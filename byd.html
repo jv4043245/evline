@@ -50,6 +50,7 @@
     --radius:14px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.55}
   .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
   section{padding:54px 0}
@@ -72,9 +73,12 @@
   .topbar{background:var(--green);color:#fff;font-size:14px;text-align:center;padding:8px 12px}
   .topbar a{color:#fff;font-weight:700;text-decoration:none}
   header.site{background:var(--dark);position:sticky;top:0;z-index:50}
-  header.site .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+  header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:14px;padding-bottom:14px;min-width:0}
+  .logo img{max-width:min(245px,38vw)}
+  nav.main{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0}
   nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
   nav.main a.active,nav.main a:hover{color:#fff}
+  .hdr-cta{display:flex;align-items:center;gap:10px;flex-shrink:0}
   .hdr-cta .btn{font-size:14px;padding:11px 22px;transition:opacity .25s}
   .hdr-cta.hide .btn{opacity:0;pointer-events:none}
   /* ───────── hero (темний — програмна частина) ───────── */
@@ -126,7 +130,7 @@
   .wm-denza{font-weight:700;letter-spacing:.2em}
   .wm-yang{font-weight:700;letter-spacing:.1em}
   .wm-fcb{font-weight:600;letter-spacing:.08em}
-  .ticker{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
+  .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
   .ticker span{display:inline-block;font-size:24px;font-weight:600;color:var(--green-d);padding-right:60px;animation:tick 30s linear infinite}
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   /* цифрове ТО: картки з круглими зображеннями */
@@ -185,9 +189,11 @@
   /* мобільна sticky-панель */
   .mbar{display:none}
   @media(max-width:900px){
-    .hdr-cta{display:none}
+    header.site .wrap{flex-wrap:wrap;justify-content:center;gap:12px}
     header.site .logo img{height:40px}
-    nav.main a{font-size:13px;margin:0 8px;letter-spacing:.02em}
+    nav.main{order:3;width:100%;gap:6px}
+    nav.main a{min-height:32px;margin:0 6px;font-size:12px;letter-spacing:.02em}
+    .hdr-cta{display:none}
     .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
     .mbar a{flex:1;text-align:center;font-weight:700;font-size:14.5px;padding:12px;border-radius:999px;text-decoration:none}
     .mbar .call{background:var(--green-l);color:var(--green-d)}
@@ -278,6 +284,12 @@
     section{padding:52px 0}
   }
   @media(max-width:560px){
+    header.site .wrap{justify-content:space-between}
+    .logo img{height:44px!important;max-width:180px}
+    nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
+    nav.main::-webkit-scrollbar{display:none}
+    nav.main a{flex:0 0 auto}
+    .hdr-cta{display:none}
     .tl,.gbar .items{grid-template-columns:1fr}
   }
 </style>
