@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /assets/download-images.html
+
+Sitemap: https://evline.com.ua/sitemap.xml
