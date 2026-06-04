@@ -232,7 +232,8 @@
   .gbar h3{font-size:21px;margin-bottom:4px}
   .gbar .sub{font-size:14.5px;color:var(--muted);margin-bottom:22px}
   .gbar .cols{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:stretch}
-  .gbar .photo{background:#dfeae3;border:1px dashed #b5d2c2;border-radius:12px;min-height:220px;display:flex;align-items:center;justify-content:center;color:#6b7a72;font-size:13px;text-align:center;padding:14px}
+  .gbar .photo{min-height:220px;overflow:hidden;border:1px solid #cde7d8;border-radius:12px;background:#f7fbf8;box-shadow:0 14px 34px rgba(20,60,40,.1)}
+  .gbar .photo img{width:100%;height:100%;min-height:220px;display:block;object-fit:cover}
   .gbar .items{display:grid;grid-template-columns:1fr 1fr;gap:20px}
   .gbar .ck{width:40px;height:40px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 6px 16px rgba(63,166,106,.3)}
   .gbar b{display:block;font-size:15px;margin-bottom:4px}
@@ -453,8 +454,7 @@
       <h3>Чому це безпечно</h3>
       <p class="sub">Той самий інструмент і той самий процес, що в офіційного дилера — тільки з людським ставленням</p>
       <div class="cols">
-        <!-- фото процесу: замініть div.photo на <img src="assets/vds-photo.jpg" style="border-radius:12px;width:100%;height:100%;object-fit:cover"> -->
-        <div class="photo">📷 Фото процесу:<br>VDS, підключений до BYD</div>
+        <div class="photo"><img src="assets/vds-photo.jpg?v=2" alt="Майстер підключає ноутбук до електромобіля для програмування та діагностики BYD" loading="lazy"></div>
         <div class="items">
           <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M8.5 8.5 12 12l3.5-3.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>Бекап перед роботами</b><p>Зберігаємо конфігурації до втручання</p></div>
           <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="1.6"/><path d="M2 19.5h20"/></svg></span><b>Дилерський інструмент VDS</b><p>Той самий доступ, що в офіційному сервісі</p></div>
