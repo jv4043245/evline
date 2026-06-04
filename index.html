@@ -228,6 +228,9 @@
   /* мобільна sticky-панель */
   .mbar{display:none}
   @media(max-width:900px){
+    .hdr-cta{display:none}
+    header.site .logo img{height:40px}
+    nav.main a{font-size:13px;margin:0 8px;letter-spacing:.02em}
     .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
     .mbar a{flex:1;text-align:center;font-weight:700;font-size:14.5px;padding:12px;border-radius:999px;text-decoration:none}
     .mbar .call{background:var(--green-l);color:var(--green-d)}
@@ -304,12 +307,12 @@
 <!-- стрічка брендів -->
 <div class="ticker"><span><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i></span></div>
 
-<!-- SEO-сторінки за марками -->
+<!-- сторінки за марками -->
 <section style="padding:38px 0;background:#fff">
   <div class="wrap">
     <div class="center"><span class="tag">Марки авто</span>
       <h2>Запчастини для китайських авто за марками</h2>
-      <p class="lead">Окремі сторінки під органічний пошук Google: BYD, ZEEKR, Xiaomi, Li Auto, NIO, XPENG та інші сучасні китайські бренди.</p>
+      <p class="lead">Оберіть свою марку — ціни, строки та особливості підбору для кожного бренда.</p>
     </div>
     <div class="grid4" style="margin-top:24px">
       <a class="card" href="zapchastyny-byd/" style="text-decoration:none"><h3>BYD</h3><p>Song Plus · Seal · Han · Tang</p></a>
@@ -319,7 +322,7 @@
       <a class="card" href="zapchastyny-nio/" style="text-decoration:none"><h3>NIO</h3><p>ES6 · ES8 · ET5 · ET7</p></a>
       <a class="card" href="zapchastyny-xpeng/" style="text-decoration:none"><h3>XPENG</h3><p>P7 · G6 · G9 · X9</p></a>
       <a class="card" href="zapchastyny-aito/" style="text-decoration:none"><h3>AITO</h3><p>M5 · M7 · M9</p></a>
-      <a class="card" href="zapchastyny-kytajskyh-avto/" style="text-decoration:none"><h3>Усі марки</h3><p>19 SEO-сторінок за брендами</p></a>
+      <a class="card" href="zapchastyny-kytajskyh-avto/" style="text-decoration:none"><h3>Усі марки →</h3><p>Повний список брендів</p></a>
     </div>
   </div>
 </section>

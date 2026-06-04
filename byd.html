@@ -185,6 +185,9 @@
   /* мобільна sticky-панель */
   .mbar{display:none}
   @media(max-width:900px){
+    .hdr-cta{display:none}
+    header.site .logo img{height:40px}
+    nav.main a{font-size:13px;margin:0 8px;letter-spacing:.02em}
     .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
     .mbar a{flex:1;text-align:center;font-weight:700;font-size:14.5px;padding:12px;border-radius:999px;text-decoration:none}
     .mbar .call{background:var(--green-l);color:var(--green-d)}
