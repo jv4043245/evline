@@ -55,6 +55,10 @@ function openTelegramMessage(message) {
   window.open(`https://t.me/evline_support?text=${encodeURIComponent(text)}`, "_blank", "noopener");
 }
 
+function isRussianPage() {
+  return document.documentElement.lang.toLowerCase().startsWith("ru");
+}
+
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -62,14 +66,23 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
     const car = String(data.car || "").trim();
     const vin = String(data.vin || "").trim().toUpperCase();
     const part = String(data.part || "").trim();
+    const ru = isRussianPage();
 
-    const lines = [
-      "Добрий день! Хочу підібрати запчастину.",
-      `Модель авто: ${car || "-"}`,
-      `VIN-код: ${vin || "-"}`,
-      `Що потрібно: ${part || "-"}`,
-      "Підкажіть, будь ласка, ціну та строк доставки.",
-    ];
+    const lines = ru
+      ? [
+          "Добрый день! Хочу подобрать запчасть.",
+          `Модель авто: ${car || "-"}`,
+          `VIN-код: ${vin || "-"}`,
+          `Что нужно: ${part || "-"}`,
+          "Подскажите, пожалуйста, цену и срок доставки.",
+        ]
+      : [
+          "Добрий день! Хочу підібрати запчастину.",
+          `Модель авто: ${car || "-"}`,
+          `VIN-код: ${vin || "-"}`,
+          `Що потрібно: ${part || "-"}`,
+          "Підкажіть, будь ласка, ціну та строк доставки.",
+        ];
 
     openTelegramMessage(lines.join("\n"));
   });
@@ -85,9 +98,11 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       ...trackingData(),
     };
 
+    const ru = isRussianPage();
+
     if (button) {
       button.disabled = true;
-      button.textContent = "Відправляємо...";
+      button.textContent = ru ? "Отправляем..." : "Відправляємо...";
     }
 
     try {
@@ -100,19 +115,27 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       if (!response.ok) throw new Error("Не вдалося зберегти заявку");
 
       form.reset();
-      setFormMessage(form, "Заявку збережено. Менеджер EVLine зв'яжеться з вами.");
+      setFormMessage(form, ru ? "Заявка сохранена. Менеджер EVLine свяжется с вами." : "Заявку збережено. Менеджер EVLine зв'яжеться з вами.");
     } catch (error) {
       const topic = payload.topic || "Запит EVLine";
-      const lines = [
-        `Запит: ${topic}`,
-        `Ім'я: ${payload.name || "-"}`,
-        `Телефон: ${payload.phone || "-"}`,
-        `Модель авто: ${payload.car || "-"}`,
-        `VIN: ${payload.vin || "-"}`,
-      ];
-      if (payload.part) lines.push(`Запчастина: ${payload.part}`);
-      lines.push(`Що потрібно: ${payload.message || "-"}`);
-      setFormMessage(form, "Зараз не вдалося зберегти заявку в CRM. Відкриваю Telegram як резервний канал.", true);
+      const lines = ru
+        ? [
+            `Запрос: ${topic}`,
+            `Имя: ${payload.name || "-"}`,
+            `Телефон: ${payload.phone || "-"}`,
+            `Модель авто: ${payload.car || "-"}`,
+            `VIN: ${payload.vin || "-"}`,
+          ]
+        : [
+            `Запит: ${topic}`,
+            `Ім'я: ${payload.name || "-"}`,
+            `Телефон: ${payload.phone || "-"}`,
+            `Модель авто: ${payload.car || "-"}`,
+            `VIN: ${payload.vin || "-"}`,
+          ];
+      if (payload.part) lines.push(ru ? `Запчасть: ${payload.part}` : `Запчастина: ${payload.part}`);
+      lines.push(ru ? `Что нужно: ${payload.message || "-"}` : `Що потрібно: ${payload.message || "-"}`);
+      setFormMessage(form, ru ? "Сейчас не удалось сохранить заявку в CRM. Открываю Telegram как резервный канал." : "Зараз не вдалося зберегти заявку в CRM. Відкриваю Telegram як резервний канал.", true);
       openTelegramMessage(lines.join("\n"));
     } finally {
       if (button) {

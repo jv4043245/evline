@@ -1,134 +1,417 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://evline.com.ua/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://evline.com.ua/ru/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/запчастини-з-китаю/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/запчастини-з-китаю/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-iz-kitaya/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/запчастини-з-китаю/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.98</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-iz-kitaya/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/запчастини-з-китаю/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-iz-kitaya/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/запчастини-з-китаю/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.98</priority>
+  </url>
+  <url>
     <loc>https://evline.com.ua/byd.html</loc>
-    <lastmod>2026-06-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd.html" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://evline.com.ua/zapchastyny-aito/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <loc>https://evline.com.ua/ru/byd.html</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd.html" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-avatr/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-byd/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-changan/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-deepal/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-denza/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-gac-aion/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-geely/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-hongqi/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
+    <priority>0.95</priority>
   </url>
   <url>
     <loc>https://evline.com.ua/zapchastyny-kytajskyh-avto/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-kytajskyh-avto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-kitajskih-avto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-kytajskyh-avto/" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://evline.com.ua/zapchastyny-leapmotor/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <loc>https://evline.com.ua/ru/zapchasti-kitajskih-avto/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-kytajskyh-avto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-kitajskih-avto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-kytajskyh-avto/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-byd/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-byd/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-byd/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-byd/" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://evline.com.ua/zapchastyny-li-auto/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-lynk-co/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-nio/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-tank-wey-ora/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-voyah/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-xiaomi/</loc>
-    <lastmod>2026-06-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.82</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/zapchastyny-xpeng/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <loc>https://evline.com.ua/ru/zapchasti-byd/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-byd/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-byd/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-byd/" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.82</priority>
   </url>
   <url>
     <loc>https://evline.com.ua/zapchastyny-zeekr/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-zeekr/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-zeekr/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-zeekr/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-zeekr/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-zeekr/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-zeekr/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-zeekr/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-xiaomi/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-xiaomi/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-xiaomi/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-xiaomi/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-xiaomi/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-xiaomi/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-xiaomi/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-xiaomi/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-li-auto/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-li-auto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-li-auto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-li-auto/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-li-auto/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-li-auto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-li-auto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-li-auto/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-nio/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-nio/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-nio/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-nio/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-nio/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-nio/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-nio/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-nio/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-xpeng/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-xpeng/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-xpeng/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-xpeng/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-xpeng/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-xpeng/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-xpeng/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-xpeng/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-aito/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-aito/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-aito/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-aito/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-aito/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-aito/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-aito/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-aito/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-avatr/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-avatr/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-avatr/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-avatr/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-avatr/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-avatr/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-avatr/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-avatr/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-lynk-co/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-lynk-co/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-lynk-co/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-lynk-co/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-lynk-co/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-lynk-co/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-lynk-co/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-lynk-co/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-denza/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-denza/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-denza/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-denza/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-denza/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-denza/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-denza/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-denza/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-leapmotor/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-leapmotor/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-leapmotor/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-leapmotor/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-leapmotor/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-leapmotor/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-leapmotor/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-leapmotor/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-deepal/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-deepal/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-deepal/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-deepal/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-deepal/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-deepal/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-deepal/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-deepal/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-voyah/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-voyah/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-voyah/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-voyah/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-voyah/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-voyah/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-voyah/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-voyah/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-geely/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-geely/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-geely/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-geely/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-geely/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-geely/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-geely/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-geely/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-changan/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-changan/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-changan/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-changan/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-changan/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-changan/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-changan/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-changan/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-gac-aion/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-gac-aion/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-gac-aion/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-gac-aion/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-gac-aion/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-gac-aion/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-gac-aion/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-gac-aion/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-hongqi/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-hongqi/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-hongqi/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-hongqi/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-hongqi/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-hongqi/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-hongqi/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-hongqi/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-omoda-jaecoo-chery/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-omoda-jaecoo-chery/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-omoda-jaecoo-chery/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-omoda-jaecoo-chery/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-tank-wey-ora/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-tank-wey-ora/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-tank-wey-ora/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-tank-wey-ora/" />
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-tank-wey-ora/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-tank-wey-ora/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-tank-wey-ora/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-tank-wey-ora/" />
+    <lastmod>2026-06-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.82</priority>
   </url>

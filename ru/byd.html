@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru-UA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Программирование и обновление BYD — дилерский уровень VDS | EVLine Украина</title>
+<meta name="description" content="Обновление, программирование и калибровка всех блоков BYD через дилерский VDS-доступ. Все модели и суббренды: Denza, Yangwang, Fang Cheng Bao. Бесплатная проверка обновлений по VIN.">
+<link rel="canonical" href="https://evline.com.ua/ru/byd.html">
+<link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html">
+<link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd.html">
+<link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd.html">
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+<meta name="theme-color" content="#111513">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_UA">
+<meta property="og:site_name" content="EVLine Украина">
+<meta property="og:title" content="Программирование и обновление BYD — дилерский уровень VDS | EVLine">
+<meta property="og:description" content="Обновление, программирование и калибровка всех блоков BYD через дилерский VDS-доступ. Все модели и суббренды: Denza, Yangwang, Fang Cheng Bao. Бесплатная проверка обновлений по VIN.">
+<meta property="og:url" content="https://evline.com.ua/ru/byd.html">
+<meta property="og:image" content="https://evline.com.ua/assets/digi-1.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
+{"@type":"Question","name":"Безопасно ли обновляться не у официального дилера?","acceptedAnswer":{"@type":"Answer","text":"Мы работаем через VDS — тот же дилерский инструмент и уровень доступа, что в официальном сервисном центре. Устанавливаются только штатные версии ПО производителя. Перед работами сохраняем текущие конфигурации."}},
+{"@type":"Question","name":"Какие авто вы берете в работу?","acceptedAnswer":{"@type":"Answer","text":"Все модели BYD и все суббренды: Denza, Yangwang, Fang Cheng Bao (Leopard). Авто с любого рынка — Китай, Европа, официальный импорт."}},
+{"@type":"Question","name":"Вы работаете только в Киеве?","acceptedAnswer":{"@type":"Answer","text":"Мы базируемся в Киеве, но работаем с клиентами по всей Украине и ближнему зарубежью."}},
+{"@type":"Question","name":"Можно ли изменить язык интерфейса и настроить авто под Украину?","acceptedAnswer":{"@type":"Answer","text":"Да, в рамках услуги программирования: язык, региональные настройки, активация нужных функций."}},
+{"@type":"Question","name":"Сколько это длится?","acceptedAnswer":{"@type":"Answer","text":"Диагностика — около часа. Полное обновление всех блоков — обычно 2–4 часа. Чаще всего все делается за один визит."}},
+{"@type":"Question","name":"От чего зависит финальная цена?","acceptedAnswer":{"@type":"Answer","text":"Диагностика 50$, обновление всех блоков от 250$, программирование от 150$, калибровка от 100$. Точную цену фиксируем после диагностики — до начала работ."}}
+]}
+</script>
+<!--
+  ПРОТОТИП EVLine — сторінка «Программирование BYD», версія 2.0
+  Формы: собирают данные → копируют сообщение в буфер → открывают Telegram. Бекенд — у submitLead().
+-->
+<style>
+  :root{
+    --dark:#111513;
+    --dark2:#1a201d;
+    --green:#3fa66a;
+    --green-d:#2e7d52;
+    --green-l:#e8f5ee;
+    --red:#c0392b;
+    --red-l:#fdf0ee;
+    --text:#1c2421;
+    --muted:#5f6b66;
+    --bg:#ffffff;
+    --bg2:#f6f8f7;
+    --line:#e3e9e6;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:clip}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.55}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+  section{padding:54px 0}
+  h2{font-size:34px;line-height:1.2;margin-bottom:14px;letter-spacing:-.5px}
+  .lead{color:var(--muted);font-size:18px;max-width:760px}
+  .center{text-align:center}
+  .center .lead{margin:0 auto}
+  .tag{display:inline-block;background:var(--green-l);color:var(--green-d);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:7px 16px;border-radius:999px;margin-bottom:16px}
+  .tag.red{background:var(--red-l);color:var(--red)}
+  .btn{display:inline-block;background:var(--green);color:#fff;font-weight:700;font-size:17px;padding:16px 34px;border-radius:999px;border:none;cursor:pointer;text-decoration:none;transition:.2s;text-align:center}
+  .btn:hover{background:var(--green-d)}
+  .btn-note{font-size:13px;color:var(--muted);margin-top:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+  .card h3{font-size:19px;margin-bottom:8px}
+  .card p{color:var(--muted);font-size:15px}
+  /* ───────── header ───────── */
+  .topbar{background:var(--green);color:#fff;font-size:14px;text-align:center;padding:8px 12px}
+  .topbar a{color:#fff;font-weight:700;text-decoration:none}
+  header.site{background:var(--dark);position:sticky;top:0;z-index:50}
+  header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:14px;padding-bottom:14px;min-width:0}
+  .logo img{max-width:min(245px,38vw)}
+  nav.main{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0}
+  nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
+  nav.main a.active,nav.main a:hover{color:#fff}
+  .lang-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;text-decoration:none;font-weight:800;font-size:12px;letter-spacing:.04em}.lang-link:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}
+  .hdr-cta{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .hdr-cta .btn{font-size:14px;padding:11px 22px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
+  body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+  /* ───────── hero (темний — программная часть) ───────── */
+  .hero{background:linear-gradient(160deg,var(--dark) 55%,#15241c);color:#fff;padding:44px 0 48px}
+  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:center}
+  .hero h1{font-size:38px;line-height:1.12;letter-spacing:-1px;margin-bottom:14px}
+  .hero h1 em{color:#7fd6a4;font-style:normal;border-bottom:4px solid var(--green)}
+  .hero .sub{font-size:17px;color:#b9c4be;margin-bottom:18px;max-width:560px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 14px;font-size:13.5px;color:#dfe7e3}
+  .chip b{color:#7fd6a4}
+  .mini-steps{display:flex;gap:14px;margin-top:26px}
+  .mini-step{flex:1;background:var(--dark2);border:1px solid #2a322e;border-radius:12px;padding:14px 16px;font-size:13.5px;color:#9aa6a0}
+  .mini-step b{display:block;color:#fff;font-size:15px;margin-bottom:3px}
+  .mini-step .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;font-size:12px;align-items:center;justify-content:center;margin-bottom:8px}
+  /* форма */
+  .leadbox{background:#fff;border-radius:18px;padding:22px;color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .leadbox h3{font-size:19px;margin-bottom:4px}
+  .leadbox .small{font-size:13.5px;color:var(--muted);margin-bottom:10px}
+  .leadbox label{display:block;font-size:13px;font-weight:700;margin:9px 0 4px}
+  .leadbox input,.leadbox textarea,.leadbox select{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
+  .leadbox input:focus,.leadbox textarea:focus{outline:none;border-color:var(--green)}
+  .leadbox .btn{width:100%;margin-top:12px;padding:14px 30px}
+  .leadbox .privacy{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+  .free-badge{display:inline-block;background:var(--green-l);color:var(--green-d);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;margin-bottom:8px}
+  /* в hero форма — «скляна» темна, щоб не сперечалась із фоном */
+  .hero .leadbox{background:rgba(255,255,255,.055);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.3);color:#fff}
+  .hero .leadbox h3{color:#fff}
+  .hero .leadbox .small{color:#9aa6a0}
+  .hero .leadbox label{color:#cfd8d3}
+  .hero .leadbox input,.hero .leadbox select{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.18);color:#fff}
+  .hero .leadbox input::placeholder{color:rgba(255,255,255,.4)}
+  .hero .leadbox input:focus{border-color:var(--green)}
+  .hero .leadbox .privacy{color:#8b958f}
+  .hero .free-badge{background:rgba(127,214,164,.16);color:#7fd6a4}
+  /* ticker */
+  /* словесні логотипи в стрічці */
+  .ticker .wm{font-style:normal;text-transform:uppercase;color:#6b7a72;display:inline-block;padding:0 28px;font-size:21px;vertical-align:middle}
+  .wm-byd{font-weight:900;letter-spacing:.32em}
+  .wm-xiaomi{text-transform:lowercase;font-weight:700;letter-spacing:.02em}
+  .wm-lynk{font-weight:800;letter-spacing:.05em}
+  .wm-leopard{font-weight:600;letter-spacing:.18em}
+  .wm-zeekr{font-weight:900;letter-spacing:.12em}
+  .wm-nio{font-weight:300;letter-spacing:.45em}
+  .wm-xpeng{font-weight:800;letter-spacing:.14em}
+  .wm-li{font-weight:600;letter-spacing:.04em;text-transform:none}
+  .wm-aito{font-weight:800;letter-spacing:.3em}
+  .wm-avatr{font-weight:800;letter-spacing:.22em}
+  .wm-denza{font-weight:700;letter-spacing:.2em}
+  .wm-yang{font-weight:700;letter-spacing:.1em}
+  .wm-fcb{font-weight:600;letter-spacing:.08em}
+  .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
+  .ticker span{display:inline-block;font-size:24px;font-weight:600;color:var(--green-d);padding-right:60px;animation:tick 30s linear infinite}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  /* цифровое ТО: картки з круглими зображеннями */
+  .digi .card{text-align:center}
+  .digi .card{padding:22px 18px}
+  .digi .imgwrap{width:200px;height:200px;max-width:100%;border-radius:50%;overflow:hidden;margin:0 auto 16px;box-shadow:0 12px 32px rgba(20,60,40,.14)}
+  .digi .imgwrap img{width:100%;height:100%;object-fit:cover;transform:scale(1.24);display:block}
+  .digi .card h3{font-size:17.5px}
+  .digi .card p{font-size:14px}
+  /* потери (щільні картки, іконки в стилі SF Symbols) */
+  .loss .grid4{gap:14px}
+  .loss .card{border-top:3px solid var(--red);text-align:center;padding:18px 16px}
+  .loss .card h3{font-size:16px;margin-bottom:4px}
+  .loss .card p{font-size:13.5px}
+  .loss .icon{width:72px;height:72px;border-radius:20px;background:linear-gradient(145deg,#f4f8f6,#e7efe9);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+  .warn{background:var(--red-l);border:1px solid #eccac4;color:var(--red);border-radius:10px;padding:12px 18px;text-align:center;font-size:14.5px;margin-top:16px;font-weight:600}
+  /* результаты по моделях: цифра — герой картки */
+  .res .grid3{gap:14px}
+  .res .card{padding:18px 20px;background:linear-gradient(165deg,#f6fbf8,#ecf5ef);border-color:#d6e6dc}
+  .res .model{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .res .stat{font-size:31px;font-weight:800;letter-spacing:-1px;color:var(--green-d);line-height:1}
+  .res .stat-l{font-size:14px;font-weight:700;color:var(--text);margin:3px 0 12px}
+  .res .stat-l span{color:var(--muted);font-weight:600}
+  .res .card ul{list-style:none;border-top:1px solid #d6e6dc;padding-top:10px;margin:0}
+  .res .card li{font-size:13px;color:var(--muted);padding-left:14px;position:relative;margin-bottom:2px}
+  .res .card li:before{content:"✓";position:absolute;left:0;color:var(--green);font-size:11px}
+  .src-note{font-size:13px;color:var(--muted);text-align:center;margin-top:16px}
+  /* счетчики доверия */
+  .stats{display:flex;justify-content:center;gap:64px;padding:30px 20px;background:linear-gradient(135deg,#2a7048,#3fa66a);flex-wrap:wrap;text-align:center}
+  .stats b{display:block;font-size:31px;color:#fff;font-weight:800;letter-spacing:-1px;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .stats span{font-size:13.5px;color:#d9f0e3}
+  /* скриншоты чатов (отзывы) */
+  .tg{border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .tg .status{display:flex;justify-content:space-between;align-items:center;padding:7px 14px 5px;font-size:11px;font-weight:700;color:#1c2421}
+  .tg .st-r{display:flex;align-items:center;gap:5px}
+  .batt{display:inline-block;width:21px;height:10px;border:1.4px solid #1c2421;border-radius:3px;position:relative}
+  .batt i{position:absolute;left:1.5px;top:1.5px;bottom:1.5px;background:#1c2421;border-radius:1px}
+  .batt.low i{background:#d23b2f}
+  .tg .hdr{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #eef1ef}
+  .tg .ava{width:34px;height:34px;border-radius:50%;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+  .tg .nm{font-weight:700;font-size:13.5px;line-height:1.2;text-align:left}
+  .tg .on{font-size:11.5px;color:var(--green);text-align:left}
+  .tg .body{padding:10px 10px 14px;display:flex;flex-direction:column;gap:6px;min-height:190px;background:#e7ece3}
+  .tg .date{align-self:center;background:rgba(255,255,255,.8);color:#6b7a72;font-size:10.5px;font-weight:600;padding:3px 11px;border-radius:99px;margin-bottom:3px}
+  .tg .dots{margin-left:auto;color:#8d9b93;font-size:18px;font-weight:700;letter-spacing:1px}
+  .tg .msg{max-width:88%;background:#fff;border-radius:12px 12px 12px 4px;padding:8px 11px;font-size:13px;line-height:1.45;align-self:flex-start;box-shadow:0 1px 1.5px rgba(0,0,0,.1);color:#1c2421;text-align:left}
+  .tg .msg.out{align-self:flex-end;background:#d9fdd3;border-radius:12px 12px 4px 12px}
+  .tg .msg .t{display:block;font-size:10px;color:#8d9b93;text-align:right;margin-top:3px}
+  .tg .msg.out .t{color:#57a05c}
+  /* зеленая CTA-полоса */
+  .cta-band{background:linear-gradient(135deg,#2a7048,#3fa66a);border-radius:var(--radius);padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:22px;margin-top:30px;flex-wrap:wrap}
+  .cta-band h3{color:#fff;font-size:21px;line-height:1.25}
+  .cta-band p{color:#d9f0e3;font-size:14px;margin-top:4px}
+  .cta-band .btn{background:#fff;color:var(--green-d);flex:none}
+  .cta-band .btn:hover{background:var(--green-l)}
+  /* мобильная sticky-панель */
+  .mbar{display:none}
+  @media(max-width:900px){
+    header.site{position:static}
+    header.site .wrap{flex-wrap:wrap;justify-content:center;gap:12px}
+    header.site .logo img{height:40px}
+    nav.main{order:3;width:100%;gap:6px}
+    nav.main a{min-height:32px;margin:0 6px;font-size:12px;letter-spacing:.02em}
+    .hdr-cta{display:none}
+    .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
+    .mbar a{flex:1;text-align:center;font-weight:700;font-size:14.5px;padding:12px;border-radius:999px;text-decoration:none}
+    .mbar .call{background:var(--green-l);color:var(--green-d)}
+    .mbar .tgb{background:var(--green);color:#fff}
+    body{padding-bottom:64px}
+  }
+  /* отзывы */
+  .rev{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .rev .stars{color:#f2a93b;font-size:16px;margin-bottom:8px;letter-spacing:2px}
+  .rev p{font-size:14.5px;color:var(--text)}
+  .rev .who{margin-top:12px;font-size:13px;color:var(--muted);font-weight:600}
+  .rev .who b{color:var(--green-d)}
+  /* цены */
+  .price-card{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s,border-color .2s;cursor:pointer}
+  .price-card:hover{transform:translateY(-5px);border-color:var(--green);box-shadow:0 18px 44px rgba(20,60,40,.16)}
+  .price-card.featured{border:2px solid var(--green);box-shadow:0 14px 40px rgba(20,60,40,.1)}
+  .price-card.featured:hover{transform:translateY(-5px);box-shadow:0 22px 50px rgba(20,60,40,.2)}
+  .pop{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-size:12px;font-weight:800;letter-spacing:.05em;border-radius:999px;padding:5px 14px;white-space:nowrap}
+  .price-card .ico{font-size:26px;margin-bottom:8px}
+  .price-card h3{font-size:18px;margin-bottom:4px}
+  .price-card .pr{color:var(--green-d);font-weight:800;font-size:22px;margin-bottom:10px}
+  .price-card p{color:var(--muted);font-size:14px;margin-bottom:8px}
+  .price-card ul{list-style:none;margin-top:auto}
+  .price-card li{font-size:13.5px;color:var(--muted);padding-left:18px;position:relative;margin-bottom:4px}
+  .price-card li:before{content:"✔";position:absolute;left:0;color:var(--green);font-size:12px}
+  /* лента шагов */
+  .tl{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
+  .tl-step{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;transition:transform .2s,box-shadow .2s,border-color .2s}
+  .tl-step:hover{transform:translateY(-4px);border-color:var(--green);box-shadow:0 14px 32px rgba(20,60,40,.13)}
+  .tl-step .num{width:38px;height:38px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:12px}
+  .tl-step .days{display:inline-block;background:var(--green-l);color:var(--green-d);font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;margin-bottom:8px}
+  .tl-step h4{font-size:16px;margin-bottom:4px}
+  .tl-step p{color:var(--muted);font-size:13.5px}
+  /* полоса безопасности — світла, довірча */
+  .gbar{background:linear-gradient(145deg,#f5faf7,#e8f5ee);border:1px solid #cde7d8;border-radius:var(--radius);padding:32px;margin-top:48px;color:var(--text)}
+  .gbar h3{font-size:21px;margin-bottom:4px}
+  .gbar .sub{font-size:14.5px;color:var(--muted);margin-bottom:22px}
+  .gbar .cols{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:stretch}
+  .gbar .photo{min-height:220px;overflow:hidden;border:1px solid #cde7d8;border-radius:12px;background:#f7fbf8;box-shadow:0 14px 34px rgba(20,60,40,.1)}
+  .gbar .photo img{width:100%;height:100%;min-height:220px;display:block;object-fit:cover}
+  .gbar .items{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .gbar .ck{width:40px;height:40px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 6px 16px rgba(63,166,106,.3)}
+  .gbar b{display:block;font-size:15px;margin-bottom:4px}
+  .gbar p{font-size:13.5px;color:var(--muted)}
+  /* faq */
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  summary{cursor:pointer;font-weight:700;font-size:16px;padding:18px 22px;list-style:none;position:relative}
+  summary::-webkit-details-marker{display:none}
+  summary:after{content:"+";position:absolute;right:20px;top:14px;font-size:22px;color:var(--green)}
+  details[open] summary:after{content:"–"}
+  details .a{padding:0 22px 18px;color:var(--muted);font-size:15px}
+  /* кросс-селл запчастей (насичений зелений band) */
+  .parts-x{background:linear-gradient(135deg,#12301f,#1d4a31);padding:44px 0}
+  .parts-x h2{color:#fff}
+  .parts-x .lead{color:#bcd6c6}
+  .parts-x .tag{background:rgba(127,214,164,.16);color:#7fd6a4}
+  .parts-x .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);padding:20px}
+  .parts-x .card h3{color:#fff;font-size:16.5px}
+  .parts-x .card p{color:#bcd6c6;font-size:13.5px}
+  .parts-x .grid3{gap:14px}
+  /* финал */
+  .final{background:var(--bg2)}
+  .final .leadbox{box-shadow:none;border:1px solid var(--line)}
+  .final .grid2{align-items:center}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .contact-list{font-size:16px;line-height:2}
+  .contact-list a{color:var(--green-d);font-weight:700;text-decoration:none}
+  footer{background:var(--dark);color:#8b958f;padding:28px 0;font-size:14px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  footer a{color:#cfd8d3;text-decoration:none}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:14px 26px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:.3s;z-index:99}
+  .toast.show{opacity:1}
+  /* інтерактивність плиток */
+  .card,.rev,.mini-step{transition:transform .2s,box-shadow .2s}
+  .card:hover,.rev:hover,.mini-step:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(20,60,40,.13)}
+  details{transition:border-color .2s}
+  details:hover{border-color:var(--green)}
+  @media(max-width:900px){
+    .hero .wrap{grid-template-columns:1fr}
+    .hero h1{font-size:32px}
+    .grid2,.grid3,.grid4{grid-template-columns:1fr}
+    .tl{grid-template-columns:1fr 1fr}
+    .gbar .cols{grid-template-columns:1fr}
+    .gbar .items{grid-template-columns:1fr 1fr}
+    .mini-steps{flex-direction:column}
+    .stats{gap:30px}
+    .stats b{font-size:25px}
+    h2{font-size:27px}
+    section{padding:52px 0}
+  }
+  @media(max-width:560px){
+    header.site .wrap{justify-content:space-between}
+    .logo img{height:44px!important;max-width:180px}
+    nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
+    nav.main::-webkit-scrollbar{display:none}
+    nav.main a{flex:0 0 auto}
+    .hdr-cta{display:none}
+    .tl,.gbar .items{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ ШАПКА ═══════════ -->
+<div class="topbar">📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a> · ✉️ <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="./"><img src="../assets/logo.svg" alt="EVLine" style="height:52px;display:block"></a>
+    <nav class="main">
+      <a href="./">Запчасти из Китая</a>
+      <a href="byd.html" class="active">Программирование BYD</a>
+    </nav>
+    <div class="hdr-cta">
+      <a class="lang-link" href="../byd.html" lang="uk">UA</a>
+      <a class="btn" href="#vin-form">Проверить обновления</a>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 1. HERO (темний): оффер + безкоштовна перевірка ═══════════ -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>Программирование BYD <em>на уровне дилерского центра</em></h1>
+      <p class="sub">Работаем через VDS — полный доступ ко всем блокам. Обновляем, настраиваем и калибруем любой BYD и все суббренды: Denza, Yangwang, Fang Cheng Bao (Leopard).</p>
+      <div class="chips">
+        <span class="chip">🔓 <b>VDS</b> — дилерский доступ</span>
+        <span class="chip">⚙️ Все <b>50–250 блоков</b> авто</span>
+        <span class="chip">🛡️ Бэкап <b>перед работами</b></span>
+        <span class="chip">🌍 <b>Вся Украина</b> и ближнее зарубежье</span>
+      </div>
+      <div class="mini-steps">
+        <div class="mini-step"><span class="n">1</span><b>Отправляете VIN</b>бесплатная проверка обновлений</div>
+        <div class="mini-step"><span class="n">2</span><b>Список обновлений по блокам</b>что устарело и что изменится</div>
+        <div class="mini-step"><span class="n">3</span><b>Запись на работы</b>цена зафиксирована до начала</div>
+      </div>
+    </div>
+    <form class="leadbox" id="hero-form" onsubmit="return submitLead('hero-form')">
+      <span class="free-badge">Бесплатно</span>
+      <h3>Узнайте, какие обновления доступны для вашего авто</h3>
+      <p class="small">Отправьте VIN — получите список доступных обновлений по блокам: что устарело и что изменится после обновления</p>
+      <label>VIN-код (17 символов)</label>
+      <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
+      <label>Модель и год</label>
+      <input name="model" placeholder="Напр.: Song Plus DM-i, 2023">
+      <label>Телефон или @ник в Telegram</label>
+      <input name="contact" placeholder="+380…" required>
+      <button class="btn" type="submit">Проверить обновления</button>
+      <p class="privacy">Без обязательств. Отвечаем в рабочее время до 30 минут.</p>
+    </form>
+  </div>
+</section>
+
+
+<!-- счетчики доверия -->
+<div class="stats">
+  <div><b>1 400+</b><span>авто обновлено</span></div>
+  <div><b>45 000+</b><span>блоков перепрошито</span></div>
+  <div><b>з 2021</b><span>работаем с китайскими авто</span></div>
+  <div><b>вся Украина</b><span>и ближнее зарубежье</span></div>
+</div>
+
+<!-- ═══════════ 2. НАВІЩО: цифровое ТО ═══════════ -->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Зачем это</span>
+      <h2>Обновление — это цифровое ТО вашего авто</h2>
+      <p class="lead">Вы меняете масло и фильтры, но алгоритмы, которые управляют батареей, подвеской и безопасностью, остаются устаревшими</p>
+    </div>
+    <!-- Локальні зображення: завантажте їх через assets/download-images.html і покладіть у assets/ -->
+    <div class="grid4 digi" style="margin-top:34px">
+      <div class="card"><div class="imgwrap"><img src="../assets/digi-1.png" alt="50–250 электронных блоков управляют автомобилем" loading="lazy"></div><h3>50–250 блоков</h3><p>управляют вашим авто — но вы используете только часть их возможностей</p></div>
+      <div class="card"><div class="imgwrap"><img src="../assets/digi-2.png" alt="Устаревшее ПО — ошибки систем" loading="lazy"></div><h3>Без обновлений — старые алгоритмы</h3><p>Авто не получает исправлений и работает хуже, чем может</p></div>
+      <div class="card"><div class="imgwrap"><img src="../assets/digi-3.png" alt="Деградация систем без обновлений" loading="lazy"></div><h3>Это приводит к износу</h3><p>Батарея, подвеска и системы работают неоптимально и быстрее теряют ресурс</p></div>
+      <div class="card"><div class="imgwrap"><img src="../assets/digi-4.png" alt="Обновление улучшает все системы авто" loading="lazy"></div><h3>Обновление исправляет</h3><p>Новые алгоритмы устраняют недостатки предыдущих версий — авто становится лучше, чем при покупке</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 3. ЩО ВТРАЧАЄТЕ (біль) ═══════════ -->
+<section class="loss" style="background:var(--bg2);padding:54px 0">
+  <div class="wrap">
+    <div class="center"><span class="tag red">Без обновлений</span>
+      <h2>Что вы реально теряете без обновлений ПО</h2>
+      <p class="lead">Авто выглядит исправным — но работает на устаревших алгоритмах</p>
+    </div>
+    <div class="grid4" style="margin-top:24px">
+      <div class="card">
+        <div class="icon"><svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="16" width="30" height="16" rx="5" fill="none" stroke="#1c2421" stroke-width="2.6"/><rect x="38.5" y="20.5" width="4" height="7" rx="1.8" fill="#1c2421"/><rect x="10" y="20" width="7" height="8" rx="1.6" fill="#c0392b"/></svg></div>
+        <h3>Батарея работает хуже</h3><p>Старые алгоритмы BMS → потеря до <b>10–15%</b> запаса хода</p></div>
+      <div class="card">
+        <div class="icon"><svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 l-6 3.5 l12 3.5 l-12 3.5 l12 3.5 l-6 3.5" fill="none" stroke="#1c2421" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="31" r="6.5" fill="none" stroke="#1c2421" stroke-width="2.6"/><circle cx="24" cy="31" r="1.8" fill="#1c2421"/><path d="M8 44 q4 -5.5 8 0 t8 0 t8 0 t8 0" fill="none" stroke="#c0392b" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+        <h3>Подвеска не адаптируется</h3><p>Система не учитывает состояние дороги → более жесткая и менее комфортная езда</p></div>
+      <div class="card">
+        <div class="icon"><svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><path d="M14 43 L20 5" stroke="#1c2421" stroke-width="2.4" stroke-linecap="round" opacity=".55"/><path d="M34 43 L28 5" stroke="#1c2421" stroke-width="2.4" stroke-linecap="round" opacity=".55"/><path d="M24 41 L24 7" stroke="#1c2421" stroke-width="2.4" stroke-dasharray="5 5" stroke-linecap="round" opacity=".55"/><rect x="20.5" y="20" width="7.5" height="13" rx="3.2" fill="#c0392b" transform="rotate(12 24 26)"/></svg></div>
+        <h3>ADAS работает нестабильно</h3><p>Больше ошибок и некорректная работа ассистентов вождения</p></div>
+      <div class="card">
+        <div class="icon"><svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5 L38 11 V22 c0 10 -6 16 -14 20 C16 38 10 32 10 22 V11 Z" fill="none" stroke="#1c2421" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 14 v12" stroke="#c0392b" stroke-width="2.8" stroke-linecap="round"/><circle cx="24" cy="31" r="1.8" fill="#c0392b"/></svg></div>
+        <h3>Системы безопасности устарели</h3><p>Вы не получаете критические исправления безопасности от производителя</p></div>
+    </div>
+    <div class="warn">⚠️ По нашей статистике диагностик, до 90% авто в Украине ездят без актуальных обновлений</div>
+  </div>
+</section>
+
+<!-- ═══════════ 4. РЕЗУЛЬТАТИ ПО МОДЕЛЯХ ═══════════ -->
+<section class="res" style="padding:54px 0">
+  <div class="wrap">
+    <div class="center"><span class="tag">Что это дает</span>
+      <h2>Реальные результаты после обновления блоков</h2>
+      <p class="lead">Это не теория — примеры улучшений для конкретных моделей</p>
+    </div>
+    <div class="grid3" style="margin-top:26px">
+      <div class="card"><div class="model">Song Plus DM-i / Song L · 2023–2024</div><div class="stat">+5–10%</div><div class="stat-l">запаса хода <span>· обновление BMS</span></div><ul><li>точнее балансировка элементов</li><li>корректный расчет запаса хода</li><li>стабильная работа в холод</li></ul></div>
+      <div class="card"><div class="model">Han EV / Tang EV AWD</div><div class="stat">+20–30%</div><div class="stat-l">плавности движения <span>· привод и рекуперация</span></div><ul><li>убраны рывки</li><li>более плавный разгон</li><li>лучший контроль тяги</li></ul></div>
+      <div class="card"><div class="model">Song / Seal / Han</div><div class="stat">−5–8%</div><div class="stat-l">расхода энергии <span>· климат-система</span></div><ul><li>адаптивная работа климата</li><li>меньше нагрузка</li><li>стабильная температура</li></ul></div>
+      <div class="card"><div class="model">Han / Tang / Seal</div><div class="stat">+30–50%</div><div class="stat-l">скорость реакции <span>· оптика и авто-свет</span></div><ul><li>быстрее реагирует на встречные авто</li><li>корректное переключение</li><li>меньше ошибок</li></ul></div>
+      <div class="card"><div class="model">Все модели с ADAS</div><div class="stat">−20–40%</div><div class="stat-l">ошибок ассистентов <span>· безопасность и ADAS</span></div><ul><li>стабильнее удержание полосы</li><li>точнее распознавание</li><li>меньше сбоев</li></ul></div>
+      <div class="card"><div class="model">Han / Seal</div><div class="stat">+30–50%</div><div class="stat-l">скорость работы <span>· мультимедиа</span></div><ul><li>более быстрый интерфейс</li><li>лучший звук</li><li>стабильная связь</li></ul></div>
+    </div>
+    <p class="src-note">Данные — из release notes производителя и обратной связи владельцев после обновления. ⚠️ В Китае эти обновления уже работают — в Украине авто продолжают ездить на устаревшем ПО.</p>
+  </div>
+</section>
+
+<!-- ═══════════ 5. ПОСЛУГИ ТА ЦІНИ ═══════════ -->
+<section style="background:var(--bg2)">
+  <div class="wrap">
+    <div class="center"><span class="tag">Услуги и цены</span>
+      <h2>Полный доступ ко всем системам вашего BYD</h2>
+      <p class="lead">Дилерский уровень работы через VDS — доступ ко всем блокам автомобиля</p>
+    </div>
+    <div class="grid4" style="margin-top:44px">
+      <div class="price-card" onclick="orderService('Диагностика всех блоков (50$)')"><span class="ico">🔍</span><h3>Диагностика всех блоков</h3><div class="pr">50$</div><p>Полный анализ всех систем, включая недоступные обычным сканерам</p><ul><li>100% электронных блоков</li><li>скрытые ошибки</li><li>реальное состояние авто</li></ul></div>
+      <div class="price-card featured" onclick="orderService('Обновление всех блоков (от 250$)')"><span class="pop">Самое популярное</span><span class="ico">⚡</span><h3>Обновление всех блоков</h3><div class="pr">от 250$</div><p>Полное обновление всех систем до актуальных версий производителя</p><ul><li>новые алгоритмы</li><li>исправление заводских ошибок</li><li>синхронизация систем</li></ul></div>
+      <div class="price-card" onclick="orderService('Программирование (от 150$)')"><span class="ico">⚙️</span><h3>Программирование</h3><div class="pr">от 150$</div><p>Настраиваем авто под вас, а не под «среднего пользователя»</p><ul><li>конфигурация блоков</li><li>активация функций</li><li>оптимизация систем</li></ul></div>
+      <div class="price-card" onclick="orderService('Калибровка и адаптация (от 100$)')"><span class="ico">🧠</span><h3>Калибровка и адаптация</h3><div class="pr">от 100$</div><p>Идеально синхронная работа всех систем после вмешательств</p><ul><li>адаптация после обновления</li><li>устранение конфликтов блоков</li><li>стабильная работа без сбоев</li></ul></div>
+    </div>
+    <p class="btn-note" style="text-align:center;margin-top:14px">👆 Нажмите на услугу — откроется Telegram с готовым запросом</p>
+    <div class="center" style="margin-top:20px">
+      <a class="btn" href="#vin-form">Записаться на обновление</a>
+      <p class="btn-note">🔥 После работ авто становится более плавным, эффективным и стабильным — как после обновления в дилерском центре</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 6. ПРОЦЕС + БЕЗПЕКА ═══════════ -->
+<section>
+  <div class="wrap">
+    <div class="center"><span class="tag">Процес</span>
+      <h2>Как происходит обновление</h2>
+    </div>
+    <div class="tl">
+      <div class="tl-step"><div class="num">1</div><span class="days">бесплатно</span><h4>Отправляете VIN</h4><p>Проверяем, какие обновления доступны именно для вашего авто</p></div>
+      <div class="tl-step"><div class="num">2</div><span class="days">~1 година</span><h4>Запись и диагностика</h4><p>Полный отчет по всем блокам — вы видите реальное состояние авто</p></div>
+      <div class="tl-step"><div class="num">3</div><span class="days">до початку робіт</span><h4>Согласовываем работы</h4><p>Фиксируем перечень и цену. Никаких «довыявили» постфактум</p></div>
+      <div class="tl-step"><div class="num">4</div><span class="days">2–4 години</span><h4>Обновление и проверка</h4><p>Бэкап → обновление → калибровка → тест всех систем</p></div>
+    </div>
+    <div class="gbar">
+      <h3>Почему это безопасно</h3>
+      <p class="sub">Тот же инструмент и тот же процесс, что у официального дилера — только с человеческим отношением</p>
+      <div class="cols">
+        <div class="photo"><img src="../assets/vds-photo.jpg?v=2" alt="Мастер подключает ноутбук к электромобилю для программирования и диагностики BYD" loading="lazy"></div>
+        <div class="items">
+          <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M8.5 8.5 12 12l3.5-3.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span><b>Бэкап перед работами</b><p>Сохраняем конфигурации до вмешательства</p></div>
+          <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="1.6"/><path d="M2 19.5h20"/></svg></span><b>Дилерский инструмент VDS</b><p>Тот же доступ, что в официальном сервисе</p></div>
+          <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h11M10 12h11M10 18h11"/><path d="M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg></span><b>Проверка после работ</b><p>Тест всех систем перед выдачей авто</p></div>
+          <div><span class="ck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><rect x="3" y="13" width="4" height="6" rx="2"/><rect x="17" y="13" width="4" height="6" rx="2"/></svg></span><b>Поддержка после</b><p>Остаемся на связи после обновления</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 6b. ВІДГУКИ ═══════════ -->
+
+<section style="padding:46px 0">
+  <div class="wrap">
+    <div class="center"><span class="tag">Отзывы</span>
+      <h2>Что говорят владельцы после обновления</h2>
+    </div>
+    <div class="grid3" style="margin-top:22px">
+
+      <div class="tg">
+        <div class="status"><span>09:41</span><span class="st-r"><svg width="16" height="11" viewBox="0 0 16 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#1c2421"/><rect x="4.3" y="5" width="3" height="6" rx="1" fill="#1c2421"/><rect x="8.6" y="2.5" width="3" height="8.5" rx="1" fill="#1c2421"/><rect x="12.9" y="0" width="3" height="11" rx="1" fill="#1c2421"/></svg> 5G <span class="batt"><i style="width:14px"></i></span></span></div>
+        <div class="hdr"><span class="ava" style="background:linear-gradient(135deg,#ff9466,#e05a5a)">О</span><div><div class="nm">Олег · Song Plus DM-i</div><div class="on">в сети</div></div><span class="dots">⋮</span></div>
+        <div class="body"><div class="date">14 листопада</div>
+          <div class="msg">Здравствуйте! Неделю поездил после прошивки. Расход зимой 18–19 вместо 21–22 😍<span class="t">09:38</span></div>
+          <div class="msg">И запас хода наконец честный, на морозе без сюрпризов<span class="t">09:39</span></div>
+          <div class="msg out">Супер! Спасибо за отзыв 🙏<span class="t">09:41 ✓✓</span></div>
+        </div>
+      </div>
+      <div class="tg">
+        <div class="status"><span>14:27</span><span class="st-r"><svg width="16" height="11" viewBox="0 0 16 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#1c2421"/><rect x="4.3" y="5" width="3" height="6" rx="1" fill="#1c2421"/><rect x="8.6" y="2.5" width="3" height="8.5" rx="1" fill="#1c2421"/><rect x="12.9" y="0" width="3" height="11" rx="1" fill="#c8cfca"/></svg> LTE <span class="batt"><i style="width:7px"></i></span></span></div>
+        <div class="hdr"><span class="ava" style="background:linear-gradient(135deg,#6fb1e8,#4a7bd0)">С</span><div><div class="nm">Сергій · Seal AWD</div><div class="on">был(а) недавно</div></div><span class="dots">⋮</span></div>
+        <div class="body"><div class="date">2 грудня</div>
+          <div class="msg">Ездил сегодня Киев–Львов. Удержание полосы после обновления работает идеально, руль не дергает<span class="t">14:21</span></div>
+          <div class="msg">ADAS вообще другое дело 👍<span class="t">14:22</span></div>
+          <div class="msg out">Рад слышать! Хорошей дороги 🚗<span class="t">14:27 ✓✓</span></div>
+        </div>
+      </div>
+      <div class="tg">
+        <div class="status"><span>21:05</span><span class="st-r"><svg width="14" height="11" viewBox="0 0 14 11"><path d="M7 10.2 L2.2 5.4 a7 7 0 0 1 9.6 0 Z" fill="#1c2421"/><path d="M7 10.2 L4.4 7.6 a3.8 3.8 0 0 1 5.2 0 Z" fill="#fff" opacity=".5"/></svg> Wi-Fi <span class="batt low"><i style="width:4px"></i></span></span></div>
+        <div class="hdr"><span class="ava" style="background:linear-gradient(135deg,#f48fb8,#d65b94)">М</span><div><div class="nm">Марина · Dolphin</div><div class="on">в сети</div></div><span class="dots">⋮</span></div>
+        <div class="body"><div class="date">21 січня</div>
+          <div class="msg">Наконец быстрая зарядка не сбрасывает сессию 🎉 Сегодня на трассе все четко<span class="t">20:58</span></div>
+          <div class="msg">И проценты идут ровно, без скачков. Спасибо вам!<span class="t">20:59</span></div>
+          <div class="msg out">Обращайтесь 🤝<span class="t">21:05 ✓✓</span></div>
+        </div>
+      </div>
+      <div class="rev"><div class="stars">★★★★★</div><p>«Исчезли рывки при старте с места, подвеска стала мягче отрабатывать мелкие неровности. Сделали все за полдня, перед выдачей прогнали тест всех систем.»</p><div class="who">Дмитрий · <b>BYD Han EV, 2022</b> · Одесса</div></div>
+      <div class="rev"><div class="stars">★★★★★</div><p>«Мультимедиа наконец перестала тормозить: экран не подвисает, камера 360 включается сразу, CarPlay больше не отваливается на ходу. Мелочь, а пользуешься каждый день.»</p><div class="who">Ирина · <b>BYD Atto 3, 2023</b> · Львов</div></div>
+      <div class="rev"><div class="stars">★★★★★</div><p>«Авто четыре года, думал, так и должно быть: жесткая подвеска, климат живет своей жизнью. После полного обновления блоков — будто другая машина. Климат больше не дует ледяным.»</p><div class="who">Андрей · <b>BYD Tang EV, 2022</b> · Днепр</div></div>
+    </div>
+    <div class="cta-band">
+      <div>
+        <h3>Ваш BYD может работать лучше уже на этой неделе</h3>
+        <p>Список доступных обновлений по VIN — бесплатно, без записи и обязательств</p>
+      </div>
+      <a class="btn" href="#vin-form">Проверить мое авто</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 7. FAQ (заперечення) ═══════════ -->
+<section style="background:var(--bg2)">
+  <div class="wrap" style="max-width:860px">
+    <div class="center"><span class="tag">Вопросы и ответы</span>
+      <h2>Что спрашивают перед записью</h2>
+    </div>
+    <div style="margin-top:30px">
+      <details><summary>Безопасно ли обновляться не у официального дилера?</summary><div class="a">Мы работаем через VDS — тот же дилерский инструмент и уровень доступа, что в официальном сервисном центре. Устанавливаются только штатные версии ПО производителя. Перед работами сохраняем текущие конфигурации.</div></details>
+      <details><summary>Какие авто вы берете в работу?</summary><div class="a">Все модели BYD и все суббренды: Denza, Yangwang, Fang Cheng Bao (Leopard). Авто с любого рынка — Китай, Европа, официальный импорт.</div></details>
+      <details><summary>Вы работаете только в Киеве?</summary><div class="a">Базируемся в Киеве, но работаем с клиентами по всей Украине и ближнему зарубежью. Напишите, откуда вы — менеджер подскажет удобный формат для вашего города.</div></details>
+      <details><summary>Мое авто привезено из Китая — есть специфика?</summary><div class="a">Это наш основной профиль. Для авто с китайского рынка доступен полный набор актуальных обновлений — тех самых, которые уже работают в Китае.</div></details>
+      <details><summary>Можно ли изменить язык интерфейса и настроить авто под Украину?</summary><div class="a">Да, в рамках услуги программирования: язык, региональные настройки, активация нужных функций. Уточните возможности для вашей модели у менеджера.</div></details>
+      <details><summary>Сколько это длится?</summary><div class="a">Диагностика — около часа. Полное обновление всех блоков — обычно 2–4 часа в зависимости от модели и количества обновлений. Чаще всего все делается за один визит.</div></details>
+      <details><summary>От чего зависит финальная цена?</summary><div class="a">От модели и объема работ: диагностика 50$, обновление всех блоков от 250$, программирование от 150$, калибровка от 100$. Точную цену фиксируем после диагностики — до начала работ, и она не меняется. Оплата официальная, по реквизитам ФОП, с полным пакетом документов.</div></details>
+      <details><summary>Что будет, если после обновления что-то работает не так?</summary><div class="a">После работ тестируем все системы. Если вопрос возникает уже после выдачи авто — вы на связи с мастером напрямую, диагностируем и решаем.</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 8. КРОСС-СЕЛЛ: запчасти ═══════════ -->
+<section class="parts-x">
+  <div class="wrap">
+    <div class="center"><span class="tag">Кстати</span>
+      <h2>Пока авто у нас — привезем все нужное из Китая</h2>
+      <p class="lead">Второе направление EVLine — оригинальные запчасти для китайских авто напрямую от дилеров</p>
+    </div>
+    <div class="grid3" style="margin-top:22px">
+      <div class="card"><h3>🔍 Подбор по VIN</h3><p>Оригинал и OEM — проверяем совместимость перед заказом</p></div>
+      <div class="card"><h3>✈️ Авиа от 14 дней</h3><p>Море — от 60 дней. Цена «под ключ» с растаможкой</p></div>
+      <div class="card"><h3>🔩 Даже один болт</h3><p>Привезем что угодно — от расходников до кузовных деталей</p></div>
+    </div>
+    <div class="center" style="margin-top:24px"><a class="btn" href="./">Запчасти из Китая →</a></div>
+  </div>
+</section>
+
+<!-- ═══════════ 9. ФІНАЛЬНА ФОРМА ═══════════ -->
+<section class="final" id="vin-form">
+  <div class="wrap">
+    <div class="grid2">
+      <div>
+        <span class="tag">Последний шаг</span>
+        <h2>Ваш BYD уже может работать лучше</h2>
+        <p class="lead">Для авто уже существуют обновления, которые улучшают работу систем — они просто не установлены. Отправьте VIN — бесплатно проверим, какие доступны именно для вашего авто.</p>
+        <div class="contact-list" style="margin-top:22px">
+          📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a><br>
+          ✈️ <a href="https://t.me/evline_support" target="_blank">Telegram-чат с менеджером</a><br>
+          ✉️ <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a><br>
+          📍 г. Киев, Оболонская набережная, 3, офис 1
+        </div>
+      </div>
+      <form class="leadbox" id="final-form" onsubmit="return submitLead('final-form')">
+        <span class="free-badge">Бесплатная проверка</span>
+        <h3>Узнайте, что можно улучшить в вашем BYD</h3>
+        <div class="row2">
+          <div><label>VIN-код</label><input name="vin" placeholder="17 символів" maxlength="17"></div>
+          <div><label>Модель и год</label><input name="model" placeholder="Seal AWD, 2024"></div>
+        </div>
+        <div class="row2">
+          <div><label>Телефон или @ник</label><input name="contact" placeholder="+380…" required></div>
+          <div><label>Где ответить?</label><select name="channel"><option>Telegram</option><option>Звонок</option><option>Email</option></select></div>
+        </div>
+        <button class="btn" type="submit">Проверить мое авто</button>
+        <p class="privacy">Отправляя форму, вы соглашаетесь на обработку данных</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>©2021–2026 EVLine — Все права защищены.<br><span style="font-size:12.5px;color:#6b7a72">ФОП Кухарчук Игорь Владимирович · ИНН 3816510874</span></div>
+    <div><a href="./">Запчасти из Китая</a> · <a href="zapchasti-kitajskih-avto/">Марки авто</a> · <a href="byd.html">Программирование BYD</a></div>
+  </div>
+</footer>
+
+<!-- мобильная sticky-панель -->
+<div class="mbar">
+  <a class="call" href="tel:+380935251024">📞 Позвонить</a>
+  <a class="tgb" href="https://t.me/evline_support" target="_blank">✈️ Telegram</a>
+</div>
+
+<div class="toast" id="toast">Сообщение скопировано — вставьте его в чат Telegram</div>
+
+<script>
+function buildMsg(f){
+  return "Добрый день! Хочу проверить или записаться на программирование BYD.\n"
+    +"VIN-код: "+(f.vin||"—")+"\n"
+    +"Модель и год: "+(f.model||"—")+"\n"
+    +"Что интересует: "+(f.need||"проверка доступных обновлений")+"\n"
+    +"Связь: "+(f.contact||"—")+" ("+(f.channel||"Telegram")+")\n"
+    +"Подскажите, пожалуйста, доступные обновления и стоимость.";
+}
+function openTelegramMsg(msg){
+  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
+  window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
+}
+function submitLead(formId){
+  var el=document.getElementById(formId);
+  function v(n){var x=el.querySelector('[name='+n+']');return x?x.value:''}
+  var f={vin:v('vin'),model:v('model'),need:v('need'),contact:v('contact'),channel:v('channel')};
+  // тут підключається отправка в CRM / на почту / в Telegram-бот
+  var msg=buildMsg(f);
+  var t=document.getElementById('toast');t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},4000);
+  openTelegramMsg(msg);
+  return false;
+}
+// клик по услуге: копируем готовый запрос и открываем Telegram
+function orderService(name){
+  var msg="Добрый день! Хочу записаться на услугу: "+name+".\nМодель и год: \nVIN-код: \nПодскажите, пожалуйста, ближайшее время для записи.";
+  var t=document.getElementById('toast');t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},4000);
+  openTelegramMsg(msg);
+}
+// показываем CTA в шапке только после первого блока
+(function(){
+  var hero=document.querySelector('.hero'),hc=document.querySelector('.hdr-cta');
+  if(!hero||!hc) return;
+  function updateStickyCta(){
+    var threshold=hero.offsetTop+hero.offsetHeight-80;
+    document.body.classList.toggle('sticky-cta-visible',window.scrollY>threshold);
+  }
+  updateStickyCta();
+  window.addEventListener('scroll',updateStickyCta,{passive:true});
+  window.addEventListener('resize',updateStickyCta);
+})();
+</script>
+</body>
+</html>
