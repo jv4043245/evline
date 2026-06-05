@@ -1,7 +1,7 @@
 /* Clean override layer for the parts funnel. Keep it scoped to avoid legacy layout bleed. */
 body.parts-page {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .brand-seo-page {

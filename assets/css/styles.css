@@ -22,7 +22,7 @@
 html {
   scroll-behavior: smooth;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -32,7 +32,7 @@ body {
   background: var(--paper);
   line-height: 1.55;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body.nav-open {
@@ -106,7 +106,8 @@ textarea {
 }
 
 .site-header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 100;
   background: #161616;
   border-bottom: 0;

@@ -50,7 +50,7 @@
     --radius:14px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{max-width:100%;overflow-x:hidden}
+  html,body{max-width:100%;overflow-x:clip}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.55}
   .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
   section{padding:54px 0}
@@ -79,8 +79,8 @@
   nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
   nav.main a.active,nav.main a:hover{color:#fff}
   .hdr-cta{display:flex;align-items:center;gap:10px;flex-shrink:0}
-  .hdr-cta .btn{font-size:14px;padding:11px 22px;transition:opacity .25s}
-  .hdr-cta.hide .btn{opacity:0;pointer-events:none}
+  .hdr-cta .btn{font-size:14px;padding:11px 22px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
+  body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
   /* ───────── hero (темний — програмна частина) ───────── */
   .hero{background:linear-gradient(160deg,var(--dark) 55%,#15241c);color:#fff;padding:44px 0 48px}
   .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:center}
@@ -629,12 +629,17 @@ function orderService(name){
   setTimeout(function(){t.classList.remove('show');},4000);
   openTelegramMsg(msg);
 }
-// ховаємо кнопку в шапці, поки hero-форма на екрані (щоб не дублювались)
+// показуємо CTA в шапці тільки після першого блоку
 (function(){
-  var hf=document.getElementById('hero-form'),hc=document.querySelector('.hdr-cta');
-  if(hf&&hc&&'IntersectionObserver' in window){
-    new IntersectionObserver(function(e){hc.classList.toggle('hide',e[0].isIntersecting)},{threshold:.15}).observe(hf);
+  var hero=document.querySelector('.hero'),hc=document.querySelector('.hdr-cta');
+  if(!hero||!hc) return;
+  function updateStickyCta(){
+    var threshold=hero.offsetTop+hero.offsetHeight-80;
+    document.body.classList.toggle('sticky-cta-visible',window.scrollY>threshold);
   }
+  updateStickyCta();
+  window.addEventListener('scroll',updateStickyCta,{passive:true});
+  window.addEventListener('resize',updateStickyCta);
 })();
 </script>
 </body>
