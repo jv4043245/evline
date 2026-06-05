@@ -81,7 +81,7 @@
   nav.main{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0}
   nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
   nav.main a.active,nav.main a:hover{color:#fff}
-  .language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);font-weight:800;font-size:12px;letter-spacing:.03em;cursor:pointer;user-select:none}.language-switch summary::-webkit-details-marker{display:none}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current="true"]{background:rgba(63,166,106,.18);color:#fff}
+  .language-switch{position:relative;display:inline-flex;align-items:center;z-index:60;margin:0;border:0;border-radius:0;background:transparent;overflow:visible}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current="true"]{background:rgba(63,166,106,.18);color:#fff}
   .hdr-cta{display:flex;gap:10px;align-items:center}
   .hdr-cta .btn{font-size:14px;padding:11px 22px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
   body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
@@ -214,6 +214,8 @@
   .byd h2{color:#fff}
   .byd .lead{color:#b9c4be}
   .byd .card{background:var(--dark2);border-color:#2a322e}
+  .byd a.card{display:block;color:inherit;text-decoration:none;cursor:pointer}
+  .byd a.card:hover{border-color:var(--green);box-shadow:0 18px 38px rgba(0,0,0,.22)}
   .byd .card h3{color:#fff;font-size:17px}
   .byd .card .pr{color:#7fd6a4;font-weight:800;font-size:15px;margin:4px 0}
   .byd .card p{color:#9aa6a0}
@@ -291,10 +293,10 @@
     </nav>
     <div class="hdr-cta">
       <details class="language-switch">
-        <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+        <summary aria-label="Змінити мову"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
         <div class="language-switch__menu">
-          <a href="../" lang="uk">Українська</a>
-          <a href="./" lang="ru" aria-current="true">Русский</a>
+          <a href="../index.html" lang="uk">Українська</a>
+          <a href="./index.html" lang="ru" aria-current="true">Русский</a>
         </div>
       </details>
       <a class="btn" href="#vin-form">Подобрать по VIN</a>
@@ -322,11 +324,11 @@
     <form class="leadbox" id="hero-form" onsubmit="return submitLead('hero-form')">
       <h3>Узнайте цену и срок за 30 минут</h3>
       <p class="small">Отправьте VIN — менеджер проверит совместимость и пришлет точную цену с доставкой «под ключ»</p>
-      <label>VIN-код (17 символов)</label>
+      <label>VIN-код</label>
       <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
       <label>Что нужно?</label>
       <input name="need" placeholder="Напр.: передний бампер, левая фара…">
-      <label>Телефон или @ник в Telegram</label>
+      <label>Телефон</label>
       <input name="contact" placeholder="+380…" required>
       <button class="btn" type="submit">Получить цену и срок</button>
       <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
@@ -475,10 +477,10 @@
     </div>
     <div class="warn">⚠️ По нашей статистике диагностик, до 90% авто в Украине ездят без актуальных обновлений блоков</div>
     <div class="grid4">
-      <div class="card"><h3>🔍 Диагностика систем</h3><div class="pr">50$</div><p>Проверяем все системы авто</p></div>
-      <div class="card" style="border-color:var(--green)"><h3>⚡ Обновление блоков</h3><div class="pr">от 250$</div><p>Актуальные версии систем — заказывают чаще всего</p></div>
-      <div class="card"><h3>⚙️ Программирование</h3><div class="pr">от 50$</div><p>Настройка под вас</p></div>
-      <div class="card"><h3>🧠 Калибровка</h3><div class="pr">от 100$</div><p>Стабильная работа систем</p></div>
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D1%8B%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%98%D0%BD%D1%82%D0%B5%D1%80%D0%B5%D1%81%D1%83%D0%B5%D1%82%20%D0%B4%D0%B8%D0%B0%D0%B3%D0%BD%D0%BE%D1%81%D1%82%D0%B8%D0%BA%D0%B0%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%20BYD.%20%D0%9F%D0%BE%D0%B4%D1%81%D0%BA%D0%B0%D0%B6%D0%B8%D1%82%D0%B5%2C%20%D0%BF%D0%BE%D0%B6%D0%B0%D0%BB%D1%83%D0%B9%D1%81%D1%82%D0%B0%2C%20%D1%87%D1%82%D0%BE%20%D0%BD%D1%83%D0%B6%D0%BD%D0%BE%20%D0%B4%D0%BB%D1%8F%20%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B8%20%D0%B0%D0%B2%D1%82%D0%BE%3F" target="_blank" rel="noopener"><h3>🔍 Диагностика систем</h3><div class="pr">50$</div><p>Проверяем все системы авто</p></a>
+      <a class="card" style="border-color:var(--green)" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D1%8B%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%98%D0%BD%D1%82%D0%B5%D1%80%D0%B5%D1%81%D1%83%D0%B5%D1%82%20%D0%BE%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%B1%D0%BB%D0%BE%D0%BA%D0%BE%D0%B2%20BYD.%20%D0%A5%D0%BE%D1%87%D1%83%20%D1%83%D0%B7%D0%BD%D0%B0%D1%82%D1%8C%2C%20%D0%BA%D0%B0%D0%BA%D0%B8%D0%B5%20%D0%BE%D0%B1%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F%20%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D1%8B%20%D0%B4%D0%BB%D1%8F%20%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚡ Обновление блоков</h3><div class="pr">от 250$</div><p>Актуальные версии систем — заказывают чаще всего</p></a>
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D1%8B%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%98%D0%BD%D1%82%D0%B5%D1%80%D0%B5%D1%81%D1%83%D0%B5%D1%82%20%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20BYD.%20%D0%9D%D1%83%D0%B6%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BF%D0%BE%20%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B5%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚙️ Программирование</h3><div class="pr">от 50$</div><p>Настройка под вас</p></a>
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D1%8B%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%98%D0%BD%D1%82%D0%B5%D1%80%D0%B5%D1%81%D1%83%D0%B5%D1%82%20%D0%BA%D0%B0%D0%BB%D0%B8%D0%B1%D1%80%D0%BE%D0%B2%D0%BA%D0%B0%20BYD.%20%D0%9D%D1%83%D0%B6%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20%D0%BF%D0%BE%20%D1%81%D1%82%D0%B0%D0%B1%D0%B8%D0%BB%D1%8C%D0%BD%D0%BE%D0%B9%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B5%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC." target="_blank" rel="noopener"><h3>🧠 Калибровка</h3><div class="pr">от 100$</div><p>Стабильная работа систем</p></a>
     </div>
     <div class="center" style="margin-top:30px">
       <a class="btn" href="byd.html">Проверить свое авто →</a>
@@ -510,7 +512,7 @@
         <label>Что нужно? Можно списком</label>
         <textarea name="need" rows="2" placeholder="Напр.: передний бампер, крепления, левая фара"></textarea>
         <div class="row2">
-          <div><label>Телефон или @ник</label><input name="contact" placeholder="+380…" required></div>
+          <div><label>Телефон</label><input name="contact" placeholder="+380…" required></div>
           <div><label>Где ответить?</label><select name="channel"><option>Telegram</option><option>Звонок</option><option>Email</option></select></div>
         </div>
         <button class="btn" type="submit">Отправить на подбор</button>
@@ -592,6 +594,22 @@ function submitLead(formId){
   lb.onclick=function(){lb.classList.remove('show')};
   document.querySelectorAll('.gal').forEach(function(g){
     g.onclick=function(){lb.querySelector('img').src=g.src;lb.classList.add('show')};
+  });
+})();
+// закрываем меню языка при клике вне него или Esc
+(function(){
+  function closeLanguageSwitches(except){
+    document.querySelectorAll('.language-switch[open]').forEach(function(switcher){
+      if(switcher!==except) switcher.removeAttribute('open');
+    });
+  }
+  document.addEventListener('click',function(event){
+    var target=event.target;
+    var current=target&&target.closest?target.closest('.language-switch'):null;
+    closeLanguageSwitches(current);
+  });
+  document.addEventListener('keydown',function(event){
+    if(event.key==='Escape') closeLanguageSwitches();
   });
 })();
 // показываем CTA в шапке только после первого блока

@@ -19,6 +19,22 @@ document.querySelectorAll("[data-year]").forEach((node) => {
   node.textContent = new Date().getFullYear();
 });
 
+function closeLanguageSwitches(except) {
+  document.querySelectorAll(".language-switch[open]").forEach((switcher) => {
+    if (switcher !== except) switcher.removeAttribute("open");
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  const currentSwitch = target instanceof Element ? target.closest(".language-switch") : null;
+  closeLanguageSwitches(currentSwitch);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeLanguageSwitches();
+});
+
 function trackingData() {
   const params = new URLSearchParams(window.location.search);
   return {

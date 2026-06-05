@@ -9,10 +9,29 @@ const siteUrl = "https://evline.com.ua";
 const ukPath = "запчастини-з-китаю/";
 const ruPath = "ru/zapchasti-iz-kitaya/";
 
-const altLinks = (currentPath) => `<link rel="canonical" href="${siteUrl}/${currentPath}">
-    <link rel="alternate" hreflang="uk-UA" href="${siteUrl}/${ukPath}">
-    <link rel="alternate" hreflang="ru-UA" href="${siteUrl}/${ruPath}">
-    <link rel="alternate" hreflang="x-default" href="${siteUrl}/${ukPath}">`;
+const organicUkPath = "";
+const organicRuPath = "ru/";
+
+const altLinks = (currentPath) => {
+  const canonicalPath = currentPath.startsWith("ru/") ? organicRuPath : organicUkPath;
+  return `<meta name="robots" content="noindex, follow">
+    <link rel="canonical" href="${siteUrl}/${canonicalPath}">
+    <link rel="alternate" hreflang="uk-UA" href="${siteUrl}/${organicUkPath}">
+    <link rel="alternate" hreflang="ru-UA" href="${siteUrl}/${organicRuPath}">
+    <link rel="alternate" hreflang="x-default" href="${siteUrl}/${organicUkPath}">`;
+};
+
+const techChatUrl = (message) => `https://t.me/evline_tech?text=${encodeURIComponent(message)}`;
+const techTelegramLinks = {
+  uaDiagnostics: techChatUrl("Добрий день! Цікавить діагностика систем BYD. Підкажіть, будь ласка, що потрібно для перевірки авто?"),
+  ruDiagnostics: techChatUrl("Добрый день! Интересует диагностика систем BYD. Подскажите, пожалуйста, что нужно для проверки авто?"),
+  uaUpdates: techChatUrl("Добрий день! Цікавить оновлення блоків BYD. Хочу дізнатися, які оновлення доступні для мого авто."),
+  ruUpdates: techChatUrl("Добрый день! Интересует обновление блоков BYD. Хочу узнать, какие обновления доступны для моего авто."),
+  uaProgramming: techChatUrl("Добрий день! Цікавить програмування BYD. Потрібна консультація по налаштуванню авто."),
+  ruProgramming: techChatUrl("Добрый день! Интересует программирование BYD. Нужна консультация по настройке авто."),
+  uaCalibration: techChatUrl("Добрий день! Цікавить калібрування BYD. Потрібна консультація по стабільній роботі систем."),
+  ruCalibration: techChatUrl("Добрый день! Интересует калибровка BYD. Нужна консультация по стабильной работе систем."),
+};
 
 const replaceMany = (html, pairs) => {
   let result = html;
@@ -32,11 +51,12 @@ const brandMarqueeMarkup = (label) => `      <section class="parts-brand-marquee
 const languageSwitch = (indent, currentLang, ukHref, ruHref) => {
   const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
   const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
+  const linkHref = (href) => (href.endsWith("/") ? `${href}index.html` : href);
   return `${indent}<details class="language-switch">
-${indent}  <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+${indent}  <summary aria-label="Змінити мову"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
 ${indent}  <div class="language-switch__menu">
-${indent}    <a href="${ukHref}" lang="uk"${ukCurrent}>Українська</a>
-${indent}    <a href="${ruHref}" lang="ru"${ruCurrent}>Русский</a>
+${indent}    <a href="${linkHref(ukHref)}" lang="uk"${ukCurrent}>Українська</a>
+${indent}    <a href="${linkHref(ruHref)}" lang="ru"${ruCurrent}>Русский</a>
 ${indent}  </div>
 ${indent}</details>`;
 };
@@ -47,7 +67,7 @@ const normalizeBrandMarquee = (html, label) =>
 const bumpAdLandingCss = (html) =>
   html
     .replace(/assets\/css\/styles\.css(?:\?[^"]*)?/g, "assets/css/styles.css?v=brand-marquee-1")
-    .replace(/assets\/css\/parts-clean\.css(?:\?[^"]*)?/g, "assets/css/parts-clean.css?v=language-switch-1");
+    .replace(/assets\/css\/parts-clean\.css(?:\?[^"]*)?/g, "assets/css/parts-clean.css?v=language-switch-3");
 
 const commonFixes = (html, prefix, currentPath) =>
   html
@@ -205,6 +225,10 @@ const ruPairs = [
   ["Не всі проблеми вирішуються запчастинами", "Не все проблемы решаются запчастями"],
   ["Часто причина — у програмному забезпеченні автомобіля. Для BYD є окрема воронка цифрового сервісу.", "Часто причина — в программном обеспечении автомобиля. Для BYD есть отдельная воронка цифрового сервиса."],
   ["До 90% авто в Україні їздять без актуальних оновлень", "До 90% авто в Украине ездят без актуальных обновлений"],
+  [techTelegramLinks.uaDiagnostics, techTelegramLinks.ruDiagnostics],
+  [techTelegramLinks.uaUpdates, techTelegramLinks.ruUpdates],
+  [techTelegramLinks.uaProgramming, techTelegramLinks.ruProgramming],
+  [techTelegramLinks.uaCalibration, techTelegramLinks.ruCalibration],
   ["Діагностика систем", "Диагностика систем"],
   ["Перевіряємо всі системи авто", "Проверяем все системы авто"],
   ["Найчастіше", "Чаще всего"],

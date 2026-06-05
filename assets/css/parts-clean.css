@@ -31,29 +31,57 @@ body.parts-page {
   z-index: 60;
   display: inline-flex;
   align-items: center;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
 .language-switch summary {
   display: inline-flex;
-  min-height: 36px;
   align-items: center;
-  gap: 7px;
-  padding: 0 12px;
+  justify-content: center;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  gap: 0;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   color: #d7e0dc;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.03em;
   list-style: none;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  overflow: hidden;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
 .language-switch summary::-webkit-details-marker {
   display: none;
+}
+
+.language-switch summary::before,
+.language-switch summary::after {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  content: none !important;
+}
+
+.language-switch__icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .language-switch[open] summary,
@@ -61,6 +89,7 @@ body.parts-page {
   border-color: #00a86b;
   background: rgba(0, 168, 107, 0.18);
   color: #fff;
+  transform: translateY(-1px);
 }
 
 .language-switch__menu {

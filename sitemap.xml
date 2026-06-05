@@ -20,25 +20,6 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
-  <!-- Paid traffic landing pages for ads and conversion testing; keep alongside home pages. -->
-  <url>
-    <loc>https://evline.com.ua/запчастини-з-китаю/</loc>
-    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/запчастини-з-китаю/" />
-    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-iz-kitaya/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/запчастини-з-китаю/" />
-    <lastmod>2026-06-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.98</priority>
-  </url>
-  <url>
-    <loc>https://evline.com.ua/ru/zapchasti-iz-kitaya/</loc>
-    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/запчастини-з-китаю/" />
-    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-iz-kitaya/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/запчастини-з-китаю/" />
-    <lastmod>2026-06-05</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.98</priority>
-  </url>
   <url>
     <loc>https://evline.com.ua/byd.html</loc>
     <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html" />

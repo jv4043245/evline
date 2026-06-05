@@ -5,16 +5,28 @@ import path from "node:path";
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
 const lastmod = "2026-06-05";
-const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);font-weight:800;font-size:12px;letter-spacing:.03em;cursor:pointer;user-select:none}.language-switch summary::-webkit-details-marker{display:none}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
+const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
+const techChatUrl = (message) => `https://t.me/evline_tech?text=${encodeURIComponent(message)}`;
+const techTelegramLinks = {
+  uaDiagnostics: techChatUrl("Добрий день! Цікавить діагностика систем BYD. Підкажіть, будь ласка, що потрібно для перевірки авто?"),
+  ruDiagnostics: techChatUrl("Добрый день! Интересует диагностика систем BYD. Подскажите, пожалуйста, что нужно для проверки авто?"),
+  uaUpdates: techChatUrl("Добрий день! Цікавить оновлення блоків BYD. Хочу дізнатися, які оновлення доступні для мого авто."),
+  ruUpdates: techChatUrl("Добрый день! Интересует обновление блоков BYD. Хочу узнать, какие обновления доступны для моего авто."),
+  uaProgramming: techChatUrl("Добрий день! Цікавить програмування BYD. Потрібна консультація по налаштуванню авто."),
+  ruProgramming: techChatUrl("Добрый день! Интересует программирование BYD. Нужна консультация по настройке авто."),
+  uaCalibration: techChatUrl("Добрий день! Цікавить калібрування BYD. Потрібна консультація по стабільній роботі систем."),
+  ruCalibration: techChatUrl("Добрый день! Интересует калибровка BYD. Нужна консультация по стабильной работе систем."),
+};
 
 function languageSwitch(indent, currentLang, ukHref, ruHref) {
   const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
   const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
+  const linkHref = (href) => (href.endsWith("/") ? `${href}index.html` : href);
   return `${indent}<details class="language-switch">
-${indent}  <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+${indent}  <summary aria-label="Змінити мову"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
 ${indent}  <div class="language-switch__menu">
-${indent}    <a href="${ukHref}" lang="uk"${ukCurrent}>Українська</a>
-${indent}    <a href="${ruHref}" lang="ru"${ruCurrent}>Русский</a>
+${indent}    <a href="${linkHref(ukHref)}" lang="uk"${ukCurrent}>Українська</a>
+${indent}    <a href="${linkHref(ruHref)}" lang="ru"${ruCurrent}>Русский</a>
 ${indent}  </div>
 ${indent}</details>`;
 }
@@ -325,10 +337,10 @@ const mainTranslations = [
   ["деталь у вас, авіа з Китаю", "деталь у вас, авиа из Китая"],
   ["Дізнайтеся ціну та строк за 30 хвилин", "Узнайте цену и срок за 30 минут"],
   ["Надішліть VIN — менеджер перевірить сумісність і надішле точну ціну з доставкою «під ключ»", "Отправьте VIN — менеджер проверит совместимость и пришлет точную цену с доставкой «под ключ»"],
-  ["VIN-код (17 символів)", "VIN-код (17 символов)"],
+  ["VIN-код", "VIN-код"],
   ["Що потрібно?", "Что нужно?"],
   ["Напр.: передній бампер, фара ліва…", "Напр.: передний бампер, левая фара…"],
-  ["Телефон або @нік у Telegram", "Телефон или @ник в Telegram"],
+  ["Телефон", "Телефон"],
   ["Отримати ціну та строк", "Получить цену и срок"],
   ["Без спаму. Відповідаємо в робочий час до 30 хв.", "Без спама. Отвечаем в рабочее время до 30 минут."],
   ["запчастин привезено", "запчастей привезено"],
@@ -420,6 +432,10 @@ const mainTranslations = [
   ["Не всі проблеми вирішуються запчастинами", "Не все проблемы решаются запчастями"],
   ["Часто причина — у програмному забезпеченні автомобіля", "Часто причина — в программном обеспечении автомобиля"],
   ["За нашою статистикою діагностик, до 90% авто в Україні їздять без актуальних оновлень блоків", "По нашей статистике диагностик, до 90% авто в Украине ездят без актуальных обновлений блоков"],
+  [techTelegramLinks.uaDiagnostics, techTelegramLinks.ruDiagnostics],
+  [techTelegramLinks.uaUpdates, techTelegramLinks.ruUpdates],
+  [techTelegramLinks.uaProgramming, techTelegramLinks.ruProgramming],
+  [techTelegramLinks.uaCalibration, techTelegramLinks.ruCalibration],
   ["Діагностика систем", "Диагностика систем"],
   ["Перевіряємо всі системи авто", "Проверяем все системы авто"],
   ["Оновлення блоків", "Обновление блоков"],
@@ -440,7 +456,7 @@ const mainTranslations = [
   ["VIN-код", "VIN-код"],
   ["Що потрібно? Можна списком", "Что нужно? Можно списком"],
   ["Напр.: бампер передній, кріплення, фара ліва", "Напр.: передний бампер, крепления, левая фара"],
-  ["Телефон або @нік", "Телефон или @ник"],
+  ["Телефон", "Телефон"],
   ["Де відповісти?", "Где ответить?"],
   ["Дзвінок", "Звонок"],
   ["Надіслати на підбір", "Отправить на подбор"],
@@ -494,10 +510,10 @@ const bydTranslations = [
   ["Безкоштовно", "Бесплатно"],
   ["Дізнайтеся, які оновлення доступні для вашого авто", "Узнайте, какие обновления доступны для вашего авто"],
   ["Надішліть VIN — отримаєте список доступних оновлень по блоках: що застаріло і що зміниться після оновлення", "Отправьте VIN — получите список доступных обновлений по блокам: что устарело и что изменится после обновления"],
-  ["VIN-код (17 символів)", "VIN-код (17 символов)"],
+  ["VIN-код", "VIN-код"],
   ["Модель і рік", "Модель и год"],
   ["Напр.: Song Plus DM-i, 2023", "Напр.: Song Plus DM-i, 2023"],
-  ["Телефон або @нік у Telegram", "Телефон или @ник в Telegram"],
+  ["Телефон", "Телефон"],
   ["Без зобов'язань. Відповідаємо в робочий час до 30 хв.", "Без обязательств. Отвечаем в рабочее время до 30 минут."],
   ["авто оновлено", "авто обновлено"],
   ["блоків перепрошито", "блоков перепрошито"],
@@ -671,7 +687,7 @@ const bydTranslations = [
   ["м. Київ, Оболонська набережна, 3, офіс 1", "г. Киев, Оболонская набережная, 3, офис 1"],
   ["Безкоштовна перевірка", "Бесплатная проверка"],
   ["Дізнайтеся, що можна покращити у вашому BYD", "Узнайте, что можно улучшить в вашем BYD"],
-  ["Телефон або @нік", "Телефон или @ник"],
+  ["Телефон", "Телефон"],
   ["Де відповісти?", "Где ответить?"],
   ["Дзвінок", "Звонок"],
   ["Надсилаючи форму, ви погоджуєтесь на обробку даних", "Отправляя форму, вы соглашаетесь на обработку данных"],
@@ -933,8 +949,8 @@ function brandPageRu(brand) {
     <meta name="twitter:description" content="${escapeHtml(description)}">
     <meta name="twitter:image" content="${siteUrl}/assets/images/seo-photos/${brand.photo}">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
-    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-1">
-    <script src="../../assets/js/main.js?v=telegram-2" defer></script>
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
+    <script src="../../assets/js/main.js?v=language-switch-close-1" defer></script>
     <script type="application/ld+json">${ruJsonLd(brand)}</script>
   </head>
   <body class="parts-page brand-seo-page">
@@ -1099,8 +1115,8 @@ function hubPageRu() {
     <meta property="og:image" content="${siteUrl}/assets/images/oem-parts-visual.jpg">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
-    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-1">
-    <script src="../../assets/js/main.js?v=telegram-2" defer></script>
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
+    <script src="../../assets/js/main.js?v=language-switch-close-1" defer></script>
     <script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
