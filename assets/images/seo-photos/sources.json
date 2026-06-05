@@ -1,0 +1,116 @@
+{
+  "byd": {
+    "brand": "BYD",
+    "model_page": "BYD Song Plus",
+    "source": "https://en.wikipedia.org/wiki/BYD_Song_Plus",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/2023_BYD_Song_Plus_DM-i_%28front%29.jpg/1920px-2023_BYD_Song_Plus_DM-i_%28front%29.jpg"
+  },
+  "zeekr": {
+    "brand": "ZEEKR",
+    "model_page": "Zeekr 001",
+    "source": "https://en.wikipedia.org/wiki/Zeekr_001",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/2022_Zeekr_001_%28front%29.jpg/1920px-2022_Zeekr_001_%28front%29.jpg"
+  },
+  "xiaomi": {
+    "brand": "Xiaomi",
+    "model_page": "Xiaomi SU7",
+    "source": "https://en.wikipedia.org/wiki/Xiaomi_SU7",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/%28CHN-Shanghai%29_Private_Xiaomi_SU7_%E6%B2%AAA7WE106_2024-11-24.jpg/1920px-%28CHN-Shanghai%29_Private_Xiaomi_SU7_%E6%B2%AAA7WE106_2024-11-24.jpg"
+  },
+  "nio": {
+    "brand": "NIO",
+    "model_page": "Nio ET5",
+    "source": "https://en.wikipedia.org/wiki/Nio_ET5",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/NIO_ET5_IMG_8291.jpg/1920px-NIO_ET5_IMG_8291.jpg"
+  },
+  "xpeng": {
+    "brand": "XPENG",
+    "model_page": "XPeng P7",
+    "source": "https://en.wikipedia.org/wiki/XPeng_P7",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/0/06/XPeng_P7_II_MY2025_IMG03.jpg"
+  },
+  "aito": {
+    "brand": "AITO",
+    "model_page": "AITO M7",
+    "source": "https://en.wikipedia.org/wiki/AITO_M7",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/AITO_M7_II_008.jpg/1920px-AITO_M7_II_008.jpg"
+  },
+  "avatr": {
+    "brand": "AVATR",
+    "model_page": "Avatr 11",
+    "source": "https://en.wikipedia.org/wiki/Avatr_11",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/2022_Avatr_11_%28front%29.jpg/1920px-2022_Avatr_11_%28front%29.jpg"
+  },
+  "lynk-co": {
+    "brand": "Lynk & Co",
+    "model_page": "Lynk & Co 01",
+    "source": "https://en.wikipedia.org/wiki/Lynk_%26_Co_01",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/2018_Lynk_%26_Co_01%2C_front_8.4.18.jpg/1920px-2018_Lynk_%26_Co_01%2C_front_8.4.18.jpg"
+  },
+  "denza": {
+    "brand": "Denza",
+    "model_page": "Denza D9",
+    "source": "https://en.wikipedia.org/wiki/Denza_D9",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Denza_D9_DM-i_IAA_2025_DSC_2042.jpg/1920px-Denza_D9_DM-i_IAA_2025_DSC_2042.jpg"
+  },
+  "leapmotor": {
+    "brand": "Leapmotor",
+    "model_page": "Leapmotor C11",
+    "source": "https://en.wikipedia.org/wiki/Leapmotor_C11",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/2020_Leapmotor_C11_%28front%29.jpg/1920px-2020_Leapmotor_C11_%28front%29.jpg"
+  },
+  "li-auto": {
+    "brand": "Li Auto",
+    "model_page": "Li L9",
+    "source": "https://en.wikipedia.org/wiki/Li_L9",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Li_Auto_L9_IMG001.jpg/1920px-Li_Auto_L9_IMG001.jpg"
+  },
+  "deepal": {
+    "brand": "Deepal",
+    "model_page": "Deepal S07",
+    "source": "https://en.wikipedia.org/wiki/Deepal_S07",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/2023_Chang%27an_Shenlan_S7.jpg/1920px-2023_Chang%27an_Shenlan_S7.jpg"
+  },
+  "voyah": {
+    "brand": "Voyah",
+    "model_page": "Voyah Free",
+    "source": "https://en.wikipedia.org/wiki/Voyah_Free",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/%28CHN-Shanghai%29_Showcar_Voyah_Free%2B_No-plate_2025-12-21.jpg/1920px-%28CHN-Shanghai%29_Showcar_Voyah_Free%2B_No-plate_2025-12-21.jpg"
+  },
+  "geely": {
+    "brand": "Geely",
+    "model_page": "Geely Galaxy E8",
+    "source": "https://en.wikipedia.org/wiki/Geely_Galaxy_E8",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Geely_Galaxy_E8_20231120_%28cropped%29.jpg/1920px-Geely_Galaxy_E8_20231120_%28cropped%29.jpg"
+  },
+  "changan": {
+    "brand": "Changan",
+    "model_page": "Changan UNI-K",
+    "source": "https://en.wikipedia.org/wiki/Changan_UNI-K",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Changan_UNI-K_001.jpg/1920px-Changan_UNI-K_001.jpg"
+  },
+  "gac-aion": {
+    "brand": "GAC Aion",
+    "model_page": "Aion Y",
+    "source": "https://en.wikipedia.org/wiki/Aion_Y",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/2021_GAC_Aion_Y_%28front%29.jpg/1920px-2021_GAC_Aion_Y_%28front%29.jpg"
+  },
+  "hongqi": {
+    "brand": "Hongqi",
+    "model_page": "Hongqi E-HS9",
+    "source": "https://en.wikipedia.org/wiki/Hongqi_E-HS9",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Hongqi_E-HS9_IMG_0753_%28cropped%29.jpg/1920px-Hongqi_E-HS9_IMG_0753_%28cropped%29.jpg"
+  },
+  "omoda-jaecoo-chery": {
+    "brand": "Omoda, Jaecoo, Chery",
+    "model_page": "Omoda C5",
+    "source": "https://en.wikipedia.org/wiki/Omoda_C5",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/2023_Omoda_C5_front_view.png/1920px-2023_Omoda_C5_front_view.png"
+  },
+  "tank-wey-ora": {
+    "brand": "Tank, Wey, Ora",
+    "model_page": "GWM Tank 300",
+    "source": "https://en.wikipedia.org/wiki/GWM_Tank_300",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/2020_TANK_300.jpg/1920px-2020_TANK_300.jpg"
+  }
+}

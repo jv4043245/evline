@@ -46,6 +46,15 @@ function setFormMessage(form, message, isError = false) {
   node.style.color = isError ? "#fecaca" : "rgba(255, 255, 255, 0.78)";
 }
 
+function openTelegramMessage(message) {
+  const text = String(message || "").trim();
+  if (!text) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+  window.open(`https://t.me/evline_support?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+}
+
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -54,12 +63,15 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
     const vin = String(data.vin || "").trim().toUpperCase();
     const part = String(data.part || "").trim();
 
-    const lines = ["Запит на підбір запчастини:"];
-    lines.push(`Модель авто: ${car || "-"}`);
-    if (vin) lines.push(`VIN: ${vin}`);
-    lines.push(`Запчастина: ${part || "-"}`);
+    const lines = [
+      "Добрий день! Хочу підібрати запчастину.",
+      `Модель авто: ${car || "-"}`,
+      `VIN-код: ${vin || "-"}`,
+      `Що потрібно: ${part || "-"}`,
+      "Підкажіть, будь ласка, ціну та строк доставки.",
+    ];
 
-    window.open(`https://t.me/evline_support?text=${encodeURIComponent(lines.join("\n"))}`, "_blank", "noopener");
+    openTelegramMessage(lines.join("\n"));
   });
 });
 
@@ -100,9 +112,8 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       ];
       if (payload.part) lines.push(`Запчастина: ${payload.part}`);
       lines.push(`Що потрібно: ${payload.message || "-"}`);
-      const text = encodeURIComponent(lines.join("\n"));
       setFormMessage(form, "Зараз не вдалося зберегти заявку в CRM. Відкриваю Telegram як резервний канал.", true);
-      window.open(`https://t.me/evline_support?text=${text}`, "_blank", "noopener");
+      openTelegramMessage(lines.join("\n"));
     } finally {
       if (button) {
         button.disabled = false;

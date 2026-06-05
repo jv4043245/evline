@@ -127,6 +127,12 @@
   .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
   .ticker span{display:inline-block;font-size:26px;font-weight:600;color:var(--green-d);padding-right:60px;animation:tick 28s linear infinite}
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .brand-seo-strip{padding:28px 0;background:#fff;border-top:1px solid var(--line)}
+  .brand-seo-strip h2{font-size:24px;color:var(--green-d);margin-bottom:6px}
+  .brand-seo-strip .lead{max-width:560px;font-size:15px}
+  .brand-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
+  .brand-links a{display:inline-flex;min-height:36px;align-items:center;padding:0 13px;border:1px solid #cde7d8;border-radius:999px;background:#f7fbf8;color:var(--green-d);font-size:13px;font-weight:750;text-decoration:none;transition:.2s}
+  .brand-links a:hover{background:var(--green-l);transform:translateY(-2px)}
   /* categories — тонкі горизонтальні плитки 4-в-ряд */
   .cat .grid2{grid-template-columns:repeat(4,1fr);gap:10px}
   .cat .card{display:flex;flex-direction:row;gap:11px;align-items:center;padding:12px 14px}
@@ -274,7 +280,6 @@
     <a class="logo" href="index.html"><img src="assets/logo.svg" alt="EVLine — запчастини з Китаю" style="height:52px;display:block"></a>
     <nav class="main">
       <a href="index.html" class="active">Запчастини з Китаю</a>
-      <a href="zapchastyny-kytajskyh-avto/">Марки авто</a>
       <a href="byd.html">Програмування BYD</a>
     </nav>
     <div class="hdr-cta">
@@ -317,26 +322,6 @@
 
 <!-- стрічка брендів -->
 <div class="ticker"><span><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i></span></div>
-
-<!-- сторінки за марками -->
-<section style="padding:38px 0;background:#fff">
-  <div class="wrap">
-    <div class="center"><span class="tag">Марки авто</span>
-      <h2>Запчастини для китайських авто за марками</h2>
-      <p class="lead">Оберіть свою марку — ціни, строки та особливості підбору для кожного бренда.</p>
-    </div>
-    <div class="grid4" style="margin-top:24px">
-      <a class="card" href="zapchastyny-byd/" style="text-decoration:none"><h3>BYD</h3><p>Song Plus · Seal · Han · Tang</p></a>
-      <a class="card" href="zapchastyny-zeekr/" style="text-decoration:none"><h3>ZEEKR</h3><p>001 · 007 · X · 009</p></a>
-      <a class="card" href="zapchastyny-xiaomi/" style="text-decoration:none"><h3>Xiaomi</h3><p>SU7 · SU7 Pro · SU7 Max</p></a>
-      <a class="card" href="zapchastyny-li-auto/" style="text-decoration:none"><h3>Li Auto</h3><p>L6 · L7 · L8 · L9</p></a>
-      <a class="card" href="zapchastyny-nio/" style="text-decoration:none"><h3>NIO</h3><p>ES6 · ES8 · ET5 · ET7</p></a>
-      <a class="card" href="zapchastyny-xpeng/" style="text-decoration:none"><h3>XPENG</h3><p>P7 · G6 · G9 · X9</p></a>
-      <a class="card" href="zapchastyny-aito/" style="text-decoration:none"><h3>AITO</h3><p>M5 · M7 · M9</p></a>
-      <a class="card" href="zapchastyny-kytajskyh-avto/" style="text-decoration:none"><h3>Усі марки →</h3><p>Повний список брендів</p></a>
-    </div>
-  </div>
-</section>
 
 <!-- лічильники довіри -->
 <div class="stats">
@@ -521,6 +506,27 @@
   </div>
 </section>
 
+<!-- SEO-навігація за марками: нижче основної воронки, без відволікання у шапці -->
+<section class="brand-seo-strip" aria-label="Сторінки запчастин за марками авто">
+  <div class="wrap">
+    <div class="center"><span class="tag">За марками</span>
+      <h2>Потрібна конкретна марка?</h2>
+      <p class="lead">Окремі сторінки для підбору запчастин по VIN. Основна дія та сама — надіслати VIN і назву деталі менеджеру.</p>
+    </div>
+    <div class="brand-links">
+      <a href="zapchastyny-byd/">BYD</a>
+      <a href="zapchastyny-zeekr/">ZEEKR</a>
+      <a href="zapchastyny-xiaomi/">Xiaomi</a>
+      <a href="zapchastyny-li-auto/">Li Auto</a>
+      <a href="zapchastyny-nio/">NIO</a>
+      <a href="zapchastyny-xpeng/">XPENG</a>
+      <a href="zapchastyny-aito/">AITO</a>
+      <a href="zapchastyny-avatr/">AVATR</a>
+      <a href="zapchastyny-kytajskyh-avto/">Усі марки</a>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div>©2021–2026 EVLine — Усі права захищено.<br><span style="font-size:12.5px;color:#6b7a72">ФОП Кухарчук Ігор Володимирович · ІПН 3816510874</span></div>
@@ -538,11 +544,16 @@
 
 <script>
 function buildMsg(f){
-  return "Вітаю! Заявка з сайту EVLine:\n"
-    +"• VIN: "+(f.vin||"—")+"\n"
-    +"• Що потрібно: "+(f.need||"—")+"\n"
-    +"• Ім'я: "+(f.name||"—")+"\n"
-    +"• Зв'язок: "+(f.contact||"—")+" ("+(f.channel||"Telegram")+")";
+  return "Добрий день! Хочу підібрати запчастину.\n"
+    +"VIN-код: "+(f.vin||"—")+"\n"
+    +"Що потрібно: "+(f.need||"—")+"\n"
+    +(f.name?"Ім'я: "+f.name+"\n":"")
+    +"Зв'язок: "+(f.contact||"—")+" ("+(f.channel||"Telegram")+")\n"
+    +"Підкажіть, будь ласка, ціну та строк доставки.";
+}
+function openTelegramMsg(msg){
+  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
+  window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 function submitLead(formId){
   var el=document.getElementById(formId);
@@ -555,10 +566,9 @@ function submitLead(formId){
   };
   // тут підключається відправка в CRM / на пошту / у Telegram-бот
   var msg=buildMsg(f);
-  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
   var t=document.getElementById('toast');t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},4000);
-  window.open('https://t.me/evline_support','_blank');
+  openTelegramMsg(msg);
   return false;
 }
 // лайтбокс для фото галереї

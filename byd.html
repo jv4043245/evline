@@ -304,7 +304,6 @@
     <a class="logo" href="index.html"><img src="assets/logo.svg" alt="EVLine" style="height:52px;display:block"></a>
     <nav class="main">
       <a href="index.html">Запчастини з Китаю</a>
-      <a href="zapchastyny-kytajskyh-avto/">Марки авто</a>
       <a href="byd.html" class="active">Програмування BYD</a>
     </nav>
     <div class="hdr-cta">
@@ -601,30 +600,34 @@
 
 <script>
 function buildMsg(f){
-  return "Вітаю! Заявка з сайту EVLine (програмування BYD):\n"
-    +"• VIN: "+(f.vin||"—")+"\n"
-    +"• Модель і рік: "+(f.model||"—")+"\n"
-    +"• Що цікавить: "+(f.need||"перевірка доступних оновлень")+"\n"
-    +"• Зв'язок: "+(f.contact||"—")+" ("+(f.channel||"Telegram")+")";
+  return "Добрий день! Хочу перевірити або записатися на програмування BYD.\n"
+    +"VIN-код: "+(f.vin||"—")+"\n"
+    +"Модель і рік: "+(f.model||"—")+"\n"
+    +"Що цікавить: "+(f.need||"перевірка доступних оновлень")+"\n"
+    +"Зв'язок: "+(f.contact||"—")+" ("+(f.channel||"Telegram")+")\n"
+    +"Підкажіть, будь ласка, доступні оновлення та вартість.";
+}
+function openTelegramMsg(msg){
+  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
+  window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 function submitLead(formId){
   var el=document.getElementById(formId);
   function v(n){var x=el.querySelector('[name='+n+']');return x?x.value:''}
   var f={vin:v('vin'),model:v('model'),need:v('need'),contact:v('contact'),channel:v('channel')};
   // тут підключається відправка в CRM / на пошту / у Telegram-бот
-  if(navigator.clipboard){navigator.clipboard.writeText(buildMsg(f));}
+  var msg=buildMsg(f);
   var t=document.getElementById('toast');t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},4000);
-  window.open('https://t.me/evline_support','_blank');
+  openTelegramMsg(msg);
   return false;
 }
 // клік по послузі: копіюємо готовий запит і відкриваємо Telegram
 function orderService(name){
-  var msg="Вітаю! Хочу записатися на послугу: "+name+".\nМоє авто: (модель, рік). VIN надішлю в чаті.";
-  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
+  var msg="Добрий день! Хочу записатися на послугу: "+name+".\nМодель і рік: \nVIN-код: \nПідкажіть, будь ласка, найближчий час для запису.";
   var t=document.getElementById('toast');t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},4000);
-  window.open('https://t.me/evline_support','_blank');
+  openTelegramMsg(msg);
 }
 // ховаємо кнопку в шапці, поки hero-форма на екрані (щоб не дублювались)
 (function(){
