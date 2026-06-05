@@ -574,7 +574,7 @@ function submitLead(formId){
 }
 // лайтбокс для фото галереї
 (function(){
-  var lb=document.createElement('div');lb.className='lb';lb.innerHTML='<img alt="Фото запчастини">';
+  var lb=document.createElement('div');lb.className='lb';lb.innerHTML='<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Фото запчастини">';
   document.body.appendChild(lb);
   lb.onclick=function(){lb.classList.remove('show')};
   document.querySelectorAll('.gal').forEach(function(g){
