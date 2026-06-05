@@ -29,13 +29,25 @@ const brandMarqueeMarkup = (label) => `      <section class="parts-brand-marquee
         </div>
       </section>`;
 
+const languageSwitch = (indent, currentLang, ukHref, ruHref) => {
+  const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
+  const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
+  return `${indent}<details class="language-switch">
+${indent}  <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+${indent}  <div class="language-switch__menu">
+${indent}    <a href="${ukHref}" lang="uk"${ukCurrent}>Українська</a>
+${indent}    <a href="${ruHref}" lang="ru"${ruCurrent}>Русский</a>
+${indent}  </div>
+${indent}</details>`;
+};
+
 const normalizeBrandMarquee = (html, label) =>
   html.replace(/      <section class="parts-brand-marquee"[\s\S]*?      <\/section>/, brandMarqueeMarkup(label));
 
 const bumpAdLandingCss = (html) =>
   html
     .replace(/assets\/css\/styles\.css(?:\?[^"]*)?/g, "assets/css/styles.css?v=brand-marquee-1")
-    .replace(/assets\/css\/parts-clean\.css(?:\?[^"]*)?/g, "assets/css/parts-clean.css?v=brand-marquee-1");
+    .replace(/assets\/css\/parts-clean\.css(?:\?[^"]*)?/g, "assets/css/parts-clean.css?v=language-switch-1");
 
 const commonFixes = (html, prefix, currentPath) =>
   html
@@ -248,7 +260,7 @@ const ukCopyUpdates = [
 
 let ukHtml = commonFixes(sourceHtml, "../", ukPath)
   .replace('href="../" aria-current="page"', 'href="../"')
-  .replace(/<div class="header-actions">\n\s*/m, '<div class="header-actions">\n          <a class="language-link" href="../ru/zapchasti-iz-kitaya/" lang="ru">RU</a>\n          ');
+  .replace(/<div class="header-actions">\n\s*/m, `<div class="header-actions">\n${languageSwitch("          ", "uk", "./", "../ru/zapchasti-iz-kitaya/")}\n          `);
 ukHtml = replaceMany(ukHtml, ukCopyUpdates);
 ukHtml = normalizeBrandMarquee(ukHtml, "Марки китайських авто");
 ukHtml = bumpAdLandingCss(ukHtml);
@@ -256,7 +268,7 @@ ukHtml = bumpAdLandingCss(ukHtml);
 let ruHtml = commonFixes(sourceHtml, "../../", ruPath)
   .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, () => ruJson)
   .replace('href="../" aria-current="page"', 'href="../"')
-  .replace(/<div class="header-actions">\n\s*/m, '<div class="header-actions">\n          <a class="language-link" href="../../запчастини-з-китаю/" lang="uk">UA</a>\n          ');
+  .replace(/<div class="header-actions">\n\s*/m, `<div class="header-actions">\n${languageSwitch("          ", "ru", "../../запчастини-з-китаю/", "./")}\n          `);
 
 ruHtml = replaceMany(ruHtml, ruPairs)
   .replace(/href="\.\.\/byd\.html"/g, 'href="../byd.html"')

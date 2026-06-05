@@ -81,7 +81,7 @@
   nav.main{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0}
   nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
   nav.main a.active,nav.main a:hover{color:#fff}
-  .lang-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;text-decoration:none;font-weight:800;font-size:12px;letter-spacing:.04em}.lang-link:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}
+  .language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);font-weight:800;font-size:12px;letter-spacing:.03em;cursor:pointer;user-select:none}.language-switch summary::-webkit-details-marker{display:none}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current="true"]{background:rgba(63,166,106,.18);color:#fff}
   .hdr-cta{display:flex;align-items:center;gap:10px;flex-shrink:0}
   .hdr-cta .btn{font-size:14px;padding:11px 22px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
   body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
@@ -208,7 +208,8 @@
     header.site .logo img{height:40px}
     nav.main{order:3;width:100%;gap:6px}
     nav.main a{min-height:32px;margin:0 6px;font-size:12px;letter-spacing:.02em}
-    .hdr-cta{display:none}
+    .hdr-cta{display:flex}
+    .hdr-cta .btn{display:none}
     .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
     .mbar a{flex:1;text-align:center;font-weight:700;font-size:14.5px;padding:12px;border-radius:999px;text-decoration:none}
     .mbar .call{background:var(--green-l);color:var(--green-d)}
@@ -309,7 +310,8 @@
     nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
     nav.main::-webkit-scrollbar{display:none}
     nav.main a{flex:0 0 auto}
-    .hdr-cta{display:none}
+    .hdr-cta{display:flex}
+    .hdr-cta .btn{display:none}
     .tl,.gbar .items{grid-template-columns:1fr}
   }
 </style>
@@ -326,7 +328,13 @@
       <a href="byd.html" class="active">Программирование BYD</a>
     </nav>
     <div class="hdr-cta">
-      <a class="lang-link" href="../byd.html" lang="uk">UA</a>
+      <details class="language-switch">
+        <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+        <div class="language-switch__menu">
+          <a href="../byd.html" lang="uk">Українська</a>
+          <a href="byd.html" lang="ru" aria-current="true">Русский</a>
+        </div>
+      </details>
       <a class="btn" href="#vin-form">Проверить обновления</a>
     </div>
   </div>

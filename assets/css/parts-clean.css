@@ -26,27 +26,71 @@ body.parts-page {
   text-align: center;
 }
 
-.language-link {
+.language-switch {
+  position: relative;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+}
+
+.language-switch summary {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
-  justify-content: center;
+  gap: 7px;
   padding: 0 12px;
-  border: 1px solid rgba(0, 168, 107, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  color: #17633a;
-  background: #f5fbf7;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d7e0dc;
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  letter-spacing: 0.03em;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
-.language-link:hover {
-  transform: translateY(-1px);
+.language-switch summary::-webkit-details-marker {
+  display: none;
+}
+
+.language-switch[open] summary,
+.language-switch summary:hover {
   border-color: #00a86b;
-  background: #eef8f1;
+  background: rgba(0, 168, 107, 0.18);
+  color: #fff;
+}
+
+.language-switch__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 162px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: #151b18;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.language-switch__menu a {
+  display: block;
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: #d7e0dc;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-transform: none;
+}
+
+.language-switch__menu a:hover,
+.language-switch__menu a[aria-current="true"] {
+  background: rgba(0, 168, 107, 0.18);
+  color: #fff;
 }
 
 .brand-seo-hero {

@@ -5,6 +5,30 @@ import path from "node:path";
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
 const lastmod = "2026-06-05";
+const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);font-weight:800;font-size:12px;letter-spacing:.03em;cursor:pointer;user-select:none}.language-switch summary::-webkit-details-marker{display:none}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
+
+function languageSwitch(indent, currentLang, ukHref, ruHref) {
+  const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
+  const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
+  return `${indent}<details class="language-switch">
+${indent}  <summary><span aria-hidden="true">🌐</span><span>Мова</span></summary>
+${indent}  <div class="language-switch__menu">
+${indent}    <a href="${ukHref}" lang="uk"${ukCurrent}>Українська</a>
+${indent}    <a href="${ruHref}" lang="ru"${ruCurrent}>Русский</a>
+${indent}  </div>
+${indent}</details>`;
+}
+
+function replaceLanguageSwitch(html, currentLang, ukHref, ruHref) {
+  const pattern = /(?<indent>[ \t]*)<details class="language-switch">[\s\S]*?<\/details>|(?<oldIndent>[ \t]*)<a class="(?:lang-link|language-link)" href="[^"]*" lang="(?:uk|ru)">(?:UA|RU)<\/a>/;
+  if (pattern.test(html)) {
+    return html.replace(pattern, (...args) => {
+      const groups = args.at(-1);
+      return languageSwitch(groups.indent ?? groups.oldIndent ?? "", currentLang, ukHref, ruHref);
+    });
+  }
+  return html;
+}
 
 const brands = [
   {
@@ -751,8 +775,9 @@ function prepareStandaloneRu(html, kind) {
   result = result
     .replace(/href="zapchastyny-kytajskyh-avto\/"/g, 'href="zapchasti-kitajskih-avto/"')
     .replace(/href="byd\.html"/g, 'href="byd.html"')
-    .replace(/href="ru\/"/g, isByd ? 'href="../byd.html"' : 'href="../"')
-    .replace(/<a class="lang-link" href="[^"]*" lang="ru">RU<\/a>/g, `<a class="lang-link" href="${isByd ? "../byd.html" : "../"}" lang="uk">UA</a>`);
+    .replace(/href="ru\/"/g, isByd ? 'href="../byd.html"' : 'href="../"');
+
+  result = replaceLanguageSwitch(result, "ru", isByd ? "../byd.html" : "../", isByd ? "byd.html" : "./");
 
   return result;
 }
@@ -830,7 +855,7 @@ function ruJsonLd(brand) {
   });
 }
 
-function ruHeader(current = "") {
+function ruHeader(current = "", ukHref = "../../") {
   return `<div class="topbar">
       <div class="container topbar__inner topbar__inner--center">
         <div><span aria-hidden="true">📞</span> <a href="tel:+380935251024">+38 (093) 525-10-24</a> <span aria-hidden="true">✉️</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
@@ -847,7 +872,7 @@ function ruHeader(current = "") {
           <a href="../byd.html"${current === "byd" ? ' aria-current="page"' : ""}>Программирование BYD</a>
         </nav>
         <div class="header-actions">
-          <a class="language-link" href="../../" lang="uk">UA</a>
+          ${languageSwitch("          ", "ru", ukHref, "./")}
           <a class="btn btn--primary" href="https://t.me/evline_support" target="_blank" rel="noopener">Telegram-чат с менеджером</a>
           <button class="nav-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
             <span></span>
@@ -908,13 +933,13 @@ function brandPageRu(brand) {
     <meta name="twitter:description" content="${escapeHtml(description)}">
     <meta name="twitter:image" content="${siteUrl}/assets/images/seo-photos/${brand.photo}">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
-    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=seo-brands-5">
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-1">
     <script src="../../assets/js/main.js?v=telegram-2" defer></script>
     <script type="application/ld+json">${ruJsonLd(brand)}</script>
   </head>
   <body class="parts-page brand-seo-page">
     <a class="skip-link" href="#main">К содержанию</a>
-    ${ruHeader()}
+    ${ruHeader("", `../../${brand.uaSlug}/`)}
 
     <main id="main">
       <section class="brand-seo-hero">
@@ -1074,7 +1099,7 @@ function hubPageRu() {
     <meta property="og:image" content="${siteUrl}/assets/images/oem-parts-visual.jpg">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
-    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=seo-brands-5">
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-1">
     <script src="../../assets/js/main.js?v=telegram-2" defer></script>
     <script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
@@ -1102,7 +1127,7 @@ function hubPageRu() {
   </head>
   <body class="parts-page brand-seo-page brand-hub-page">
     <a class="skip-link" href="#main">К содержанию</a>
-    ${ruHeader()}
+    ${ruHeader("", "../../zapchastyny-kytajskyh-avto/")}
 
     <main id="main">
       <section class="brand-seo-hero brand-seo-hero--hub">
@@ -1155,16 +1180,20 @@ async function patchUkStandalone(fileName, ukPath, ruPath) {
   const abs = path.join(root, fileName);
   let html = await readFile(abs, "utf8");
   html = html.replace(/<link rel="canonical" href="[^"]*">(?:\n<link rel="alternate"[\s\S]*?x-default" href="[^"]*">)?/, altLinks(ukPath, ruPath, ukPath));
-  if (!html.includes(".lang-link{")) {
+  if (!html.includes(".language-switch{")) {
     html = html.replace(
       ".hdr-cta{display:flex",
-      ".lang-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;text-decoration:none;font-weight:800;font-size:12px;letter-spacing:.04em}.lang-link:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18)}\n  .hdr-cta{display:flex",
+      `${inlineLanguageSwitchCss}\n  .hdr-cta{display:flex`,
     );
   }
-  if (!html.includes("class=\"lang-link\"")) {
+  const selfHref = ukPath === "byd.html" ? "byd.html" : "./";
+  const ruHref = ruPath === "ru/" ? "ru/" : "ru/byd.html";
+  if (html.includes("class=\"language-switch\"") || html.includes("class=\"lang-link\"")) {
+    html = replaceLanguageSwitch(html, "uk", selfHref, ruHref);
+  } else {
     html = html.replace(
       /<div class="hdr-cta">\n\s*/m,
-      `<div class="hdr-cta">\n      <a class="lang-link" href="${ruPath === "ru/" ? "ru/" : "ru/byd.html"}" lang="ru">RU</a>\n      `,
+      `<div class="hdr-cta">\n${languageSwitch("      ", "uk", selfHref, ruHref)}\n      `,
     );
   }
   await writeFile(abs, html);
@@ -1176,10 +1205,12 @@ async function patchUkSeoPage(uaSlug, ruSlug) {
   const ukPath = `${uaSlug}/`;
   const ruPath = `ru/${ruSlug}/`;
   html = html.replace(/<link rel="canonical" href="[^"]*">(?:\n    <link rel="alternate"[\s\S]*?x-default" href="[^"]*">)?/, altLinks(ukPath, ruPath, ukPath).replaceAll("\n", "\n    "));
-  if (!html.includes("class=\"language-link\"")) {
+  if (html.includes("class=\"language-switch\"") || html.includes("class=\"language-link\"")) {
+    html = replaceLanguageSwitch(html, "uk", "./", `../ru/${ruSlug}/`);
+  } else {
     html = html.replace(
       /<div class="header-actions">\n\s*/m,
-      `<div class="header-actions">\n          <a class="language-link" href="../ru/${ruSlug}/" lang="ru">RU</a>\n          `,
+      `<div class="header-actions">\n${languageSwitch("          ", "uk", "./", `../ru/${ruSlug}/`)}\n          `,
     );
   }
   await writeFile(abs, html);
@@ -1189,10 +1220,12 @@ async function patchUkHub() {
   const abs = path.join(root, "zapchastyny-kytajskyh-avto/index.html");
   let html = await readFile(abs, "utf8");
   html = html.replace(/<link rel="canonical" href="[^"]*">(?:\n    <link rel="alternate"[\s\S]*?x-default" href="[^"]*">)?/, altLinks("zapchastyny-kytajskyh-avto/", "ru/zapchasti-kitajskih-avto/", "zapchastyny-kytajskyh-avto/").replaceAll("\n", "\n    "));
-  if (!html.includes("class=\"language-link\"")) {
+  if (html.includes("class=\"language-switch\"") || html.includes("class=\"language-link\"")) {
+    html = replaceLanguageSwitch(html, "uk", "./", "../ru/zapchasti-kitajskih-avto/");
+  } else {
     html = html.replace(
       /<div class="header-actions">\n\s*/m,
-      `<div class="header-actions">\n          <a class="language-link" href="../ru/zapchasti-kitajskih-avto/" lang="ru">RU</a>\n          `,
+      `<div class="header-actions">\n${languageSwitch("          ", "uk", "./", "../ru/zapchasti-kitajskih-avto/")}\n          `,
     );
   }
   await writeFile(abs, html);
