@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://evline.com.ua/assets/digi-1.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — програмування BYD","description":"Оновлення та програмування всіх блоків BYD через дилерський VDS-доступ. Діагностика, оновлення, калібрування. Усі моделі та суббренди BYD.","url":"https://evline.com.ua/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонська набережна, 3, офіс 1","addressLocality":"Київ","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Діагностика всіх блоків"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Оновлення всіх блоків"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Програмування"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калібрування та адаптація"},"price":"100","priceCurrency":"USD"}]}
+{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — програмування BYD","description":"Оновлення та програмування всіх блоків BYD через дилерський VDS-доступ. Діагностика, оновлення, калібрування. Усі моделі та суббренди BYD.","url":"https://evline.com.ua/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонська набережна, 3, офіс 1","addressLocality":"Київ","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Діагностика всіх блоків"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Оновлення всіх блоків"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Програмування"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калібрування та адаптація"},"price":"100","priceCurrency":"USD"}]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
@@ -185,13 +185,23 @@
   .tg .msg .t{display:block;font-size:10px;color:#8d9b93;text-align:right;margin-top:3px}
   .tg .msg.out .t{color:#57a05c}
   /* зелена CTA-смуга */
-  .cta-band{background:linear-gradient(135deg,#2a7048,#3fa66a);border-radius:var(--radius);padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:22px;margin-top:30px;flex-wrap:wrap}
-  .cta-band h3{color:#fff;font-size:21px;line-height:1.25}
-  .cta-band p{color:#d9f0e3;font-size:14px;margin-top:4px}
-  .cta-band .btn{background:#fff;color:var(--green-d);flex:none}
+  .cta-band{background:linear-gradient(135deg,#2a7048,#3fa66a);border-radius:var(--radius);padding:22px 26px;display:grid;grid-template-columns:minmax(500px,1fr) minmax(430px,.8fr);align-items:center;gap:22px;margin-top:30px}
+  .cta-band__text{min-width:0}
+  .cta-band h3{color:#fff;font-size:20px;line-height:1.2}
+  .cta-band p{color:#d9f0e3;font-size:13.5px;line-height:1.35;margin-top:4px}
+  .cta-band__form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:center;min-width:0}
+  .cta-band__form input{min-width:0;height:42px;border:1px solid rgba(255,255,255,.34);border-radius:999px;background:rgba(255,255,255,.14);color:#fff;padding:0 13px;font:inherit;font-size:13.5px;font-weight:600}
+  .cta-band__form input::placeholder{color:rgba(255,255,255,.72);font-weight:600}
+  .cta-band__form input:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.22);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+  .cta-band .btn{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;background:#fff;color:var(--green-d);flex:none;font-size:14px;white-space:nowrap}
   .cta-band .btn:hover{background:var(--green-l)}
   /* мобільна sticky-панель */
   .mbar{display:none}
+  @media(max-width:1060px){
+    .cta-band{grid-template-columns:1fr}
+    .cta-band__form{grid-template-columns:1fr 1fr}
+    .cta-band__form .btn{grid-column:1/-1}
+  }
   @media(max-width:900px){
     header.site{position:static}
     header.site .wrap{flex-wrap:wrap;justify-content:center;gap:12px}
@@ -204,6 +214,10 @@
     .mbar .call{background:var(--green-l);color:var(--green-d)}
     .mbar .tgb{background:var(--green);color:#fff}
     body{padding-bottom:64px}
+    .cta-band{padding:24px 22px}
+  }
+  @media(max-width:560px){
+    .cta-band__form{grid-template-columns:1fr}
   }
   /* відгуки */
   .rev{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px}
@@ -512,11 +526,17 @@
       <div class="rev"><div class="stars">★★★★★</div><p>«Авто чотири роки, думав, так і має бути: жорстка підвіска, клімат живе своїм життям. Після повного оновлення блоків — наче інша машина. Клімат більше не дме крижаним.»</p><div class="who">Андрій · <b>BYD Tang EV, 2022</b> · Дніпро</div></div>
     </div>
     <div class="cta-band">
-      <div>
+      <div class="cta-band__text">
         <h3>Ваш BYD може працювати краще вже цього тижня</h3>
         <p>Список доступних оновлень по VIN — безкоштовно, без запису та зобов'язань</p>
       </div>
-      <a class="btn" href="#vin-form">Перевірити моє авто</a>
+      <form class="cta-band__form" id="quick-check-form" onsubmit="return submitLead('quick-check-form')">
+        <input name="vin" placeholder="VIN-код" maxlength="17" aria-label="VIN-код">
+        <input name="model" placeholder="Модель BYD" aria-label="Модель BYD">
+        <input name="contact" placeholder="+380 або @нік" aria-label="Телефон або Telegram" required>
+        <input type="hidden" name="need" value="швидка перевірка доступних оновлень">
+        <button class="btn" type="submit">Перевірити</button>
+      </form>
     </div>
   </div>
 </section>
@@ -566,7 +586,7 @@
         <p class="lead">В авто вже існують оновлення, які покращують роботу систем — вони просто не встановлені. Надішліть VIN — безкоштовно перевіримо, які доступні саме для вашого авто.</p>
         <div class="contact-list" style="margin-top:22px">
           📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a><br>
-          ✈️ <a href="https://t.me/evline_support" target="_blank">Telegram-чат з менеджером</a><br>
+          ✈️ <a href="https://t.me/evline_tech" target="_blank">Telegram-чат з менеджером</a><br>
           ✉️ <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a><br>
           📍 м. Київ, Оболонська набережна, 3, офіс 1
         </div>
@@ -599,7 +619,7 @@
 <!-- мобільна sticky-панель -->
 <div class="mbar">
   <a class="call" href="tel:+380935251024">📞 Подзвонити</a>
-  <a class="tgb" href="https://t.me/evline_support" target="_blank">✈️ Telegram</a>
+  <a class="tgb" href="https://t.me/evline_tech" target="_blank">✈️ Telegram</a>
 </div>
 
 <div class="toast" id="toast">Повідомлення скопійовано — вставте його в чат Telegram</div>
@@ -615,7 +635,7 @@ function buildMsg(f){
 }
 function openTelegramMsg(msg){
   if(navigator.clipboard){navigator.clipboard.writeText(msg);}
-  window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
+  window.open('https://t.me/evline_tech?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 function submitLead(formId){
   var el=document.getElementById(formId);

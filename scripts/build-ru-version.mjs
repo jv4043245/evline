@@ -266,7 +266,7 @@ const headJsonIndexRu = `<script type="application/ld+json">
 </script>`;
 
 const headJsonBydRu = `<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
+{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
@@ -606,6 +606,11 @@ const bydTranslations = [
   ["Андрій · <b>BYD Tang EV, 2022</b> · Дніпро", "Андрей · <b>BYD Tang EV, 2022</b> · Днепр"],
   ["Ваш BYD може працювати краще вже цього тижня", "Ваш BYD может работать лучше уже на этой неделе"],
   ["Список доступних оновлень по VIN — безкоштовно, без запису та зобов'язань", "Список доступных обновлений по VIN — бесплатно, без записи и обязательств"],
+  ["Модель BYD", "Модель BYD"],
+  ["+380 або @нік", "+380 или @ник"],
+  ["Телефон або Telegram", "Телефон или Telegram"],
+  ["швидка перевірка доступних оновлень", "быстрая проверка доступных обновлений"],
+  ["Перевірити", "Проверить"],
   ["Перевірити моє авто", "Проверить мое авто"],
   ["Питання та відповіді", "Вопросы и ответы"],
   ["Що питають перед записом", "Что спрашивают перед записью"],
