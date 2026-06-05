@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Organic home pages: direct, brand and search traffic. -->
   <url>
     <loc>https://evline.com.ua/</loc>
     <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/" />
@@ -19,6 +20,7 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- Paid traffic landing pages for ads and conversion testing; keep alongside home pages. -->
   <url>
     <loc>https://evline.com.ua/запчастини-з-китаю/</loc>
     <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/запчастини-з-китаю/" />

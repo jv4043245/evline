@@ -219,8 +219,8 @@ const brands = [
 ];
 
 const sitePairs = [
-  { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly" },
-  { uk: "запчастини-з-китаю/", ru: "ru/zapchasti-iz-kitaya/", priority: "0.98", changefreq: "weekly" },
+  { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly", role: "Organic home pages: direct, brand and search traffic." },
+  { uk: "запчастини-з-китаю/", ru: "ru/zapchasti-iz-kitaya/", priority: "0.98", changefreq: "weekly", role: "Paid traffic landing pages for ads and conversion testing; keep alongside home pages." },
   { uk: "byd.html", ru: "ru/byd.html", priority: "0.95", changefreq: "weekly" },
   { uk: "zapchastyny-kytajskyh-avto/", ru: "ru/zapchasti-kitajskih-avto/", priority: "0.9", changefreq: "weekly" },
   ...brands.map((brand) => ({ uk: `${brand.uaSlug}/`, ru: `ru/${brand.ruSlug}/`, priority: "0.82", changefreq: "weekly" })),
@@ -1198,10 +1198,11 @@ function sitemap() {
     .map((pair) => {
       const ukUrl = `${siteUrl}/${pair.uk}`;
       const ruUrl = `${siteUrl}/${pair.ru}`;
+      const roleComment = pair.role ? `  <!-- ${pair.role} -->\n` : "";
       const alternates = `    <xhtml:link rel="alternate" hreflang="uk-UA" href="${ukUrl}" />
     <xhtml:link rel="alternate" hreflang="ru-UA" href="${ruUrl}" />
     <xhtml:link rel="alternate" hreflang="x-default" href="${ukUrl}" />`;
-      return `  <url>
+      return `${roleComment}  <url>
     <loc>${ukUrl}</loc>
 ${alternates}
     <lastmod>${lastmod}</lastmod>
