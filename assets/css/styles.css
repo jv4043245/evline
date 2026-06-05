@@ -912,6 +912,10 @@ textarea {
 }
 
 @media (max-width: 980px) {
+  .site-header {
+    position: static;
+  }
+
   .nav-toggle {
     display: inline-flex;
   }
