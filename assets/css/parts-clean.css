@@ -890,8 +890,10 @@ body.parts-page {
 
 .parts-page .parts-brand-marquee {
   overflow: hidden;
-  padding: 18px 0 24px;
-  background: #fff;
+  padding: 18px 0 20px;
+  background: #f7f9f8;
+  border-top: 1px solid #e6ece8;
+  border-bottom: 1px solid #e6ece8;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
 }
@@ -900,14 +902,16 @@ body.parts-page {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 42px;
+  gap: clamp(38px, 8vw, 88px);
   width: max-content;
-  color: #3f9363;
+  color: #6a7973;
   white-space: nowrap;
-  font-size: clamp(24px, 2.4vw, 34px);
-  font-weight: 500;
+  font-size: clamp(23px, 3.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
   line-height: 1;
-  animation: partsCleanMarquee 30s linear infinite;
+  text-transform: uppercase;
+  animation: partsCleanMarquee 24s linear infinite;
   will-change: transform;
 }
 
@@ -1496,12 +1500,13 @@ body.parts-page {
   }
 
   .parts-page .parts-brand-marquee {
-    padding: 16px 0 22px;
+    padding: 14px 0 16px;
   }
 
   .parts-page .parts-brand-marquee__track {
-    gap: 28px;
-    font-size: 22px;
+    gap: 42px;
+    font-size: 24px;
+    letter-spacing: 0.1em;
   }
 
   .parts-page .parts-trust {

@@ -22,6 +22,21 @@ const replaceMany = (html, pairs) => {
   return result;
 };
 
+const brandMarqueeMarkup = (label) => `      <section class="parts-brand-marquee" aria-label="${label}">
+        <div class="parts-brand-marquee__track">
+          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span>
+          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span>
+        </div>
+      </section>`;
+
+const normalizeBrandMarquee = (html, label) =>
+  html.replace(/      <section class="parts-brand-marquee"[\s\S]*?      <\/section>/, brandMarqueeMarkup(label));
+
+const bumpAdLandingCss = (html) =>
+  html
+    .replace(/assets\/css\/styles\.css(?:\?[^"]*)?/g, "assets/css/styles.css?v=brand-marquee-1")
+    .replace(/assets\/css\/parts-clean\.css(?:\?[^"]*)?/g, "assets/css/parts-clean.css?v=brand-marquee-1");
+
 const commonFixes = (html, prefix, currentPath) =>
   html
     .replace(/<link rel="canonical" href="[^"]*">/, altLinks(currentPath))
@@ -235,6 +250,8 @@ let ukHtml = commonFixes(sourceHtml, "../", ukPath)
   .replace('href="../" aria-current="page"', 'href="../"')
   .replace(/<div class="header-actions">\n\s*/m, '<div class="header-actions">\n          <a class="language-link" href="../ru/zapchasti-iz-kitaya/" lang="ru">RU</a>\n          ');
 ukHtml = replaceMany(ukHtml, ukCopyUpdates);
+ukHtml = normalizeBrandMarquee(ukHtml, "Марки китайських авто");
+ukHtml = bumpAdLandingCss(ukHtml);
 
 let ruHtml = commonFixes(sourceHtml, "../../", ruPath)
   .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, () => ruJson)
@@ -245,6 +262,8 @@ ruHtml = replaceMany(ruHtml, ruPairs)
   .replace(/href="\.\.\/byd\.html"/g, 'href="../byd.html"')
   .replace(/href="\.\.\/"/g, 'href="../"');
 ruHtml = cleanupGeneratedRu(ruHtml);
+ruHtml = normalizeBrandMarquee(ruHtml, "Марки китайских авто");
+ruHtml = bumpAdLandingCss(ruHtml);
 
 await mkdir(path.join(root, "запчастини-з-китаю"), { recursive: true });
 await mkdir(path.join(root, "ru/zapchasti-iz-kitaya"), { recursive: true });
