@@ -1,4 +1,4 @@
-import { json, readPayload, text } from "../_lib/http.js";
+import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
 import { createOrderFromLead, managerChatIdForType, managerContactForType } from "../_lib/crm.js";
 
 const ALLOWED_TYPES = new Set(["parts", "byd", "other"]);
@@ -101,7 +101,7 @@ export async function onRequestPost({ request, env }) {
   const lead = normalizeLead(payload, request);
 
   if (!lead.phone && !lead.email && !lead.telegram) {
-    return json({ error: "Phone, email or Telegram is required" }, { status: 400 });
+    return json({ error: "Phone, email or Telegram is required" }, { status: 400, headers: leadCorsHeaders(request) });
   }
 
   await env.DB.prepare(
@@ -147,5 +147,12 @@ export async function onRequestPost({ request, env }) {
 
   await notifyTelegram(env, lead, orderId, request).catch(() => {});
 
-  return json({ ok: true, lead_id: lead.id, order_id: orderId });
+  return json({ ok: true, lead_id: lead.id, order_id: orderId }, { headers: leadCorsHeaders(request) });
+}
+
+export async function onRequestOptions({ request }) {
+  return new Response(null, {
+    status: 204,
+    headers: leadCorsHeaders(request),
+  });
 }

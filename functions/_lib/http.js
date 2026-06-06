@@ -9,6 +9,26 @@ export function json(data, init = {}) {
   });
 }
 
+const LEAD_CORS_ALLOWED_ORIGINS = new Set([
+  "https://evline.com.ua",
+  "https://www.evline.com.ua",
+  "https://evline.pages.dev",
+  "https://jv4043245.github.io",
+]);
+
+export function leadCorsHeaders(request) {
+  const origin = request.headers.get("origin") || "";
+  const isLocal = origin.startsWith("http://127.0.0.1:") || origin.startsWith("http://localhost:");
+  const allowOrigin = !origin || LEAD_CORS_ALLOWED_ORIGINS.has(origin) || isLocal ? origin || "*" : "https://evline.com.ua";
+  return {
+    "access-control-allow-origin": allowOrigin,
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "content-type",
+    "access-control-max-age": "86400",
+    vary: "Origin",
+  };
+}
+
 export function csv(body, filename = "evline-export.csv") {
   return new Response(body, {
     headers: {

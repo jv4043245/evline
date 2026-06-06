@@ -697,6 +697,13 @@ function trackingPayload(){
     landing_page:window.location.href,referrer:document.referrer
   };
 }
+function leadEndpoint(){
+  if(window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
+  if(['evline.com.ua','www.evline.com.ua','jv4043245.github.io'].indexOf(window.location.hostname)!==-1){
+    return 'https://evline.pages.dev/api/leads';
+  }
+  return '/api/leads';
+}
 function showLeadToast(message,isError){
   var t=document.getElementById('toast');
   if(!t) return;
@@ -727,7 +734,7 @@ function submitLead(formId){
     channel:f.channel,
     page_url:window.location.href
   });
-  fetch('/api/leads',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
+  fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
     .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
     .then(function(){el.reset();showLeadToast('Telegram открыт с готовым текстом. Менеджер получит ваш запрос.');})
     .catch(function(){showLeadToast('Telegram открыт с готовым текстом.');})

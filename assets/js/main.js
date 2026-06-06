@@ -50,6 +50,14 @@ function trackingData() {
   };
 }
 
+function leadEndpoint() {
+  if (window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
+  if (["evline.com.ua", "www.evline.com.ua", "jv4043245.github.io"].includes(window.location.hostname)) {
+    return "https://evline.pages.dev/api/leads";
+  }
+  return "/api/leads";
+}
+
 function setFormMessage(form, message, isError = false) {
   let node = form.querySelector("[data-form-message]");
   if (!node) {
@@ -93,7 +101,7 @@ function isRussianPage() {
 }
 
 async function sendLeadToCrm(payload) {
-  const response = await fetch("/api/leads", {
+  const response = await fetch(leadEndpoint(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
