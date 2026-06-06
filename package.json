@@ -1,0 +1,8 @@
+{
+  "name": "evline",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve-static.mjs"
+  }
+}

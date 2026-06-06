@@ -1,0 +1,9 @@
+name = "evline"
+compatibility_date = "2026-05-23"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "evline-crm"
+database_id = "77712619-95e4-4eb1-aaaf-6eda879ac3d3"
+migrations_dir = "migrations"

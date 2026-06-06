@@ -56,23 +56,50 @@ function setFormMessage(form, message, isError = false) {
     node = document.createElement("div");
     node.dataset.formMessage = "";
     node.className = "form__note";
-    form.querySelector(".form__actions")?.append(node);
+    (form.querySelector(".form__actions") || form).append(node);
   }
   node.textContent = message;
   node.style.color = isError ? "#fecaca" : "rgba(255, 255, 255, 0.78)";
 }
 
-function openTelegramMessage(message) {
+function detectLeadType(payload = {}) {
+  const joined = [
+    payload.type,
+    payload.topic,
+    payload.service,
+    payload.form_type,
+    window.location.pathname,
+  ].join(" ").toLowerCase();
+  return joined.includes("byd") || joined.includes("програм") || joined.includes("оновлен") || joined.includes("obnovlen")
+    ? "byd"
+    : "parts";
+}
+
+function telegramUsernameForType(type) {
+  return type === "byd" ? "evline_tech" : "evline_support";
+}
+
+function openTelegramMessage(message, username = "evline_support") {
   const text = String(message || "").trim();
   if (!text) return;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).catch(() => {});
   }
-  window.open(`https://t.me/evline_support?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  window.open(`https://t.me/${username}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
 }
 
 function isRussianPage() {
   return document.documentElement.lang.toLowerCase().startsWith("ru");
+}
+
+async function sendLeadToCrm(payload) {
+  const response = await fetch("/api/leads", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Не вдалося зберегти заявку");
+  return response.json().catch(() => ({}));
 }
 
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
@@ -82,7 +109,9 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
     const car = String(data.car || "").trim();
     const vin = String(data.vin || "").trim().toUpperCase();
     const part = String(data.part || "").trim();
+    const phone = String(data.phone || data.contact || data.tel || "").trim();
     const ru = isRussianPage();
+    const type = "parts";
 
     const lines = ru
       ? [
@@ -90,6 +119,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
           `Модель авто: ${car || "-"}`,
           `VIN-код: ${vin || "-"}`,
           `Что нужно: ${part || "-"}`,
+          `Телефон: ${phone || "-"}`,
           "Подскажите, пожалуйста, цену и срок доставки.",
         ]
       : [
@@ -97,10 +127,31 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
           `Модель авто: ${car || "-"}`,
           `VIN-код: ${vin || "-"}`,
           `Що потрібно: ${part || "-"}`,
+          `Телефон: ${phone || "-"}`,
           "Підкажіть, будь ласка, ціну та строк доставки.",
         ];
 
-    openTelegramMessage(lines.join("\n"));
+    const payload = {
+      ...data,
+      car,
+      vin,
+      part,
+      phone,
+      type,
+      message: part,
+      ...trackingData(),
+    };
+
+    sendLeadToCrm(payload)
+      .then(() => {
+        form.reset();
+        setFormMessage(form, ru ? "Telegram открыт с готовым текстом. Менеджер получит ваш запрос." : "Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.");
+      })
+      .catch(() => {
+        setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
+      });
+
+    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type));
   });
 });
 
@@ -113,6 +164,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       ...Object.fromEntries(new FormData(form)),
       ...trackingData(),
     };
+    payload.type = detectLeadType(payload);
 
     const ru = isRussianPage();
 
@@ -122,13 +174,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
     }
 
     try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Не вдалося зберегти заявку");
+      await sendLeadToCrm(payload);
 
       form.reset();
       setFormMessage(form, ru ? "Заявка сохранена. Менеджер EVLine свяжется с вами." : "Заявку збережено. Менеджер EVLine зв'яжеться з вами.");
@@ -151,8 +197,8 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
           ];
       if (payload.part) lines.push(ru ? `Запчасть: ${payload.part}` : `Запчастина: ${payload.part}`);
       lines.push(ru ? `Что нужно: ${payload.message || "-"}` : `Що потрібно: ${payload.message || "-"}`);
-      setFormMessage(form, ru ? "Сейчас не удалось сохранить заявку в CRM. Открываю Telegram как резервный канал." : "Зараз не вдалося зберегти заявку в CRM. Відкриваю Telegram як резервний канал.", true);
-      openTelegramMessage(lines.join("\n"));
+      setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
+      openTelegramMessage(lines.join("\n"), telegramUsernameForType(payload.type));
     } finally {
       if (button) {
         button.disabled = false;

@@ -689,19 +689,56 @@ function openTelegramMsg(msg){
   if(navigator.clipboard){navigator.clipboard.writeText(msg);}
   window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
 }
+function trackingPayload(){
+  var p=new URLSearchParams(window.location.search);
+  return {
+    utm_source:p.get('utm_source')||'',utm_medium:p.get('utm_medium')||'',utm_campaign:p.get('utm_campaign')||'',
+    utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',fbclid:p.get('fbclid')||'',
+    landing_page:window.location.href,referrer:document.referrer
+  };
+}
+function showLeadToast(message,isError){
+  var t=document.getElementById('toast');
+  if(!t) return;
+  t.textContent=message;
+  t.style.background=isError?'#7f1d1d':'#111513';
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},4000);
+}
+function fieldValue(form,name){
+  var x=form.querySelector('[name='+name+']');
+  return x&&x.value?x.value.trim():'';
+}
 function submitLead(formId){
   var el=document.getElementById(formId);
   var f={
-    vin:el.querySelector('[name=vin]').value,
-    need:el.querySelector('[name=need]').value,
-    name:(el.querySelector('[name=name]')||{}).value,
-    contact:(el.querySelector('[name=contact]')||{}).value,
-    channel:(el.querySelector('[name=channel]')||{}).value
+    vin:fieldValue(el,'vin').toUpperCase(),
+    need:fieldValue(el,'need'),
+    name:fieldValue(el,'name'),
+    contact:fieldValue(el,'contact'),
+    channel:fieldValue(el,'channel')
   };
-  // тут підключається відправка в CRM / на пошту / у Telegram-бот
   var msg=buildMsg(f);
-  var t=document.getElementById('toast');t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},4000);
+  var button=el.querySelector('button[type=submit]');
+  var originalText=button?button.textContent:'';
+  if(button){button.disabled=true;button.textContent='Зберігаємо...';}
+  var payload=Object.assign({},trackingPayload(),{
+    type:'parts',
+    name:f.name,
+    phone:f.contact,
+    contact:f.contact,
+    vin:f.vin,
+    part:f.need,
+    item_name:f.need,
+    message:f.need,
+    channel:f.channel,
+    page_url:window.location.href
+  });
+  fetch('/api/leads',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
+    .then(function(){el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
+    .catch(function(){showLeadToast('Telegram відкрито з готовим текстом.');})
+    .finally(function(){if(button){button.disabled=false;button.textContent=originalText;}});
   openTelegramMsg(msg);
   return false;
 }
