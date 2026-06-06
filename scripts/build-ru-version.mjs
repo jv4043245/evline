@@ -761,6 +761,15 @@ function cleanupGeneratedRu(html) {
     .replaceAll("відволікання", "отвлечения")
     .replaceAll("шапці", "шапке")
     .replaceAll("Сторінки запчастин за марками авто", "Страницы запчастей по маркам авто")
+    .replaceAll("Корисні сторінки про програмування BYD", "Полезные страницы о программировании BYD")
+    .replaceAll("Корисні сторінки BYD", "Полезные страницы BYD")
+    .replaceAll("Оновлення BYD по VIN", "Обновление BYD по VIN")
+    .replaceAll("Діагностика блоків BYD", "Диагностика блоков BYD")
+    .replaceAll("Калібрування BYD", "Калибровка BYD")
+    .replaceAll("Помилки електроніки BYD", "Ошибки электроники BYD")
+    .replaceAll("BMS і батарея BYD", "BMS и батарея BYD")
+    .replaceAll("CarPlay та Android Auto", "CarPlay и Android Auto")
+    .replaceAll("Мультимедіа BYD", "Мультимедиа BYD")
     .replaceAll("КРОС-СЕЛЛ: запчастини", "КРОСС-СЕЛЛ: запчасти");
 }
 
@@ -798,6 +807,11 @@ function prepareStandaloneRu(html, kind) {
   for (const brand of brands) {
     result = result.split(`href="${brand.uaSlug}/"`).join(`href="${brand.ruSlug}/"`);
     result = result.split(`href="../${brand.uaSlug}/"`).join(`href="../${brand.ruSlug}/"`);
+  }
+  for (const pair of bydSeoPairs) {
+    const ruLocal = pair.ru.replace(/^ru\//, "");
+    result = result.split(`href="${pair.uk}"`).join(`href="${ruLocal}"`);
+    result = result.split(`href="../${pair.uk}"`).join(`href="../${ruLocal}"`);
   }
   result = result
     .replace(/href="zapchastyny-kytajskyh-avto\/"/g, 'href="zapchasti-kitajskih-avto/"')
