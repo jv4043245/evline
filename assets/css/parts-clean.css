@@ -581,6 +581,86 @@ body.parts-page {
   font-weight: 700;
 }
 
+.byd-seo-page .brand-seo-hero {
+  color: #fff;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(127, 216, 169, 0.2), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.08), transparent 26%),
+    linear-gradient(145deg, #101714 0%, #18211d 58%, #0d1210 100%);
+}
+
+.byd-seo-page .brand-seo-breadcrumb {
+  color: #9aa6a0;
+}
+
+.byd-seo-page .brand-seo-breadcrumb a {
+  color: #7fd8a9;
+}
+
+.byd-seo-page .brand-seo-kicker {
+  border-color: rgba(127, 216, 169, 0.24);
+  color: #7fd8a9;
+  background: rgba(127, 216, 169, 0.12);
+}
+
+.byd-seo-page .brand-seo-hero h1 {
+  color: #fff;
+}
+
+.byd-seo-page .brand-seo-lead {
+  color: #cbd5d0;
+}
+
+.byd-seo-page .brand-seo-tags span {
+  border-color: rgba(127, 216, 169, 0.28);
+  color: #dff7e8;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.byd-seo-page .brand-seo-form {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.byd-seo-page .brand-seo-form strong {
+  color: #fff;
+}
+
+.byd-seo-page .brand-seo-form input {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.byd-seo-page .brand-seo-form input::placeholder {
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.byd-seo-page .brand-seo-form a {
+  color: #bff4d5;
+}
+
+.byd-seo-page .brand-seo-cards {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.byd-seo-page .brand-seo-section--soft .brand-seo-cards article {
+  background: linear-gradient(180deg, #fff 0%, #f7fbf8 100%);
+}
+
+.byd-seo-page .brand-seo-proof__media {
+  background:
+    radial-gradient(circle at 24% 20%, rgba(127, 216, 169, 0.12), transparent 28%),
+    #f7faf8;
+}
+
+.byd-seo-page .brand-seo-proof__media img {
+  object-position: center;
+}
+
 @media (max-width: 980px) {
   .brand-seo-hero__grid,
   .brand-seo-proof__grid {
@@ -588,6 +668,10 @@ body.parts-page {
   }
 
   .brand-seo-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .byd-seo-page .brand-seo-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -628,6 +712,10 @@ body.parts-page {
   .brand-seo-links__panel div,
   .brand-link-grid,
   .brand-hub-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .byd-seo-page .brand-seo-cards {
     grid-template-columns: 1fr;
   }
 

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ru-UA">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Диагностика BYD — ошибки блоков и электроники | EVLine</title>
+    <meta name="description" content="Диагностика всех блоков BYD через VDS: скрытые ошибки, электроника, батарея, ADAS, мультимедиа и реальное состояние авто.">
+    <meta name="theme-color" content="#111513">
+    <link rel="canonical" href="https://evline.com.ua/ru/diagnostika-byd/">
+    <link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/diagnostyka-byd/">
+    <link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/diagnostika-byd/">
+    <link rel="alternate" hreflang="x-default" href="https://evline.com.ua/diagnostyka-byd/">
+    <link rel="icon" href="../../assets/images/favicon.png">
+    <link rel="manifest" href="../../manifest.webmanifest">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://evline.com.ua/ru/diagnostika-byd/">
+    <meta property="og:title" content="Диагностика BYD — ошибки блоков и электроники | EVLine">
+    <meta property="og:description" content="Диагностика всех блоков BYD через VDS: скрытые ошибки, электроника, батарея, ADAS, мультимедиа и реальное состояние авто.">
+    <meta property="og:image" content="https://evline.com.ua/assets/images/system-error.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Диагностика BYD — ошибки блоков и электроники | EVLine">
+    <meta name="twitter:description" content="Диагностика всех блоков BYD через VDS: скрытые ошибки, электроника, батарея, ADAS, мультимедиа и реальное состояние авто.">
+    <meta name="twitter:image" content="https://evline.com.ua/assets/images/system-error.png">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=byd-seo-1">
+    <script src="../../assets/js/main.js?v=language-switch-close-1" defer></script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"AutoRepair","@id":"https://evline.com.ua/#byd-tech","name":"EVLine — программирование BYD","url":"https://evline.com.ua/ru/byd.html","logo":"https://evline.com.ua/assets/images/logo.png","image":"https://evline.com.ua/assets/images/system-error.png","telephone":"+380935251024","email":"evlineukraine@gmail.com","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":{"@type":"Country","name":"Украина"},"sameAs":["https://t.me/evline_tech"]},{"@type":"BreadcrumbList","@id":"https://evline.com.ua/ru/diagnostika-byd/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"EVLine","item":"https://evline.com.ua/ru/"},{"@type":"ListItem","position":2,"name":"Программирование BYD","item":"https://evline.com.ua/ru/byd.html"},{"@type":"ListItem","position":3,"name":"Диагностика всех блоков BYD","item":"https://evline.com.ua/ru/diagnostika-byd/"}]},{"@type":"Service","@id":"https://evline.com.ua/ru/diagnostika-byd/#service","name":"Диагностика всех блоков BYD","serviceType":"BYD electronic diagnostics","provider":{"@id":"https://evline.com.ua/#byd-tech"},"areaServed":{"@type":"Country","name":"Украина"},"description":"Диагностика всех блоков BYD через VDS: скрытые ошибки, электроника, батарея, ADAS, мультимедиа и реальное состояние авто."},{"@type":"FAQPage","@id":"https://evline.com.ua/ru/diagnostika-byd/#faq","inLanguage":"ru-UA","mainEntity":[{"@type":"Question","name":"Сколько стоит диагностика?","acceptedAnswer":{"@type":"Answer","text":"Ориентир на основной странице — 50$. Точную стоимость подтверждает менеджер по модели и проблеме."}},{"@type":"Question","name":"Можно сделать диагностику без ошибки на панели?","acceptedAnswer":{"@type":"Answer","text":"Да. Часть проблем проявляется как нестабильное поведение, а не как лампа на панели."}},{"@type":"Question","name":"После диагностики обязательно что-то делать?","acceptedAnswer":{"@type":"Answer","text":"Нет. Мы показываем картину и рекомендации, а решение по работам остается за вами."}},{"@type":"Question","name":"Видите ли вы батарею и ADAS?","acceptedAnswer":{"@type":"Answer","text":"Да, если конкретный блок доступен через VDS для вашей модели и VIN."}}]}]}</script>
+  </head>
+  <body class="parts-page brand-seo-page byd-seo-page">
+    <a class="skip-link" href="#main">К содержанию</a>
+    <div class="topbar">
+      <div class="container topbar__inner topbar__inner--center">
+        <div><span aria-hidden="true">📞</span> <a href="tel:+380935251024">+38 (093) 525-10-24</a> <span aria-hidden="true">✉️</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../" aria-label="EVLine">
+          <img src="../../assets/images/logo.png" alt="EVLine" width="245" height="100">
+        </a>
+        <nav class="nav" id="site-nav" aria-label="Основная навигация">
+          <a href="../">Запчасти из Китая</a>
+          <a href="../byd.html" aria-current="page">Программирование BYD</a>
+        </nav>
+        <div class="header-actions">
+          <details class="language-switch">
+            <summary aria-label="Изменить язык"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
+            <div class="language-switch__menu">
+              <a href="../../diagnostyka-byd/index.html" lang="uk">Українська</a>
+              <a href="./index.html" lang="ru" aria-current="true">Русский</a>
+            </div>
+          </details>
+          <a class="btn btn--primary" href="https://t.me/evline_tech" target="_blank" rel="noopener">Telegram-чат с мастером</a>
+          <button class="nav-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="brand-seo-hero">
+        <div class="container brand-seo-hero__grid">
+          <div>
+            <nav class="brand-seo-breadcrumb" aria-label="Breadcrumb">
+              <a href="../">EVLine</a><span>/</span><a href="../byd.html">Программирование BYD</a><span>/</span><strong>Диагностика всех блоков BYD</strong>
+            </nav>
+            <p class="brand-seo-kicker">Диагностика BYD</p>
+            <h1>Диагностика всех блоков BYD</h1>
+            <p class="brand-seo-lead">Подключаемся на дилерском уровне, читаем не только очевидные ошибки, но и скрытые состояния блоков, которые не видит обычный сканер.</p>
+            <div class="brand-seo-tags">
+              <span>диагностика</span>
+              <span>ошибки блоков</span>
+              <span>VDS</span>
+              <span>BYD Song</span>
+              <span>BYD Seal</span>
+              <span>Denza</span>
+            </div>
+          </div>
+          <form class="brand-seo-form" data-byd-seo-form data-topic="диагностика систем BYD" data-lang="ru">
+            <strong>Описать проблему</strong>
+            <input name="car" placeholder="Модель" required>
+            <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <input name="issue" placeholder="Что беспокоит: ошибка, симптом или функция" required>
+            <input name="contact" placeholder="+380" required>
+            <button type="submit">Отправить мастеру</button>
+            <a href="tel:+380935251024">Или позвонить: +38 (093) 525-10-24</a>
+          </form>
+        </div>
+      </section>
+
+      <section class="brand-seo-section">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>Частые запросы</span>
+            <h2>С чем обращаются чаще всего</h2>
+            <p>Диагностика нужна не только когда горит ошибка. Она помогает понять, что реально происходит с авто.</p>
+          </div>
+          <div class="brand-seo-cards">
+            <article><span>🔍</span><h3>Горит предупреждение</h3><p>ABS, ADAS, battery, airbag, TPMS или другие сообщения на панели.</p></article>
+            <article><span>🔍</span><h3>После ремонта что-то работает не так</h3><p>После ДТП, замены датчиков или кузовных работ блоки могут требовать проверки.</p></article>
+            <article><span>🔍</span><h3>Авто ведет себя странно</h3><p>Рывки, потеря тяги, некорректная рекуперация, проблемы с климатом или зарядкой.</p></article>
+            <article><span>🔍</span><h3>Нужна проверка перед покупкой</h3><p>Показываем реальное состояние электронных систем до принятия решения.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-proof">
+        <div class="container brand-seo-proof__grid">
+          <div class="brand-seo-proof__text">
+            <span>VDS</span>
+            <h2>Чем дилерская диагностика отличается от обычной</h2>
+            <p>Обычный сканер часто видит только базовые ошибки. VDS дает более глубокий доступ к конфигурациям, статусам, истории ошибок и состоянию электронных блоков BYD.</p>
+            <ul>
+              <li>чтение всех доступных блоков</li>
+              <li>анализ активных и сохраненных ошибок</li>
+              <li>проверка состояния систем после ремонта</li>
+              <li>рекомендации: что обновить, калибровать или не трогать</li>
+            </ul>
+          </div>
+          <div class="brand-seo-proof__media">
+            <img src="../../assets/images/system-error.png" alt="Диагностика всех блоков BYD" loading="lazy">
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section brand-seo-section--soft">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>Результат</span>
+            <h2>Что вы получаете после диагностики</h2>
+            <p>Менеджер и мастер объясняют результат человеческим языком: что критично, что можно отложить, а что вообще не является проблемой.</p>
+          </div>
+          <div class="brand-seo-cards">
+            <article><span>✓</span><h3>Понятный вывод</h3><p>Без списка непонятных кодов — объясняем причину и следующий шаг.</p></article>
+            <article><span>✓</span><h3>Приоритет работ</h3><p>Выделяем критичное, желательное и то, что не требует вмешательства.</p></article>
+            <article><span>✓</span><h3>Проверка смежных систем</h3><p>Одна ошибка может быть следствием другой. Ищем причину, а не только код.</p></article>
+            <article><span>✓</span><h3>Подготовка к обновлениям</h3><p>Видим, можно ли сразу обновлять блоки или нужна предварительная работа.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-process">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>Как работаем</span>
+            <h2>Без лишнего риска и догадок</h2>
+          </div>
+          <div class="brand-seo-process__grid">
+            <article><strong>1</strong><h3>Отправляете VIN</h3><p>Добавляете модель, год, симптом или фото ошибки.</p></article>
+            <article><strong>2</strong><h3>Проверяем возможность</h3><p>Смотрим доступные обновления, блоки и нужный формат работы.</p></article>
+            <article><strong>3</strong><h3>Согласовываем работы</h3><p>Фиксируем объем и цену до начала вмешательства.</p></article>
+            <article><strong>4</strong><h3>Тестируем результат</h3><p>После работ проверяем системы и объясняем изменения.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-faq" aria-label="FAQ">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>FAQ</span>
+            <h2>Вопросы по теме</h2>
+          </div>
+          <div class="parts-faq__grid">
+            <article><h3>Сколько стоит диагностика?</h3><p>Ориентир на основной странице — 50$. Точную стоимость подтверждает менеджер по модели и проблеме.</p></article>
+            <article><h3>Можно сделать диагностику без ошибки на панели?</h3><p>Да. Часть проблем проявляется как нестабильное поведение, а не как лампа на панели.</p></article>
+            <article><h3>После диагностики обязательно что-то делать?</h3><p>Нет. Мы показываем картину и рекомендации, а решение по работам остается за вами.</p></article>
+            <article><h3>Видите ли вы батарею и ADAS?</h3><p>Да, если конкретный блок доступен через VDS для вашей модели и VIN.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-links">
+        <div class="container">
+          <div class="brand-seo-links__panel">
+            <h2>Смежные темы по BYD</h2>
+            <div>
+              <a href="../byd.html">Программирование BYD</a>
+              <a href="../obnovlenie-byd/">⚡ Обновление BYD по VIN</a>
+                <a href="../kalibrovka-byd/">🧠 Калибровка и адаптация BYD</a>
+                <a href="../oshibki-elektroniki-byd/">⚠️ Ошибки электроники BYD</a>
+                <a href="../bms-byd-batareya/">🔋 BMS BYD: батарея, запас хода, зарядка</a>
+                <a href="../adas-byd-kamery-datchiki/">🛡️ ADAS BYD: камеры, датчики, ассистенты</a>
+                <a href="../carplay-android-auto-byd/">📱 CarPlay и Android Auto для BYD</a>
+                <a href="../multimedia-byd/">🖥️ Мультимедиа BYD: язык, регион, связь</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="origin-contact" id="contacts">
+        <div class="container origin-contact__card">
+          <div>
+            <p>Нужна консультация по BYD?</p>
+            <a class="origin-contact__phone" href="tel:+380935251024">+38 (093) 525-10-24</a>
+            <a class="origin-pill-button" href="https://t.me/evline_tech" target="_blank" rel="noopener">Написать мастеру</a>
+          </div>
+          <div class="origin-contact__details">
+            <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
+            <span>г. Киев, Оболонская набережная, 3, офис 1</span>
+            <strong>EVLine Ukraine</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <a class="floating-chat" href="https://t.me/evline_tech" target="_blank" rel="noopener" aria-label="Telegram"></a>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner site-footer__inner--links">
+        <div>©2021-<span data-year>2026</span> EVLine - Все права защищены.</div>
+        <nav aria-label="Footer">
+          <a href="../">Запчасти из Китая</a>
+          <a href="../zapchasti-kitajskih-avto/">Марки авто</a>
+          <a href="../byd.html">Программирование BYD</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const data = Object.fromEntries(new FormData(form));
+          const ru = form.dataset.lang === "ru";
+          const lines = ru
+            ? [
+                "Добрый день! Нужна консультация по BYD.",
+                "Тема: " + (form.dataset.topic || "-"),
+                "Модель: " + (data.car || "-"),
+                "VIN-код: " + ((data.vin || "-").toString().toUpperCase()),
+                "Что беспокоит: " + (data.issue || "-"),
+                "Связь: " + (data.contact || "-"),
+                "Подскажите, пожалуйста, что можно проверить и какая стоимость."
+              ]
+            : [
+                "Добрий день! Потрібна консультація по BYD.",
+                "Тема: " + (form.dataset.topic || "-"),
+                "Модель: " + (data.car || "-"),
+                "VIN-код: " + ((data.vin || "-").toString().toUpperCase()),
+                "Що турбує: " + (data.issue || "-"),
+                "Зв'язок: " + (data.contact || "-"),
+                "Підкажіть, будь ласка, що можна перевірити та яка вартість."
+              ];
+          const msg = lines.join("\n");
+          if (navigator.clipboard) navigator.clipboard.writeText(msg).catch(() => {});
+          window.open("https://t.me/evline_tech?text=" + encodeURIComponent(msg), "_blank", "noopener");
+        });
+      });
+    </script>
+  </body>
+</html>

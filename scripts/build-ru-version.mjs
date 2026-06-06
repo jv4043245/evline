@@ -4,7 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
-const lastmod = "2026-06-05";
+const lastmod = "2026-06-06";
 const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
 const techChatUrl = (message) => `https://t.me/evline_tech?text=${encodeURIComponent(message)}`;
 const techTelegramLinks = {
@@ -254,10 +254,21 @@ const brands = [
   },
 ];
 
+const bydSeoPairs = [
+  { uk: "onovlennya-byd/", ru: "ru/obnovlenie-byd/" },
+  { uk: "diagnostyka-byd/", ru: "ru/diagnostika-byd/" },
+  { uk: "kalibruvannya-byd/", ru: "ru/kalibrovka-byd/" },
+  { uk: "pomylky-elektroniky-byd/", ru: "ru/oshibki-elektroniki-byd/" },
+  { uk: "bms-byd-batareya/", ru: "ru/bms-byd-batareya/" },
+  { uk: "adas-byd-kamery-datchyky/", ru: "ru/adas-byd-kamery-datchiki/" },
+  { uk: "carplay-android-auto-byd/", ru: "ru/carplay-android-auto-byd/" },
+  { uk: "multymedia-byd/", ru: "ru/multimedia-byd/" },
+];
+
 const sitePairs = [
   { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly", role: "Organic home pages: direct, brand and search traffic." },
-  { uk: "запчастини-з-китаю/", ru: "ru/zapchasti-iz-kitaya/", priority: "0.98", changefreq: "weekly", role: "Paid traffic landing pages for ads and conversion testing; keep alongside home pages." },
   { uk: "byd.html", ru: "ru/byd.html", priority: "0.95", changefreq: "weekly" },
+  ...bydSeoPairs.map((pair) => ({ ...pair, priority: "0.78", changefreq: "monthly", role: "BYD programming SEO pain-point pages." })),
   { uk: "zapchastyny-kytajskyh-avto/", ru: "ru/zapchasti-kitajskih-avto/", priority: "0.9", changefreq: "weekly" },
   ...brands.map((brand) => ({ uk: `${brand.uaSlug}/`, ru: `ru/${brand.ruSlug}/`, priority: "0.82", changefreq: "weekly" })),
 ];
@@ -316,7 +327,7 @@ const headJsonBydRu = `<script type="application/ld+json">
 </script>`;
 
 const mainTranslations = [
-  ["Запчастини для BYD, Zeekr, Xiaomi з Китаю — авіа 14 днів | EVLine Україна", "Запчасти для BYD, Zeekr, Xiaomi из Китая — авиа от 14 дней | EVLine Украина"],
+  ["Запчастини BYD, Zeekr, Xiaomi з Китаю | EVLine Україна", "Запчасти BYD, Zeekr, Xiaomi из Китая | EVLine Украина"],
   ["Оригінальні та OEM запчастини для китайських авто: BYD, Zeekr, Xiaomi, Lynk & Co, NIO. Підбір по VIN, перевірка перед відправкою, авіа 14 днів. Привеземо навіть один болт.", "Оригинальные и OEM запчасти для китайских авто: BYD, Zeekr, Xiaomi, Lynk & Co, NIO. Подбор по VIN, проверка перед отправкой, авиа от 14 дней. Привезем даже один болт."],
   ["EVLine Україна", "EVLine Украина"],
   ["Оригінал та OEM від офіційних дилерів. Підбір по VIN, фотозвіт перед відправкою, ціна «під ключ». Авіа 14 днів, море 60.", "Оригинал и OEM от официальных дилеров. Подбор по VIN, фотоотчет перед отправкой, цена «под ключ». Авиа от 14 дней, море от 60."],
@@ -486,10 +497,10 @@ const mainTranslations = [
 ];
 
 const bydTranslations = [
-  ["Програмування та оновлення BYD — дилерський рівень VDS | EVLine Україна", "Программирование и обновление BYD — дилерский уровень VDS | EVLine Украина"],
+  ["Програмування BYD — оновлення блоків через VDS | EVLine", "Программирование BYD — обновление блоков через VDS | EVLine"],
   ["Оновлення, програмування та калібрування всіх блоків BYD через дилерський VDS-доступ. Усі моделі та суббренди: Denza, Yangwang, Fang Cheng Bao. Безкоштовна перевірка доступних оновлень по VIN.", "Обновление, программирование и калибровка всех блоков BYD через дилерский VDS-доступ. Все модели и суббренды: Denza, Yangwang, Fang Cheng Bao. Бесплатная проверка доступных обновлений по VIN."],
   ["EVLine Україна", "EVLine Украина"],
-  ["Програмування та оновлення BYD — дилерський рівень VDS | EVLine", "Программирование и обновление BYD — дилерский уровень VDS | EVLine"],
+  ["Програмування та оновлення BYD — дилерський рівень VDS | EVLine", "Программирование BYD — обновление блоков через VDS | EVLine"],
   ["Оновлення, програмування та калібрування всіх блоків BYD і суббрендів (Denza, Yangwang, Fang Cheng Bao). Безкоштовна перевірка доступних оновлень по VIN.", "Обновление, программирование и калибровка всех блоков BYD и суббрендов (Denza, Yangwang, Fang Cheng Bao). Бесплатная проверка доступных обновлений по VIN."],
   ["Запчастини з Китаю", "Запчасти из Китая"],
   ["Програмування BYD", "Программирование BYD"],
@@ -756,11 +767,11 @@ function cleanupGeneratedRu(html) {
 function prepareStandaloneRu(html, kind) {
   const isByd = kind === "byd";
   const title = isByd
-    ? "Программирование и обновление BYD — дилерский уровень VDS | EVLine Украина"
-    : "Запчасти для BYD, Zeekr, Xiaomi из Китая — авиа от 14 дней | EVLine Украина";
+    ? "Программирование BYD — обновление блоков через VDS | EVLine"
+    : "Запчасти BYD, Zeekr, Xiaomi из Китая | EVLine Украина";
   const desc = isByd
-    ? "Обновление, программирование и калибровка всех блоков BYD через дилерский VDS-доступ. Все модели и суббренды: Denza, Yangwang, Fang Cheng Bao. Бесплатная проверка обновлений по VIN."
-    : "Оригинальные и OEM запчасти для китайских авто: BYD, Zeekr, Xiaomi, Lynk & Co, NIO. Подбор по VIN, проверка перед отправкой, авиа от 14 дней. Привезем даже один болт.";
+    ? "Программирование, обновление и калибровка блоков BYD через VDS. Denza, Yangwang, Fang Cheng Bao. Проверка обновлений по VIN."
+    : "Оригинальные и OEM запчасти для BYD, Zeekr, Xiaomi и других авто из Китая. Подбор по VIN, проверка, авиа от 14 дней.";
   const ukPath = isByd ? "byd.html" : "";
   const ruPath = isByd ? "ru/byd.html" : "ru/";
 
@@ -915,7 +926,7 @@ function ruFooter() {
 
 function brandPageRu(brand) {
   const title = `Запчасти ${brand.name} из Китая | Подбор по VIN — EVLine`;
-  const description = `Запчасти для ${brand.name} из Китая: ${brand.popular.slice(0, 4).join(", ")}. Подбор по VIN, оригинал/OEM, проверка совместимости, доставка в Украину.`;
+  const description = `Запчасти ${brand.name} из Китая: ${brand.popular.slice(0, 3).join(", ")}. Подбор по VIN, оригинал/OEM, доставка в Украину.`;
   const canonical = `${siteUrl}/ru/${brand.ruSlug}/`;
   const ukCanonical = `${siteUrl}/${brand.uaSlug}/`;
   const otherBrands = brands
