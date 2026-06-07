@@ -7,6 +7,35 @@ function extractOrderId(value) {
   return match ? match[1] : "";
 }
 
+function isSetupCommand(value) {
+  const input = text(value).toLowerCase();
+  return /^\/(?:start|help|chatid)(?:@\w+)?(?:\s|$)/.test(input);
+}
+
+function buildSetupMessage(message, chatId) {
+  const chatType = text(message.chat?.type);
+  const title = text(message.chat?.title);
+  const lines = [
+    "EVLine CRM бот на зв'язку.",
+    `Chat ID: ${chatId}`,
+  ];
+
+  if (title) lines.push(`Чат: ${title}`);
+  if (chatType) lines.push(`Тип: ${chatType}`);
+
+  lines.push(
+    "",
+    "Для менеджерського чату скопіюйте цей Chat ID у Cloudflare:",
+    "• запчастини: TELEGRAM_PARTS_CHAT_ID",
+    "• програмування BYD: TELEGRAM_TECH_CHAT_ID",
+    "",
+    "Для клієнта використовуйте команду з картки замовлення:",
+    "/start order_<id>"
+  );
+
+  return lines.join("\n");
+}
+
 async function sendTelegram(env, chatId, message) {
   if (!env.TELEGRAM_BOT_TOKEN || !chatId) return;
   await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -36,10 +65,14 @@ export async function onRequestPost({ request, env }) {
   if (!chatId) return json({ ok: true, skipped: "no_chat_id" });
 
   if (!orderId) {
+    const fallbackMessage = isSetupCommand(incomingText)
+      ? buildSetupMessage(message, chatId)
+      : "Добрий день! Це бот EVLine для статусів замовлення. Щоб підключити повідомлення, надішліть команду, яку дав менеджер.";
+
     await sendTelegram(
       env,
       chatId,
-      "Добрий день! Це бот EVLine для статусів замовлення. Щоб підключити повідомлення, надішліть команду, яку дав менеджер."
+      fallbackMessage
     ).catch(() => {});
     return json({ ok: true, skipped: "no_order_id" });
   }
