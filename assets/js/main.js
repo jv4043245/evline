@@ -52,7 +52,7 @@ function trackingData() {
 
 function leadEndpoint() {
   if (window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
-  if (["evline.com.ua", "www.evline.com.ua", "jv4043245.github.io"].includes(window.location.hostname)) {
+  if (window.location.hostname === "jv4043245.github.io") {
     return "https://evline.pages.dev/api/leads";
   }
   return "/api/leads";
