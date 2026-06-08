@@ -17,8 +17,8 @@
           <img src="/assets/images/logo.png" alt="EVLine">
         </a>
         <div>
-          <strong>CRM та маркетинг</strong>
-          <span>Заявки, замовлення, логістика, реклама</span>
+          <strong>EVLine CRM</strong>
+          <span>Заявки, замовлення, логістика, аналітика</span>
         </div>
       </div>
       <div class="admin-header__actions">
@@ -47,162 +47,184 @@
         </form>
       </section>
 
-      <section class="summary-grid" aria-label="Показники">
-        <article class="summary-card">
-          <span>Заявки</span>
-          <strong data-kpi="leads">0</strong>
-          <small><b data-kpi="new_leads">0</b> нових</small>
-        </article>
-        <article class="summary-card">
-          <span>Активні замовлення</span>
-          <strong data-kpi="active_orders">0</strong>
-          <small><b data-kpi="completed_orders">0</b> завершено</small>
-        </article>
-        <article class="summary-card">
-          <span>Виручка</span>
-          <strong data-kpi="revenue_uah">0 грн</strong>
-          <small><b data-kpi="avg_order_uah">0 грн</b> середній чек</small>
-        </article>
-        <article class="summary-card">
-          <span>Реклама</span>
-          <strong data-kpi="ad_spend_uah">0 грн</strong>
-          <small><b data-kpi="cpl_uah">0 грн</b> CPL</small>
-        </article>
-        <article class="summary-card">
-          <span>Валова маржа</span>
-          <strong data-kpi="gross_profit_uah">0 грн</strong>
-          <small><b data-kpi="profit_roas">0.0x</b> profit ROAS</small>
-        </article>
-        <article class="summary-card">
-          <span>ROAS</span>
-          <strong data-kpi="roas">0.0x</strong>
-          <small><b data-kpi="close_rate">0%</b> лід → завершено</small>
-        </article>
-      </section>
+      <nav class="admin-tabs" aria-label="Розділи адмінки">
+        <button class="admin-tab" type="button" data-admin-tab="orders" aria-selected="true">Замовлення</button>
+        <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
+      </nav>
 
-      <section class="admin-grid admin-grid--two">
-        <article class="admin-panel">
+      <section class="admin-view admin-view--active" data-admin-view="orders">
+        <section class="summary-grid summary-grid--manager" aria-label="Показники менеджера">
+          <article class="summary-card">
+            <span>Заявки</span>
+            <strong data-kpi="leads">0</strong>
+            <small><b data-kpi="new_leads">0</b> нових</small>
+          </article>
+          <article class="summary-card">
+            <span>Активні замовлення</span>
+            <strong data-kpi="active_orders">0</strong>
+            <small><b data-kpi="completed_orders">0</b> завершено</small>
+          </article>
+          <article class="summary-card">
+            <span>Виручка</span>
+            <strong data-kpi="revenue_uah">0 грн</strong>
+            <small><b data-kpi="avg_order_uah">0 грн</b> середній чек</small>
+          </article>
+        </section>
+
+        <section class="admin-panel">
           <div class="admin-panel__head">
-          <h2>Динаміка замовлень</h2>
+            <h2>Замовлення менеджера</h2>
+            <div class="filters">
+              <input type="search" id="search" placeholder="VIN, телефон, авто, трек...">
+              <select id="status-filter">
+                <option value="all">Усі статуси</option>
+                <option value="new">Нова заявка</option>
+                <option value="accepted">Прийнято в роботу</option>
+                <option value="proposal_sent">Пропозицію відправлено</option>
+                <option value="paid">Оплачено</option>
+                <option value="sourcing_china">Шукаємо / замовляємо в Китаї</option>
+                <option value="china_warehouse">На складі в Китаї</option>
+                <option value="left_china">Виїхало з Китаю</option>
+                <option value="in_ukraine">В Україні</option>
+                <option value="ready_for_pickup">Готово до видачі</option>
+                <option value="completed">Завершено</option>
+                <option value="canceled">Скасовано</option>
+              </select>
+              <select id="type-filter">
+                <option value="all">Усі типи</option>
+                <option value="parts">Запчастини</option>
+                <option value="byd">BYD</option>
+                <option value="other">Інше</option>
+              </select>
+            </div>
           </div>
-          <div class="mini-chart" data-chart></div>
-        </article>
-        <article class="admin-panel">
-          <div class="admin-panel__head">
-            <h2>Джерела</h2>
+          <div class="table-wrap">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Клієнт</th>
+                  <th>Авто / запит</th>
+                  <th>Джерело</th>
+                  <th>Статус</th>
+                  <th>Сума</th>
+                  <th>Трек</th>
+                </tr>
+              </thead>
+              <tbody data-orders></tbody>
+            </table>
           </div>
-          <div class="source-list" data-sources></div>
-        </article>
-      </section>
+        </section>
 
-      <section class="admin-panel">
-        <div class="admin-panel__head">
-          <h2>Замовлення менеджера</h2>
-          <div class="filters">
-            <input type="search" id="search" placeholder="VIN, телефон, авто, трек...">
-            <select id="status-filter">
-              <option value="all">Усі статуси</option>
-              <option value="new">Нова заявка</option>
-              <option value="accepted">Прийнято в роботу</option>
-              <option value="proposal_sent">Пропозицію відправлено</option>
-              <option value="paid">Оплачено</option>
-              <option value="sourcing_china">Шукаємо / замовляємо в Китаї</option>
-              <option value="china_warehouse">На складі в Китаї</option>
-              <option value="left_china">Виїхало з Китаю</option>
-              <option value="in_ukraine">В Україні</option>
-              <option value="ready_for_pickup">Готово до видачі</option>
-              <option value="completed">Завершено</option>
-              <option value="canceled">Скасовано</option>
-            </select>
-            <select id="type-filter">
-              <option value="all">Усі типи</option>
-              <option value="parts">Запчастини</option>
-              <option value="byd">BYD</option>
-              <option value="other">Інше</option>
-            </select>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="orders-table">
-            <thead>
-              <tr>
-                <th>Дата</th>
-                <th>Клієнт</th>
-                <th>Авто / запит</th>
-                <th>Джерело</th>
-                <th>Статус</th>
-                <th>Гроші</th>
-                <th>Трек</th>
-              </tr>
-            </thead>
-            <tbody data-orders></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="admin-grid admin-grid--two">
-        <article class="admin-panel">
+        <section class="admin-panel">
           <div class="admin-panel__head">
             <h2>Картка замовлення</h2>
           </div>
           <form class="order-editor" data-order-editor>
             <p class="muted">Оберіть замовлення в таблиці.</p>
           </form>
-        </article>
-
-        <article class="admin-panel">
-          <div class="admin-panel__head">
-            <h2>Витрати на рекламу</h2>
-          </div>
-          <form class="cost-form" data-cost-form>
-            <label>
-              Дата
-              <input type="date" name="cost_date" required>
-            </label>
-            <label>
-              Платформа
-              <select name="platform">
-                <option value="google">Google Ads</option>
-                <option value="facebook">Facebook / Instagram</option>
-                <option value="other">Інше</option>
-              </select>
-            </label>
-            <label>
-              Source
-              <input name="source" placeholder="google, facebook">
-            </label>
-            <label>
-              Campaign
-              <input name="campaign" placeholder="byd_parts_search">
-            </label>
-            <label>
-              Витрати, грн
-              <input name="spend_uah" type="number" min="0" step="0.01">
-            </label>
-            <label>
-              Кліки
-              <input name="clicks" type="number" min="0">
-            </label>
-            <label>
-              Покази
-              <input name="impressions" type="number" min="0">
-            </label>
-            <label class="wide">
-              Нотатка
-              <textarea name="notes" rows="3" placeholder="Що змінювали в кампанії"></textarea>
-            </label>
-            <button class="admin-btn admin-btn--primary wide" type="submit">Додати витрати</button>
-          </form>
-        </article>
+        </section>
       </section>
 
-      <section class="admin-panel">
-        <div class="admin-panel__head">
-          <h2>Маркетингові висновки</h2>
-        </div>
-        <div class="insights" data-insights>
-          <p>Дані з'являться після перших заявок і витрат на рекламу.</p>
-        </div>
+      <section class="admin-view" data-admin-view="analytics" hidden>
+        <section class="summary-grid" aria-label="Маркетингові показники">
+          <article class="summary-card">
+            <span>Заявки</span>
+            <strong data-kpi="leads">0</strong>
+            <small><b data-kpi="new_leads">0</b> нових</small>
+          </article>
+          <article class="summary-card">
+            <span>Реклама</span>
+            <strong data-kpi="ad_spend_uah">0 грн</strong>
+            <small><b data-kpi="cpl_uah">0 грн</b> CPL</small>
+          </article>
+          <article class="summary-card">
+            <span>Виручка</span>
+            <strong data-kpi="revenue_uah">0 грн</strong>
+            <small><b data-kpi="avg_order_uah">0 грн</b> середній чек</small>
+          </article>
+          <article class="summary-card">
+            <span>Валова маржа</span>
+            <strong data-kpi="gross_profit_uah">0 грн</strong>
+            <small><b data-kpi="profit_roas">0.0x</b> profit ROAS</small>
+          </article>
+          <article class="summary-card">
+            <span>ROAS</span>
+            <strong data-kpi="roas">0.0x</strong>
+            <small><b data-kpi="close_rate">0%</b> лід → завершено</small>
+          </article>
+        </section>
+
+        <section class="admin-grid admin-grid--two">
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+            <h2>Динаміка замовлень</h2>
+            </div>
+            <div class="mini-chart" data-chart></div>
+          </article>
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <h2>Джерела</h2>
+            </div>
+            <div class="source-list" data-sources></div>
+          </article>
+        </section>
+
+        <section class="admin-grid admin-grid--two">
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <h2>Витрати на рекламу</h2>
+            </div>
+            <form class="cost-form" data-cost-form>
+              <label>
+                Дата
+                <input type="date" name="cost_date" required>
+              </label>
+              <label>
+                Платформа
+                <select name="platform">
+                  <option value="google">Google Ads</option>
+                  <option value="facebook">Facebook / Instagram</option>
+                  <option value="other">Інше</option>
+                </select>
+              </label>
+              <label>
+                Source
+                <input name="source" placeholder="google, facebook">
+              </label>
+              <label>
+                Campaign
+                <input name="campaign" placeholder="byd_parts_search">
+              </label>
+              <label>
+                Витрати, грн
+                <input name="spend_uah" type="number" min="0" step="0.01">
+              </label>
+              <label>
+                Кліки
+                <input name="clicks" type="number" min="0">
+              </label>
+              <label>
+                Покази
+                <input name="impressions" type="number" min="0">
+              </label>
+              <label class="wide">
+                Нотатка
+                <textarea name="notes" rows="3" placeholder="Що змінювали в кампанії"></textarea>
+              </label>
+              <button class="admin-btn admin-btn--primary wide" type="submit">Додати витрати</button>
+            </form>
+          </article>
+
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <h2>Маркетингові висновки</h2>
+            </div>
+            <div class="insights" data-insights>
+              <p>Дані з'являться після перших заявок і витрат на рекламу.</p>
+            </div>
+          </article>
+        </section>
       </section>
     </main>
   </body>

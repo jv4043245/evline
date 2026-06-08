@@ -52,6 +52,37 @@
   padding: 24px 0 60px;
 }
 
+.admin-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(10, 31, 24, 0.05);
+}
+
+.admin-tab {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-tab[aria-selected="true"] {
+  background: var(--green);
+  color: #fff;
+}
+
+.admin-view[hidden] {
+  display: none;
+}
+
 .auth-panel,
 .admin-panel,
 .summary-card {
@@ -137,6 +168,10 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.summary-grid--manager {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .summary-card {
@@ -487,6 +522,14 @@
   .auth-panel form {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .admin-tabs {
+    width: 100%;
+  }
+
+  .admin-tab {
+    flex: 1;
   }
 
   .summary-grid,

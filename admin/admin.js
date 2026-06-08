@@ -1,5 +1,6 @@
 const state = {
   range: "30d",
+  activeTab: localStorage.getItem("evline_admin_tab") || "orders",
   orders: [],
   selectedOrder: null,
   selectedEvents: [],
@@ -24,6 +25,14 @@ const typeLabels = {
   parts: "Запчастини",
   byd: "BYD",
   other: "Інше",
+};
+
+const paymentLabels = {
+  unknown: "оплата не вказана",
+  unpaid: "не оплачено",
+  partial: "часткова оплата",
+  paid: "оплачено",
+  refunded: "повернення",
 };
 
 const money = new Intl.NumberFormat("uk-UA", {
@@ -87,6 +96,21 @@ function setText(selector, value) {
 function setAuthVisible(visible) {
   const panel = document.querySelector("[data-auth-panel]");
   if (panel) panel.hidden = !visible && adminToken();
+}
+
+function setActiveTab(tab) {
+  const nextTab = tab === "analytics" ? "analytics" : "orders";
+  state.activeTab = nextTab;
+  localStorage.setItem("evline_admin_tab", nextTab);
+
+  document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+    const isActive = button.dataset.adminTab === nextTab;
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  document.querySelectorAll("[data-admin-view]").forEach((view) => {
+    view.hidden = view.dataset.adminView !== nextTab;
+  });
 }
 
 function renderSummary(data) {
@@ -174,6 +198,10 @@ function badge(status) {
   return `<span class="badge badge--${safeClass(status)}">${escapeHtml(statusLabels[status] || status || "new")}</span>`;
 }
 
+function paymentLabel(value) {
+  return paymentLabels[value] || value || "оплата не вказана";
+}
+
 function shortDate(value) {
   return value ? new Date(value).toLocaleDateString("uk-UA") : "-";
 }
@@ -204,7 +232,7 @@ function renderOrders() {
               <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
               <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
-              <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">маржа ${money.format(order.gross_profit_uah || 0)}</span></td>
+              <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
               <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span></td>
             </tr>
           `;
@@ -352,10 +380,6 @@ function renderOrderEditor(order) {
       <input name="processing_cost_uah" type="number" step="0.01" min="0" value="${Number(order.processing_cost_uah || 0)}">
     </label>
     <label>
-      Реклама, грн
-      <input name="ad_cost_uah" type="number" step="0.01" min="0" value="${Number(order.ad_cost_uah || 0)}">
-    </label>
-    <label>
       Інші витрати, грн
       <input name="other_cost_uah" type="number" step="0.01" min="0" value="${Number(order.other_cost_uah || 0)}">
     </label>
@@ -492,6 +516,9 @@ document.querySelector("[data-clear-token]")?.addEventListener("click", () => {
 });
 
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
+document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+  button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
+});
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {
   event.preventDefault();
   try {
@@ -570,4 +597,5 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
   await refresh();
 });
 
+setActiveTab(state.activeTab);
 refresh();
