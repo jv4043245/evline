@@ -226,6 +226,38 @@
             </div>
           </article>
         </section>
+
+        <section class="admin-panel google-ads-panel">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Google Ads конверсії</h2>
+              <p class="muted" data-google-ads-status>Черга офлайн-конверсій для передачі у Google Ads.</p>
+            </div>
+            <div class="admin-panel__actions">
+              <button class="admin-btn" type="button" data-google-ads-backfill>Підготувати з CRM</button>
+              <a class="admin-btn" href="/api/admin/google-ads/conversions?format=csv&range=30d" data-google-ads-export>CSV конверсій</a>
+            </div>
+          </div>
+          <div class="google-ads-summary" data-google-ads-summary></div>
+          <div class="table-wrap">
+            <table class="orders-table google-ads-table">
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Подія</th>
+                  <th>Замовлення</th>
+                  <th>Кампанія</th>
+                  <th>Ідентифікатор</th>
+                  <th>Value</th>
+                  <th>Стан</th>
+                </tr>
+              </thead>
+              <tbody data-google-ads-conversions>
+                <tr><td colspan="7" class="muted">Дані з'являться після застосування міграції.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <section class="admin-view" data-admin-view="delivery" hidden>

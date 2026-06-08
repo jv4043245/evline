@@ -7,6 +7,7 @@ import {
   normalizeOrderStatus,
   queueOrderNotification,
 } from "../../../_lib/crm.js";
+import { queueGoogleAdsConversionsForStatus } from "../../../_lib/google-ads.js";
 
 function statusDates(status) {
   const now = new Date().toISOString();
@@ -160,9 +161,12 @@ export async function onRequestPatch({ request, params, env }) {
 
   let eventId = "";
   let notification = null;
+  let googleAdsConversions = [];
   const updated = await loadOrder(env, params.id);
 
   if (statusChanged) {
+    googleAdsConversions = await queueGoogleAdsConversionsForStatus(env, updated, nextStatus);
+
     const shouldNotify = boolFromPayload(payload.notify_customer, true);
     eventId = await insertStatusEvent(env, {
       order_id: params.id,
@@ -209,6 +213,7 @@ export async function onRequestPatch({ request, params, env }) {
     order: updated,
     event_id: eventId,
     notification,
+    google_ads_conversions: googleAdsConversions,
     events: events.results,
     notifications: notifications.results,
     tracking_events: trackingEvents.results,

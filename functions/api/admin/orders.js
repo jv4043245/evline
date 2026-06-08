@@ -1,5 +1,6 @@
 import { csv, escapeCsv, integer, json, number, readPayload, rangeStart, text } from "../../_lib/http.js";
 import { createOrderFromLead, loadOrder, managerContactForType, normalizeOrderStatus, upsertCustomer } from "../../_lib/crm.js";
+import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
 
 function orderSelect() {
   return `
@@ -101,6 +102,9 @@ export async function onRequestGet({ request, env }) {
       "source",
       "medium",
       "campaign",
+      "gclid",
+      "gbraid",
+      "wbraid",
       "revenue_uah",
       "purchase_cost_uah",
       "delivery_cost_uah",
@@ -129,70 +133,73 @@ export async function onRequestPost({ request, env }) {
   const orderId = crypto.randomUUID();
   const status = normalizeOrderStatus(payload.status);
 
-  await env.DB.prepare(
-    `INSERT INTO orders (
-      id, created_at, updated_at, customer_id, type, status, manager_contact, customer_name,
-      customer_phone, customer_email, customer_telegram, telegram_chat_id, car, vin, item_name,
-      service_name, request_text, tracking_carrier, tracking_number, tracking_url, source,
-      medium, campaign, term, content, gclid, fbclid, landing_page, referrer, shipping_carrier_id,
-      shipping_rate_id, shipping_mode, shipping_weight_kg, shipping_volume_m3, shipping_rate,
-      shipping_rate_currency, shipping_rate_unit, shipping_exchange_rate_uah, revenue_uah,
-      purchase_cost_uah, delivery_cost_uah, customs_cost_uah, processing_cost_uah, ad_cost_uah,
-      other_cost_uah, payment_status, manager_notes, client_notes, next_action_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      orderId,
-      now,
-      now,
-      customerId,
-      text(payload.type) || "parts",
-      status,
-      text(payload.manager_contact) || managerContactForType(payload.type),
-      text(payload.customer_name || payload.name),
-      text(payload.customer_phone || payload.phone),
-      text(payload.customer_email || payload.email),
-      text(payload.customer_telegram || payload.telegram),
-      text(payload.telegram_chat_id),
-      text(payload.car),
-      text(payload.vin).toUpperCase(),
-      text(payload.item_name || payload.part),
-      text(payload.service_name),
-      text(payload.request_text || payload.message),
-      text(payload.tracking_carrier),
-      text(payload.tracking_number),
-      text(payload.tracking_url),
-      text(payload.source),
-      text(payload.medium),
-      text(payload.campaign),
-      text(payload.term),
-      text(payload.content),
-      text(payload.gclid),
-      text(payload.fbclid),
-      text(payload.landing_page),
-      text(payload.referrer),
-      text(payload.shipping_carrier_id),
-      text(payload.shipping_rate_id),
-      text(payload.shipping_mode),
-      number(payload.shipping_weight_kg),
-      number(payload.shipping_volume_m3),
-      number(payload.shipping_rate),
-      text(payload.shipping_rate_currency),
-      text(payload.shipping_rate_unit),
-      number(payload.shipping_exchange_rate_uah),
-      number(payload.revenue_uah),
-      number(payload.purchase_cost_uah),
-      number(payload.delivery_cost_uah),
-      number(payload.customs_cost_uah),
-      number(payload.processing_cost_uah),
-      number(payload.ad_cost_uah),
-      number(payload.other_cost_uah),
-      text(payload.payment_status) || "unknown",
-      text(payload.manager_notes),
-      text(payload.client_notes),
-      text(payload.next_action_at)
+  const orderFields = [
+    ["id", orderId],
+    ["created_at", now],
+    ["updated_at", now],
+    ["customer_id", customerId],
+    ["type", text(payload.type) || "parts"],
+    ["status", status],
+    ["manager_contact", text(payload.manager_contact) || managerContactForType(payload.type)],
+    ["customer_name", text(payload.customer_name || payload.name)],
+    ["customer_phone", text(payload.customer_phone || payload.phone)],
+    ["customer_email", text(payload.customer_email || payload.email)],
+    ["customer_telegram", text(payload.customer_telegram || payload.telegram)],
+    ["telegram_chat_id", text(payload.telegram_chat_id)],
+    ["car", text(payload.car)],
+    ["vin", text(payload.vin).toUpperCase()],
+    ["item_name", text(payload.item_name || payload.part)],
+    ["service_name", text(payload.service_name)],
+    ["request_text", text(payload.request_text || payload.message)],
+    ["tracking_carrier", text(payload.tracking_carrier)],
+    ["tracking_number", text(payload.tracking_number)],
+    ["tracking_url", text(payload.tracking_url)],
+    ["source", text(payload.source)],
+    ["medium", text(payload.medium)],
+    ["campaign", text(payload.campaign)],
+    ["term", text(payload.term)],
+    ["content", text(payload.content)],
+    ["gclid", text(payload.gclid)],
+    ["gbraid", text(payload.gbraid)],
+    ["wbraid", text(payload.wbraid)],
+    ["fbclid", text(payload.fbclid)],
+    ["landing_page", text(payload.landing_page)],
+    ["referrer", text(payload.referrer)],
+    ["shipping_carrier_id", text(payload.shipping_carrier_id)],
+    ["shipping_rate_id", text(payload.shipping_rate_id)],
+    ["shipping_mode", text(payload.shipping_mode)],
+    ["shipping_weight_kg", number(payload.shipping_weight_kg)],
+    ["shipping_volume_m3", number(payload.shipping_volume_m3)],
+    ["shipping_rate", number(payload.shipping_rate)],
+    ["shipping_rate_currency", text(payload.shipping_rate_currency)],
+    ["shipping_rate_unit", text(payload.shipping_rate_unit)],
+    ["shipping_exchange_rate_uah", number(payload.shipping_exchange_rate_uah)],
+    ["revenue_uah", number(payload.revenue_uah)],
+    ["purchase_cost_uah", number(payload.purchase_cost_uah)],
+    ["delivery_cost_uah", number(payload.delivery_cost_uah)],
+    ["customs_cost_uah", number(payload.customs_cost_uah)],
+    ["processing_cost_uah", number(payload.processing_cost_uah)],
+    ["ad_cost_uah", number(payload.ad_cost_uah)],
+    ["other_cost_uah", number(payload.other_cost_uah)],
+    ["payment_status", text(payload.payment_status) || "unknown"],
+    ["manager_notes", text(payload.manager_notes)],
+    ["client_notes", text(payload.client_notes)],
+    ["next_action_at", text(payload.next_action_at)],
+  ];
+  const insertOrder = (fields) =>
+    env.DB.prepare(
+      `INSERT INTO orders (${fields.map(([name]) => name).join(", ")})
+      VALUES (${fields.map(() => "?").join(", ")})`
     )
-    .run();
+      .bind(...fields.map(([, value]) => value))
+      .run();
+
+  try {
+    await insertOrder(orderFields);
+  } catch (error) {
+    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
+    await insertOrder(orderFields.filter(([name]) => name !== "gbraid" && name !== "wbraid"));
+  }
 
   await env.DB.prepare(
     `INSERT INTO order_status_events (
@@ -203,7 +210,12 @@ export async function onRequestPost({ request, env }) {
     .run();
 
   const order = await loadOrder(env, orderId);
-  return json({ ok: true, order });
+  const google_ads_conversions = await queueGoogleAdsConversionsForOrder(
+    env,
+    order,
+    googleAdsEventTypesForStatus(order.status)
+  );
+  return json({ ok: true, order, google_ads_conversions });
 }
 
 export async function onRequestPut({ request, env }) {

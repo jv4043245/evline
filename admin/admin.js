@@ -11,6 +11,14 @@ const state = {
     rates: [],
     migrationRequired: false,
   },
+  googleAds: {
+    conversions: [],
+    summary: {},
+    byEventType: [],
+    settings: {},
+    migrationRequired: false,
+    apiReady: false,
+  },
 };
 
 const statusLabels = {
@@ -50,6 +58,19 @@ const rateUnitLabels = {
   kg: "кг",
   m3: "м3",
   item: "замовлення",
+};
+
+const googleAdsEventLabels = {
+  lead: "Лід",
+  paid: "Оплата",
+  completed: "Завершення",
+};
+
+const googleAdsStatusLabels = {
+  queued: "готово",
+  skipped: "пропущено",
+  uploaded: "відправлено",
+  failed: "помилка",
 };
 
 const adminTabs = new Set(["orders", "analytics", "delivery"]);
@@ -213,6 +234,85 @@ function renderInsights(data) {
   root.innerHTML = insights
     .map(([title, body]) => `<div class="insight"><strong>${title}</strong><span>${body}</span></div>`)
     .join("");
+}
+
+function googleAdsIdentifierLabel(row) {
+  if (row.gclid) return "gclid";
+  if (row.gbraid) return "gbraid";
+  if (row.wbraid) return "wbraid";
+  if (Number(row.has_customer_identifier) === 1) return "enhanced";
+  return "немає";
+}
+
+function renderGoogleAds(data = state.googleAds) {
+  const statusNode = document.querySelector("[data-google-ads-status]");
+  const summaryRoot = document.querySelector("[data-google-ads-summary]");
+  const tableRoot = document.querySelector("[data-google-ads-conversions]");
+  if (!statusNode || !summaryRoot || !tableRoot) return;
+
+  if (data.migrationRequired) {
+    statusNode.textContent = "Потрібно застосувати D1-міграцію Google Ads перед використанням черги.";
+    summaryRoot.innerHTML = "";
+    tableRoot.innerHTML = `<tr><td colspan="7" class="muted">Міграція ще не застосована.</td></tr>`;
+    return;
+  }
+
+  if (data.error) {
+    statusNode.textContent = `Google Ads черга: ${data.error}`;
+  }
+
+  const summary = data.summary || {};
+  const settings = data.settings || {};
+  if (!data.error) {
+    statusNode.textContent = `Customer ID: ${settings.customer_id || "4028488894"} · API: ${
+      data.apiReady ? "ключі підключені" : "поки CSV/черга, без API-відправки"
+    }`;
+  }
+
+  const eventBreakdown = (data.byEventType || [])
+    .map((item) => `${googleAdsEventLabels[item.event_type] || item.event_type}: ${item.total || 0}`)
+    .join(" · ");
+
+  summaryRoot.innerHTML = `
+    <div class="google-ads-summary__item">
+      <span>Усього</span>
+      <strong>${numberFmt.format(summary.total || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Готово</span>
+      <strong>${numberFmt.format(summary.queued || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Відправлено</span>
+      <strong>${numberFmt.format(summary.uploaded || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Пропущено</span>
+      <strong>${numberFmt.format(summary.skipped || 0)}</strong>
+    </div>
+    <p class="muted">${escapeHtml(eventBreakdown || "Події ще не підготовлені.")}</p>
+  `;
+
+  tableRoot.innerHTML = data.conversions?.length
+    ? data.conversions
+        .map((row) => {
+          const orderText = row.item_name || row.service_name || row.car || row.vin || row.order_id;
+          const clickLabel = googleAdsIdentifierLabel(row);
+          const status = row.status || "queued";
+          return `
+            <tr>
+              <td>${escapeHtml(shortDateTime(row.created_at))}</td>
+              <td><strong>${escapeHtml(googleAdsEventLabels[row.event_type] || row.event_type)}</strong><br><span class="muted">${textOrDash(row.conversion_action_name)}</span></td>
+              <td>${textOrDash(orderText)}<br><span class="muted">${textOrDash(row.customer_phone || row.customer_telegram)}</span></td>
+              <td>${textOrDash(row.source || "site")}<br><span class="muted">${textOrDash(row.campaign || "без кампанії")}</span></td>
+              <td>${escapeHtml(clickLabel)}<br><span class="muted">${row.has_click_id ? "click id є" : "через контакт клієнта"}</span></td>
+              <td>${money.format(row.conversion_value || 0)}<br><span class="muted">маржа ${money.format(row.gross_profit_uah || 0)}</span></td>
+              <td><span class="conversion-status conversion-status--${safeClass(status)}">${escapeHtml(googleAdsStatusLabels[status] || status)}</span>${row.skip_reason ? `<br><span class="muted">${escapeHtml(row.skip_reason)}</span>` : ""}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `<tr><td colspan="7" class="muted">Поки немає підготовлених конверсій.</td></tr>`;
 }
 
 function rateFromMode(carrierId, mode) {
@@ -804,12 +904,39 @@ async function loadShipping() {
   renderShippingDirectory();
 }
 
+async function loadGoogleAds() {
+  try {
+    const data = await api(`/api/admin/google-ads/conversions?range=${encodeURIComponent(state.range)}&limit=80`);
+    state.googleAds = {
+      conversions: data.conversions || [],
+      summary: data.summary || {},
+      byEventType: data.by_event_type || [],
+      settings: data.settings || {},
+      migrationRequired: Boolean(data.migration_required),
+      apiReady: Boolean(data.api_ready),
+    };
+  } catch (error) {
+    state.googleAds = {
+      conversions: [],
+      summary: {},
+      byEventType: [],
+      settings: {},
+      migrationRequired: /migration|google_ads_conversion_events_missing/i.test(error.message),
+      apiReady: false,
+      error: error.message,
+    };
+  }
+  renderGoogleAds(state.googleAds);
+}
+
 async function refresh() {
   try {
     state.range = document.querySelector("#range")?.value || "30d";
     const exportLink = document.querySelector("[data-export]");
     if (exportLink) exportLink.href = `/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`;
-    await Promise.all([loadSummary(), loadOrders(), loadShipping()]);
+    const googleAdsExport = document.querySelector("[data-google-ads-export]");
+    if (googleAdsExport) googleAdsExport.href = `/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`;
+    await Promise.all([loadSummary(), loadOrders(), loadShipping(), loadGoogleAds()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     setAuthVisible(false);
   } catch (error) {
@@ -884,6 +1011,43 @@ document.querySelector("[data-export]")?.addEventListener("click", async (event)
     URL.revokeObjectURL(url);
   } catch (error) {
     alert(error.message);
+  }
+});
+document.querySelector("[data-google-ads-export]")?.addEventListener("click", async (event) => {
+  event.preventDefault();
+  try {
+    const csv = await api(`/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`, {
+      headers: { accept: "text/csv" },
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `evline-google-ads-conversions-${state.range}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    alert(error.message);
+  }
+});
+document.querySelector("[data-google-ads-backfill]")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = "Готую...";
+  try {
+    const result = await api("/api/admin/google-ads/conversions", {
+      method: "POST",
+      body: JSON.stringify({ action: "backfill", range: state.range, limit: 500 }),
+    });
+    await loadGoogleAds();
+    alert(`Підготовлено: ${result.queued || 0}. Перевірено замовлень: ${result.processed || 0}.`);
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Підготувати з CRM";
   }
 });
 document.querySelector("#range")?.addEventListener("change", refresh);

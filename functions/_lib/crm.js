@@ -1,4 +1,5 @@
 import { number, text } from "./http.js";
+import { queueGoogleAdsConversionsForOrder } from "./google-ads.js";
 
 export const ORDER_STATUS_LABELS = {
   new: "Нова заявка",
@@ -132,43 +133,86 @@ export async function createOrderFromLead(env, lead) {
   const itemName = text(lead.part || lead.item_name);
   const serviceName = lead.type === "byd" ? "Програмування BYD" : "";
 
-  await env.DB.prepare(
-    `INSERT INTO orders (
-      id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
-      customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
-      service_name, request_text, source, medium, campaign, term, content, gclid, fbclid,
-      landing_page, referrer
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      orderId,
-      now,
-      now,
-      lead.id,
-      customerId,
-      lead.type || "parts",
-      "new",
-      managerContactForType(lead.type),
-      text(lead.name),
-      text(lead.phone),
-      text(lead.email),
-      normalizeTelegram(lead.telegram),
-      text(lead.car),
-      text(lead.vin).toUpperCase(),
-      itemName,
-      serviceName,
-      orderRequestText(lead),
-      text(lead.source),
-      text(lead.medium),
-      text(lead.campaign),
-      text(lead.term),
-      text(lead.content),
-      text(lead.gclid),
-      text(lead.fbclid),
-      text(lead.landing_page),
-      text(lead.referrer)
+  try {
+    await env.DB.prepare(
+      `INSERT INTO orders (
+        id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
+        customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
+        service_name, request_text, source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid,
+        landing_page, referrer
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run();
+      .bind(
+        orderId,
+        now,
+        now,
+        lead.id,
+        customerId,
+        lead.type || "parts",
+        "new",
+        managerContactForType(lead.type),
+        text(lead.name),
+        text(lead.phone),
+        text(lead.email),
+        normalizeTelegram(lead.telegram),
+        text(lead.car),
+        text(lead.vin).toUpperCase(),
+        itemName,
+        serviceName,
+        orderRequestText(lead),
+        text(lead.source),
+        text(lead.medium),
+        text(lead.campaign),
+        text(lead.term),
+        text(lead.content),
+        text(lead.gclid),
+        text(lead.gbraid),
+        text(lead.wbraid),
+        text(lead.fbclid),
+        text(lead.landing_page),
+        text(lead.referrer)
+      )
+      .run();
+  } catch (error) {
+    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
+    await env.DB.prepare(
+      `INSERT INTO orders (
+        id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
+        customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
+        service_name, request_text, source, medium, campaign, term, content, gclid, fbclid,
+        landing_page, referrer
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        orderId,
+        now,
+        now,
+        lead.id,
+        customerId,
+        lead.type || "parts",
+        "new",
+        managerContactForType(lead.type),
+        text(lead.name),
+        text(lead.phone),
+        text(lead.email),
+        normalizeTelegram(lead.telegram),
+        text(lead.car),
+        text(lead.vin).toUpperCase(),
+        itemName,
+        serviceName,
+        orderRequestText(lead),
+        text(lead.source),
+        text(lead.medium),
+        text(lead.campaign),
+        text(lead.term),
+        text(lead.content),
+        text(lead.gclid),
+        text(lead.fbclid),
+        text(lead.landing_page),
+        text(lead.referrer)
+      )
+      .run();
+  }
 
   await insertStatusEvent(env, {
     order_id: orderId,
@@ -176,6 +220,8 @@ export async function createOrderFromLead(env, lead) {
     actor: "site",
     comment: "Заявка створена на сайті",
   });
+
+  await queueGoogleAdsConversionsForOrder(env, { ...lead, id: orderId, lead_id: lead.id, status: "new" }, ["lead"]);
 
   return orderId;
 }

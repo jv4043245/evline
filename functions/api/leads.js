@@ -55,6 +55,8 @@ function normalizeLead(payload, request) {
     term: text(payload.utm_term || payload.term),
     content: text(payload.utm_content || payload.content),
     gclid: text(payload.gclid),
+    gbraid: text(payload.gbraid),
+    wbraid: text(payload.wbraid),
     fbclid: text(payload.fbclid),
     landing_page: text(payload.landing_page) || url.origin,
     referrer: text(payload.referrer) || text(request.headers.get("referer")),
@@ -104,39 +106,78 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Phone, email or Telegram is required" }, { status: 400, headers: leadCorsHeaders(request) });
   }
 
-  await env.DB.prepare(
-    `INSERT INTO leads (
-      id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
-      source, medium, campaign, term, content, gclid, fbclid, landing_page, referrer, user_agent, ip_country
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      lead.id,
-      lead.created_at,
-      lead.updated_at,
-      lead.type,
-      lead.status,
-      lead.quality,
-      lead.name,
-      lead.phone,
-      lead.email,
-      lead.telegram,
-      lead.car,
-      lead.vin,
-      lead.message,
-      lead.source,
-      lead.medium,
-      lead.campaign,
-      lead.term,
-      lead.content,
-      lead.gclid,
-      lead.fbclid,
-      lead.landing_page,
-      lead.referrer,
-      lead.user_agent,
-      lead.ip_country
+  try {
+    await env.DB.prepare(
+      `INSERT INTO leads (
+        id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
+        source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid, landing_page, referrer, user_agent, ip_country
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run();
+      .bind(
+        lead.id,
+        lead.created_at,
+        lead.updated_at,
+        lead.type,
+        lead.status,
+        lead.quality,
+        lead.name,
+        lead.phone,
+        lead.email,
+        lead.telegram,
+        lead.car,
+        lead.vin,
+        lead.message,
+        lead.source,
+        lead.medium,
+        lead.campaign,
+        lead.term,
+        lead.content,
+        lead.gclid,
+        lead.gbraid,
+        lead.wbraid,
+        lead.fbclid,
+        lead.landing_page,
+        lead.referrer,
+        lead.user_agent,
+        lead.ip_country
+      )
+      .run();
+  } catch (error) {
+    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
+    await env.DB.prepare(
+      `INSERT INTO leads (
+        id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
+        source, medium, campaign, term, content, gclid, fbclid, landing_page, referrer, user_agent, ip_country
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        lead.id,
+        lead.created_at,
+        lead.updated_at,
+        lead.type,
+        lead.status,
+        lead.quality,
+        lead.name,
+        lead.phone,
+        lead.email,
+        lead.telegram,
+        lead.car,
+        lead.vin,
+        lead.message,
+        lead.source,
+        lead.medium,
+        lead.campaign,
+        lead.term,
+        lead.content,
+        lead.gclid,
+        lead.fbclid,
+        lead.landing_page,
+        lead.referrer,
+        lead.user_agent,
+        lead.ip_country
+      )
+      .run();
+  }
 
   let orderId = "";
   try {

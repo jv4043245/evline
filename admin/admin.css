@@ -209,6 +209,75 @@
   overflow: hidden;
 }
 
+.admin-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.google-ads-panel .admin-panel__head {
+  align-items: flex-start;
+}
+
+.google-ads-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.google-ads-summary__item {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbf9;
+}
+
+.google-ads-summary__item span,
+.google-ads-summary > .muted {
+  display: block;
+  color: var(--muted);
+}
+
+.google-ads-summary__item strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.google-ads-summary > .muted {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+}
+
+.conversion-status {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eaf7ef;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.conversion-status--skipped {
+  background: #f4f5f7;
+  color: var(--muted);
+}
+
+.conversion-status--uploaded {
+  background: #e6f2ff;
+  color: #1261a6;
+}
+
+.conversion-status--failed {
+  background: #fff0ee;
+  color: #b43225;
+}
+
 .admin-panel__head {
   display: flex;
   align-items: center;
@@ -636,6 +705,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .google-ads-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .admin-grid--two {
     grid-template-columns: 1fr;
   }
@@ -662,6 +735,7 @@
   }
 
   .summary-grid,
+  .google-ads-summary,
   .order-editor,
   .cost-form,
   .shipping-form,

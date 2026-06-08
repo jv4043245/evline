@@ -44,6 +44,8 @@ function trackingData() {
     utm_term: params.get("utm_term") || "",
     utm_content: params.get("utm_content") || "",
     gclid: params.get("gclid") || "",
+    gbraid: params.get("gbraid") || "",
+    wbraid: params.get("wbraid") || "",
     fbclid: params.get("fbclid") || "",
     landing_page: window.location.href,
     referrer: document.referrer,
