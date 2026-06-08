@@ -427,6 +427,43 @@
   flex-shrink: 0;
 }
 
+.tracking-sync-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(0, 180, 114, 0.2);
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.tracking-sync-card strong,
+.tracking-sync-card span {
+  display: block;
+}
+
+.tracking-sync-card span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tracking-sync-card--error {
+  border-color: rgba(185, 28, 28, 0.24);
+  background: #fef2f2;
+}
+
+.tracking-sync-card__error {
+  color: #b91c1c !important;
+  font-weight: 800;
+}
+
+.tracking-sync-card .admin-btn {
+  flex-shrink: 0;
+}
+
 .shipping-note {
   color: var(--green-dark);
   font-weight: 800;
@@ -637,5 +674,10 @@
   .shipping-form .wide,
   .shipping-rate-block {
     grid-column: auto;
+  }
+
+  .tracking-sync-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

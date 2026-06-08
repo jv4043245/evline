@@ -5,6 +5,7 @@ const state = {
   selectedOrder: null,
   selectedEvents: [],
   selectedNotifications: [],
+  selectedTrackingEvents: [],
   shipping: {
     carriers: [],
     rates: [],
@@ -263,7 +264,7 @@ function renderShippingDirectory() {
               <div class="shipping-card__head">
                 <div>
                   <strong>${textOrDash(carrier.name)}</strong>
-                  <span class="muted">${textOrDash(carrier.code)}${Number(carrier.active) === 0 ? " · вимкнено" : ""}</span>
+                  <span class="muted">${textOrDash(carrier.code)}${carrierTrackingLabel(carrier)}${Number(carrier.active) === 0 ? " · вимкнено" : ""}</span>
                 </div>
                 <button class="admin-btn admin-btn--small" type="button" data-edit-shipping-carrier="${escapeHtml(carrier.id)}">Редагувати</button>
               </div>
@@ -343,6 +344,13 @@ function rateLabel(rate) {
   return `${shippingModeLabels[rate.mode] || rate.mode}: ${numeric(rate.rate)} ${rate.currency}/${unit}${exchange}${days}`;
 }
 
+function carrierTrackingLabel(carrier) {
+  if (!carrier) return "";
+  if (Number(carrier.tracking_auto_enabled) === 1) return " · авто-трекінг";
+  if (carrier.tracking_provider === "manual") return " · ручний статус";
+  return "";
+}
+
 function calculateDeliveryCost(rate, weightKg, volumeM3) {
   if (!rate) return 0;
   if (numeric(rate.rate) <= 0) return 0;
@@ -384,6 +392,9 @@ function renderOrders() {
           const contact = order.customer_phone || order.customer_email || order.customer_telegram || "";
           const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
           const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
+          const trackingStatus = order.tracking_status_text
+            ? `${order.tracking_status_text}${order.tracking_status_location ? ` · ${order.tracking_status_location}` : ""}`
+            : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
               <td>${escapeHtml(shortDateTime(order.created_at))}<br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
@@ -392,7 +403,7 @@ function renderOrders() {
               <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
               <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
-              <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
+              <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${trackingStatus ? `<br><span class="muted">${escapeHtml(trackingStatus)}</span>` : ""}${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
             </tr>
           `;
         })
@@ -480,6 +491,11 @@ function renderOrderEditor(order) {
   const selectedMode = order.shipping_mode || "air";
   const selectedRate = selectRate(selectedCarrierId, selectedMode, order.shipping_rate_id);
   const currentRateLabel = selectedRate ? rateLabel(selectedRate) : "Оберіть перевізника і тип доставки";
+  const selectedCarrier = carrierById(selectedCarrierId) || matchedCarrier || null;
+  const autoTrackingAvailable = Number(selectedCarrier?.tracking_auto_enabled) === 1 || /meest|mist/i.test(`${order.tracking_carrier || ""} ${order.tracking_number || ""}`);
+  const trackingStatus = order.tracking_status_text
+    ? `${order.tracking_status_text}${order.tracking_status_location ? ` (${order.tracking_status_location})` : ""}`
+    : "Статус перевізника ще не перевірявся";
 
   form.innerHTML = `
     <div class="order-editor__meta">
@@ -563,6 +579,20 @@ function renderOrderEditor(order) {
       Посилання на трекінг
       <input name="tracking_url" value="${escapeHtml(order.tracking_url || "")}">
     </label>
+    <div class="tracking-sync-card wide ${order.tracking_sync_error ? "tracking-sync-card--error" : ""}">
+      <div>
+        <strong>${escapeHtml(trackingStatus)}</strong>
+        <span>
+          ${order.tracking_status_at ? `Статус від ${escapeHtml(shortDateTime(order.tracking_status_at))}` : "Після першої перевірки тут буде статус Meest"}
+          ${order.tracking_last_checked_at ? ` · перевірено ${escapeHtml(shortDateTime(order.tracking_last_checked_at))}` : ""}
+        </span>
+        ${order.carrier_estimated_delivery_at ? `<span>Орієнтовна доставка: ${escapeHtml(shortDate(order.carrier_estimated_delivery_at))}</span>` : ""}
+        ${order.tracking_sync_error ? `<span class="tracking-sync-card__error">${escapeHtml(order.tracking_sync_error)}</span>` : ""}
+      </div>
+      <button class="admin-btn" type="button" data-sync-tracking="${escapeHtml(order.id)}" ${autoTrackingAvailable && order.tracking_number ? "" : "disabled"}>
+        Оновити трекінг
+      </button>
+    </div>
 
     <div class="order-editor__section order-editor__section--delivery wide">
       <div>
@@ -652,6 +682,10 @@ function renderOrderEditor(order) {
     </label>
 
     <div class="order-editor__history wide">
+      <strong>Історія доставки</strong>
+      ${renderTrackingEvents()}
+    </div>
+    <div class="order-editor__history wide">
       <strong>Історія статусів</strong>
       ${renderEvents()}
     </div>
@@ -685,6 +719,27 @@ function renderNotifications() {
               <span>${escapeHtml(shortDateTime(notification.created_at))} · ${textOrDash(notification.recipient_contact)} · спроб: ${Number(notification.attempts || 0)}</span>
               ${notification.error ? `<p>${escapeHtml(notification.error)}</p>` : ""}
               ${notification.status !== "sent" ? `<button class="admin-btn admin-btn--small" type="button" data-retry-notification="${escapeHtml(notification.id)}">Повторити відправку</button>` : ""}
+            </li>
+          `
+        )
+        .join("")}
+    </ol>
+  `;
+}
+
+function renderTrackingEvents() {
+  if (!state.selectedTrackingEvents.length) {
+    return `<p class="muted">Подій доставки ще немає. Натисніть “Оновити трекінг” після внесення трек-номера Meest.</p>`;
+  }
+  return `
+    <ol class="event-list">
+      ${state.selectedTrackingEvents
+        .map(
+          (event) => `
+            <li>
+              <strong>${escapeHtml(event.status_text || event.status_code || "Статус перевізника")}</strong>
+              <span>${escapeHtml(shortDateTime(event.occurred_at))} · ${textOrDash([event.city, event.country].filter(Boolean).join(", "))} · ${textOrDash(event.tracking_number)}</span>
+              ${event.status_description ? `<p>${escapeHtml(event.status_description.replace(/^\*/, ""))}</p>` : ""}
             </li>
           `
         )
@@ -735,6 +790,7 @@ async function loadOrder(id) {
   state.selectedOrder = data.order;
   state.selectedEvents = data.events || [];
   state.selectedNotifications = data.notifications || [];
+  state.selectedTrackingEvents = data.tracking_events || [];
   renderOrderEditor(state.selectedOrder);
 }
 
@@ -856,6 +912,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
   state.selectedOrder = result.order;
   state.selectedEvents = result.events || [];
   state.selectedNotifications = result.notifications || state.selectedNotifications;
+  state.selectedTrackingEvents = result.tracking_events || state.selectedTrackingEvents;
   renderOrderEditor(result.order);
   await refresh();
 });
@@ -873,6 +930,28 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const syncButton = event.target.closest("[data-sync-tracking]");
+  if (syncButton) {
+    syncButton.disabled = true;
+    syncButton.textContent = "Перевіряю...";
+    try {
+      const result = await api(`/api/admin/tracking/${encodeURIComponent(syncButton.dataset.syncTracking)}`, {
+        method: "POST",
+        body: "{}",
+      });
+      if (!result.ok) throw new Error(result.error || "Не вдалося оновити трекінг");
+      if (state.selectedOrder?.id) await loadOrder(state.selectedOrder.id);
+      await loadOrders();
+      alert(result.status === "updated" ? "Трекінг оновлено." : "Нових статусів у перевізника немає.");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      syncButton.disabled = false;
+      syncButton.textContent = "Оновити трекінг";
+    }
+    return;
+  }
+
   const settingsButton = event.target.closest("[data-open-shipping-settings]");
   if (settingsButton) {
     setActiveTab("delivery");

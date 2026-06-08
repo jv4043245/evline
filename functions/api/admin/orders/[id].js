@@ -42,7 +42,13 @@ export async function onRequestGet({ params, env }) {
     .bind(params.id)
     .all();
 
-  return json({ order, events: events.results, notifications: notifications.results });
+  const trackingEvents = await env.DB.prepare(
+    `SELECT * FROM order_tracking_events WHERE order_id = ? ORDER BY occurred_at DESC, created_at DESC LIMIT 80`
+  )
+    .bind(params.id)
+    .all();
+
+  return json({ order, events: events.results, notifications: notifications.results, tracking_events: trackingEvents.results });
 }
 
 export async function onRequestPatch({ request, params, env }) {
@@ -192,5 +198,19 @@ export async function onRequestPatch({ request, params, env }) {
     .bind(params.id)
     .all();
 
-  return json({ ok: true, order: updated, event_id: eventId, notification, events: events.results, notifications: notifications.results });
+  const trackingEvents = await env.DB.prepare(
+    `SELECT * FROM order_tracking_events WHERE order_id = ? ORDER BY occurred_at DESC, created_at DESC LIMIT 80`
+  )
+    .bind(params.id)
+    .all();
+
+  return json({
+    ok: true,
+    order: updated,
+    event_id: eventId,
+    notification,
+    events: events.results,
+    notifications: notifications.results,
+    tracking_events: trackingEvents.results,
+  });
 }

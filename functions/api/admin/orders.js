@@ -47,10 +47,10 @@ function buildWhere(url) {
     clauses.push(`(
       customer_name LIKE ? OR customer_phone LIKE ? OR customer_email LIKE ? OR customer_telegram LIKE ?
       OR car LIKE ? OR vin LIKE ? OR item_name LIKE ? OR service_name LIKE ? OR request_text LIKE ?
-      OR campaign LIKE ? OR tracking_number LIKE ?
+      OR campaign LIKE ? OR tracking_number LIKE ? OR tracking_status_text LIKE ? OR tracking_status_location LIKE ?
     )`);
     const like = `%${q}%`;
-    binds.push(like, like, like, like, like, like, like, like, like, like, like);
+    binds.push(like, like, like, like, like, like, like, like, like, like, like, like, like);
   }
 
   return {
@@ -84,6 +84,12 @@ export async function onRequestGet({ request, env }) {
       "service_name",
       "tracking_carrier",
       "tracking_number",
+      "tracking_status_code",
+      "tracking_status_text",
+      "tracking_status_location",
+      "tracking_status_at",
+      "tracking_last_checked_at",
+      "carrier_estimated_delivery_at",
       "shipping_carrier_id",
       "shipping_mode",
       "shipping_weight_kg",
