@@ -1,0 +1,10 @@
+name = "evline-crm-tracking-cron"
+main = "index.js"
+compatibility_date = "2026-06-08"
+
+[vars]
+CRM_TRACKING_SYNC_URL = "https://evline.com.ua/api/cron/tracking-sync"
+CRM_TRACKING_SYNC_LIMIT = "50"
+
+[triggers]
+crons = ["0 */2 * * *"]
