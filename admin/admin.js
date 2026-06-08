@@ -178,6 +178,17 @@ function shortDate(value) {
   return value ? new Date(value).toLocaleDateString("uk-UA") : "-";
 }
 
+function shortDateTime(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function renderOrders() {
   const root = document.querySelector("[data-orders]");
   if (!root) return;
@@ -188,7 +199,7 @@ function renderOrders() {
           const contact = order.customer_phone || order.customer_email || order.customer_telegram || "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
-              <td>${escapeHtml(shortDate(order.created_at))}<br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
+              <td>${escapeHtml(shortDateTime(order.created_at))}<br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
               <td><strong>${textOrDash(order.customer_name || "Без імені")}</strong><br><span class="muted">${textOrDash(contact)}</span></td>
               <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
               <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
@@ -399,7 +410,7 @@ function renderNotifications() {
           (notification) => `
             <li>
               <strong class="notification-status notification-status--${safeClass(notification.status)}">${escapeHtml(notification.status || "pending")}</strong>
-              <span>${escapeHtml(shortDate(notification.created_at))} · ${textOrDash(notification.recipient_contact)} · спроб: ${Number(notification.attempts || 0)}</span>
+              <span>${escapeHtml(shortDateTime(notification.created_at))} · ${textOrDash(notification.recipient_contact)} · спроб: ${Number(notification.attempts || 0)}</span>
               ${notification.error ? `<p>${escapeHtml(notification.error)}</p>` : ""}
               ${notification.status !== "sent" ? `<button class="admin-btn admin-btn--small" type="button" data-retry-notification="${escapeHtml(notification.id)}">Повторити відправку</button>` : ""}
             </li>
@@ -419,7 +430,7 @@ function renderEvents() {
           (event) => `
             <li>
               <strong>${escapeHtml(statusLabels[event.status] || event.status)}</strong>
-              <span>${escapeHtml(shortDate(event.created_at))} · ${textOrDash(event.actor)} · повідомлення: ${textOrDash(event.notification_status)}</span>
+              <span>${escapeHtml(shortDateTime(event.created_at))} · ${textOrDash(event.actor)} · повідомлення: ${textOrDash(event.notification_status)}</span>
               ${event.comment ? `<p>${escapeHtml(event.comment)}</p>` : ""}
             </li>
           `
