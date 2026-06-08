@@ -281,7 +281,7 @@ function renderShippingDirectory() {
           `;
         })
         .join("")
-    : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад MIST China.</p>`;
+    : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад Meest China.</p>`;
 
   if (!document.querySelector("[data-shipping-form]")?.elements.namedItem("id")?.value && state.shipping.carriers[0]) {
     fillShippingForm(state.shipping.carriers[0].id);
@@ -334,15 +334,18 @@ function selectRate(carrierId, mode, preferredRateId = "") {
 function rateLabel(rate) {
   if (!rate) return "Тариф не вибрано";
   const unit = rateUnitLabels[rate.unit] || rate.unit || "-";
-  const exchange = rate.currency === "UAH" ? "" : ` · курс ${numeric(rate.exchange_rate_uah) || "-"}`;
+  const rateValue = numeric(rate.rate);
+  const exchange = rate.currency === "UAH" || rateValue <= 0 ? "" : ` · курс ${numeric(rate.exchange_rate_uah) || "-"}`;
   const days = rate.estimated_days_min || rate.estimated_days_max
     ? ` · ${numeric(rate.estimated_days_min) || "?"}-${numeric(rate.estimated_days_max) || "?"} днів`
     : "";
+  if (rateValue <= 0) return `${shippingModeLabels[rate.mode] || rate.mode}: індивідуально${days}`;
   return `${shippingModeLabels[rate.mode] || rate.mode}: ${numeric(rate.rate)} ${rate.currency}/${unit}${exchange}${days}`;
 }
 
 function calculateDeliveryCost(rate, weightKg, volumeM3) {
   if (!rate) return 0;
+  if (numeric(rate.rate) <= 0) return 0;
   let base = 0;
   if (rate.unit === "m3") {
     base = Math.max(numeric(volumeM3), numeric(rate.min_volume_m3));
@@ -550,7 +553,7 @@ function renderOrderEditor(order) {
 
     <label>
       Перевізник
-      <input name="tracking_carrier" value="${escapeHtml(order.tracking_carrier || "")}" placeholder="MIST China">
+      <input name="tracking_carrier" value="${escapeHtml(order.tracking_carrier || "")}" placeholder="Meest China">
     </label>
     <label>
       Трек-номер
@@ -761,7 +764,8 @@ async function refresh() {
 
 function shippingRatePayload(form, mode) {
   const field = (name) => form.elements.namedItem(name);
-  const rate = numeric(field(`${mode}_rate`)?.value);
+  const rawRate = plainText(field(`${mode}_rate`)?.value);
+  const rate = numeric(rawRate);
   return {
     id: plainText(field(`${mode}_id`)?.value),
     mode,
@@ -774,7 +778,7 @@ function shippingRatePayload(form, mode) {
     exchange_rate_uah: numeric(field(`${mode}_exchange_rate_uah`)?.value),
     estimated_days_min: numeric(field(`${mode}_estimated_days_min`)?.value),
     estimated_days_max: numeric(field(`${mode}_estimated_days_max`)?.value),
-    active: rate > 0 ? 1 : 0,
+    active: rawRate ? 1 : 0,
   };
 }
 

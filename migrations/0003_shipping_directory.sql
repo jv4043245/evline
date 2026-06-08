@@ -50,11 +50,11 @@ INSERT OR IGNORE INTO shipping_carriers (
   'mist-china',
   datetime('now'),
   datetime('now'),
-  'MIST China',
-  'mist-china',
+  'Meest China',
+  'meest-china',
   1,
-  '',
-  'Базовий перевізник. Тарифи уточнити перед бойовим використанням.'
+  'https://cab.meest.cn/',
+  'Комерційне карго з Китаю: авіа від 11.3 USD/кг, море від 2.5 USD/кг. Партії від 150 EUR та 30 кг.'
 );
 
 INSERT OR IGNORE INTO shipping_rates (
@@ -68,16 +68,16 @@ INSERT OR IGNORE INTO shipping_rates (
   'mist-china',
   'air',
   'USD',
-  12,
+  11.3,
   'kg',
   0,
-  1,
+  30,
   0,
   42,
   12,
-  18,
+  15,
   1,
-  'Тестовий тариф для авіа. Перевірити актуальність.'
+  'Meest China: авіа комерційних збірних вантажів, від 11.3 USD/кг, 12-15 днів.'
 ),
 (
   'mist-china-sea',
@@ -86,14 +86,14 @@ INSERT OR IGNORE INTO shipping_rates (
   'mist-china',
   'sea',
   'USD',
-  450,
-  'm3',
+  2.5,
+  'kg',
   0,
   0,
-  0.1,
+  0,
   42,
-  55,
-  70,
+  60,
+  65,
   1,
-  'Тестовий тариф для моря. Перевірити актуальність.'
+  'Meest China: море комерційних збірних вантажів, від 2.5 USD/кг, 60-65 днів.'
 );
