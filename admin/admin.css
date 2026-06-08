@@ -126,7 +126,10 @@
 .order-editor textarea,
 .cost-form input,
 .cost-form select,
-.cost-form textarea {
+.cost-form textarea,
+.shipping-form input,
+.shipping-form select,
+.shipping-form textarea {
   min-height: 40px;
   padding: 9px 11px;
   border: 1px solid var(--line);
@@ -362,7 +365,8 @@
 }
 
 .order-editor,
-.cost-form {
+.cost-form,
+.shipping-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -370,7 +374,8 @@
 }
 
 .order-editor label,
-.cost-form label {
+.cost-form label,
+.shipping-form label {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -379,12 +384,14 @@
 }
 
 .order-editor textarea,
-.cost-form textarea {
+.cost-form textarea,
+.shipping-form textarea {
   resize: vertical;
 }
 
 .order-editor .wide,
-.cost-form .wide {
+.cost-form .wide,
+.shipping-form .wide {
   grid-column: 1 / -1;
 }
 
@@ -410,6 +417,91 @@
 
 .order-editor__section strong {
   color: var(--ink);
+}
+
+.order-editor__section--delivery {
+  align-items: center;
+}
+
+.order-editor__section--delivery .admin-btn {
+  flex-shrink: 0;
+}
+
+.shipping-note {
+  color: var(--green-dark);
+  font-weight: 800;
+}
+
+.shipping-rate-block {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgba(0, 180, 114, 0.22);
+  border-radius: 8px;
+  background: #f7fbf8;
+}
+
+.shipping-rate-block legend {
+  padding: 0 6px;
+  color: var(--green-dark);
+  font-weight: 900;
+}
+
+.shipping-list {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.shipping-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.shipping-card--inactive {
+  opacity: 0.62;
+}
+
+.shipping-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shipping-card__head strong,
+.shipping-card__head span {
+  display: block;
+}
+
+.shipping-rate-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shipping-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.shipping-pill--muted {
+  background: var(--surface-strong);
+  color: var(--muted);
 }
 
 .order-editor__notify {
@@ -534,12 +626,16 @@
 
   .summary-grid,
   .order-editor,
-  .cost-form {
+  .cost-form,
+  .shipping-form,
+  .shipping-rate-block {
     grid-template-columns: 1fr;
   }
 
   .order-editor .wide,
-  .cost-form .wide {
+  .cost-form .wide,
+  .shipping-form .wide,
+  .shipping-rate-block {
     grid-column: auto;
   }
 }

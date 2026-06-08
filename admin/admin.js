@@ -5,6 +5,11 @@ const state = {
   selectedOrder: null,
   selectedEvents: [],
   selectedNotifications: [],
+  shipping: {
+    carriers: [],
+    rates: [],
+    migrationRequired: false,
+  },
 };
 
 const statusLabels = {
@@ -34,6 +39,19 @@ const paymentLabels = {
   paid: "оплачено",
   refunded: "повернення",
 };
+
+const shippingModeLabels = {
+  air: "Авіа",
+  sea: "Море",
+};
+
+const rateUnitLabels = {
+  kg: "кг",
+  m3: "м3",
+  item: "замовлення",
+};
+
+const adminTabs = new Set(["orders", "analytics", "delivery"]);
 
 const money = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -99,7 +117,7 @@ function setAuthVisible(visible) {
 }
 
 function setActiveTab(tab) {
-  const nextTab = tab === "analytics" ? "analytics" : "orders";
+  const nextTab = adminTabs.has(tab) ? tab : "orders";
   state.activeTab = nextTab;
   localStorage.setItem("evline_admin_tab", nextTab);
 
@@ -111,6 +129,8 @@ function setActiveTab(tab) {
   document.querySelectorAll("[data-admin-view]").forEach((view) => {
     view.hidden = view.dataset.adminView !== nextTab;
   });
+
+  if (nextTab === "delivery") renderShippingDirectory();
 }
 
 function renderSummary(data) {
@@ -194,12 +214,146 @@ function renderInsights(data) {
     .join("");
 }
 
+function rateFromMode(carrierId, mode) {
+  return ratesForCarrier(carrierId).find((rate) => rate.mode === mode) || {};
+}
+
+function fillShippingForm(carrierId = "") {
+  const form = document.querySelector("[data-shipping-form]");
+  if (!form) return;
+  const field = (name) => form.elements.namedItem(name);
+  const carrier = carrierById(carrierId) || {};
+  const air = rateFromMode(carrier.id, "air");
+  const sea = rateFromMode(carrier.id, "sea");
+  form.reset();
+  field("id").value = carrier.id || "";
+  field("name").value = carrier.name || "";
+  field("code").value = carrier.code || "";
+  field("active").value = carrier.active === 0 ? "0" : "1";
+  field("tracking_url_template").value = carrier.tracking_url_template || "";
+  field("notes").value = carrier.notes || "";
+
+  for (const [mode, rate] of Object.entries({ air, sea })) {
+    field(`${mode}_id`).value = rate.id || "";
+    field(`${mode}_rate`).value = rate.rate ?? "";
+    field(`${mode}_currency`).value = rate.currency || "USD";
+    field(`${mode}_unit`).value = rate.unit || (mode === "sea" ? "m3" : "kg");
+    field(`${mode}_exchange_rate_uah`).value = rate.exchange_rate_uah ?? "";
+    field(`${mode}_min_charge`).value = rate.min_charge ?? "";
+    field(`${mode}_estimated_days_min`).value = rate.estimated_days_min ?? "";
+    field(`${mode}_estimated_days_max`).value = rate.estimated_days_max ?? "";
+  }
+  field("air_min_weight_kg").value = air.min_weight_kg ?? "";
+  field("sea_min_volume_m3").value = sea.min_volume_m3 ?? "";
+}
+
+function renderShippingDirectory() {
+  const root = document.querySelector("[data-shipping-list]");
+  if (!root) return;
+  if (state.shipping.migrationRequired) {
+    root.innerHTML = `<p class="muted">Потрібно застосувати міграцію D1 для довідника доставки.</p>`;
+    return;
+  }
+  root.innerHTML = state.shipping.carriers.length
+    ? state.shipping.carriers
+        .map((carrier) => {
+          const rates = ratesForCarrier(carrier.id);
+          return `
+            <article class="shipping-card ${Number(carrier.active) === 0 ? "shipping-card--inactive" : ""}">
+              <div class="shipping-card__head">
+                <div>
+                  <strong>${textOrDash(carrier.name)}</strong>
+                  <span class="muted">${textOrDash(carrier.code)}${Number(carrier.active) === 0 ? " · вимкнено" : ""}</span>
+                </div>
+                <button class="admin-btn admin-btn--small" type="button" data-edit-shipping-carrier="${escapeHtml(carrier.id)}">Редагувати</button>
+              </div>
+              <div class="shipping-rate-row">
+                ${
+                  rates.length
+                    ? rates
+                        .map((rate) => `<span class="shipping-pill ${Number(rate.active) === 0 ? "shipping-pill--muted" : ""}">${escapeHtml(rateLabel(rate))}</span>`)
+                        .join("")
+                    : `<span class="shipping-pill shipping-pill--muted">Тарифи не задані</span>`
+                }
+              </div>
+              ${carrier.notes ? `<p class="muted">${escapeHtml(carrier.notes)}</p>` : ""}
+            </article>
+          `;
+        })
+        .join("")
+    : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад MIST China.</p>`;
+
+  if (!document.querySelector("[data-shipping-form]")?.elements.namedItem("id")?.value && state.shipping.carriers[0]) {
+    fillShippingForm(state.shipping.carriers[0].id);
+  }
+}
+
 function badge(status) {
   return `<span class="badge badge--${safeClass(status)}">${escapeHtml(statusLabels[status] || status || "new")}</span>`;
 }
 
 function paymentLabel(value) {
   return paymentLabels[value] || value || "оплата не вказана";
+}
+
+function plainText(value) {
+  return String(value ?? "").trim();
+}
+
+function numeric(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function activeCarriers() {
+  return state.shipping.carriers.filter((carrier) => Number(carrier.active) !== 0);
+}
+
+function carrierById(id) {
+  return state.shipping.carriers.find((carrier) => carrier.id === id) || null;
+}
+
+function ratesForCarrier(carrierId) {
+  return state.shipping.rates.filter((rate) => rate.carrier_id === carrierId);
+}
+
+function rateById(id) {
+  return state.shipping.rates.find((rate) => rate.id === id) || null;
+}
+
+function selectRate(carrierId, mode, preferredRateId = "") {
+  const preferred = preferredRateId ? rateById(preferredRateId) : null;
+  if (preferred && preferred.carrier_id === carrierId && (!mode || preferred.mode === mode)) return preferred;
+  return (
+    ratesForCarrier(carrierId).find((rate) => Number(rate.active) !== 0 && rate.mode === mode) ||
+    ratesForCarrier(carrierId).find((rate) => Number(rate.active) !== 0) ||
+    null
+  );
+}
+
+function rateLabel(rate) {
+  if (!rate) return "Тариф не вибрано";
+  const unit = rateUnitLabels[rate.unit] || rate.unit || "-";
+  const exchange = rate.currency === "UAH" ? "" : ` · курс ${numeric(rate.exchange_rate_uah) || "-"}`;
+  const days = rate.estimated_days_min || rate.estimated_days_max
+    ? ` · ${numeric(rate.estimated_days_min) || "?"}-${numeric(rate.estimated_days_max) || "?"} днів`
+    : "";
+  return `${shippingModeLabels[rate.mode] || rate.mode}: ${numeric(rate.rate)} ${rate.currency}/${unit}${exchange}${days}`;
+}
+
+function calculateDeliveryCost(rate, weightKg, volumeM3) {
+  if (!rate) return 0;
+  let base = 0;
+  if (rate.unit === "m3") {
+    base = Math.max(numeric(volumeM3), numeric(rate.min_volume_m3));
+  } else if (rate.unit === "item") {
+    base = 1;
+  } else {
+    base = Math.max(numeric(weightKg), numeric(rate.min_weight_kg));
+  }
+  const subtotal = Math.max(base * numeric(rate.rate), numeric(rate.min_charge));
+  const exchange = rate.currency === "UAH" ? 1 : numeric(rate.exchange_rate_uah);
+  return exchange > 0 ? Math.round(subtotal * exchange) : Math.round(subtotal);
 }
 
 function shortDate(value) {
@@ -225,6 +379,8 @@ function renderOrders() {
         .map((order) => {
           const request = order.item_name || order.service_name || order.request_text || "";
           const contact = order.customer_phone || order.customer_email || order.customer_telegram || "";
+          const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
+          const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
               <td>${escapeHtml(shortDateTime(order.created_at))}<br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
@@ -233,7 +389,7 @@ function renderOrders() {
               <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
               <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
-              <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span></td>
+              <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
             </tr>
           `;
         })
@@ -255,6 +411,51 @@ function messagePreview(order, status) {
   return lines.join("\n");
 }
 
+function shippingCarrierOptions(selectedId) {
+  const carriers = activeCarriers();
+  return [
+    `<option value="">Не вибрано</option>`,
+    ...carriers.map((carrier) => `<option value="${escapeHtml(carrier.id)}" ${selectedId === carrier.id ? "selected" : ""}>${escapeHtml(carrier.name)}</option>`),
+  ].join("");
+}
+
+function shippingModeOptions(selectedMode) {
+  return Object.entries(shippingModeLabels)
+    .map(([value, label]) => `<option value="${value}" ${selectedMode === value ? "selected" : ""}>${label}</option>`)
+    .join("");
+}
+
+function applyShippingSelection(form, options = {}) {
+  const carrierId = form.elements.shipping_carrier_id?.value || "";
+  const mode = form.elements.shipping_mode?.value || "air";
+  const rate = selectRate(carrierId, mode, form.elements.shipping_rate_id?.value || "");
+  const carrier = carrierById(carrierId);
+  const display = form.querySelector("[data-shipping-rate-display]");
+  const hint = form.querySelector("[data-shipping-hint]");
+  const label = rate ? rateLabel(rate) : "Оберіть перевізника і тип доставки";
+
+  if (display) display.value = label;
+  if (hint) hint.textContent = label;
+  if (form.elements.shipping_rate_id) form.elements.shipping_rate_id.value = rate?.id || "";
+  if (form.elements.shipping_rate) form.elements.shipping_rate.value = rate?.rate || 0;
+  if (form.elements.shipping_rate_currency) form.elements.shipping_rate_currency.value = rate?.currency || "";
+  if (form.elements.shipping_rate_unit) form.elements.shipping_rate_unit.value = rate?.unit || "";
+  if (form.elements.shipping_exchange_rate_uah) form.elements.shipping_exchange_rate_uah.value = rate?.exchange_rate_uah || 0;
+
+  if (carrier && form.elements.tracking_carrier && !plainText(form.elements.tracking_carrier.value)) {
+    form.elements.tracking_carrier.value = carrier.name || "";
+  }
+  if (carrier?.tracking_url_template && form.elements.tracking_url && !plainText(form.elements.tracking_url.value) && plainText(form.elements.tracking_number?.value)) {
+    form.elements.tracking_url.value = carrier.tracking_url_template.replace("{tracking}", plainText(form.elements.tracking_number.value));
+  }
+
+  const cost = calculateDeliveryCost(rate, form.elements.shipping_weight_kg?.value, form.elements.shipping_volume_m3?.value);
+  const costInput = form.querySelector("[data-delivery-cost]");
+  if (costInput && (options.overwriteCost || !numeric(costInput.value))) {
+    costInput.value = cost || 0;
+  }
+}
+
 function renderOrderEditor(order) {
   const form = document.querySelector("[data-order-editor]");
   if (!form) return;
@@ -271,6 +472,11 @@ function renderOrderEditor(order) {
     Number(order.ad_cost_uah || 0) +
     Number(order.other_cost_uah || 0);
   const profit = Number(order.revenue_uah || 0) - costs;
+  const matchedCarrier = state.shipping.carriers.find((carrier) => carrier.name === order.tracking_carrier);
+  const selectedCarrierId = order.shipping_carrier_id || matchedCarrier?.id || "";
+  const selectedMode = order.shipping_mode || "air";
+  const selectedRate = selectRate(selectedCarrierId, selectedMode, order.shipping_rate_id);
+  const currentRateLabel = selectedRate ? rateLabel(selectedRate) : "Оберіть перевізника і тип доставки";
 
   form.innerHTML = `
     <div class="order-editor__meta">
@@ -355,6 +561,43 @@ function renderOrderEditor(order) {
       <input name="tracking_url" value="${escapeHtml(order.tracking_url || "")}">
     </label>
 
+    <div class="order-editor__section order-editor__section--delivery wide">
+      <div>
+        <strong>Доставка з Китаю</strong>
+        <span data-shipping-hint>${escapeHtml(currentRateLabel)}</span>
+      </div>
+      <button class="admin-btn" type="button" data-open-shipping-settings>Керувати тарифами</button>
+    </div>
+    <input type="hidden" name="shipping_rate_id" value="${escapeHtml(order.shipping_rate_id || selectedRate?.id || "")}" data-shipping-rate-id>
+    <input type="hidden" name="shipping_rate" value="${Number(order.shipping_rate || selectedRate?.rate || 0)}" data-shipping-rate>
+    <input type="hidden" name="shipping_rate_currency" value="${escapeHtml(order.shipping_rate_currency || selectedRate?.currency || "")}" data-shipping-currency>
+    <input type="hidden" name="shipping_rate_unit" value="${escapeHtml(order.shipping_rate_unit || selectedRate?.unit || "")}" data-shipping-unit>
+    <input type="hidden" name="shipping_exchange_rate_uah" value="${Number(order.shipping_exchange_rate_uah || selectedRate?.exchange_rate_uah || 0)}" data-shipping-exchange>
+    <label>
+      Перевізник доставки
+      <select name="shipping_carrier_id" data-shipping-carrier>
+        ${shippingCarrierOptions(selectedCarrierId)}
+      </select>
+    </label>
+    <label>
+      Тип доставки
+      <select name="shipping_mode" data-shipping-mode>
+        ${shippingModeOptions(selectedMode)}
+      </select>
+    </label>
+    <label>
+      Вага, кг
+      <input name="shipping_weight_kg" type="number" step="0.01" min="0" value="${Number(order.shipping_weight_kg || 0)}" data-shipping-weight>
+    </label>
+    <label>
+      Об'єм, м3
+      <input name="shipping_volume_m3" type="number" step="0.01" min="0" value="${Number(order.shipping_volume_m3 || 0)}" data-shipping-volume>
+    </label>
+    <label class="wide">
+      Ставка для розрахунку
+      <input value="${escapeHtml(currentRateLabel)}" readonly data-shipping-rate-display>
+    </label>
+
     <div class="order-editor__section wide">
       <strong>Фінанси</strong>
       <span>Витрати: ${money.format(costs)} · маржа: ${money.format(profit)}</span>
@@ -369,7 +612,7 @@ function renderOrderEditor(order) {
     </label>
     <label>
       Доставка, грн
-      <input name="delivery_cost_uah" type="number" step="0.01" min="0" value="${Number(order.delivery_cost_uah || 0)}">
+      <input name="delivery_cost_uah" type="number" step="0.01" min="0" value="${Number(order.delivery_cost_uah || 0)}" data-delivery-cost>
     </label>
     <label>
       Мито / оформлення, грн
@@ -421,6 +664,8 @@ function renderOrderEditor(order) {
     const preview = form.querySelector("[data-message-preview]");
     if (preview) preview.value = messagePreview(order, event.target.value);
   });
+
+  applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
 }
 
 function renderNotifications() {
@@ -490,17 +735,60 @@ async function loadOrder(id) {
   renderOrderEditor(state.selectedOrder);
 }
 
+async function loadShipping() {
+  const data = await api("/api/admin/shipping");
+  state.shipping = {
+    carriers: data.carriers || [],
+    rates: data.rates || [],
+    migrationRequired: Boolean(data.migration_required),
+  };
+  renderShippingDirectory();
+}
+
 async function refresh() {
   try {
     state.range = document.querySelector("#range")?.value || "30d";
     const exportLink = document.querySelector("[data-export]");
     if (exportLink) exportLink.href = `/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`;
-    await Promise.all([loadSummary(), loadOrders()]);
+    await Promise.all([loadSummary(), loadOrders(), loadShipping()]);
+    if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     setAuthVisible(false);
   } catch (error) {
     setAuthVisible(true);
     alert(error.message);
   }
+}
+
+function shippingRatePayload(form, mode) {
+  const field = (name) => form.elements.namedItem(name);
+  const rate = numeric(field(`${mode}_rate`)?.value);
+  return {
+    id: plainText(field(`${mode}_id`)?.value),
+    mode,
+    currency: plainText(field(`${mode}_currency`)?.value) || "USD",
+    unit: plainText(field(`${mode}_unit`)?.value) || (mode === "sea" ? "m3" : "kg"),
+    rate,
+    min_charge: numeric(field(`${mode}_min_charge`)?.value),
+    min_weight_kg: mode === "air" ? numeric(field("air_min_weight_kg")?.value) : 0,
+    min_volume_m3: mode === "sea" ? numeric(field("sea_min_volume_m3")?.value) : 0,
+    exchange_rate_uah: numeric(field(`${mode}_exchange_rate_uah`)?.value),
+    estimated_days_min: numeric(field(`${mode}_estimated_days_min`)?.value),
+    estimated_days_max: numeric(field(`${mode}_estimated_days_max`)?.value),
+    active: rate > 0 ? 1 : 0,
+  };
+}
+
+function shippingFormPayload(form) {
+  const field = (name) => form.elements.namedItem(name);
+  return {
+    id: plainText(field("id").value),
+    name: plainText(field("name").value),
+    code: plainText(field("code").value),
+    active: plainText(field("active").value),
+    tracking_url_template: plainText(field("tracking_url_template").value),
+    notes: plainText(field("notes").value),
+    rates: [shippingRatePayload(form, "air"), shippingRatePayload(form, "sea")],
+  };
 }
 
 document.querySelector("[data-token-form]")?.addEventListener("submit", (event) => {
@@ -568,7 +856,24 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
   await refresh();
 });
 
+document.querySelector("[data-order-editor]")?.addEventListener("input", (event) => {
+  if (event.target.matches("[data-shipping-weight], [data-shipping-volume]")) {
+    applyShippingSelection(event.currentTarget, { overwriteCost: true });
+  }
+});
+
+document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
+  if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number']")) {
+    applyShippingSelection(event.currentTarget, { overwriteCost: true });
+  }
+});
+
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const settingsButton = event.target.closest("[data-open-shipping-settings]");
+  if (settingsButton) {
+    setActiveTab("delivery");
+    return;
+  }
   const button = event.target.closest("[data-retry-notification]");
   if (!button) return;
   button.disabled = true;
@@ -584,6 +889,34 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
   } finally {
     button.disabled = false;
   }
+});
+
+document.querySelector("[data-new-shipping-carrier]")?.addEventListener("click", () => {
+  fillShippingForm("");
+});
+
+document.querySelector("[data-shipping-list]")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-shipping-carrier]");
+  if (!button) return;
+  fillShippingForm(button.dataset.editShippingCarrier);
+});
+
+document.querySelector("[data-shipping-form]")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const payload = shippingFormPayload(event.currentTarget);
+  const method = payload.id && carrierById(payload.id) ? "PATCH" : "POST";
+  const data = await api("/api/admin/shipping", {
+    method,
+    body: JSON.stringify(payload),
+  });
+  state.shipping = {
+    carriers: data.carriers || [],
+    rates: data.rates || [],
+    migrationRequired: Boolean(data.migration_required),
+  };
+  renderShippingDirectory();
+  fillShippingForm(payload.id || data.carriers?.[0]?.id || "");
+  if (state.selectedOrder) renderOrderEditor(state.selectedOrder);
 });
 
 document.querySelector("[data-cost-form]")?.addEventListener("submit", async (event) => {

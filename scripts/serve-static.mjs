@@ -12,6 +12,7 @@ const customersFile = path.join(dataRoot, "customers.json");
 const ordersFile = path.join(dataRoot, "orders.json");
 const eventsFile = path.join(dataRoot, "order-events.json");
 const notificationsFile = path.join(dataRoot, "notifications.json");
+const shippingFile = path.join(dataRoot, "shipping.json");
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || "127.0.0.1";
 
@@ -62,6 +63,82 @@ async function readJsonList(file) {
 async function writeJsonList(file, rows) {
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(rows, null, 2)}\n`);
+}
+
+function defaultShippingData() {
+  const now = new Date().toISOString();
+  return {
+    carriers: [
+      {
+        id: "mist-china",
+        created_at: now,
+        updated_at: now,
+        name: "MIST China",
+        code: "mist-china",
+        active: 1,
+        tracking_url_template: "",
+        notes: "Тестовий перевізник для локальної адмінки. Тарифи уточнити перед бойовим використанням.",
+      },
+    ],
+    rates: [
+      {
+        id: "mist-china-air",
+        created_at: now,
+        updated_at: now,
+        carrier_id: "mist-china",
+        mode: "air",
+        currency: "USD",
+        rate: 12,
+        unit: "kg",
+        min_charge: 0,
+        min_weight_kg: 1,
+        min_volume_m3: 0,
+        exchange_rate_uah: 42,
+        estimated_days_min: 12,
+        estimated_days_max: 18,
+        active: 1,
+        notes: "Тестовий тариф для авіа.",
+      },
+      {
+        id: "mist-china-sea",
+        created_at: now,
+        updated_at: now,
+        carrier_id: "mist-china",
+        mode: "sea",
+        currency: "USD",
+        rate: 450,
+        unit: "m3",
+        min_charge: 0,
+        min_weight_kg: 0,
+        min_volume_m3: 0.1,
+        exchange_rate_uah: 42,
+        estimated_days_min: 55,
+        estimated_days_max: 70,
+        active: 1,
+        notes: "Тестовий тариф для моря.",
+      },
+    ],
+  };
+}
+
+async function readShippingData() {
+  try {
+    const data = JSON.parse(await readFile(shippingFile, "utf8"));
+    return {
+      carriers: Array.isArray(data.carriers) ? data.carriers : [],
+      rates: Array.isArray(data.rates) ? data.rates : [],
+    };
+  } catch {
+    const data = defaultShippingData();
+    await mkdir(path.dirname(shippingFile), { recursive: true });
+    await writeFile(shippingFile, `${JSON.stringify(data, null, 2)}\n`);
+    return data;
+  }
+}
+
+async function writeShippingData(data) {
+  await mkdir(path.dirname(shippingFile), { recursive: true });
+  await writeFile(shippingFile, `${JSON.stringify(data, null, 2)}\n`);
 }
 
 async function readBody(req) {
@@ -347,6 +424,15 @@ async function createLocalOrderFromLead(lead) {
     tracking_number: "",
     tracking_url: "",
     china_warehouse: "",
+    shipping_carrier_id: "",
+    shipping_rate_id: "",
+    shipping_mode: "",
+    shipping_weight_kg: 0,
+    shipping_volume_m3: 0,
+    shipping_rate: 0,
+    shipping_rate_currency: "",
+    shipping_rate_unit: "",
+    shipping_exchange_rate_uah: 0,
     source: lead.source,
     medium: lead.medium,
     campaign: lead.campaign,
@@ -386,6 +472,57 @@ async function createLocalOrderFromLead(lead) {
   });
   await writeJsonList(eventsFile, events);
   return order.id;
+}
+
+function slug(value) {
+  const cleaned = text(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9а-яіїєґ_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
+  return cleaned || randomUUID();
+}
+
+function normalizeShippingRate(rate, carrierId, now) {
+  const mode = ["air", "sea"].includes(text(rate.mode).toLowerCase()) ? text(rate.mode).toLowerCase() : "air";
+  const unit = ["kg", "m3", "item"].includes(text(rate.unit).toLowerCase()) ? text(rate.unit).toLowerCase() : "kg";
+  const currency = ["UAH", "USD", "EUR"].includes(text(rate.currency).toUpperCase()) ? text(rate.currency).toUpperCase() : "UAH";
+  return {
+    id: text(rate.id) || `${carrierId}-${mode}`,
+    created_at: rate.created_at || now,
+    updated_at: now,
+    carrier_id: carrierId,
+    mode,
+    currency,
+    rate: number(rate.rate),
+    unit,
+    min_charge: number(rate.min_charge),
+    min_weight_kg: number(rate.min_weight_kg),
+    min_volume_m3: number(rate.min_volume_m3),
+    exchange_rate_uah: number(rate.exchange_rate_uah),
+    estimated_days_min: integer(rate.estimated_days_min),
+    estimated_days_max: integer(rate.estimated_days_max),
+    active: text(rate.active) === "0" ? 0 : 1,
+    notes: text(rate.notes),
+  };
+}
+
+function normalizeShippingCarrier(payload, existing = {}) {
+  const now = new Date().toISOString();
+  const id = text(payload.id) || slug(payload.code || payload.name);
+  return {
+    carrier: {
+      id,
+      created_at: existing.created_at || now,
+      updated_at: now,
+      name: text(payload.name),
+      code: text(payload.code) || id,
+      active: text(payload.active) === "0" ? 0 : 1,
+      tracking_url_template: text(payload.tracking_url_template),
+      notes: text(payload.notes),
+    },
+    rates: Array.isArray(payload.rates) ? payload.rates.map((rate) => normalizeShippingRate(rate, id, now)) : [],
+  };
 }
 
 async function handleApi(req, res, url) {
@@ -484,6 +621,30 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true, lead_id: lead.id, order_id: orderId });
   }
 
+  if (url.pathname === "/api/admin/shipping" && req.method === "GET") {
+    return sendJson(res, 200, await readShippingData());
+  }
+
+  if (url.pathname === "/api/admin/shipping" && ["POST", "PATCH"].includes(req.method)) {
+    const payload = await readBody(req);
+    const data = await readShippingData();
+    const existing = data.carriers.find((carrier) => carrier.id === text(payload.id));
+    const { carrier, rates } = normalizeShippingCarrier(payload, existing || {});
+    if (!carrier.name) return sendJson(res, 400, { error: "Carrier name is required" });
+    const carrierExists = data.carriers.some((item) => item.id === carrier.id);
+    const next = {
+      carriers: carrierExists
+        ? data.carriers.map((item) => (item.id === carrier.id ? carrier : item))
+        : [...data.carriers, carrier],
+      rates: [
+        ...data.rates.filter((rate) => rate.carrier_id !== carrier.id),
+        ...rates,
+      ],
+    };
+    await writeShippingData(next);
+    return sendJson(res, 200, { ok: true, ...next });
+  }
+
   if (url.pathname === "/api/admin/orders" && req.method === "GET") {
     const orders = filterOrders(await readJsonList(ordersFile), url.searchParams);
     const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
@@ -503,6 +664,14 @@ async function handleApi(req, res, url) {
         "service_name",
         "tracking_carrier",
         "tracking_number",
+        "shipping_carrier_id",
+        "shipping_mode",
+        "shipping_weight_kg",
+        "shipping_volume_m3",
+        "shipping_rate",
+        "shipping_rate_currency",
+        "shipping_rate_unit",
+        "shipping_exchange_rate_uah",
         "source",
         "medium",
         "campaign",
@@ -564,6 +733,15 @@ async function handleApi(req, res, url) {
       tracking_number: text(payload.tracking_number),
       tracking_url: text(payload.tracking_url),
       china_warehouse: text(payload.china_warehouse),
+      shipping_carrier_id: text(payload.shipping_carrier_id),
+      shipping_rate_id: text(payload.shipping_rate_id),
+      shipping_mode: text(payload.shipping_mode),
+      shipping_weight_kg: number(payload.shipping_weight_kg),
+      shipping_volume_m3: number(payload.shipping_volume_m3),
+      shipping_rate: number(payload.shipping_rate),
+      shipping_rate_currency: text(payload.shipping_rate_currency),
+      shipping_rate_unit: text(payload.shipping_rate_unit),
+      shipping_exchange_rate_uah: number(payload.shipping_exchange_rate_uah),
       revenue_uah: number(payload.revenue_uah),
       purchase_cost_uah: number(payload.purchase_cost_uah),
       delivery_cost_uah: number(payload.delivery_cost_uah),

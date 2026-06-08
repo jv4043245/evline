@@ -50,6 +50,7 @@
       <nav class="admin-tabs" aria-label="Розділи адмінки">
         <button class="admin-tab" type="button" data-admin-tab="orders" aria-selected="true">Замовлення</button>
         <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
+        <button class="admin-tab" type="button" data-admin-tab="delivery" aria-selected="false">Доставка</button>
       </nav>
 
       <section class="admin-view admin-view--active" data-admin-view="orders">
@@ -222,6 +223,147 @@
             </div>
             <div class="insights" data-insights>
               <p>Дані з'являться після перших заявок і витрат на рекламу.</p>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <section class="admin-view" data-admin-view="delivery" hidden>
+        <section class="admin-grid admin-grid--two">
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <div>
+                <h2>Перевізники і тарифи</h2>
+                <p class="muted">Тут менеджер додає перевізника, ставки для авіа/моря і курс для автоматичного розрахунку доставки.</p>
+              </div>
+              <button class="admin-btn" type="button" data-new-shipping-carrier>Новий перевізник</button>
+            </div>
+            <form class="shipping-form" data-shipping-form>
+              <input type="hidden" name="id">
+              <label>
+                Назва
+                <input name="name" placeholder="MIST China" required>
+              </label>
+              <label>
+                Код
+                <input name="code" placeholder="mist-china">
+              </label>
+              <label>
+                Активний
+                <select name="active">
+                  <option value="1">Так</option>
+                  <option value="0">Ні</option>
+                </select>
+              </label>
+              <label class="wide">
+                Шаблон трекінгу
+                <input name="tracking_url_template" placeholder="https://.../{tracking}">
+              </label>
+
+              <fieldset class="shipping-rate-block">
+                <legend>Авіа</legend>
+                <input type="hidden" name="air_id">
+                <label>
+                  Ставка
+                  <input name="air_rate" type="number" min="0" step="0.01" placeholder="12">
+                </label>
+                <label>
+                  Валюта
+                  <select name="air_currency">
+                    <option value="USD">USD</option>
+                    <option value="UAH">UAH</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </label>
+                <label>
+                  Одиниця
+                  <select name="air_unit">
+                    <option value="kg">кг</option>
+                    <option value="m3">м3</option>
+                    <option value="item">замовлення</option>
+                  </select>
+                </label>
+                <label>
+                  Курс до грн
+                  <input name="air_exchange_rate_uah" type="number" min="0" step="0.01" placeholder="42">
+                </label>
+                <label>
+                  Мін. вага, кг
+                  <input name="air_min_weight_kg" type="number" min="0" step="0.01" placeholder="1">
+                </label>
+                <label>
+                  Мін. сума
+                  <input name="air_min_charge" type="number" min="0" step="0.01">
+                </label>
+                <label>
+                  Днів від
+                  <input name="air_estimated_days_min" type="number" min="0" step="1" placeholder="12">
+                </label>
+                <label>
+                  Днів до
+                  <input name="air_estimated_days_max" type="number" min="0" step="1" placeholder="18">
+                </label>
+              </fieldset>
+
+              <fieldset class="shipping-rate-block">
+                <legend>Море</legend>
+                <input type="hidden" name="sea_id">
+                <label>
+                  Ставка
+                  <input name="sea_rate" type="number" min="0" step="0.01" placeholder="450">
+                </label>
+                <label>
+                  Валюта
+                  <select name="sea_currency">
+                    <option value="USD">USD</option>
+                    <option value="UAH">UAH</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </label>
+                <label>
+                  Одиниця
+                  <select name="sea_unit">
+                    <option value="m3">м3</option>
+                    <option value="kg">кг</option>
+                    <option value="item">замовлення</option>
+                  </select>
+                </label>
+                <label>
+                  Курс до грн
+                  <input name="sea_exchange_rate_uah" type="number" min="0" step="0.01" placeholder="42">
+                </label>
+                <label>
+                  Мін. об'єм, м3
+                  <input name="sea_min_volume_m3" type="number" min="0" step="0.01" placeholder="0.1">
+                </label>
+                <label>
+                  Мін. сума
+                  <input name="sea_min_charge" type="number" min="0" step="0.01">
+                </label>
+                <label>
+                  Днів від
+                  <input name="sea_estimated_days_min" type="number" min="0" step="1" placeholder="55">
+                </label>
+                <label>
+                  Днів до
+                  <input name="sea_estimated_days_max" type="number" min="0" step="1" placeholder="70">
+                </label>
+              </fieldset>
+
+              <label class="wide">
+                Нотатка
+                <textarea name="notes" rows="3" placeholder="Особливості роботи, обмеження, контакт менеджера"></textarea>
+              </label>
+              <button class="admin-btn admin-btn--primary wide" type="submit">Зберегти перевізника</button>
+            </form>
+          </article>
+
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <h2>Довідник доставки</h2>
+            </div>
+            <div class="shipping-list" data-shipping-list>
+              <p class="muted">Перевізники з'являться після збереження.</p>
             </div>
           </article>
         </section>
