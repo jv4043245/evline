@@ -40,7 +40,7 @@ customers/4028488894/conversionActions/123456789
 
 ## Required secrets for API upload
 
-CSV/export and queue work without these. Direct upload to Google Ads API will need:
+CSV/export and queue work without these. Direct upload to Google Ads API needs Cloudflare secrets:
 
 - `GOOGLE_ADS_DEVELOPER_TOKEN`
 - `GOOGLE_ADS_CLIENT_ID`
@@ -51,8 +51,21 @@ CSV/export and queue work without these. Direct upload to Google Ads API will ne
 - `GOOGLE_ADS_LEAD_CONVERSION_ACTION`
 - `GOOGLE_ADS_PAID_CONVERSION_ACTION`
 - `GOOGLE_ADS_COMPLETED_CONVERSION_ACTION`
+- optional `GOOGLE_ADS_API_VERSION`, defaults to `v22`
+- optional `GOOGLE_ADS_AD_USER_DATA_CONSENT`, allowed values: `GRANTED` or `DENIED`
 
-Until these are configured, the admin panel shows the queue and exports CSV.
+`GOOGLE_ADS_*_CONVERSION_ACTION` can be either the numeric conversion action ID or the full resource name:
+
+```text
+customers/4028488894/conversionActions/123456789
+```
+
+Until these are configured, the admin panel shows the queue and exports CSV. After they are configured:
+
+- `Перевірити API` sends the queued conversions with `validateOnly=true`, so Google Ads validates the payload without importing conversions.
+- `Відправити в Google Ads` uploads queued/failed conversions and marks rows as `uploaded` or `failed`.
+
+The upload uses the official Google Ads API `uploadClickConversions` method with `partialFailure=true`. Rows with `gclid`, `gbraid`, or `wbraid` are sent with the click ID. Rows without click IDs can still be sent as enhanced conversions when email or phone is available; email and phone are normalized and SHA-256 hashed before upload.
 
 ## Migration
 

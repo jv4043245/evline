@@ -18,6 +18,8 @@ const state = {
     settings: {},
     migrationRequired: false,
     apiReady: false,
+    apiMissing: [],
+    apiVersion: "",
   },
 };
 
@@ -264,9 +266,10 @@ function renderGoogleAds(data = state.googleAds) {
   const summary = data.summary || {};
   const settings = data.settings || {};
   if (!data.error) {
-    statusNode.textContent = `Customer ID: ${settings.customer_id || "4028488894"} · API: ${
-      data.apiReady ? "ключі підключені" : "поки CSV/черга, без API-відправки"
-    }`;
+    const missing = (data.apiMissing || []).map((item) => item.name || item).filter(Boolean);
+    statusNode.textContent = `Customer ID: ${settings.customer_id || "4028488894"} · API ${
+      data.apiVersion || "v22"
+    }: ${data.apiReady ? "готовий до відправки" : `поки CSV/черга · бракує ${missing.length || "ключів"}`}`;
   }
 
   const eventBreakdown = (data.byEventType || [])
@@ -290,7 +293,18 @@ function renderGoogleAds(data = state.googleAds) {
       <span>Пропущено</span>
       <strong>${numberFmt.format(summary.skipped || 0)}</strong>
     </div>
+    <div class="google-ads-summary__item">
+      <span>Помилки</span>
+      <strong>${numberFmt.format(summary.failed || 0)}</strong>
+    </div>
     <p class="muted">${escapeHtml(eventBreakdown || "Події ще не підготовлені.")}</p>
+    ${
+      data.apiReady
+        ? ""
+        : `<p class="muted">Для прямої відправки додайте в Cloudflare: ${escapeHtml(
+            (data.apiMissing || []).map((item) => item.name || item).join(", ") || "Google Ads secrets"
+          )}</p>`
+    }
   `;
 
   tableRoot.innerHTML = data.conversions?.length
@@ -914,6 +928,8 @@ async function loadGoogleAds() {
       settings: data.settings || {},
       migrationRequired: Boolean(data.migration_required),
       apiReady: Boolean(data.api_ready),
+      apiMissing: data.api_missing || [],
+      apiVersion: data.api_version || "",
     };
   } catch (error) {
     state.googleAds = {
@@ -923,6 +939,8 @@ async function loadGoogleAds() {
       settings: {},
       migrationRequired: /migration|google_ads_conversion_events_missing/i.test(error.message),
       apiReady: false,
+      apiMissing: [],
+      apiVersion: "",
       error: error.message,
     };
   }
@@ -1049,6 +1067,56 @@ document.querySelector("[data-google-ads-backfill]")?.addEventListener("click", 
     button.disabled = false;
     button.textContent = "Підготувати з CRM";
   }
+});
+
+async function runGoogleAdsApiAction(action, button) {
+  const defaultText = button.textContent;
+  button.disabled = true;
+  button.textContent = action === "validate" ? "Перевіряю..." : "Відправляю...";
+  try {
+    const result = await api("/api/admin/google-ads/conversions", {
+      method: "POST",
+      body: JSON.stringify({ action, limit: 100 }),
+    });
+    await loadGoogleAds();
+    if (result.missing_config?.length) {
+      alert(`Не вистачає налаштувань Google Ads: ${result.missing_config.map((item) => item.name).join(", ")}`);
+      return;
+    }
+    const checked = result.validated || 0;
+    const uploaded = result.uploaded || 0;
+    const failed = result.failed || 0;
+    alert(
+      action === "validate"
+        ? `Перевірка Google Ads API: валідно ${checked}, помилок ${failed}.`
+        : `Відправка Google Ads: відправлено ${uploaded}, помилок ${failed}.`
+    );
+  } catch (error) {
+    let message = error.message;
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed.missing_config?.length) {
+        message = `Не вистачає налаштувань Google Ads: ${parsed.missing_config.map((item) => item.name).join(", ")}`;
+      } else if (parsed.error) {
+        message = parsed.error;
+      }
+    } catch {
+      // Keep the original fetch error text.
+    }
+    alert(message);
+  } finally {
+    button.disabled = false;
+    button.textContent = defaultText;
+  }
+}
+
+document.querySelector("[data-google-ads-validate]")?.addEventListener("click", (event) => {
+  runGoogleAdsApiAction("validate", event.currentTarget);
+});
+
+document.querySelector("[data-google-ads-upload]")?.addEventListener("click", (event) => {
+  if (!confirm("Відправити готові конверсії у Google Ads?")) return;
+  runGoogleAdsApiAction("upload", event.currentTarget);
 });
 document.querySelector("#range")?.addEventListener("change", refresh);
 document.querySelector("#status-filter")?.addEventListener("change", loadOrders);

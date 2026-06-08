@@ -4,6 +4,7 @@ import {
   googleAdsEventTypesForStatus,
   queueGoogleAdsConversionsForOrder,
 } from "../../../_lib/google-ads.js";
+import { googleAdsApiConfigStatus, uploadGoogleAdsConversions } from "../../../_lib/google-ads-api.js";
 
 const TABLE_MISSING = "google_ads_conversion_events_missing";
 
@@ -16,6 +17,7 @@ function emptyPayload(migrationRequired = false) {
     migration_required: migrationRequired,
     settings: {},
     api_ready: false,
+    api_missing: [],
     summary: { total: 0, queued: 0, skipped: 0, uploaded: 0, failed: 0 },
     by_event_type: [],
     conversions: [],
@@ -48,21 +50,13 @@ async function loadSettings(env) {
   return Object.fromEntries((rows.results || []).map((row) => [row.key, row.value]));
 }
 
-function hasGoogleAdsApiCredentials(env) {
-  return Boolean(
-    env.GOOGLE_ADS_DEVELOPER_TOKEN &&
-      env.GOOGLE_ADS_CLIENT_ID &&
-      env.GOOGLE_ADS_CLIENT_SECRET &&
-      env.GOOGLE_ADS_REFRESH_TOKEN
-  );
-}
-
 function conversionSelect() {
   return `
     SELECT
       e.*,
       o.customer_name,
       o.customer_phone,
+      o.customer_email,
       o.customer_telegram,
       o.car,
       o.vin,
@@ -75,6 +69,39 @@ function conversionSelect() {
   `;
 }
 
+async function loadUploadCandidates(env, limit) {
+  const rows = await env.DB.prepare(
+    `${conversionSelect()}
+    WHERE e.status IN ('queued', 'failed')
+    ORDER BY e.created_at ASC
+    LIMIT ?`
+  )
+    .bind(limit)
+    .all();
+  return rows.results || [];
+}
+
+async function persistUploadResult(env, uploadResult) {
+  const response = JSON.stringify(uploadResult.google_response || {});
+  const now = new Date().toISOString();
+  for (const row of uploadResult.rows || []) {
+    if (!row?.id) continue;
+    const status = row.status === "uploaded" ? "uploaded" : "failed";
+    await env.DB.prepare(
+      `UPDATE google_ads_conversion_events SET
+        updated_at = ?,
+        attempts = COALESCE(attempts, 0) + 1,
+        status = ?,
+        uploaded_at = CASE WHEN ? = 'uploaded' THEN ? ELSE uploaded_at END,
+        google_upload_response = ?,
+        last_error = ?
+      WHERE id = ?`
+    )
+      .bind(now, status, status, now, response, text(row.error), row.id)
+      .run();
+  }
+}
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const wantsCsv = url.searchParams.get("format") === "csv";
@@ -84,6 +111,7 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const settings = await loadSettings(env);
+    const apiStatus = googleAdsApiConfigStatus(env);
     const rows = await env.DB.prepare(`${conversionSelect()} ${where} ORDER BY e.created_at DESC LIMIT ? OFFSET ?`)
       .bind(...binds, limit, offset)
       .all();
@@ -157,7 +185,9 @@ export async function onRequestGet({ request, env }) {
         paid_conversion_action_name: settings.paid_conversion_action_name || "EVLine Paid Order",
         completed_conversion_action_name: settings.completed_conversion_action_name || "EVLine Completed Order",
       },
-      api_ready: hasGoogleAdsApiCredentials(env),
+      api_ready: apiStatus.ready,
+      api_missing: apiStatus.missing,
+      api_version: apiStatus.api_version,
       summary,
       by_event_type: byEventType.results,
       conversions: rows.results,
@@ -175,7 +205,36 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const payload = await readPayload(request);
   const action = text(payload.action) || "backfill";
-  if (action !== "backfill") return json({ error: "Unsupported action" }, { status: 400 });
+  if (!["backfill", "validate", "upload"].includes(action)) return json({ error: "Unsupported action" }, { status: 400 });
+
+  if (action === "validate" || action === "upload") {
+    const limit = Math.min(Math.max(integer(payload.limit) || 50, 1), 500);
+    try {
+      const rows = await loadUploadCandidates(env, limit);
+      const result = await uploadGoogleAdsConversions(env, rows, { validateOnly: action === "validate" });
+      if (result.missing_config?.length) {
+        return json(
+          {
+            ok: false,
+            action,
+            candidates: rows.length,
+            missing_config: result.missing_config,
+            error: "Google Ads API secrets are incomplete.",
+          },
+          { status: 409 }
+        );
+      }
+      if (action === "upload") {
+        await persistUploadResult(env, result);
+      }
+      return json({ ok: result.ok, action, candidates: rows.length, ...result });
+    } catch (error) {
+      if (isMissingTableError(error)) {
+        return json({ ok: false, migration_required: true, error: TABLE_MISSING }, { status: 409 });
+      }
+      return json({ ok: false, action, error: error.message || String(error) }, { status: 502 });
+    }
+  }
 
   const range = text(payload.range) || "365d";
   const start = rangeStart(range);
