@@ -32,5 +32,6 @@ curl https://evline-crm-tracking-cron.<account>.workers.dev/health
 Ручной запуск:
 
 ```bash
-curl -X POST https://evline-crm-tracking-cron.<account>.workers.dev/run
+curl -X POST https://evline-crm-tracking-cron.<account>.workers.dev/run \
+  -H "Authorization: Bearer $CRON_SYNC_TOKEN"
 ```

@@ -1,5 +1,22 @@
 const DEFAULT_SYNC_URL = "https://evline.com.ua/api/cron/tracking-sync";
 
+function timingSafeEqual(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+}
+
+function isAuthorizedManualRun(request, env) {
+  const expected = env.CRON_SYNC_TOKEN || "";
+  const auth = request.headers.get("authorization") || "";
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const headerToken = request.headers.get("x-cron-token") || "";
+  return timingSafeEqual(bearer, expected) || timingSafeEqual(headerToken, expected);
+}
+
 async function runTrackingSync(env, source = "scheduled") {
   const token = env.CRON_SYNC_TOKEN;
   if (!token) {
@@ -52,6 +69,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/run") {
+      if (!isAuthorizedManualRun(request, env)) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const result = await runTrackingSync(env, "manual");
       return Response.json(result, {
         status: result.ok ? 200 : 502,
