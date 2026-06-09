@@ -10,7 +10,7 @@
 
 var CRM_ENDPOINT = "https://evline.com.ua/api/google-ads/costs";
 var SYNC_TOKEN = "PASTE_SYNC_TOKEN_HERE";
-var LOOKBACK_DAYS = 14;
+var LOOKBACK_DAYS = 30;
 
 function main() {
   var account = AdsApp.currentAccount();

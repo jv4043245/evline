@@ -37,7 +37,7 @@ document.addEventListener("keydown", (event) => {
 
 function trackingData() {
   const params = new URLSearchParams(window.location.search);
-  return {
+  const current = {
     utm_source: params.get("utm_source") || "",
     utm_medium: params.get("utm_medium") || "",
     utm_campaign: params.get("utm_campaign") || "",
@@ -50,6 +50,25 @@ function trackingData() {
     landing_page: window.location.href,
     referrer: document.referrer,
   };
+  const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
+  let saved = {};
+  try {
+    saved = JSON.parse(sessionStorage.getItem("evline_tracking") || "{}") || {};
+  } catch {
+    saved = {};
+  }
+  const hasTracking = keys.some((key) => current[key]);
+  if (hasTracking) {
+    saved = { ...saved, ...current, referrer: current.referrer || saved.referrer || "" };
+    try {
+      sessionStorage.setItem("evline_tracking", JSON.stringify(saved));
+    } catch {}
+  }
+  keys.forEach((key) => {
+    if (!current[key] && saved[key]) current[key] = saved[key];
+  });
+  current.referrer = current.referrer || saved.referrer || "";
+  return current;
 }
 
 function leadEndpoint() {

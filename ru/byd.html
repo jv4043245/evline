@@ -691,11 +691,23 @@ function openTelegramMsg(msg){
 }
 function trackingPayload(){
   var p=new URLSearchParams(window.location.search);
-  return {
+  var current={
     utm_source:p.get('utm_source')||'',utm_medium:p.get('utm_medium')||'',utm_campaign:p.get('utm_campaign')||'',
-    utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',fbclid:p.get('fbclid')||'',
+    utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',gbraid:p.get('gbraid')||'',wbraid:p.get('wbraid')||'',fbclid:p.get('fbclid')||'',
     landing_page:window.location.href,referrer:document.referrer
   };
+  var keys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid'];
+  var saved={};
+  try{saved=JSON.parse(sessionStorage.getItem('evline_tracking')||'{}')||{};}catch(e){saved={};}
+  var hasTracking=keys.some(function(k){return !!current[k];});
+  if(hasTracking){
+    var toSave=Object.assign({},saved,current,{referrer:current.referrer||saved.referrer||''});
+    try{sessionStorage.setItem('evline_tracking',JSON.stringify(toSave));}catch(e){}
+    saved=toSave;
+  }
+  keys.forEach(function(k){if(!current[k]&&saved[k]) current[k]=saved[k];});
+  current.referrer=current.referrer||saved.referrer||'';
+  return current;
 }
 function leadEndpoint(){
   if(window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;

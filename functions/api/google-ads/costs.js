@@ -31,6 +31,7 @@ function notesForRow(row, payload, batchId) {
   const parts = [
     `customerId=${text(row.customerId || payload.customerId || payload.customer_id) || "-"}`,
     `campaignId=${text(row.campaignId || row.campaign_id) || "-"}`,
+    `campaignName=${text(row.campaignName || row.campaign_name || row.campaign) || "-"}`,
     `currency=${text(row.currencyCode || payload.currencyCode || payload.currency_code) || "UAH"}`,
     `conversions=${number(row.conversions)}`,
     `conversionValue=${number(row.conversionValue ?? row.conversion_value)}`,
@@ -75,7 +76,9 @@ export async function onRequestPost({ request, env }) {
 
   for (const row of rows) {
     const costDate = normalizedDate(row.date || row.cost_date || row.segmentsDate);
-    const campaign = text(row.campaignName || row.campaign_name || row.campaign) || "без кампанії";
+    const campaignId = text(row.campaignId || row.campaign_id);
+    const campaignName = text(row.campaignName || row.campaign_name || row.campaign);
+    const campaign = campaignId || campaignName || "без кампанії";
     if (!costDate) {
       skipped += 1;
       continue;
@@ -92,10 +95,14 @@ export async function onRequestPost({ request, env }) {
          AND platform = 'google'
          AND source = 'google'
          AND medium = 'cpc'
-         AND campaign = ?
+         AND (
+           campaign = ?
+           OR campaign = ?
+           OR notes LIKE ?
+         )
          AND notes LIKE 'Google Ads sync:%'`
     )
-      .bind(costDate, campaign)
+      .bind(costDate, campaign, campaignName, campaignId ? `%campaignId=${campaignId};%` : "__no_campaign_id__")
       .run();
 
     await env.DB.prepare(
