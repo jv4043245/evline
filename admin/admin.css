@@ -159,6 +159,17 @@
   color: #fff;
 }
 
+.admin-btn--danger {
+  border-color: #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+}
+
+.admin-btn--danger:hover {
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
 .admin-btn--small {
   min-height: 30px;
   margin-top: 8px;
@@ -475,6 +486,13 @@
 
 .order-editor__meta p {
   margin: 4px 0;
+}
+
+.order-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .order-editor__section {

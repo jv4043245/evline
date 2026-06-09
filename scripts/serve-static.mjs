@@ -861,6 +861,49 @@ async function handleApi(req, res, url) {
     });
   }
 
+  if (orderMatch && req.method === "DELETE") {
+    const orders = await readJsonList(ordersFile);
+    const order = orders.find((item) => item.id === orderMatch[1]);
+    if (!order) return sendJson(res, 404, { error: "Order not found" });
+
+    const remainingOrders = orders.filter((item) => item.id !== order.id);
+    await writeJsonList(ordersFile, remainingOrders);
+    await writeJsonList(
+      eventsFile,
+      (await readJsonList(eventsFile)).filter((event) => event.order_id !== order.id)
+    );
+    await writeJsonList(
+      notificationsFile,
+      (await readJsonList(notificationsFile)).filter((item) => item.order_id !== order.id)
+    );
+
+    let leadDeleted = false;
+    if (order.lead_id && !remainingOrders.some((item) => item.lead_id === order.lead_id)) {
+      await writeJsonList(
+        leadsFile,
+        (await readJsonList(leadsFile)).filter((lead) => lead.id !== order.lead_id)
+      );
+      leadDeleted = true;
+    }
+
+    let customerDeleted = false;
+    if (order.customer_id && !remainingOrders.some((item) => item.customer_id === order.customer_id)) {
+      await writeJsonList(
+        customersFile,
+        (await readJsonList(customersFile)).filter((customer) => customer.id !== order.customer_id)
+      );
+      customerDeleted = true;
+    }
+
+    return sendJson(res, 200, {
+      ok: true,
+      deleted_order_id: order.id,
+      deleted_order_number: order.order_number || "",
+      deleted_lead_id: leadDeleted ? order.lead_id : "",
+      deleted_customer_id: customerDeleted ? order.customer_id : "",
+    });
+  }
+
   const notificationRetryMatch = url.pathname.match(/^\/api\/admin\/notifications\/([^/]+)\/retry$/);
   if (notificationRetryMatch && req.method === "POST") {
     const result = await retryLocalNotification(notificationRetryMatch[1]);

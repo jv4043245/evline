@@ -219,3 +219,56 @@ export async function onRequestPatch({ request, params, env }) {
     tracking_events: trackingEvents.results,
   });
 }
+
+async function safeDelete(env, sql, ...binds) {
+  try {
+    await env.DB.prepare(sql).bind(...binds).run();
+  } catch (error) {
+    if (!/no such table|no such column/i.test(error.message || String(error))) throw error;
+  }
+}
+
+export async function onRequestDelete({ params, env }) {
+  const current = await loadOrder(env, params.id);
+  if (!current) return json({ error: "Order not found" }, { status: 404 });
+
+  const leadId = current.lead_id || "";
+  const customerId = current.customer_id || "";
+
+  await safeDelete(env, "DELETE FROM google_ads_conversion_events WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM order_tracking_events WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM notification_queue WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM order_status_events WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM order_items WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM orders WHERE id = ?", params.id);
+
+  let leadDeleted = false;
+  if (leadId) {
+    const remainingLeadOrders = await env.DB.prepare("SELECT COUNT(*) AS count FROM orders WHERE lead_id = ?")
+      .bind(leadId)
+      .first();
+    if (!Number(remainingLeadOrders?.count || 0)) {
+      await safeDelete(env, "DELETE FROM leads WHERE id = ?", leadId);
+      leadDeleted = true;
+    }
+  }
+
+  let customerDeleted = false;
+  if (customerId) {
+    const remainingCustomerOrders = await env.DB.prepare("SELECT COUNT(*) AS count FROM orders WHERE customer_id = ?")
+      .bind(customerId)
+      .first();
+    if (!Number(remainingCustomerOrders?.count || 0)) {
+      await safeDelete(env, "DELETE FROM customers WHERE id = ?", customerId);
+      customerDeleted = true;
+    }
+  }
+
+  return json({
+    ok: true,
+    deleted_order_id: params.id,
+    deleted_order_number: current.order_number || "",
+    deleted_lead_id: leadDeleted ? leadId : "",
+    deleted_customer_id: customerDeleted ? customerId : "",
+  });
+}

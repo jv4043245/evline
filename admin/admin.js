@@ -623,7 +623,10 @@ function renderOrderEditor(order) {
       <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>
       <p class="muted">Джерело: ${textOrDash(order.source || "site")} / ${textOrDash(order.medium)} / ${textOrDash(order.campaign || "без кампанії")}</p>
       <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
-      <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
+      <div class="order-editor__actions">
+        <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
+        <button class="admin-btn admin-btn--danger" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}">Видалити заявку</button>
+      </div>
     </div>
 
     <input type="hidden" name="id" value="${escapeHtml(order.id)}">
@@ -1168,6 +1171,31 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("[data-delete-order]");
+  if (deleteButton) {
+    const orderNumber = deleteButton.dataset.deleteOrderNumber || "це замовлення";
+    if (!confirm(`Видалити ${orderNumber}?\\n\\nБуде видалено замовлення, пов'язаний лід і технічну історію. Дію не можна скасувати.`)) return;
+    deleteButton.disabled = true;
+    deleteButton.textContent = "Видаляю...";
+    try {
+      await api(`/api/admin/orders/${encodeURIComponent(deleteButton.dataset.deleteOrder)}`, {
+        method: "DELETE",
+      });
+      state.selectedOrder = null;
+      state.selectedEvents = [];
+      state.selectedNotifications = [];
+      state.selectedTrackingEvents = [];
+      renderOrderEditor(null);
+      await refresh();
+      alert("Заявку видалено.");
+    } catch (error) {
+      alert(error.message);
+      deleteButton.disabled = false;
+      deleteButton.textContent = "Видалити заявку";
+    }
+    return;
+  }
+
   const notifyManagerButton = event.target.closest("[data-notify-manager]");
   if (notifyManagerButton) {
     notifyManagerButton.disabled = true;
