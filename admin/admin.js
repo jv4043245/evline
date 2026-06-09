@@ -519,11 +519,17 @@ function renderOrders() {
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
               <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
               <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${trackingStatus ? `<br><span class="muted">${escapeHtml(trackingStatus)}</span>` : ""}${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
+              <td>
+                <div class="orders-table__actions">
+                  <button class="admin-btn admin-btn--small" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>
+                  <button class="admin-btn admin-btn--small admin-btn--danger" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}">Видалити</button>
+                </div>
+              </td>
             </tr>
           `;
         })
         .join("")
-    : `<tr><td colspan="7" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
+    : `<tr><td colspan="8" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
 }
 
 function messagePreview(order, status) {
@@ -917,6 +923,36 @@ async function loadOrder(id) {
   renderOrderEditor(state.selectedOrder);
 }
 
+async function openOrder(id, options = {}) {
+  await loadOrder(id);
+  document.querySelectorAll("[data-order-id]").forEach((row) => {
+    row.classList.toggle("orders-table__row--selected", row.dataset.orderId === id);
+  });
+  if (options.scroll !== false) {
+    document.querySelector("[data-order-editor]")?.closest(".admin-panel")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+}
+
+async function deleteOrder(id, orderNumber = "це замовлення") {
+  if (!confirm(`Видалити ${orderNumber}?\n\nБуде видалено замовлення, пов'язаний лід і технічну історію. Дію не можна скасувати.`)) return false;
+  await api(`/api/admin/orders/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (state.selectedOrder?.id === id) {
+    state.selectedOrder = null;
+    state.selectedEvents = [];
+    state.selectedNotifications = [];
+    state.selectedTrackingEvents = [];
+    renderOrderEditor(null);
+  }
+  await refresh();
+  alert("Заявку видалено.");
+  return true;
+}
+
 async function loadShipping() {
   const data = await api("/api/admin/shipping");
   state.shipping = {
@@ -1136,9 +1172,33 @@ document.querySelector("#search")?.addEventListener("input", () => {
 });
 
 document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
+  const openButton = event.target.closest("[data-open-order]");
+  if (openButton) {
+    openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete-order]");
+  if (deleteButton) {
+    deleteButton.disabled = true;
+    deleteButton.textContent = "Видаляю...";
+    deleteOrder(deleteButton.dataset.deleteOrder, deleteButton.dataset.deleteOrderNumber || "це замовлення")
+      .then((deleted) => {
+        if (deleted) return;
+        deleteButton.disabled = false;
+        deleteButton.textContent = "Видалити";
+      })
+      .catch((error) => {
+        alert(error.message);
+        deleteButton.disabled = false;
+        deleteButton.textContent = "Видалити";
+      });
+    return;
+  }
+
   const row = event.target.closest("[data-order-id]");
   if (!row) return;
-  loadOrder(row.dataset.orderId).catch((error) => alert(error.message));
+  openOrder(row.dataset.orderId).catch((error) => alert(error.message));
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("submit", async (event) => {
@@ -1173,21 +1233,14 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
   const deleteButton = event.target.closest("[data-delete-order]");
   if (deleteButton) {
-    const orderNumber = deleteButton.dataset.deleteOrderNumber || "це замовлення";
-    if (!confirm(`Видалити ${orderNumber}?\\n\\nБуде видалено замовлення, пов'язаний лід і технічну історію. Дію не можна скасувати.`)) return;
     deleteButton.disabled = true;
     deleteButton.textContent = "Видаляю...";
     try {
-      await api(`/api/admin/orders/${encodeURIComponent(deleteButton.dataset.deleteOrder)}`, {
-        method: "DELETE",
-      });
-      state.selectedOrder = null;
-      state.selectedEvents = [];
-      state.selectedNotifications = [];
-      state.selectedTrackingEvents = [];
-      renderOrderEditor(null);
-      await refresh();
-      alert("Заявку видалено.");
+      const deleted = await deleteOrder(deleteButton.dataset.deleteOrder, deleteButton.dataset.deleteOrderNumber || "це замовлення");
+      if (!deleted) {
+        deleteButton.disabled = false;
+        deleteButton.textContent = "Видалити заявку";
+      }
     } catch (error) {
       alert(error.message);
       deleteButton.disabled = false;
