@@ -1,11 +1,21 @@
 import { csv, escapeCsv, integer, json, number, readPayload, rangeStart, text } from "../../_lib/http.js";
-import { createOrderFromLead, loadOrder, managerContactForType, normalizeOrderStatus, upsertCustomer } from "../../_lib/crm.js";
+import {
+  createOrderFromLead,
+  loadOrder,
+  managerContactForType,
+  nextPublicNumber,
+  normalizeOrderStatus,
+  tableHasColumn,
+  upsertCustomer,
+} from "../../_lib/crm.js";
 import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
 
-function orderSelect() {
+function orderSelect(options = {}) {
   return `
     SELECT
       orders.*,
+      ${options.hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
+      ${options.hasLeadNumber ? "leads.lead_number" : "NULL"} AS lead_number,
       (
         COALESCE(orders.revenue_uah, 0)
         - COALESCE(orders.purchase_cost_uah, 0)
@@ -16,10 +26,12 @@ function orderSelect() {
         - COALESCE(orders.other_cost_uah, 0)
       ) AS gross_profit_uah
     FROM orders
+    LEFT JOIN customers ON customers.id = orders.customer_id
+    LEFT JOIN leads ON leads.id = orders.lead_id
   `;
 }
 
-function buildWhere(url) {
+function buildWhere(url, options = {}) {
   const clauses = [];
   const binds = [];
   const start = rangeStart(url.searchParams.get("range") || "30d");
@@ -29,29 +41,45 @@ function buildWhere(url) {
   const q = url.searchParams.get("q");
 
   if (start) {
-    clauses.push("created_at >= ?");
+    clauses.push("orders.created_at >= ?");
     binds.push(start);
   }
   if (status && status !== "all") {
-    clauses.push("status = ?");
+    clauses.push("orders.status = ?");
     binds.push(status);
   }
   if (type && type !== "all") {
-    clauses.push("type = ?");
+    clauses.push("orders.type = ?");
     binds.push(type);
   }
   if (source && source !== "all") {
-    clauses.push("COALESCE(NULLIF(source, ''), 'direct') = ?");
+    clauses.push("COALESCE(NULLIF(orders.source, ''), 'direct') = ?");
     binds.push(source);
   }
   if (q) {
+    const searchColumns = [
+      ...(options.hasOrderNumber ? ["orders.order_number"] : []),
+      ...(options.hasCustomerNumber ? ["customers.customer_number"] : []),
+      ...(options.hasLeadNumber ? ["leads.lead_number"] : []),
+      "orders.customer_name",
+      "orders.customer_phone",
+      "orders.customer_email",
+      "orders.customer_telegram",
+      "orders.car",
+      "orders.vin",
+      "orders.item_name",
+      "orders.service_name",
+      "orders.request_text",
+      "orders.campaign",
+      "orders.tracking_number",
+      "orders.tracking_status_text",
+      "orders.tracking_status_location",
+    ];
     clauses.push(`(
-      customer_name LIKE ? OR customer_phone LIKE ? OR customer_email LIKE ? OR customer_telegram LIKE ?
-      OR car LIKE ? OR vin LIKE ? OR item_name LIKE ? OR service_name LIKE ? OR request_text LIKE ?
-      OR campaign LIKE ? OR tracking_number LIKE ? OR tracking_status_text LIKE ? OR tracking_status_location LIKE ?
+      ${searchColumns.map((column) => `${column} LIKE ?`).join(" OR ")}
     )`);
     const like = `%${q}%`;
-    binds.push(like, like, like, like, like, like, like, like, like, like, like, like, like);
+    binds.push(...searchColumns.map(() => like));
   }
 
   return {
@@ -62,20 +90,28 @@ function buildWhere(url) {
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  const { where, binds } = buildWhere(url);
+  const options = {
+    hasOrderNumber: await tableHasColumn(env, "orders", "order_number"),
+    hasCustomerNumber: await tableHasColumn(env, "customers", "customer_number"),
+    hasLeadNumber: await tableHasColumn(env, "leads", "lead_number"),
+  };
+  const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
   const offset = Math.max(integer(url.searchParams.get("offset")) || 0, 0);
   const wantsCsv = url.searchParams.get("format") === "csv";
 
-  const rows = await env.DB.prepare(`${orderSelect()} ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+  const rows = await env.DB.prepare(`${orderSelect(options)} ${where} ORDER BY orders.created_at DESC LIMIT ? OFFSET ?`)
     .bind(...binds, limit, offset)
     .all();
 
   if (wantsCsv) {
     const columns = [
+      "order_number",
       "created_at",
       "type",
       "status",
+      "customer_number",
+      "lead_number",
       "customer_name",
       "customer_phone",
       "customer_telegram",
@@ -122,7 +158,9 @@ export async function onRequestGet({ request, env }) {
     return csv(body, "evline-orders.csv");
   }
 
-  const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM orders ${where}`).bind(...binds).first();
+  const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM orders LEFT JOIN customers ON customers.id = orders.customer_id LEFT JOIN leads ON leads.id = orders.lead_id ${where}`)
+    .bind(...binds)
+    .first();
   return json({ orders: rows.results, total: count.count, limit, offset });
 }
 
@@ -131,10 +169,12 @@ export async function onRequestPost({ request, env }) {
   const now = new Date().toISOString();
   const customerId = await upsertCustomer(env, payload);
   const orderId = crypto.randomUUID();
+  const orderNumber = await nextPublicNumber(env, "order", "O");
   const status = normalizeOrderStatus(payload.status);
 
   const orderFields = [
     ["id", orderId],
+    ["order_number", orderNumber],
     ["created_at", now],
     ["updated_at", now],
     ["customer_id", customerId],
@@ -197,8 +237,8 @@ export async function onRequestPost({ request, env }) {
   try {
     await insertOrder(orderFields);
   } catch (error) {
-    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
-    await insertOrder(orderFields.filter(([name]) => name !== "gbraid" && name !== "wbraid"));
+    if (!/gbraid|wbraid|order_number|no such column/i.test(error.message || String(error))) throw error;
+    await insertOrder(orderFields.filter(([name]) => !["gbraid", "wbraid", "order_number"].includes(name)));
   }
 
   await env.DB.prepare(

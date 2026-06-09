@@ -506,12 +506,13 @@ function renderOrders() {
           const contact = order.customer_phone || order.customer_email || order.customer_telegram || "";
           const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
           const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
+          const publicNumber = order.order_number || "без номера";
           const trackingStatus = order.tracking_status_text
             ? `${order.tracking_status_text}${order.tracking_status_location ? ` · ${order.tracking_status_location}` : ""}`
             : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
-              <td>${escapeHtml(shortDateTime(order.created_at))}<br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
+              <td><strong>${textOrDash(publicNumber)}</strong><br><span class="muted">${escapeHtml(shortDateTime(order.created_at))}</span><br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
               <td><strong>${textOrDash(order.customer_name || "Без імені")}</strong><br><span class="muted">${textOrDash(contact)}</span></td>
               <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
               <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
@@ -610,9 +611,13 @@ function renderOrderEditor(order) {
   const trackingStatus = order.tracking_status_text
     ? `${order.tracking_status_text}${order.tracking_status_location ? ` (${order.tracking_status_location})` : ""}`
     : "Статус перевізника ще не перевірявся";
+  const orderNumber = order.order_number || "без номера";
+  const customerNumber = order.customer_number || "без номера";
+  const leadNumber = order.lead_number || "";
 
   form.innerHTML = `
     <div class="order-editor__meta">
+      <p><strong>${textOrDash(orderNumber)}</strong> · клієнт ${textOrDash(customerNumber)}${leadNumber ? ` · лід ${textOrDash(leadNumber)}` : ""}</p>
       <p><strong>${textOrDash(order.customer_name || "Без імені")}</strong> · ${textOrDash(order.customer_phone || order.customer_email || order.customer_telegram)}</p>
       <p>${textOrDash(order.car)} · VIN: ${textOrDash(order.vin)}</p>
       <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>

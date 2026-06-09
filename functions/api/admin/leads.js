@@ -1,6 +1,7 @@
 import { csv, escapeCsv, integer, json, rangeStart } from "../../_lib/http.js";
+import { tableHasColumn } from "../../_lib/crm.js";
 
-function buildWhere(url) {
+function buildWhere(url, options = {}) {
   const clauses = [];
   const binds = [];
   const start = rangeStart(url.searchParams.get("range") || "30d");
@@ -31,9 +32,18 @@ function buildWhere(url) {
     binds.push(type);
   }
   if (q) {
-    clauses.push("(name LIKE ? OR phone LIKE ? OR car LIKE ? OR vin LIKE ? OR message LIKE ? OR campaign LIKE ?)");
+    const searchColumns = [
+      ...(options.hasLeadNumber ? ["lead_number"] : []),
+      "name",
+      "phone",
+      "car",
+      "vin",
+      "message",
+      "campaign",
+    ];
+    clauses.push(`(${searchColumns.map((column) => `${column} LIKE ?`).join(" OR ")})`);
     const like = `%${q}%`;
-    binds.push(like, like, like, like, like, like);
+    binds.push(...searchColumns.map(() => like));
   }
 
   return {
@@ -44,7 +54,10 @@ function buildWhere(url) {
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  const { where, binds } = buildWhere(url);
+  const options = {
+    hasLeadNumber: await tableHasColumn(env, "leads", "lead_number"),
+  };
+  const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
   const offset = Math.max(integer(url.searchParams.get("offset")) || 0, 0);
   const wantsCsv = url.searchParams.get("format") === "csv";
@@ -57,6 +70,7 @@ export async function onRequestGet({ request, env }) {
 
   if (wantsCsv) {
     const columns = [
+      "lead_number",
       "created_at",
       "type",
       "status",

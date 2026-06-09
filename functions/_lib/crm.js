@@ -84,6 +84,48 @@ function orderRequestText(data) {
   return [item ? `Запчастина/послуга: ${item}` : "", details].filter(Boolean).join("\n");
 }
 
+function publicNumber(prefix, value) {
+  const parsed = Number.parseInt(value, 10);
+  return parsed > 0 ? `${prefix}-${String(parsed).padStart(6, "0")}` : "";
+}
+
+export async function tableHasColumn(env, table, column) {
+  try {
+    const rows = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+    return (rows.results || []).some((row) => row.name === column);
+  } catch {
+    return false;
+  }
+}
+
+export async function nextPublicNumber(env, scope, prefix) {
+  const now = new Date().toISOString();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO crm_counters (scope, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(scope) DO NOTHING"
+    )
+      .bind(scope, 0, now)
+      .run();
+    try {
+      const row = await env.DB.prepare(
+        "UPDATE crm_counters SET value = value + 1, updated_at = ? WHERE scope = ? RETURNING value"
+      )
+        .bind(now, scope)
+        .first();
+      return publicNumber(prefix, row?.value);
+    } catch {
+      await env.DB.prepare("UPDATE crm_counters SET value = value + 1, updated_at = ? WHERE scope = ?")
+        .bind(now, scope)
+        .run();
+      const row = await env.DB.prepare("SELECT value FROM crm_counters WHERE scope = ?").bind(scope).first();
+      return publicNumber(prefix, row?.value);
+    }
+  } catch (error) {
+    if (/no such table|no such column/i.test(error.message || String(error))) return "";
+    throw error;
+  }
+}
+
 export async function upsertCustomer(env, data) {
   const now = new Date().toISOString();
   const phone = text(data.phone || data.customer_phone);
@@ -101,28 +143,57 @@ export async function upsertCustomer(env, data) {
     .first();
 
   if (existing) {
-    await env.DB.prepare(
-      `UPDATE customers SET
-        updated_at = ?,
-        name = COALESCE(NULLIF(?, ''), name),
-        phone = COALESCE(NULLIF(?, ''), phone),
-        email = COALESCE(NULLIF(?, ''), email),
-        telegram_username = COALESCE(NULLIF(?, ''), telegram_username)
-      WHERE id = ?`
-    )
-      .bind(now, text(data.name || data.customer_name), phone, email, telegram, existing.id)
-      .run();
+    const customerNumber = existing.customer_number ? "" : await nextPublicNumber(env, "customer", "C");
+    try {
+      await env.DB.prepare(
+        `UPDATE customers SET
+          updated_at = ?,
+          customer_number = COALESCE(NULLIF(customer_number, ''), NULLIF(?, ''), customer_number),
+          name = COALESCE(NULLIF(?, ''), name),
+          phone = COALESCE(NULLIF(?, ''), phone),
+          email = COALESCE(NULLIF(?, ''), email),
+          telegram_username = COALESCE(NULLIF(?, ''), telegram_username)
+        WHERE id = ?`
+      )
+        .bind(now, customerNumber, text(data.name || data.customer_name), phone, email, telegram, existing.id)
+        .run();
+    } catch (error) {
+      if (!/customer_number|no such column/i.test(error.message || String(error))) throw error;
+      await env.DB.prepare(
+        `UPDATE customers SET
+          updated_at = ?,
+          name = COALESCE(NULLIF(?, ''), name),
+          phone = COALESCE(NULLIF(?, ''), phone),
+          email = COALESCE(NULLIF(?, ''), email),
+          telegram_username = COALESCE(NULLIF(?, ''), telegram_username)
+        WHERE id = ?`
+      )
+        .bind(now, text(data.name || data.customer_name), phone, email, telegram, existing.id)
+        .run();
+    }
     return existing.id;
   }
 
   const id = crypto.randomUUID();
-  await env.DB.prepare(
-    `INSERT INTO customers (
-      id, created_at, updated_at, name, phone, email, telegram_username, preferred_channel
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(id, now, now, text(data.name || data.customer_name), phone, email, telegram, "telegram")
-    .run();
+  const customerNumber = await nextPublicNumber(env, "customer", "C");
+  try {
+    await env.DB.prepare(
+      `INSERT INTO customers (
+        id, customer_number, created_at, updated_at, name, phone, email, telegram_username, preferred_channel
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(id, customerNumber, now, now, text(data.name || data.customer_name), phone, email, telegram, "telegram")
+      .run();
+  } catch (error) {
+    if (!/customer_number|no such column/i.test(error.message || String(error))) throw error;
+    await env.DB.prepare(
+      `INSERT INTO customers (
+        id, created_at, updated_at, name, phone, email, telegram_username, preferred_channel
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(id, now, now, text(data.name || data.customer_name), phone, email, telegram, "telegram")
+      .run();
+  }
   return id;
 }
 
@@ -130,20 +201,22 @@ export async function createOrderFromLead(env, lead) {
   const customerId = await upsertCustomer(env, lead);
   const now = lead.created_at || new Date().toISOString();
   const orderId = crypto.randomUUID();
+  const orderNumber = await nextPublicNumber(env, "order", "O");
   const itemName = text(lead.part || lead.item_name);
   const serviceName = lead.type === "byd" ? "Програмування BYD" : "";
 
   try {
     await env.DB.prepare(
       `INSERT INTO orders (
-        id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
+        id, order_number, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
         customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
         service_name, request_text, source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid,
         landing_page, referrer
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         orderId,
+        orderNumber,
         now,
         now,
         lead.id,
@@ -174,7 +247,7 @@ export async function createOrderFromLead(env, lead) {
       )
       .run();
   } catch (error) {
-    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
+    if (!/gbraid|wbraid|order_number|no such column/i.test(error.message || String(error))) throw error;
     await env.DB.prepare(
       `INSERT INTO orders (
         id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
@@ -250,9 +323,13 @@ export async function insertStatusEvent(env, event) {
 }
 
 export async function loadOrder(env, id) {
+  const hasCustomerNumber = await tableHasColumn(env, "customers", "customer_number");
+  const hasLeadNumber = await tableHasColumn(env, "leads", "lead_number");
   return env.DB.prepare(
     `SELECT
       orders.*,
+      ${hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
+      ${hasLeadNumber ? "leads.lead_number" : "NULL"} AS lead_number,
       customers.telegram_chat_id AS customer_telegram_chat_id,
       (
         COALESCE(orders.revenue_uah, 0)
@@ -265,6 +342,7 @@ export async function loadOrder(env, id) {
       ) AS gross_profit_uah
     FROM orders
     LEFT JOIN customers ON customers.id = orders.customer_id
+    LEFT JOIN leads ON leads.id = orders.lead_id
     WHERE orders.id = ?`
   )
     .bind(id)
@@ -297,7 +375,9 @@ export function buildManagerOrderMessage(order, origin = "https://evline.com.ua"
   const lines = [
     prefix,
     order.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
-    `Замовлення CRM: ${order.id || "-"}`,
+    `Замовлення CRM: ${order.order_number || order.id || "-"}`,
+    ...(order.customer_number ? [`Клієнт CRM: ${order.customer_number}`] : []),
+    ...(order.lead_number ? [`Лід CRM: ${order.lead_number}`] : []),
     `Менеджер: ${text(order.manager_contact) || managerContactForType(order.type)}`,
     `Тип: ${order.type || "parts"}`,
     `Ім'я: ${order.customer_name || "-"}`,

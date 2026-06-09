@@ -1,5 +1,12 @@
 import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
-import { createOrderFromLead, managerChatIdForType, managerContactForType } from "../_lib/crm.js";
+import {
+  createOrderFromLead,
+  loadOrder,
+  managerChatIdForType,
+  managerContactForType,
+  nextPublicNumber,
+  sendManagerOrderNotification,
+} from "../_lib/crm.js";
 
 const ALLOWED_TYPES = new Set(["parts", "byd", "other"]);
 
@@ -70,9 +77,17 @@ async function notifyTelegram(env, lead, orderId, request) {
   if (!env.TELEGRAM_BOT_TOKEN || !managerChatId) return;
 
   const url = new URL(request.url);
+  if (orderId) {
+    const order = await loadOrder(env, orderId);
+    if (order) {
+      await sendManagerOrderNotification(env, order, { origin: url.origin });
+      return;
+    }
+  }
 
   const lines = [
     lead.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
+    ...(lead.lead_number ? [`Лід CRM: ${lead.lead_number}`] : []),
     `Замовлення CRM: ${orderId || "-"}`,
     `Менеджер: ${managerContactForType(lead.type)}`,
     `Тип: ${lead.type}`,
@@ -111,14 +126,16 @@ export async function onRequestPost({ request, env }) {
   }
 
   try {
+    lead.lead_number = await nextPublicNumber(env, "lead", "L");
     await env.DB.prepare(
       `INSERT INTO leads (
-        id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
+        id, lead_number, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
         source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid, landing_page, referrer, user_agent, ip_country
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         lead.id,
+        lead.lead_number,
         lead.created_at,
         lead.updated_at,
         lead.type,
@@ -147,7 +164,7 @@ export async function onRequestPost({ request, env }) {
       )
       .run();
   } catch (error) {
-    if (!/gbraid|wbraid|no such column/i.test(error.message || String(error))) throw error;
+    if (!/gbraid|wbraid|lead_number|no such column/i.test(error.message || String(error))) throw error;
     await env.DB.prepare(
       `INSERT INTO leads (
         id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
@@ -194,7 +211,10 @@ export async function onRequestPost({ request, env }) {
     console.error("Failed to notify manager Telegram chat", error);
   });
 
-  return json({ ok: true, lead_id: lead.id, order_id: orderId }, { headers: leadCorsHeaders(request) });
+  return json(
+    { ok: true, lead_id: lead.id, lead_number: lead.lead_number || "", order_id: orderId },
+    { headers: leadCorsHeaders(request) }
+  );
 }
 
 export async function onRequestOptions({ request }) {
