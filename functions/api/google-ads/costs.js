@@ -51,7 +51,15 @@ export async function onRequestPost({ request, env }) {
 
   const rows = Array.isArray(payload.rows) ? payload.rows : [];
   if (!rows.length) {
-    return json({ error: "No rows to import" }, { status: 400 });
+    return json({
+      ok: true,
+      imported: 0,
+      skipped: 0,
+      spend_uah: 0,
+      clicks: 0,
+      impressions: 0,
+      message: "No Google Ads rows to import for this period.",
+    });
   }
   if (rows.length > 1000) {
     return json({ error: "Too many rows in one import" }, { status: 413 });
