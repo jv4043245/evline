@@ -293,6 +293,35 @@ async function sendTelegramMessage(env, chatId, body) {
   return String(data.result?.message_id || "");
 }
 
+export function buildManagerOrderMessage(order, origin = "https://evline.com.ua", prefix = "") {
+  const lines = [
+    prefix,
+    order.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
+    `Замовлення CRM: ${order.id || "-"}`,
+    `Менеджер: ${text(order.manager_contact) || managerContactForType(order.type)}`,
+    `Тип: ${order.type || "parts"}`,
+    `Ім'я: ${order.customer_name || "-"}`,
+    `Телефон: ${order.customer_phone || "-"}`,
+    `Telegram: ${order.customer_telegram || "-"}`,
+    `Авто: ${order.car || "-"}`,
+    `VIN: ${order.vin || "-"}`,
+    ...(order.item_name ? [`Запчастина: ${order.item_name}`] : []),
+    ...(order.service_name ? [`Послуга: ${order.service_name}`] : []),
+    `Джерело: ${order.source || "-"} / ${order.campaign || "-"}`,
+    `Запит: ${order.request_text || "-"}`,
+    `Адмінка: ${origin}/admin/`,
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+export async function sendManagerOrderNotification(env, order, { origin = "https://evline.com.ua", prefix = "" } = {}) {
+  const managerChatId = managerChatIdForType(env, order.type);
+  if (!managerChatId) throw new Error("Manager Telegram chat ID is not configured");
+  const body = buildManagerOrderMessage(order, origin, prefix);
+  const telegramMessageId = await sendTelegramMessage(env, managerChatId, body);
+  return { ok: true, chat_id: managerChatId, telegram_message_id: telegramMessageId };
+}
+
 export async function buildCustomerMessage(env, order, status, customMessage = "") {
   const manual = text(customMessage);
   if (manual) return manual;

@@ -87,7 +87,7 @@ async function notifyTelegram(env, lead, orderId, request) {
     `Адмінка: ${url.origin}/admin/`,
   ];
 
-  await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -96,6 +96,10 @@ async function notifyTelegram(env, lead, orderId, request) {
       disable_web_page_preview: true,
     }),
   });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.description || "Telegram sendMessage failed");
+  }
 }
 
 export async function onRequestPost({ request, env }) {
@@ -186,7 +190,9 @@ export async function onRequestPost({ request, env }) {
     console.error("Failed to create order from lead", error);
   }
 
-  await notifyTelegram(env, lead, orderId, request).catch(() => {});
+  await notifyTelegram(env, lead, orderId, request).catch((error) => {
+    console.error("Failed to notify manager Telegram chat", error);
+  });
 
   return json({ ok: true, lead_id: lead.id, order_id: orderId }, { headers: leadCorsHeaders(request) });
 }

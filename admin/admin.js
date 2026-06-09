@@ -315,7 +315,7 @@ function renderGoogleAds(data = state.googleAds) {
           const status = row.status || "queued";
           return `
             <tr>
-              <td>${escapeHtml(shortDateTime(row.created_at))}</td>
+              <td>${escapeHtml(shortDateTime(row.conversion_time || row.created_at))}<br><span class="muted">черга ${escapeHtml(shortDateTime(row.created_at))}</span></td>
               <td><strong>${escapeHtml(googleAdsEventLabels[row.event_type] || row.event_type)}</strong><br><span class="muted">${textOrDash(row.conversion_action_name)}</span></td>
               <td>${textOrDash(orderText)}<br><span class="muted">${textOrDash(row.customer_phone || row.customer_telegram)}</span></td>
               <td>${textOrDash(row.source || "site")}<br><span class="muted">${textOrDash(row.campaign || "без кампанії")}</span></td>
@@ -618,6 +618,7 @@ function renderOrderEditor(order) {
       <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>
       <p class="muted">Джерело: ${textOrDash(order.source || "site")} / ${textOrDash(order.medium)} / ${textOrDash(order.campaign || "без кампанії")}</p>
       <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
+      <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
     </div>
 
     <input type="hidden" name="id" value="${escapeHtml(order.id)}">
@@ -1162,6 +1163,28 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const notifyManagerButton = event.target.closest("[data-notify-manager]");
+  if (notifyManagerButton) {
+    notifyManagerButton.disabled = true;
+    notifyManagerButton.textContent = "Надсилаю...";
+    try {
+      const result = await api(`/api/admin/orders/${encodeURIComponent(notifyManagerButton.dataset.notifyManager)}/notify-manager`, {
+        method: "POST",
+        body: "{}",
+      });
+      state.selectedEvents = result.events || state.selectedEvents;
+      if (state.selectedOrder?.id) await loadOrder(state.selectedOrder.id);
+      await loadOrders();
+      alert("Заявку надіслано менеджеру в Telegram.");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      notifyManagerButton.disabled = false;
+      notifyManagerButton.textContent = "Надіслати менеджеру в Telegram";
+    }
+    return;
+  }
+
   const syncButton = event.target.closest("[data-sync-tracking]");
   if (syncButton) {
     syncButton.disabled = true;
