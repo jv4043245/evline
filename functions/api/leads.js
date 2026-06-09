@@ -1,4 +1,5 @@
 import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
+import { inferAttribution } from "../_lib/attribution.js";
 import {
   createOrderFromLead,
   loadOrder,
@@ -39,6 +40,7 @@ function normalizeLead(payload, request) {
   const part = text(payload.part || payload.item_name || payload.need || payload.requested_part);
   const details = text(payload.message || payload.request_text || payload.details || payload.comment);
   const message = [part ? `Запчастина: ${part}` : "", details].filter(Boolean).join("\n");
+  const attribution = inferAttribution(payload, request);
 
   return {
     id: crypto.randomUUID(),
@@ -56,17 +58,17 @@ function normalizeLead(payload, request) {
     part,
     details,
     message,
-    source: text(payload.utm_source || payload.source) || "site",
-    medium: text(payload.utm_medium || payload.medium),
-    campaign: text(payload.utm_campaign || payload.campaign),
-    term: text(payload.utm_term || payload.term),
-    content: text(payload.utm_content || payload.content),
-    gclid: text(payload.gclid),
-    gbraid: text(payload.gbraid),
-    wbraid: text(payload.wbraid),
-    fbclid: text(payload.fbclid),
-    landing_page: text(payload.landing_page) || url.origin,
-    referrer: text(payload.referrer) || text(request.headers.get("referer")),
+    source: attribution.source,
+    medium: attribution.medium,
+    campaign: attribution.campaign,
+    term: attribution.term,
+    content: attribution.content,
+    gclid: attribution.gclid,
+    gbraid: attribution.gbraid,
+    wbraid: attribution.wbraid,
+    fbclid: attribution.fbclid,
+    landing_page: attribution.landing_page || url.origin,
+    referrer: attribution.referrer,
     user_agent: text(request.headers.get("user-agent")),
     ip_country: text(request.headers.get("cf-ipcountry")),
   };
