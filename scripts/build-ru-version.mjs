@@ -299,7 +299,7 @@ const altLinks = (ukPath, ruPath, currentPath) => {
 };
 
 const headJsonIndexRu = `<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoPartsStore","name":"EVLine Украина","description":"Оригинальные и OEM запчасти для китайских авто (BYD, Zeekr, Xiaomi, NIO и др.) с доставкой из Китая в Украину. Подбор по VIN.","url":"https://evline.com.ua/ru/","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/gallery-1.jpg","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$"}
+{"@context":"https://schema.org","@type":"AutoPartsStore","name":"EVLine Украина","description":"Оригинальные и OEM запчасти для китайских авто (BYD, Zeekr, Xiaomi, NIO и др.) с доставкой из Китая в Украину. Подбор по VIN.","url":"https://evline.com.ua/ru/","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/images/og-evline-social.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
