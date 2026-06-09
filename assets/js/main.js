@@ -35,8 +35,26 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeLanguageSwitches();
 });
 
-function trackingData() {
+function readTrackingStore(store, key) {
+  try {
+    return JSON.parse(store.getItem(key) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTrackingStore(store, key, value) {
+  try {
+    store.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function trackingData(form) {
   const params = new URLSearchParams(window.location.search);
+  const now = new Date().toISOString();
+  const storageKey = "evline_attribution_v1";
+  const sessionKey = "evline_tracking";
+  const ttlMs = 90 * 24 * 60 * 60 * 1000;
   const current = {
     utm_source: params.get("utm_source") || "",
     utm_medium: params.get("utm_medium") || "",
@@ -49,27 +67,45 @@ function trackingData() {
     fbclid: params.get("fbclid") || "",
     landing_page: window.location.href,
     referrer: document.referrer,
+    page_url: window.location.href,
+    submitted_at: now,
   };
   const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
-  let saved = {};
-  try {
-    saved = JSON.parse(sessionStorage.getItem("evline_tracking") || "{}") || {};
-  } catch {
+  let saved = readTrackingStore(localStorage, storageKey);
+  if (saved.expires_at && Number(saved.expires_at) < Date.now()) {
     saved = {};
   }
+  if (!Object.keys(saved).length) saved = readTrackingStore(sessionStorage, sessionKey);
+
   const hasTracking = keys.some((key) => current[key]);
   if (hasTracking) {
-    saved = { ...saved, ...current, referrer: current.referrer || saved.referrer || "" };
-    try {
-      sessionStorage.setItem("evline_tracking", JSON.stringify(saved));
-    } catch {}
+    saved = {
+      ...saved,
+      ...current,
+      landing_page: saved.landing_page || current.landing_page,
+      referrer: saved.referrer || current.referrer || "",
+      tracking_captured_at: saved.tracking_captured_at || now,
+      expires_at: Date.now() + ttlMs,
+    };
+    writeTrackingStore(localStorage, storageKey, saved);
+    writeTrackingStore(sessionStorage, sessionKey, saved);
   }
   keys.forEach((key) => {
     if (!current[key] && saved[key]) current[key] = saved[key];
   });
-  current.referrer = current.referrer || saved.referrer || "";
+  current.landing_page = saved.landing_page || current.landing_page;
+  current.referrer = saved.referrer || current.referrer || "";
+  current.tracking_captured_at = saved.tracking_captured_at || now;
+  current.page_url = window.location.href;
+  current.submitted_at = now;
+  if (form) {
+    current.form_id = form.id || form.getAttribute("name") || "";
+    current.form_name = form.dataset.formName || form.getAttribute("aria-label") || form.id || "";
+  }
   return current;
 }
+
+trackingData();
 
 function leadEndpoint() {
   if (window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
@@ -122,12 +158,27 @@ function isRussianPage() {
 }
 
 async function sendLeadToCrm(payload) {
+  const eventPayload = {
+    event: "evline_lead_submit",
+    lead_type: payload.type || detectLeadType(payload),
+    form_id: payload.form_id || "",
+    form_name: payload.form_name || "",
+    source: payload.utm_source || payload.source || "",
+    medium: payload.utm_medium || payload.medium || "",
+    campaign: payload.utm_campaign || payload.campaign || "",
+    term: payload.utm_term || payload.term || "",
+    has_gclid: Boolean(payload.gclid),
+    has_gbraid: Boolean(payload.gbraid),
+    has_wbraid: Boolean(payload.wbraid),
+  };
   const response = await fetch(leadEndpoint(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error("Не вдалося зберегти заявку");
+  if (window.dataLayer) window.dataLayer.push(eventPayload);
+  if (typeof window.gtag === "function") window.gtag("event", "generate_lead", eventPayload);
   return response.json().catch(() => ({}));
 }
 
@@ -168,7 +219,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
       phone,
       type,
       message: part,
-      ...trackingData(),
+      ...trackingData(form),
     };
 
     sendLeadToCrm(payload)
@@ -191,7 +242,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
     const originalButtonText = button?.textContent || "";
     const payload = {
       ...Object.fromEntries(new FormData(form)),
-      ...trackingData(),
+      ...trackingData(form),
     };
     payload.type = detectLeadType(payload);
 

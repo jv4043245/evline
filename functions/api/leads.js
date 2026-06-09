@@ -69,9 +69,31 @@ function normalizeLead(payload, request) {
     fbclid: attribution.fbclid,
     landing_page: attribution.landing_page || url.origin,
     referrer: attribution.referrer,
+    page_url: attribution.page_url || attribution.landing_page || url.origin,
+    form_id: attribution.form_id,
+    form_name: attribution.form_name,
+    submitted_at: attribution.submitted_at || now,
+    tracking_captured_at: attribution.tracking_captured_at,
+    attribution_type: attribution.attribution_type,
     user_agent: text(request.headers.get("user-agent")),
     ip_country: text(request.headers.get("cf-ipcountry")),
   };
+}
+
+async function tableColumns(env, table) {
+  const rows = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+  return new Set((rows.results || []).map((row) => row.name));
+}
+
+async function insertKnownFields(env, table, fields) {
+  const columns = await tableColumns(env, table);
+  const available = fields.filter(([name]) => columns.has(name));
+  await env.DB.prepare(
+    `INSERT INTO ${table} (${available.map(([name]) => name).join(", ")})
+    VALUES (${available.map(() => "?").join(", ")})`
+  )
+    .bind(...available.map(([, value]) => value))
+    .run();
 }
 
 async function notifyTelegram(env, lead, orderId, request) {
@@ -100,6 +122,8 @@ async function notifyTelegram(env, lead, orderId, request) {
     `VIN: ${lead.vin || "-"}`,
     ...(lead.part ? [`Запчастина: ${lead.part}`] : []),
     `Джерело: ${lead.source || "-"} / ${lead.campaign || "-"}`,
+    `Атрибуція: ${lead.attribution_type || "-"}${lead.gclid ? " / gclid" : lead.gbraid ? " / gbraid" : lead.wbraid ? " / wbraid" : ""}`,
+    ...(lead.form_name || lead.form_id ? [`Форма: ${lead.form_name || lead.form_id}`] : []),
     `Запит: ${lead.details || (lead.part ? "" : lead.message) || "-"}`,
     `Адмінка: ${url.origin}/admin/`,
   ];
@@ -129,77 +153,43 @@ export async function onRequestPost({ request, env }) {
 
   try {
     lead.lead_number = await nextPublicNumber(env, "lead", "L");
-    await env.DB.prepare(
-      `INSERT INTO leads (
-        id, lead_number, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
-        source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid, landing_page, referrer, user_agent, ip_country
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        lead.id,
-        lead.lead_number,
-        lead.created_at,
-        lead.updated_at,
-        lead.type,
-        lead.status,
-        lead.quality,
-        lead.name,
-        lead.phone,
-        lead.email,
-        lead.telegram,
-        lead.car,
-        lead.vin,
-        lead.message,
-        lead.source,
-        lead.medium,
-        lead.campaign,
-        lead.term,
-        lead.content,
-        lead.gclid,
-        lead.gbraid,
-        lead.wbraid,
-        lead.fbclid,
-        lead.landing_page,
-        lead.referrer,
-        lead.user_agent,
-        lead.ip_country
-      )
-      .run();
+    await insertKnownFields(env, "leads", [
+      ["id", lead.id],
+      ["lead_number", lead.lead_number],
+      ["created_at", lead.created_at],
+      ["updated_at", lead.updated_at],
+      ["type", lead.type],
+      ["status", lead.status],
+      ["quality", lead.quality],
+      ["name", lead.name],
+      ["phone", lead.phone],
+      ["email", lead.email],
+      ["telegram", lead.telegram],
+      ["car", lead.car],
+      ["vin", lead.vin],
+      ["message", lead.message],
+      ["source", lead.source],
+      ["medium", lead.medium],
+      ["campaign", lead.campaign],
+      ["term", lead.term],
+      ["content", lead.content],
+      ["gclid", lead.gclid],
+      ["gbraid", lead.gbraid],
+      ["wbraid", lead.wbraid],
+      ["fbclid", lead.fbclid],
+      ["landing_page", lead.landing_page],
+      ["referrer", lead.referrer],
+      ["page_url", lead.page_url],
+      ["form_id", lead.form_id],
+      ["form_name", lead.form_name],
+      ["submitted_at", lead.submitted_at],
+      ["tracking_captured_at", lead.tracking_captured_at],
+      ["attribution_type", lead.attribution_type],
+      ["user_agent", lead.user_agent],
+      ["ip_country", lead.ip_country],
+    ]);
   } catch (error) {
-    if (!/gbraid|wbraid|lead_number|no such column/i.test(error.message || String(error))) throw error;
-    await env.DB.prepare(
-      `INSERT INTO leads (
-        id, created_at, updated_at, type, status, quality, name, phone, email, telegram, car, vin, message,
-        source, medium, campaign, term, content, gclid, fbclid, landing_page, referrer, user_agent, ip_country
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        lead.id,
-        lead.created_at,
-        lead.updated_at,
-        lead.type,
-        lead.status,
-        lead.quality,
-        lead.name,
-        lead.phone,
-        lead.email,
-        lead.telegram,
-        lead.car,
-        lead.vin,
-        lead.message,
-        lead.source,
-        lead.medium,
-        lead.campaign,
-        lead.term,
-        lead.content,
-        lead.gclid,
-        lead.fbclid,
-        lead.landing_page,
-        lead.referrer,
-        lead.user_agent,
-        lead.ip_country
-      )
-      .run();
+    throw error;
   }
 
   let orderId = "";

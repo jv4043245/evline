@@ -246,6 +246,82 @@ function googleAdsIdentifierLabel(row) {
   return "немає";
 }
 
+const attributionLabels = {
+  google_ads: "Google Ads",
+  organic: "Organic",
+  direct: "Direct",
+  referral: "Referral",
+  social: "Social",
+  other: "Інше",
+};
+
+function attributionType(row = {}) {
+  const source = plainText(row.source).toLowerCase();
+  const medium = plainText(row.medium).toLowerCase();
+  const referrer = plainText(row.referrer).toLowerCase();
+  const internalReferrer = /\/\/(www\.)?(evline\.com\.ua|evline\.pages\.dev|jv4043245\.github\.io)/.test(referrer);
+  if (row.attribution_type) return row.attribution_type;
+  if (row.gclid || row.gbraid || row.wbraid || (source === "google" && /(cpc|ppc|paid|ads?)/.test(medium))) return "google_ads";
+  if (medium === "organic" || (source === "google" && !medium) || /\/\/(www\.)?google\./.test(referrer)) return "organic";
+  if ((!source || source === "site" || source === "direct") && !medium && (!referrer || internalReferrer)) return "direct";
+  if (/facebook|instagram|tiktok|youtube|telegram|social/.test(source) || row.fbclid) return "social";
+  if (referrer) return "referral";
+  return "other";
+}
+
+function clickIdentifier(row = {}) {
+  if (row.gclid) return "gclid";
+  if (row.gbraid) return "gbraid";
+  if (row.wbraid) return "wbraid";
+  return "";
+}
+
+function attributionCell(row = {}) {
+  const type = attributionType(row);
+  const campaign = row.campaign || "без кампанії";
+  const click = clickIdentifier(row);
+  const term = row.term || "";
+  return `
+    <span class="source-badge source-badge--${safeClass(type)}">${escapeHtml(attributionLabels[type] || type)}</span>
+    <br><span class="muted">${textOrDash(row.source || "site")} / ${textOrDash(row.medium)}</span>
+    <br><span class="muted">${textOrDash(campaign)}</span>
+    ${term ? `<br><span class="muted">term: ${escapeHtml(term)}</span>` : ""}
+    ${click ? `<br><span class="click-badge">${escapeHtml(click)} є</span>` : ""}
+  `;
+}
+
+function shortUrl(value) {
+  const raw = plainText(value);
+  if (!raw) return "-";
+  try {
+    const url = new URL(raw);
+    return `${url.hostname}${url.pathname}${url.search ? "?" : ""}${url.search ? url.search.slice(1, 42) : ""}`;
+  } catch {
+    return raw.length > 64 ? `${raw.slice(0, 61)}...` : raw;
+  }
+}
+
+function attributionDetails(order = {}) {
+  const click = clickIdentifier(order);
+  return `
+    <details class="attribution-details">
+      <summary>Атрибуція: ${escapeHtml(attributionLabels[attributionType(order)] || attributionType(order))}${click ? ` · ${escapeHtml(click)}` : ""}</summary>
+      <dl>
+        <div><dt>Source / medium</dt><dd>${textOrDash(order.source || "site")} / ${textOrDash(order.medium)}</dd></div>
+        <div><dt>Campaign</dt><dd>${textOrDash(order.campaign || "без кампанії")}</dd></div>
+        <div><dt>Keyword / term</dt><dd>${textOrDash(order.term)}</dd></div>
+        <div><dt>Content</dt><dd>${textOrDash(order.content)}</dd></div>
+        <div><dt>Click ID</dt><dd>${textOrDash(click)}${click ? " збережено" : ""}</dd></div>
+        <div><dt>Landing page</dt><dd>${order.landing_page ? `<a href="${escapeHtml(order.landing_page)}" target="_blank" rel="noopener">${escapeHtml(shortUrl(order.landing_page))}</a>` : "-"}</dd></div>
+        <div><dt>Page URL</dt><dd>${order.page_url ? `<a href="${escapeHtml(order.page_url)}" target="_blank" rel="noopener">${escapeHtml(shortUrl(order.page_url))}</a>` : "-"}</dd></div>
+        <div><dt>Form</dt><dd>${textOrDash(order.form_name || order.form_id)}</dd></div>
+        <div><dt>Submitted</dt><dd>${textOrDash(shortDateTime(order.submitted_at || order.created_at))}</dd></div>
+        <div><dt>Referrer</dt><dd>${order.referrer ? `<span title="${escapeHtml(order.referrer)}">${escapeHtml(shortUrl(order.referrer))}</span>` : "-"}</dd></div>
+      </dl>
+    </details>
+  `;
+}
+
 function renderGoogleAds(data = state.googleAds) {
   const statusNode = document.querySelector("[data-google-ads-status]");
   const summaryRoot = document.querySelector("[data-google-ads-summary]");
@@ -515,7 +591,7 @@ function renderOrders() {
               <td><strong>${textOrDash(publicNumber)}</strong><br><span class="muted">${escapeHtml(shortDateTime(order.created_at))}</span><br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
               <td><strong>${textOrDash(order.customer_name || "Без імені")}</strong><br><span class="muted">${textOrDash(contact)}</span></td>
               <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
-              <td>${textOrDash(order.source || "site")}<br><span class="muted">${textOrDash(order.campaign || "без кампанії")}</span></td>
+              <td>${attributionCell(order)}</td>
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
               <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
               <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${trackingStatus ? `<br><span class="muted">${escapeHtml(trackingStatus)}</span>` : ""}${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
@@ -627,7 +703,7 @@ function renderOrderEditor(order) {
       <p><strong>${textOrDash(order.customer_name || "Без імені")}</strong> · ${textOrDash(order.customer_phone || order.customer_email || order.customer_telegram)}</p>
       <p>${textOrDash(order.car)} · VIN: ${textOrDash(order.vin)}</p>
       <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>
-      <p class="muted">Джерело: ${textOrDash(order.source || "site")} / ${textOrDash(order.medium)} / ${textOrDash(order.campaign || "без кампанії")}</p>
+      ${attributionDetails(order)}
       <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
       <div class="order-editor__actions">
         <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>

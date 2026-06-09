@@ -2,10 +2,11 @@ import { inferAttribution } from "../../../_lib/attribution.js";
 import { json, text } from "../../../_lib/http.js";
 
 function shouldUpdate(row, attribution) {
-  if (!attribution.has_google_click) return false;
+  if (!attribution.has_google_click && text(row.attribution_type)) return false;
   return (
     text(row.source) !== "google" ||
     text(row.medium) !== "cpc" ||
+    (!text(row.attribution_type) && text(attribution.attribution_type)) ||
     (!text(row.campaign) && text(attribution.campaign)) ||
     (!text(row.term) && text(attribution.term)) ||
     (!text(row.content) && text(attribution.content)) ||
@@ -15,9 +16,21 @@ function shouldUpdate(row, attribution) {
   );
 }
 
+async function tableHasColumn(env, table, column) {
+  try {
+    const rows = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+    return (rows.results || []).some((row) => row.name === column);
+  } catch {
+    return false;
+  }
+}
+
 async function backfillTable(env, table) {
+  const hasAttributionType = await tableHasColumn(env, table, "attribution_type");
   const rows = await env.DB.prepare(
-    `SELECT id, source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid, landing_page, referrer
+    `SELECT id, source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid, landing_page, referrer${
+      hasAttributionType ? ", attribution_type" : ""
+    }
      FROM ${table}
      WHERE (
        COALESCE(landing_page, '') LIKE '%gclid=%'
@@ -49,6 +62,22 @@ async function backfillTable(env, table) {
     });
     if (!shouldUpdate(row, attribution)) continue;
 
+    const attributionTypeSql = hasAttributionType ? ",\n        attribution_type = COALESCE(NULLIF(?, ''), attribution_type)" : "";
+    const bindValues = [
+      now,
+      "google",
+      "cpc",
+      attribution.campaign,
+      attribution.term,
+      attribution.content,
+      attribution.gclid,
+      attribution.gbraid,
+      attribution.wbraid,
+      attribution.fbclid,
+    ];
+    if (hasAttributionType) bindValues.push(attribution.attribution_type);
+    bindValues.push(row.id);
+
     await env.DB.prepare(
       `UPDATE ${table} SET
         updated_at = ?,
@@ -60,22 +89,10 @@ async function backfillTable(env, table) {
         gclid = COALESCE(NULLIF(gclid, ''), NULLIF(?, '')),
         gbraid = COALESCE(NULLIF(gbraid, ''), NULLIF(?, '')),
         wbraid = COALESCE(NULLIF(wbraid, ''), NULLIF(?, '')),
-        fbclid = COALESCE(NULLIF(fbclid, ''), NULLIF(?, ''))
+        fbclid = COALESCE(NULLIF(fbclid, ''), NULLIF(?, ''))${attributionTypeSql}
        WHERE id = ?`
     )
-      .bind(
-        now,
-        "google",
-        "cpc",
-        attribution.campaign,
-        attribution.term,
-        attribution.content,
-        attribution.gclid,
-        attribution.gbraid,
-        attribution.wbraid,
-        attribution.fbclid,
-        row.id
-      )
+      .bind(...bindValues)
       .run();
 
     updated += 1;

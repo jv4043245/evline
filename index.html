@@ -362,7 +362,7 @@
         <div class="mini-step"><span class="n">3</span><b>Від 14 днів</b>деталь у вас, авіа з Китаю</div>
       </div>
     </div>
-    <form class="leadbox" id="hero-form" onsubmit="return submitLead('hero-form')">
+    <form class="leadbox" id="hero-form" data-form-name="Головна форма запчастини" onsubmit="return submitLead('hero-form')">
       <h3>Дізнайтеся ціну та строк за 30 хвилин</h3>
       <p class="small">Надішліть VIN — менеджер перевірить сумісність і надішле точну ціну з доставкою «під ключ»</p>
       <label>VIN-код</label>
@@ -614,7 +614,7 @@
           📍 м. Київ, Оболонська набережна, 3, офіс 1
         </div>
       </div>
-      <form class="leadbox" id="final-form" onsubmit="return submitLead('final-form')">
+      <form class="leadbox" id="final-form" data-form-name="Фінальна форма запчастини" onsubmit="return submitLead('final-form')">
         <span class="free-badge">Безкоштовний підбір</span>
         <h3>Заявка на підбір запчастини</h3>
         <label>VIN-код</label>
@@ -692,25 +692,63 @@ function openTelegramMsg(msg){
   if(navigator.clipboard){navigator.clipboard.writeText(msg);}
   window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
 }
-function trackingPayload(){
+function trackingPayload(form){
   var p=new URLSearchParams(window.location.search);
+  var now=new Date().toISOString();
+  var storageKey='evline_attribution_v1';
+  var sessionKey='evline_tracking';
+  var ttlMs=90*24*60*60*1000;
+  function readStore(store,key){try{return JSON.parse(store.getItem(key)||'{}')||{};}catch(e){return {};}}
+  function writeStore(store,key,value){try{store.setItem(key,JSON.stringify(value));}catch(e){}}
   var current={
     utm_source:p.get('utm_source')||'',utm_medium:p.get('utm_medium')||'',utm_campaign:p.get('utm_campaign')||'',
     utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',gbraid:p.get('gbraid')||'',wbraid:p.get('wbraid')||'',fbclid:p.get('fbclid')||'',
-    landing_page:window.location.href,referrer:document.referrer
+    landing_page:window.location.href,referrer:document.referrer,page_url:window.location.href,submitted_at:now
   };
   var keys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid'];
-  var saved={};
-  try{saved=JSON.parse(sessionStorage.getItem('evline_tracking')||'{}')||{};}catch(e){saved={};}
+  var saved=readStore(localStorage,storageKey);
+  if(saved.expires_at&&Number(saved.expires_at)<Date.now()) saved={};
+  if(!Object.keys(saved).length) saved=readStore(sessionStorage,sessionKey);
   var hasTracking=keys.some(function(k){return !!current[k];});
   if(hasTracking){
-    var toSave=Object.assign({},saved,current,{referrer:current.referrer||saved.referrer||''});
-    try{sessionStorage.setItem('evline_tracking',JSON.stringify(toSave));}catch(e){}
-    saved=toSave;
+    saved=Object.assign({},saved,current,{
+      landing_page:saved.landing_page||current.landing_page,
+      referrer:saved.referrer||current.referrer||'',
+      tracking_captured_at:saved.tracking_captured_at||now,
+      expires_at:Date.now()+ttlMs
+    });
+    writeStore(localStorage,storageKey,saved);
+    writeStore(sessionStorage,sessionKey,saved);
   }
   keys.forEach(function(k){if(!current[k]&&saved[k]) current[k]=saved[k];});
-  current.referrer=current.referrer||saved.referrer||'';
+  current.landing_page=saved.landing_page||current.landing_page;
+  current.referrer=saved.referrer||current.referrer||'';
+  current.tracking_captured_at=saved.tracking_captured_at||now;
+  current.page_url=window.location.href;
+  current.submitted_at=now;
+  if(form){
+    current.form_id=form.id||form.getAttribute('name')||'';
+    current.form_name=form.getAttribute('data-form-name')||form.getAttribute('aria-label')||form.id||'';
+  }
   return current;
+}
+trackingPayload();
+function trackLeadSubmit(payload){
+  var eventPayload={
+    event:'evline_lead_submit',
+    lead_type:payload.type||'parts',
+    form_id:payload.form_id||'',
+    form_name:payload.form_name||'',
+    source:payload.utm_source||payload.source||'',
+    medium:payload.utm_medium||payload.medium||'',
+    campaign:payload.utm_campaign||payload.campaign||'',
+    term:payload.utm_term||payload.term||'',
+    has_gclid:!!payload.gclid,
+    has_gbraid:!!payload.gbraid,
+    has_wbraid:!!payload.wbraid
+  };
+  if(window.dataLayer) window.dataLayer.push(eventPayload);
+  if(typeof window.gtag==='function') window.gtag('event','generate_lead',eventPayload);
 }
 function leadEndpoint(){
   if(window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
@@ -744,7 +782,7 @@ function submitLead(formId){
   var button=el.querySelector('button[type=submit]');
   var originalText=button?button.textContent:'';
   if(button){button.disabled=true;button.textContent='Зберігаємо...';}
-  var payload=Object.assign({},trackingPayload(),{
+  var payload=Object.assign({},trackingPayload(el),{
     type:'parts',
     name:f.name,
     phone:f.contact,
@@ -758,7 +796,7 @@ function submitLead(formId){
   });
   fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
     .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
-    .then(function(){el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
+    .then(function(){trackLeadSubmit(payload);el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
     .catch(function(){showLeadToast('Telegram відкрито з готовим текстом.');})
     .finally(function(){if(button){button.disabled=false;button.textContent=originalText;}});
   openTelegramMsg(msg);

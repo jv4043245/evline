@@ -98,6 +98,22 @@ export async function tableHasColumn(env, table, column) {
   }
 }
 
+async function tableColumnSet(env, table) {
+  const rows = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+  return new Set((rows.results || []).map((row) => row.name));
+}
+
+async function insertKnownFields(env, table, fields) {
+  const columns = await tableColumnSet(env, table);
+  const available = fields.filter(([name]) => columns.has(name));
+  await env.DB.prepare(
+    `INSERT INTO ${table} (${available.map(([name]) => name).join(", ")})
+    VALUES (${available.map(() => "?").join(", ")})`
+  )
+    .bind(...available.map(([, value]) => value))
+    .run();
+}
+
 export async function nextPublicNumber(env, scope, prefix) {
   const now = new Date().toISOString();
   try {
@@ -205,87 +221,43 @@ export async function createOrderFromLead(env, lead) {
   const itemName = text(lead.part || lead.item_name);
   const serviceName = lead.type === "byd" ? "Програмування BYD" : "";
 
-  try {
-    await env.DB.prepare(
-      `INSERT INTO orders (
-        id, order_number, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
-        customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
-        service_name, request_text, source, medium, campaign, term, content, gclid, gbraid, wbraid, fbclid,
-        landing_page, referrer
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        orderId,
-        orderNumber,
-        now,
-        now,
-        lead.id,
-        customerId,
-        lead.type || "parts",
-        "new",
-        managerContactForType(lead.type),
-        text(lead.name),
-        text(lead.phone),
-        text(lead.email),
-        normalizeTelegram(lead.telegram),
-        text(lead.car),
-        text(lead.vin).toUpperCase(),
-        itemName,
-        serviceName,
-        orderRequestText(lead),
-        text(lead.source),
-        text(lead.medium),
-        text(lead.campaign),
-        text(lead.term),
-        text(lead.content),
-        text(lead.gclid),
-        text(lead.gbraid),
-        text(lead.wbraid),
-        text(lead.fbclid),
-        text(lead.landing_page),
-        text(lead.referrer)
-      )
-      .run();
-  } catch (error) {
-    if (!/gbraid|wbraid|order_number|no such column/i.test(error.message || String(error))) throw error;
-    await env.DB.prepare(
-      `INSERT INTO orders (
-        id, created_at, updated_at, lead_id, customer_id, type, status, manager_contact,
-        customer_name, customer_phone, customer_email, customer_telegram, car, vin, item_name,
-        service_name, request_text, source, medium, campaign, term, content, gclid, fbclid,
-        landing_page, referrer
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        orderId,
-        now,
-        now,
-        lead.id,
-        customerId,
-        lead.type || "parts",
-        "new",
-        managerContactForType(lead.type),
-        text(lead.name),
-        text(lead.phone),
-        text(lead.email),
-        normalizeTelegram(lead.telegram),
-        text(lead.car),
-        text(lead.vin).toUpperCase(),
-        itemName,
-        serviceName,
-        orderRequestText(lead),
-        text(lead.source),
-        text(lead.medium),
-        text(lead.campaign),
-        text(lead.term),
-        text(lead.content),
-        text(lead.gclid),
-        text(lead.fbclid),
-        text(lead.landing_page),
-        text(lead.referrer)
-      )
-      .run();
-  }
+  await insertKnownFields(env, "orders", [
+    ["id", orderId],
+    ["order_number", orderNumber],
+    ["created_at", now],
+    ["updated_at", now],
+    ["lead_id", lead.id],
+    ["customer_id", customerId],
+    ["type", lead.type || "parts"],
+    ["status", "new"],
+    ["manager_contact", managerContactForType(lead.type)],
+    ["customer_name", text(lead.name)],
+    ["customer_phone", text(lead.phone)],
+    ["customer_email", text(lead.email)],
+    ["customer_telegram", normalizeTelegram(lead.telegram)],
+    ["car", text(lead.car)],
+    ["vin", text(lead.vin).toUpperCase()],
+    ["item_name", itemName],
+    ["service_name", serviceName],
+    ["request_text", orderRequestText(lead)],
+    ["source", text(lead.source)],
+    ["medium", text(lead.medium)],
+    ["campaign", text(lead.campaign)],
+    ["term", text(lead.term)],
+    ["content", text(lead.content)],
+    ["gclid", text(lead.gclid)],
+    ["gbraid", text(lead.gbraid)],
+    ["wbraid", text(lead.wbraid)],
+    ["fbclid", text(lead.fbclid)],
+    ["landing_page", text(lead.landing_page)],
+    ["referrer", text(lead.referrer)],
+    ["page_url", text(lead.page_url)],
+    ["form_id", text(lead.form_id)],
+    ["form_name", text(lead.form_name)],
+    ["submitted_at", text(lead.submitted_at)],
+    ["tracking_captured_at", text(lead.tracking_captured_at)],
+    ["attribution_type", text(lead.attribution_type)],
+  ]);
 
   await insertStatusEvent(env, {
     order_id: orderId,
@@ -388,6 +360,8 @@ export function buildManagerOrderMessage(order, origin = "https://evline.com.ua"
     ...(order.item_name ? [`Запчастина: ${order.item_name}`] : []),
     ...(order.service_name ? [`Послуга: ${order.service_name}`] : []),
     `Джерело: ${order.source || "-"} / ${order.campaign || "-"}`,
+    `Атрибуція: ${order.attribution_type || "-"}${order.gclid ? " / gclid" : order.gbraid ? " / gbraid" : order.wbraid ? " / wbraid" : ""}`,
+    ...(order.form_name || order.form_id ? [`Форма: ${order.form_name || order.form_id}`] : []),
     `Запит: ${order.request_text || "-"}`,
     `Адмінка: ${origin}/admin/`,
   ];

@@ -358,7 +358,7 @@
         <div class="mini-step"><span class="n">3</span><b>Запись на работы</b>цена зафиксирована до начала</div>
       </div>
     </div>
-    <form class="leadbox" id="hero-form" onsubmit="return submitLead('hero-form')">
+    <form class="leadbox" id="hero-form" data-form-name="Главная форма BYD" onsubmit="return submitLead('hero-form')">
       <span class="free-badge">Бесплатно</span>
       <h3>Узнайте, какие обновления доступны для вашего авто</h3>
       <p class="small">Отправьте VIN — получите список доступных обновлений по блокам: что устарело и что изменится после обновления</p>
@@ -538,7 +538,7 @@
         <h3>Ваш BYD может работать лучше уже на этой неделе</h3>
         <p>Список доступных обновлений по VIN — бесплатно, без записи и обязательств</p>
       </div>
-      <form class="cta-band__form" id="quick-check-form" onsubmit="return submitLead('quick-check-form')">
+      <form class="cta-band__form" id="quick-check-form" data-form-name="Быстрая проверка BYD" onsubmit="return submitLead('quick-check-form')">
         <input name="vin" placeholder="VIN-код" maxlength="17" aria-label="VIN-код">
         <input name="model" placeholder="Модель" aria-label="Модель">
         <input name="contact" placeholder="+380" aria-label="Телефон" required>
@@ -643,7 +643,7 @@
           📍 г. Киев, Оболонская набережная, 3, офис 1
         </div>
       </div>
-      <form class="leadbox" id="final-form" onsubmit="return submitLead('final-form')">
+      <form class="leadbox" id="final-form" data-form-name="Финальная форма BYD" onsubmit="return submitLead('final-form')">
         <span class="free-badge">Бесплатная проверка</span>
         <h3>Узнайте, что можно улучшить в вашем BYD</h3>
         <div class="row2">
@@ -689,25 +689,63 @@ function openTelegramMsg(msg){
   if(navigator.clipboard){navigator.clipboard.writeText(msg);}
   window.open('https://t.me/evline_tech?text='+encodeURIComponent(msg),'_blank','noopener');
 }
-function trackingPayload(){
+function trackingPayload(form){
   var p=new URLSearchParams(window.location.search);
+  var now=new Date().toISOString();
+  var storageKey='evline_attribution_v1';
+  var sessionKey='evline_tracking';
+  var ttlMs=90*24*60*60*1000;
+  function readStore(store,key){try{return JSON.parse(store.getItem(key)||'{}')||{};}catch(e){return {};}}
+  function writeStore(store,key,value){try{store.setItem(key,JSON.stringify(value));}catch(e){}}
   var current={
     utm_source:p.get('utm_source')||'',utm_medium:p.get('utm_medium')||'',utm_campaign:p.get('utm_campaign')||'',
     utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',gbraid:p.get('gbraid')||'',wbraid:p.get('wbraid')||'',fbclid:p.get('fbclid')||'',
-    landing_page:window.location.href,referrer:document.referrer
+    landing_page:window.location.href,referrer:document.referrer,page_url:window.location.href,submitted_at:now
   };
   var keys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid'];
-  var saved={};
-  try{saved=JSON.parse(sessionStorage.getItem('evline_tracking')||'{}')||{};}catch(e){saved={};}
+  var saved=readStore(localStorage,storageKey);
+  if(saved.expires_at&&Number(saved.expires_at)<Date.now()) saved={};
+  if(!Object.keys(saved).length) saved=readStore(sessionStorage,sessionKey);
   var hasTracking=keys.some(function(k){return !!current[k];});
   if(hasTracking){
-    var toSave=Object.assign({},saved,current,{referrer:current.referrer||saved.referrer||''});
-    try{sessionStorage.setItem('evline_tracking',JSON.stringify(toSave));}catch(e){}
-    saved=toSave;
+    saved=Object.assign({},saved,current,{
+      landing_page:saved.landing_page||current.landing_page,
+      referrer:saved.referrer||current.referrer||'',
+      tracking_captured_at:saved.tracking_captured_at||now,
+      expires_at:Date.now()+ttlMs
+    });
+    writeStore(localStorage,storageKey,saved);
+    writeStore(sessionStorage,sessionKey,saved);
   }
   keys.forEach(function(k){if(!current[k]&&saved[k]) current[k]=saved[k];});
-  current.referrer=current.referrer||saved.referrer||'';
+  current.landing_page=saved.landing_page||current.landing_page;
+  current.referrer=saved.referrer||current.referrer||'';
+  current.tracking_captured_at=saved.tracking_captured_at||now;
+  current.page_url=window.location.href;
+  current.submitted_at=now;
+  if(form){
+    current.form_id=form.id||form.getAttribute('name')||'';
+    current.form_name=form.getAttribute('data-form-name')||form.getAttribute('aria-label')||form.id||'';
+  }
   return current;
+}
+trackingPayload();
+function trackLeadSubmit(payload){
+  var eventPayload={
+    event:'evline_lead_submit',
+    lead_type:payload.type||'byd',
+    form_id:payload.form_id||'',
+    form_name:payload.form_name||'',
+    source:payload.utm_source||payload.source||'',
+    medium:payload.utm_medium||payload.medium||'',
+    campaign:payload.utm_campaign||payload.campaign||'',
+    term:payload.utm_term||payload.term||'',
+    has_gclid:!!payload.gclid,
+    has_gbraid:!!payload.gbraid,
+    has_wbraid:!!payload.wbraid
+  };
+  if(window.dataLayer) window.dataLayer.push(eventPayload);
+  if(typeof window.gtag==='function') window.gtag('event','generate_lead',eventPayload);
 }
 function leadEndpoint(){
   if(window.EVLINE_LEAD_ENDPOINT) return window.EVLINE_LEAD_ENDPOINT;
@@ -732,7 +770,7 @@ function submitLead(formId){
   var button=el.querySelector('button[type=submit]');
   var originalText=button?button.textContent:'';
   if(button){button.disabled=true;button.textContent='Сохраняем...';}
-  var payload=Object.assign({},trackingPayload(),{
+  var payload=Object.assign({},trackingPayload(el),{
     type:'byd',
     topic:'programming-byd',
     phone:f.contact,
@@ -748,7 +786,7 @@ function submitLead(formId){
   });
   fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
     .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
-    .then(function(){el.reset();showLeadToast('Telegram открыт с готовым текстом. Менеджер получит ваш запрос.');})
+    .then(function(){trackLeadSubmit(payload);el.reset();showLeadToast('Telegram открыт с готовым текстом. Менеджер получит ваш запрос.');})
     .catch(function(){showLeadToast('Telegram открыт с готовым текстом.');})
     .finally(function(){if(button){button.disabled=false;button.textContent=originalText;}});
   openTelegramMsg(msg);
