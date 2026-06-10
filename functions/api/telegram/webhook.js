@@ -85,7 +85,13 @@ export async function onRequestPost({ request, env }) {
 
   const now = new Date().toISOString();
   const username = text(message.chat?.username || update.message?.from?.username);
-  const telegramUsername = username ? `@${username.replace(/^@/, "")}` : order.customer_telegram || "";
+  const tgFrom = update.message?.from || update.callback_query?.from || {};
+  const tgFullName = [text(tgFrom.first_name || message.chat?.first_name), text(tgFrom.last_name || message.chat?.last_name)]
+    .filter(Boolean)
+    .join(" ");
+  const telegramUsername = username
+    ? `@${username.replace(/^@/, "")}`
+    : (tgFullName ? `tg: ${tgFullName}` : order.customer_telegram || "");
 
   await env.DB.prepare(
     `UPDATE orders SET
