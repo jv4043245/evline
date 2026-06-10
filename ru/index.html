@@ -238,6 +238,12 @@
   .footer-seo-links span{display:block;margin-bottom:5px;color:#7d8a84;font-weight:700}
   .footer-seo-links a{display:inline-block;margin-right:12px;color:#93a39b;text-decoration:none}
   .footer-seo-links a:hover{color:#cfd8d3}
+  .footer-seo-links details{border:none;margin:0;padding:0}
+  .footer-seo-links summary{cursor:pointer;color:#7d8a84;font-weight:700;list-style:none;display:inline-block;padding:2px 0;user-select:none}
+  .footer-seo-links summary::-webkit-details-marker{display:none}
+  .footer-seo-links summary::after{content:" ▸";color:#5d6a64;font-weight:400}
+  .footer-seo-links details[open] summary::after{content:" ▾"}
+  .footer-seo-links details>div{padding:2px 0 8px}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:14px 26px;border-radius:999px;font-size:15px;opacity:0;pointer-events:none;transition:.3s;z-index:99}
   .toast.show{opacity:1}
   /* інтерактивність плиток */
@@ -555,39 +561,47 @@
     <div>©2021–2026 EVLine — Все права защищены.<br><span style="font-size:12.5px;color:#6b7a72">ФОП Кухарчук Игорь Владимирович · ИНН 3816510874</span></div>
     <div><a href="./">Запчасти из Китая</a> · <a href="zapchasti-kitajskih-avto/">Марки авто</a> · <a href="byd.html">Программирование BYD</a></div>
   </div>
-  <nav class="footer-seo-links" aria-label="Полезные страницы о программировании BYD">
-    <span>Полезные страницы BYD</span>
-    <a href="ukrainizaciya-byd/">Украинизация BYD</a>
-    <a href="obnovlenie-byd/">Обновление BYD по VIN</a>
-    <a href="diagnostika-byd/">Диагностика блоков BYD</a>
-    <a href="kalibrovka-byd/">Калибровка BYD</a>
-    <a href="oshibki-elektroniki-byd/">Ошибки электроники BYD</a>
-    <a href="bms-byd-batareya/">BMS и батарея BYD</a>
-    <a href="adas-byd-kamery-datchiki/">ADAS BYD</a>
-    <a href="carplay-android-auto-byd/">CarPlay и Android Auto</a>
-    <a href="multimedia-byd/">Мультимедиа BYD</a>
-  </nav>
-  <nav class="footer-seo-links" aria-label="Запчасти BYD по моделям">
-    <span>Запчасти BYD по моделям</span>
-    <a href="zapchasti-byd/song-plus/">Song Plus</a>
-    <a href="zapchasti-byd/seal/">Seal</a>
-    <a href="zapchasti-byd/dolphin/">Dolphin</a>
-    <a href="zapchasti-byd/atto-3/">Atto 3 / Yuan Plus</a>
-    <a href="zapchasti-byd/han/">Han</a>
-    <a href="zapchasti-byd/tang/">Tang</a>
-    <a href="zapchasti-byd/">Все запчасти BYD</a>
-  </nav>
-  <nav class="footer-seo-links" aria-label="Запчасти Zeekr, Xiaomi, Avatr, Li Auto по моделям">
-    <span>Запчасти по моделям: Zeekr · Xiaomi · Avatr · Li Auto</span>
-    <a href="zapchasti-zeekr/001/">Zeekr 001</a>
-    <a href="zapchasti-zeekr/7x/">Zeekr 7X</a>
-    <a href="zapchasti-zeekr/x/">Zeekr X</a>
-    <a href="zapchasti-xiaomi/su7/">Xiaomi SU7</a>
-    <a href="zapchasti-xiaomi/yu7/">Xiaomi YU7</a>
-    <a href="zapchasti-avatr/11/">Avatr 11</a>
-    <a href="zapchasti-avatr/12/">Avatr 12</a>
-    <a href="zapchasti-li-auto/l7/">Li Auto L7</a>
-    <a href="zapchasti-li-auto/l9/">Li Auto L9</a>
+  <nav class="footer-seo-links" aria-label="Дополнительные страницы">
+    <details>
+      <summary>Полезные страницы BYD</summary>
+      <div>
+        <a href="ukrainizaciya-byd/">Украинизация BYD</a>
+        <a href="obnovlenie-byd/">Обновление BYD по VIN</a>
+        <a href="diagnostika-byd/">Диагностика блоков BYD</a>
+        <a href="kalibrovka-byd/">Калибровка BYD</a>
+        <a href="oshibki-elektroniki-byd/">Ошибки электроники BYD</a>
+        <a href="bms-byd-batareya/">BMS и батарея BYD</a>
+        <a href="adas-byd-kamery-datchiki/">ADAS BYD</a>
+        <a href="carplay-android-auto-byd/">CarPlay и Android Auto</a>
+        <a href="multimedia-byd/">Мультимедиа BYD</a>
+      </div>
+    </details>
+    <details>
+      <summary>Запчасти BYD по моделям</summary>
+      <div>
+        <a href="zapchasti-byd/song-plus/">Song Plus</a>
+        <a href="zapchasti-byd/seal/">Seal</a>
+        <a href="zapchasti-byd/dolphin/">Dolphin</a>
+        <a href="zapchasti-byd/atto-3/">Atto 3 / Yuan Plus</a>
+        <a href="zapchasti-byd/han/">Han</a>
+        <a href="zapchasti-byd/tang/">Tang</a>
+        <a href="zapchasti-byd/">Все запчасти BYD</a>
+      </div>
+    </details>
+    <details>
+      <summary>Запчасти по моделям: Zeekr · Xiaomi · Avatr · Li Auto</summary>
+      <div>
+        <a href="zapchasti-zeekr/001/">Zeekr 001</a>
+        <a href="zapchasti-zeekr/7x/">Zeekr 7X</a>
+        <a href="zapchasti-zeekr/x/">Zeekr X</a>
+        <a href="zapchasti-xiaomi/su7/">Xiaomi SU7</a>
+        <a href="zapchasti-xiaomi/yu7/">Xiaomi YU7</a>
+        <a href="zapchasti-avatr/11/">Avatr 11</a>
+        <a href="zapchasti-avatr/12/">Avatr 12</a>
+        <a href="zapchasti-li-auto/l7/">Li Auto L7</a>
+        <a href="zapchasti-li-auto/l9/">Li Auto L9</a>
+      </div>
+    </details>
   </nav>
 </footer>
 
