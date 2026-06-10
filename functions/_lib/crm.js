@@ -376,6 +376,45 @@ export async function sendManagerOrderNotification(env, order, { origin = "https
   return { ok: true, chat_id: managerChatId, telegram_message_id: telegramMessageId };
 }
 
+export async function notifyManagerTrackingUpdate(env, { order, latest, previousStatus, nextStatus, tracking, customerNotification, isFirstSync = false }) {
+  const managerChatId = managerChatIdForType(env, order.type);
+  if (!managerChatId || !latest) return { ok: false, skipped: !managerChatId ? "no_manager_chat" : "no_event" };
+
+  const customerLine = (() => {
+    if (!customerNotification) return "Клієнта не повідомлено (подію без сповіщення)";
+    if (customerNotification.status === "sent") return "Клієнта повідомлено в Telegram ✓";
+    if (customerNotification.status === "skipped") return `Клієнта НЕ повідомлено: ${customerNotification.error || "Telegram не прив'язаний"}`;
+    if (customerNotification.status === "failed") return `Помилка надсилання клієнту: ${customerNotification.error || "невідома"}`;
+    return `Сповіщення клієнту: ${customerNotification.status}`;
+  })();
+
+  const lines = [
+    isFirstSync ? "📦 Трек підключено · Meest China" : "📦 Оновлення треку · Meest China",
+    `Замовлення: ${order.order_number || order.id || "-"}`,
+    `Клієнт: ${order.customer_name || "-"} · ${order.customer_phone || order.customer_telegram || "-"}`,
+    ...(order.item_name ? [`Запчастина: ${order.item_name}`] : []),
+    ...(order.car ? [`Авто: ${order.car}`] : []),
+    `Статус: ${latest.status_text}${latest.location ? ` (${latest.location})` : ""}`,
+    ...(latest.occurred_at ? [`Дата події: ${new Date(latest.occurred_at).toLocaleString("uk-UA")}`] : []),
+    ...(previousStatus && nextStatus && previousStatus !== nextStatus
+      ? [`Статус CRM: ${ORDER_STATUS_LABELS[previousStatus] || previousStatus} → ${ORDER_STATUS_LABELS[nextStatus] || nextStatus}`]
+      : []),
+    `Трек: ${tracking?.tracking_number || order.tracking_number || "-"}`,
+    ...(tracking?.estimated_delivery_at
+      ? [`Орієнтовна доставка: ${new Date(tracking.estimated_delivery_at).toLocaleDateString("uk-UA")}`]
+      : []),
+    customerLine,
+    "Адмінка: https://evline.com.ua/admin/",
+  ];
+
+  try {
+    const telegramMessageId = await sendTelegramMessage(env, managerChatId, lines.filter(Boolean).join("\n"));
+    return { ok: true, chat_id: managerChatId, telegram_message_id: telegramMessageId };
+  } catch (error) {
+    return { ok: false, error: error.message || String(error) };
+  }
+}
+
 export async function buildCustomerMessage(env, order, status, customMessage = "") {
   const manual = text(customMessage);
   if (manual) return manual;

@@ -3,6 +3,7 @@ import {
   insertStatusEvent,
   loadOrder,
   normalizeOrderStatus,
+  notifyManagerTrackingUpdate,
   queueOrderNotification,
 } from "./crm.js";
 import { integer, text } from "./http.js";
@@ -293,6 +294,7 @@ export async function syncOrderTracking(env, orderId, options = {}) {
     let notification = null;
     const hasTrackingBaseline = Boolean(order.tracking_last_event_id);
     const shouldNotify = latestEventChanged && (hasTrackingBaseline || options.notify_initial);
+    let managerNotification = null;
 
     if (latestEventChanged && latest) {
       eventId = await insertStatusEvent(env, {
@@ -314,6 +316,16 @@ export async function syncOrderTracking(env, orderId, options = {}) {
           message: customerTrackingMessage(order, latest, nextStatus, tracking) || (await buildCustomerMessage(env, updatedOrder, nextStatus)),
         });
       }
+
+      managerNotification = await notifyManagerTrackingUpdate(env, {
+        order,
+        latest,
+        previousStatus: order.status,
+        nextStatus,
+        tracking,
+        customerNotification: notification,
+        isFirstSync: !hasTrackingBaseline,
+      });
     }
 
     return {
@@ -324,6 +336,7 @@ export async function syncOrderTracking(env, orderId, options = {}) {
       notified: Boolean(notification),
       event_id: eventId,
       notification,
+      manager_notification: managerNotification,
       latest,
       estimated_delivery_at: tracking.estimated_delivery_at,
       events_count: tracking.events.length,
