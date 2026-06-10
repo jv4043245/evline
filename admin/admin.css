@@ -869,3 +869,9 @@
     flex-direction: column;
   }
 }
+
+.tg-connect{border:1px solid #d8e4dc;border-radius:12px;padding:12px 14px;background:#f6faf7}
+.tg-connect--due{border-color:#e0a93c;background:#fdf6e7}
+.tg-connect--done{border-color:#bfe3cd;background:#effaf2}
+.tg-connect textarea{width:100%;margin-top:8px;font-size:13px}
+.tg-connect__actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}

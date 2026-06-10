@@ -812,18 +812,6 @@ function showLeadToast(message,isError){
   t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},4000);
 }
-window.EVLINE_TG_BOT=window.EVLINE_TG_BOT||'evline_crm_bot';
-function showTgSubscribe(el,orderId){
-  if(!window.EVLINE_TG_BOT||!orderId) return;
-  var old=el.querySelector('.tg-subscribe');if(old) old.remove();
-  var a=document.createElement('a');
-  a.className='tg-subscribe';
-  a.href='https://t.me/'+window.EVLINE_TG_BOT+'?start=order_'+orderId;
-  a.target='_blank';a.rel='noopener';
-  a.textContent='🔔 Отримувати статуси замовлення в Telegram — натисніть Start';
-  a.style.cssText='display:block;margin-top:10px;text-align:center;padding:12px;border-radius:999px;background:#eef7f1;color:#1b7a4b;font-weight:700;text-decoration:none';
-  el.appendChild(a);
-}
 function fieldValue(form,name){
   var x=form.querySelector('[name='+name+']');
   return x&&x.value?x.value.trim():'';
@@ -855,7 +843,7 @@ function submitLead(formId){
   });
   fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
     .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
-    .then(function(data){trackLeadSubmit(payload);el.reset();showTgSubscribe(el,data&&data.order_id);showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
+    .then(function(){trackLeadSubmit(payload);el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
     .catch(function(){showLeadToast('Telegram відкрито з готовим текстом.');})
     .finally(function(){if(button){button.disabled=false;button.textContent=originalText;}});
   openTelegramMsg(msg);

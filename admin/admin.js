@@ -746,10 +746,17 @@ function renderOrderEditor(order) {
       Telegram chat_id
       <input name="telegram_chat_id" value="${escapeHtml(order.telegram_chat_id || order.customer_telegram_chat_id || "")}" placeholder="з'явиться після прив'язки бота">
     </label>
-    <label class="wide">
-      Команда клієнту для підключення Telegram-статусів
-      <input value="/start order_${escapeHtml(order.id)}" readonly>
-    </label>
+    <div class="wide tg-connect ${order.telegram_chat_id || order.customer_telegram_chat_id ? "tg-connect--done" : (["paid","sourcing_china","china_warehouse","left_china","in_ukraine","ready_for_pickup"].includes(order.status) ? "tg-connect--due" : "")}">
+      <strong>${order.telegram_chat_id || order.customer_telegram_chat_id ? "✅ Клієнт підключений до Telegram-статусів" : "⏳ Клієнт ще не підключений до Telegram-статусів"}</strong>
+      ${order.telegram_chat_id || order.customer_telegram_chat_id ? "" : `
+      <p class="muted">Після фіксації оплати надішліть клієнту це повідомлення у ваш чат із ним:</p>
+      <textarea rows="4" readonly data-tg-invite-text>Дякуємо за оплату! Підключіть автоматичні статуси вашого замовлення EVLine: натисніть посилання і кнопку Start — бот надсилатиме оновлення на кожному етапі доставки.
+https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
+      <div class="tg-connect__actions">
+        <button type="button" class="ghost" data-copy-tg-invite>Скопіювати повідомлення</button>
+        <button type="button" class="ghost" data-copy-tg-link>Скопіювати лише посилання</button>
+      </div>`}
+    </div>
 
     <label>
       Авто / модель
@@ -1432,3 +1439,19 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
 
 setActiveTab(state.activeTab);
 refresh();
+
+document.addEventListener("click", (event) => {
+  const inviteButton = event.target.closest("[data-copy-tg-invite], [data-copy-tg-link]");
+  if (!inviteButton) return;
+  const wrap = inviteButton.closest(".tg-connect");
+  const textarea = wrap?.querySelector("[data-tg-invite-text]");
+  if (!textarea) return;
+  const full = textarea.value;
+  const link = (full.match(/https:\/\/t\.me\/\S+/) || [full])[0];
+  const value = inviteButton.hasAttribute("data-copy-tg-invite") ? full : link;
+  navigator.clipboard?.writeText(value).then(() => {
+    const original = inviteButton.textContent;
+    inviteButton.textContent = "Скопійовано ✓";
+    setTimeout(() => { inviteButton.textContent = original; }, 1500);
+  });
+});
