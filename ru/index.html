@@ -238,8 +238,9 @@
   .footer-seo-links span{display:block;margin-bottom:5px;color:#7d8a84;font-weight:700}
   .footer-seo-links a{display:inline-block;margin-right:12px;color:#93a39b;text-decoration:none}
   .footer-seo-links a:hover{color:#cfd8d3}
-  .footer-seo-links details{border:none;margin:0;padding:0}
-  .footer-seo-links summary{cursor:pointer;color:#7d8a84;font-weight:700;list-style:none;display:inline-block;padding:2px 0;user-select:none}
+  .footer-seo-links details{background:transparent;border:none;border-radius:0;margin:0;padding:0;overflow:visible;box-shadow:none}
+  .footer-seo-links summary{cursor:pointer;color:#7d8a84;font-weight:700;font-size:12px;list-style:none;display:inline-block;padding:2px 0;user-select:none;position:static}
+  .footer-seo-links summary::before{content:none}
   .footer-seo-links summary::-webkit-details-marker{display:none}
   .footer-seo-links summary::after{content:" ▸";color:#5d6a64;font-weight:400}
   .footer-seo-links details[open] summary::after{content:" ▾"}
