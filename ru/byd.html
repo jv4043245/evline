@@ -792,6 +792,7 @@ function showLeadToast(message,isError){
   t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},4000);
 }
+window.EVLINE_TG_BOT=window.EVLINE_TG_BOT||'evline_crm_bot';
 function showTgSubscribe(el,orderId){
   if(!window.EVLINE_TG_BOT||!orderId) return;
   var old=el.querySelector('.tg-subscribe');if(old) old.remove();
