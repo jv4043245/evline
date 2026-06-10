@@ -40,6 +40,24 @@
   </url>
   <!-- BYD programming SEO pain-point pages. -->
   <url>
+    <loc>https://evline.com.ua/ukrainizatsiya-byd/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/ukrainizatsiya-byd/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/ukrainizaciya-byd/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/ukrainizatsiya-byd/" />
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/ukrainizaciya-byd/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/ukrainizatsiya-byd/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/ukrainizaciya-byd/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/ukrainizatsiya-byd/" />
+    <lastmod>2026-06-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://evline.com.ua/onovlennya-byd/</loc>
     <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/onovlennya-byd/" />
     <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/obnovlenie-byd/" />
