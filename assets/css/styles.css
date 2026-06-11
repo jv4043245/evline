@@ -116,11 +116,11 @@ textarea {
 }
 
 .site-header__inner {
-  min-height: 148px;
+  min-height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 48px;
+  gap: 14px;
   min-width: 0;
 }
 
@@ -132,8 +132,9 @@ textarea {
 }
 
 .brand img {
-  width: 245px;
-  height: auto;
+  width: auto;
+  height: 52px;
+  max-width: 210px;
 }
 
 .byd-page .topbar__inner {
@@ -158,29 +159,32 @@ textarea {
 
 .byd-page .site-header__inner,
 .parts-page .site-header__inner {
-  min-height: 148px;
+  min-height: 80px;
 }
 
 .nav {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  flex: 1;
+  gap: 8px;
   min-width: 0;
 }
 
-.nav a {
+.nav a,
+.nav__pending {
   min-height: 42px;
   display: inline-flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 10px;
   border-radius: 6px;
   color: #a4a4a4;
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 0.071em;
-  font-size: 14px;
+  letter-spacing: 0.055em;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .nav a:hover,
@@ -189,10 +193,15 @@ textarea {
   background: transparent;
 }
 
+.nav__pending {
+  opacity: 0.62;
+  cursor: default;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   flex-shrink: 0;
 }
@@ -268,16 +277,19 @@ textarea {
 }
 
 .site-header .btn--primary {
-  min-height: 56px;
-  padding-inline: 30px;
+  min-height: 44px;
+  max-width: 220px;
+  padding-inline: 18px;
   border-color: #00b472;
   border-radius: 999px;
   background: transparent;
   color: #00b472;
   box-shadow: none;
   text-transform: uppercase;
-  letter-spacing: 0.071em;
-  font-size: 14px;
+  letter-spacing: 0.055em;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
 }
 
 .site-header .btn--primary:hover {
@@ -936,7 +948,8 @@ textarea {
     display: flex;
   }
 
-  .nav a {
+  .nav a,
+  .nav__pending {
     justify-content: center;
   }
 

@@ -82,11 +82,12 @@
   .logo img{max-width:min(245px,38vw)}
   .logo b{color:var(--green)}
   nav.main{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;min-width:0}
-  nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:15px;margin:0 14px;text-transform:uppercase;letter-spacing:.04em}
+  nav.main a{color:#cfd8d3;text-decoration:none;font-weight:600;font-size:14px;margin:0 10px;text-transform:uppercase;letter-spacing:.035em}
   nav.main a.active,nav.main a:hover{color:#fff}
+  nav.main .nav__pending{color:#8f9b96;font-weight:700;font-size:13px;margin:0 10px;text-transform:uppercase;letter-spacing:.035em;opacity:.72;white-space:nowrap;cursor:default}
   .language-switch{position:relative;display:inline-flex;align-items:center;z-index:60;margin:0;border:0;border-radius:0;background:transparent;overflow:visible}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current="true"]{background:rgba(63,166,106,.18);color:#fff}
   .hdr-cta{display:flex;gap:10px;align-items:center}
-  .hdr-cta .btn{font-size:14px;padding:11px 22px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
+  .hdr-cta .btn{font-size:12px;padding:10px 16px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
   body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
   /* ───────── hero ───────── */
   .hero{background:linear-gradient(160deg,#fbfdfc 55%,#e8f5ee);color:var(--text);padding:44px 0 40px;border-bottom:1px solid var(--line)}
@@ -288,7 +289,7 @@
     header.site .wrap{flex-wrap:wrap;justify-content:center;gap:12px}
     header.site .logo img{height:40px}
     nav.main{order:3;width:100%;gap:6px}
-    nav.main a{min-height:32px;margin:0 6px;font-size:12px;letter-spacing:.02em}
+    nav.main a,nav.main .nav__pending{min-height:32px;margin:0 6px;font-size:12px;letter-spacing:.02em}
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .mbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1)}
@@ -318,7 +319,7 @@
     .logo img{height:44px!important;max-width:180px}
     nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
     nav.main::-webkit-scrollbar{display:none}
-    nav.main a{flex:0 0 auto}
+    nav.main a,nav.main .nav__pending{flex:0 0 auto}
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .tl,.gbar .items,.cat .grid2{grid-template-columns:1fr}
@@ -338,6 +339,7 @@
     <nav class="main">
       <a href="/" class="active">Запчастини з Китаю</a>
       <a href="/byd">Програмування BYD</a>
+      <span class="nav__pending" aria-disabled="true">Комплект ТО</span>
     </nav>
     <div class="hdr-cta">
       <details class="language-switch">
