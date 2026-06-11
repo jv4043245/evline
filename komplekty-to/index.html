@@ -35,13 +35,14 @@
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
-      .to-page .site-header__inner{min-height:128px;gap:28px}
-      .to-page .brand img{width:min(245px,38vw);height:auto}
+      .to-page .site-header__inner{min-height:80px;gap:18px}
+      .to-page .brand img{width:auto;height:52px}
       .to-page .brand-seo-hero{padding:clamp(42px,4.8vw,66px) 0 clamp(40px,4.6vw,62px)}
       .to-page .brand-seo-hero__grid{width:min(100% - 40px,1080px);grid-template-columns:minmax(0,.96fr) minmax(390px,.78fr);gap:clamp(26px,4vw,52px);align-items:center}
       .to-hero-copy{max-width:620px}
       .to-hero-form{max-width:470px;justify-self:stretch;align-self:center}
       .to-hero-form strong{font-size:24px}
+      .to-form-note{margin:0;color:#64748b;font-size:14px;font-weight:650;line-height:1.45}
       .to-hero-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px;max-width:780px}
       .to-hero-points span{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid rgba(0,180,114,.16);border-radius:16px;background:rgba(255,255,255,.78);color:#255241;font-size:13px;font-weight:800;box-shadow:0 12px 28px rgba(15,23,42,.05)}
       .to-hero-points b{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:#eaf8f0;color:#00a568}
@@ -89,6 +90,7 @@
         .to-page .site-header .container,
         .to-page .topbar .container{width:min(100% - 32px,var(--max))}
         .to-page .site-header__inner{min-height:116px}
+        .to-page .brand img{height:auto;width:min(148px,42vw)}
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
         .to-hero-points,.to-service-pack,.to-logistics-compare{grid-template-columns:1fr}
         .to-hero-form{max-width:none;justify-self:stretch}
@@ -137,7 +139,7 @@
     <header class="site-header">
       <div class="container site-header__inner">
         <a class="brand" href="../" aria-label="EVLine">
-          <img src="../assets/images/logo.png" alt="EVLine" width="245" height="100">
+          <img src="../assets/logo.svg" alt="EVLine" width="902" height="368">
         </a>
         <nav class="nav" id="site-nav" aria-label="Nav">
           <a href="../">Запчастини з Китаю</a>
@@ -176,16 +178,17 @@
             </div>
           </div>
           <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
-            <strong>Отримати склад ТО і дві ціни</strong>
+            <strong>Що входить у моє ТО?</strong>
+            <p class="to-form-note">Надішліть модель, пробіг і VIN — підкажемо склад комплекту та строк доставки.</p>
             <div class="to-hero-points" aria-label="Що входить">
               <span><b>1</b> склад ТО по VIN</span>
               <span><b>2</b> оригінальні рідини і фільтри</span>
               <span><b>3</b> карта для механіка</span>
             </div>
-            <input name="car" placeholder="Модель, рік і пробіг" required>
+            <input name="car" placeholder="Марка, модель і пробіг" required>
             <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
-            <input name="part" value="Комплект ТО + технологічна карта" required>
-            <button type="submit">Розрахувати комплект</button>
+            <input type="hidden" name="part" value="Комплект ТО + технологічна карта">
+            <button type="submit">Отримати список ТО</button>
             <a href="tel:+380935251024">Або подзвонити: +38 (093) 525-10-24</a>
           </form>
         </div>
