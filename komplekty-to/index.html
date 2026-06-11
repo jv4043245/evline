@@ -41,6 +41,19 @@
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
       }
       .brand-seo-cards span{width:52px;height:52px;font-size:24px;border-radius:16px;background:#eef7f1}
+      .fear-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+      @media(max-width:1020px){.fear-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:560px){.fear-grid{grid-template-columns:1fr}}
+      .fear-card{background:#fff;border:1px solid rgba(63,147,99,.18);border-radius:20px;padding:18px;box-shadow:0 14px 36px rgba(15,23,42,.06);transition:border-color .18s,box-shadow .18s}
+      .fear-card:hover{border-color:#7fd8a9;box-shadow:0 20px 44px rgba(15,23,42,.1)}
+      .fear-card summary{cursor:pointer;list-style:none;display:block}
+      .fear-card summary::-webkit-details-marker{display:none}
+      .fear-card summary span{display:grid;width:52px;height:52px;place-items:center;font-size:24px;border-radius:16px;background:#eef7f1;margin-bottom:10px}
+      .fear-card summary strong{display:block;font-size:15px;line-height:1.35;color:#15201a}
+      .fear-card summary em{display:inline-block;margin-top:10px;font-style:normal;font-size:12.5px;font-weight:700;color:#1b7a4b}
+      .fear-card[open] summary em{display:none}
+      .fear-card p{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:#5b6862}
+
 
     </style>
     <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["AutoPartsStore"],"@id":"https://evline.com.ua/#business","name":"EVLine Ukraine","url":"https://evline.com.ua","logo":"https://evline.com.ua/assets/images/logo.png","telephone":"+380935251024","email":"evlineukraine@gmail.com","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Оболонська набережна, 3, офіс 1","addressLocality":"Київ","addressCountry":"UA"},"areaServed":{"@type":"Country","name":"Україна"},"sameAs":["https://t.me/evline_support"]},{"@type":"BreadcrumbList","@id":"https://evline.com.ua/komplekty-to/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"EVLine","item":"https://evline.com.ua/"},{"@type":"ListItem","position":2,"name":"Комплекти ТО з Китаю","item":"https://evline.com.ua/komplekty-to/"}]},{"@type":"Service","@id":"https://evline.com.ua/komplekty-to/#service","name":"ТО для китайського авто: оригінальний комплект + карта, з якою впорається будь-яке СТО","serviceType":"Maintenance kits with technical instructions","provider":{"@id":"https://evline.com.ua/#business"},"areaServed":{"@type":"Country","name":"Україна"},"description":"Оригінальний комплект ТО з Китаю + детальна технологічна карта для вашого СТО: партномери, моменти затяжки, схеми. Морем — суттєво дешевше."},{"@type":"FAQPage","@id":"https://evline.com.ua/komplekty-to/#faq","inLanguage":"uk-UA","mainEntity":[{"@type":"Question","name":"Моє СТО ніколи не бачило BYD. Точно впорається?","acceptedAnswer":{"@type":"Answer","text":"Для робіт рівня ТО — так: карта описує процедуру до рівня «який ключ і з яким моментом». Це і є її сенс: компетентним стає будь-який акуратний механік."}},{"@type":"Question","name":"А високовольтні роботи?","acceptedAnswer":{"@type":"Answer","text":"У карти ТО високовольтні процедури не входять принципово — це зона сертифікованих електриків. Усе, що в комплекті, безпечне для звичайного СТО."}},{"@type":"Question","name":"Чи можна купити карту окремо, без комплекту?","acceptedAnswer":{"@type":"Answer","text":"Ні, карта йде лише разом із комплектом — це частина нашої послуги, а не окремий товар. Кожен примірник маркується номером замовлення."}},{"@type":"Question","name":"Скільки реально економлю морем?","acceptedAnswer":{"@type":"Answer","text":"Залежить від ваги. Орієнтир: доставка 10-кілограмового комплекту авіа — близько $155, морем — від $56, а від 30 кг тарифи ще нижчі. Плюс самі розхідники дешевші, ніж у локальних продавців."}},{"@type":"Question","name":"Звідки впевненість, що все оригінал?","acceptedAnswer":{"@type":"Answer","text":"Купуємо у офіційних дилерів у Китаї, перевіряємо і фотографуємо кожну позицію перед відправкою — фотозвіт ви отримуєте до того, як комплект поїде."}}]}]}</script>
@@ -112,10 +125,10 @@
             <h2>Чому ТО китайського авто — це проблема (поки без нашої карти)</h2>
           </div>
           <div class="brand-seo-cards cards-4">
-            <article><span>🔧</span><h3>Механік не знає авто</h3><p>Куди натиснути, де відкрутити, з яким зусиллям — без документації навіть заміна фільтра перетворюється на експеримент.</p></article>
-            <article><span>📄</span><h3>Документації немає</h3><p>Дилерські мануали закриті, в інтернеті — уривки. СТО відмовляються або роблять «на дотик».</p></article>
-            <article><span>🧪</span><h3>Рідини не ті</h3><p>Для електро та гібридів критичні оригінальні рідини — наприклад, діелектрична охолоджуюча рідина. Аналог «начебто підходить» тут не працює.</p></article>
-            <article><span>💸</span><h3>Розхідники з націнкою</h3><p>Посередники в Україні продають витратники у кілька разів дорожче, ніж вони коштують у Китаї.</p></article>
+            <article><span>🔧</span><h3>Механік не знає авто</h3><p>Без документації навіть заміна фільтра — експеримент.</p></article>
+            <article><span>📄</span><h3>Документації немає</h3><p>Дилерські мануали закриті, СТО працюють «на дотик».</p></article>
+            <article><span>🧪</span><h3>Рідини не ті</h3><p>Для електро критичні оригінальні рідини. Аналог «начебто підходить» тут не працює.</p></article>
+            <article><span>💸</span><h3>Розхідники з націнкою</h3><p>В Україні витратники коштують у рази дорожче, ніж у Китаї.</p></article>
           </div>
         </div>
       </section>
@@ -157,15 +170,43 @@
           <div class="parts-section-head">
             <span>Перевірте своє СТО</span>
             <h2>А ви впевнені, що вам це роблять?</h2>
-            <p>П'ять пунктів регламенту сучасного китайського авто на пробігу 30–50 тис. км, які пропускає більшість сервісів — бо просто про них не знає. Усі вони описані в наших технологічних картах.</p>
+            <p>Вісім неочевидних речей на пробігу до 100 тис. км. Натисніть на картку — і вирішуйте самі, чи довіряти «звичайному» ТО.</p>
           </div>
-          <div class="brand-seo-cards">
-            <article><span>⚡</span><h3>Електропровідність рідини батареї</h3><p>Діелектрична охолоджуюча рідина з часом стає провідною і кислою. <strong>Якщо пропустити:</strong> корозія контуру, помилки ізоляції, перегрів і прискорена деградація батареї.</p></article>
-            <article><span>🛑</span><h3>Волога в гальмівній рідині</h3><p>Через рекуперацію гальма «сплять», рідина стоїть і вбирає вологу, направляючі супортів закисають. <strong>Якщо пропустити:</strong> клин супорта і раптове «ватне» гальмо — при цілих колодках.</p></article>
-            <article><span>⚙️</span><h3>Олива редуктора</h3><p>«Електричці нічого не треба» — міф: у редукторі накопичується стружка, заміна за регламентом 30–60 тис. км. <strong>Якщо пропустити:</strong> гул, знос пари — ремонт коштує як десять ТО.</p></article>
-            <article><span>❄️</span><h3>Кондиціонер з електрокомпресором</h3><p>Заправляти можна лише з діелектричною оливою — звичайна СТО заллє універсальну. <strong>Якщо пропустити:</strong> вбитий компресор, а в авто, де кондиціонер охолоджує батарею — ще й її перегрів улітку.</p></article>
-            <article><span>🔋</span><h3>12V АКБ і тест ізоляції</h3><p>Маленький акумулятор помирає раптово, а опір ізоляції ВВ-системи перевіряється лише дилерським обладнанням. <strong>Якщо пропустити:</strong> авто-«цеглина» зранку та приховані витоки, які ніхто не бачить.</p></article>
+          <div class="fear-grid">
+            <details class="fear-card">
+              <summary><span>⚡</span><strong>У рідині вашої батареї тече струм?</strong><em>детальніше ↓</em></summary>
+              <p>Охолоджуюча рідина батареї має бути діелектриком. З часом вона стає провідною і кислою — це міряється приладом, а не «на око». Якщо пропустити: корозія контуру, помилки ізоляції, перегрів і прискорена деградація батареї.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>🅿️</span><strong>Задні колодки не можна міняти «як завжди»</strong><em>детальніше ↓</em></summary>
+              <p>На авто з електронним ручником перед заміною колодок потрібен сервісний режим EPB через діагностику. Якщо механік просто втисне поршень — зламає електропривод супорта. Так «економна» заміна колодок закінчується покупкою супорта.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>⛽</span><strong>У гібрида олива старіє, навіть коли двигун «спить»</strong><em>детальніше ↓</em></summary>
+              <p>У DM-i бензин потрапляє в оливу через короткі цикли роботи ДВЗ — олива розріджується пальним. Тому її міняють за часом, а не за пробігом. Якщо пропустити: задири і знос двигуна, який «майже не працював».</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>🛞</span><strong>Домкрат не туди — мінус батарея</strong><em>детальніше ↓</em></summary>
+              <p>У електромобіля все днище — це батарея. Підйом тільки за штатні точки, часто з адаптерами. Якщо пропустити: деформація чи пробій корпусу батареї — найдорожчої деталі авто. Спитайте своє СТО, чи знає воно точки підйому вашої моделі.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>🛑</span><strong>Колодки цілі — не означає, що гальма справні</strong><em>детальніше ↓</em></summary>
+              <p>Через рекуперацію гальма «сплять»: рідина роками вбирає вологу, направляючі закисають. Якщо пропустити: клин супорта і «ватне» гальмо в найгірший момент. Вологість рідини міряється тестером за хвилину.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>❄️</span><strong>Одна заправка кондиціонера може вбити компресор</strong><em>детальніше ↓</em></summary>
+              <p>Електрокомпресор вимагає діелектричної оливи. Звичайна СТО заллє універсальну — провідну. Якщо пропустити: компресор під заміну, а там, де кондиціонер охолоджує батарею — ще й перегрів батареї влітку.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>🔋</span><strong>Чому електромобіль «вмирає» вранці</strong><em>детальніше ↓</em></summary>
+              <p>12V акумулятор живить усю електроніку і вмирає раптово. А опір ізоляції ВВ-системи взагалі перевіряється лише дилерським обладнанням. Якщо пропустити: авто-«цеглина» і приховані витоки струму, яких ніхто не бачить.</p>
+            </details>
+            <details class="fear-card">
+              <summary><span>⚙️</span><strong>Єдина «передача» теж має витратник</strong><em>детальніше ↓</em></summary>
+              <p>Олива редуктора працює під ударним моментом електромотора з першого метра. Заміна за регламентом — недорога. Якщо пропустити: гул і ремонт редуктора, який коштує як десять ТО.</p>
+            </details>
           </div>
+          <p class="to-note" style="text-align:center;max-width:640px;margin:18px auto 0">Усі ці перевірки і застереження вже прописані в наших технологічних картах — ваше СТО просто робить за списком.</p>
         </div>
       </section>
       <section class="brand-seo-section">
