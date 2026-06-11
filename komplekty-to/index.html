@@ -35,13 +35,19 @@
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
-      .to-page .site-header__inner{min-height:80px;gap:18px}
+      .to-page .site-header__inner{min-height:80px;gap:14px}
       .to-page .brand img{width:auto;height:52px}
+      .to-page .nav{flex:1;gap:8px}
+      .to-page .nav a{padding:0 10px;font-size:13px;letter-spacing:.055em;white-space:nowrap}
+      .to-page .site-header .btn--primary{min-height:44px;max-width:220px;padding-inline:18px;font-size:12px;line-height:1.15}
+      .to-page .header-actions{gap:8px}
       .to-page .brand-seo-hero{padding:clamp(42px,4.8vw,66px) 0 clamp(40px,4.6vw,62px)}
-      .to-page .brand-seo-hero__grid{width:min(100% - 40px,1080px);grid-template-columns:minmax(0,.96fr) minmax(390px,.78fr);gap:clamp(26px,4vw,52px);align-items:center}
+      .to-page .brand-seo-hero__grid{width:min(100% - 40px,1080px);grid-template-columns:minmax(0,1fr) minmax(390px,.86fr);gap:clamp(24px,3.4vw,42px);align-items:center}
       .to-hero-copy{max-width:620px}
-      .to-hero-form{max-width:470px;justify-self:stretch;align-self:center}
-      .to-hero-form strong{font-size:24px}
+      .to-hero-form{max-width:500px;justify-self:stretch;align-self:center;gap:10px;padding:20px}
+      .to-hero-form strong{font-size:23px}
+      .to-hero-form input{min-height:48px}
+      .to-hero-form button{min-height:52px}
       .to-form-note{margin:0;color:#64748b;font-size:14px;font-weight:650;line-height:1.45}
       .to-free-badge{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:5px 9px;border-radius:999px;background:#dff7e9;color:#087244;font-size:11px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
       .to-free-line{margin-top:10px;padding:8px 10px;border-radius:12px;background:#ecfdf3;color:#16603d;font-weight:850}
@@ -52,8 +58,10 @@
       .to-hero-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px;max-width:780px}
       .to-hero-points span{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid rgba(0,180,114,.16);border-radius:16px;background:rgba(255,255,255,.78);color:#255241;font-size:13px;font-weight:800;box-shadow:0 12px 28px rgba(15,23,42,.05)}
       .to-hero-points b{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:#eaf8f0;color:#00a568}
-      .to-hero-form .to-hero-points{grid-template-columns:1fr;gap:8px;margin:4px 0 2px;max-width:none}
-      .to-hero-form .to-hero-points span{min-height:42px;padding:9px 10px;box-shadow:none;background:#f6fbf8}
+      .to-hero-form .to-hero-points{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 4px;max-width:none}
+      .to-hero-point{min-height:96px;margin:0;padding:9px 8px;border:1px solid rgba(0,180,114,.16);border-radius:16px;background:linear-gradient(180deg,#f7fcf9,#fff);box-shadow:0 10px 24px rgba(15,23,42,.05);text-align:center}
+      .to-hero-point img{width:42px;height:42px;margin:0 auto 7px}
+      .to-hero-point figcaption{color:#255241;font-size:12px;font-weight:850;line-height:1.25}
       .to-service-pack{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:28px;align-items:center;border:1px solid rgba(0,180,114,.18);border-radius:28px;background:linear-gradient(135deg,#f7fbf8,#fff);padding:28px;box-shadow:0 22px 54px rgba(15,23,42,.08)}
       .to-service-pack img{width:100%;height:auto;border-radius:20px;box-shadow:0 18px 44px rgba(20,60,40,.12)}
       .to-service-pack--offer{grid-template-columns:minmax(0,1.05fr) minmax(300px,.82fr);background:linear-gradient(135deg,#111816,#163d2b);border-color:transparent;color:#fff;overflow:hidden}
@@ -98,12 +106,17 @@
         .to-page .site-header__inner{min-height:116px}
         .to-page .brand img{height:auto;width:min(148px,42vw)}
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
+        .to-page .nav{flex:none;gap:0}
+        .to-page .nav a{padding:12px 16px;font-size:14px;white-space:normal}
+        .to-page .site-header .btn--primary{max-width:none}
         .to-hero-points,.to-service-pack,.to-logistics-compare{grid-template-columns:1fr}
+        .to-hero-form .to-hero-points{grid-template-columns:repeat(3,minmax(0,1fr))}
         .to-hero-form{max-width:none;justify-self:stretch}
         .to-model-hooks{grid-template-columns:1fr}
         .to-service-list,.to-card-bullets{grid-template-columns:1fr}
         .to-service-pack{padding:20px}
       }
+      @media(max-width:520px){.to-hero-form .to-hero-points{grid-template-columns:1fr}.to-hero-point{display:grid;min-height:0;grid-template-columns:42px 1fr;gap:10px;align-items:center;text-align:left}.to-hero-point img{margin:0}.to-hero-point figcaption{font-size:13px}}
       .brand-seo-hero h1{font-size:clamp(25px,2.9vw,38px);line-height:1.18}
       .to-page .brand-seo-hero h1{max-width:650px;font-size:clamp(28px,3.1vw,42px);line-height:1.12}
       .to-page .brand-seo-lead{max-width:600px;font-size:clamp(17px,1.45vw,20px);line-height:1.48}
@@ -187,9 +200,18 @@
             <strong>Отримати список ТО безкоштовно</strong>
             <p class="to-form-note">Дамо перелік деталей і рідин саме під вашу модель, пробіг і VIN.</p>
             <div class="to-hero-points" aria-label="Що входить">
-              <span><b>1</b> список ТО по VIN</span>
-              <span><b>2</b> оригінальні рідини і фільтри</span>
-              <span><b>3</b> карта робіт безкоштовно</span>
+              <figure class="to-hero-point">
+                <img src="../assets/images/to/to-point-list.svg" alt="" aria-hidden="true" loading="lazy">
+                <figcaption>Список ТО по VIN</figcaption>
+              </figure>
+              <figure class="to-hero-point">
+                <img src="../assets/images/to/to-point-fluids.svg" alt="" aria-hidden="true" loading="lazy">
+                <figcaption>Оригінальні рідини і фільтри</figcaption>
+              </figure>
+              <figure class="to-hero-point">
+                <img src="../assets/images/to/to-point-map.svg" alt="" aria-hidden="true" loading="lazy">
+                <figcaption>Карта робіт безкоштовно</figcaption>
+              </figure>
             </div>
             <input name="car" placeholder="Марка, модель і пробіг" required>
             <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
