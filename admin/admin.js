@@ -592,7 +592,6 @@ function renderOrders() {
               <td><strong>${textOrDash(publicNumber)}</strong><br><span class="muted">${escapeHtml(shortDateTime(order.created_at))}</span><br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
               <td><strong>${textOrDash(order.customer_name || "Без імені")}</strong><br><span class="muted">${textOrDash(contact)}</span></td>
               <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
-              <td>${attributionCell(order)}</td>
               <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
               <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
               <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${trackingStatus ? `<br><span class="muted">${escapeHtml(trackingStatus)}</span>` : ""}${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
@@ -606,7 +605,7 @@ function renderOrders() {
           `;
         })
         .join("")
-    : `<tr><td colspan="8" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
+    : `<tr><td colspan="7" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
   highlightSelectedOrder();
 }
 
@@ -743,7 +742,6 @@ function renderOrderEditor(order) {
       <p><strong>${textOrDash(order.customer_name || "Без імені")}</strong> · ${textOrDash(order.customer_phone || order.customer_email || order.customer_telegram)}</p>
       <p>${textOrDash(order.car)} · VIN: ${textOrDash(order.vin)}</p>
       <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>
-      ${attributionDetails(order)}
       <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
       <div class="order-editor__actions">
         <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
