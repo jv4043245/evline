@@ -33,16 +33,42 @@
       .to-card-preview{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center}
       .to-card-preview img{width:100%;height:auto;border-radius:14px;box-shadow:0 14px 40px rgba(20,60,40,.14)}
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
+      .to-hero-form{max-width:410px;justify-self:end}
       .to-hero-points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px;max-width:780px}
       .to-hero-points span{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid rgba(0,180,114,.16);border-radius:16px;background:rgba(255,255,255,.78);color:#255241;font-size:13px;font-weight:800;box-shadow:0 12px 28px rgba(15,23,42,.05)}
       .to-hero-points b{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:#eaf8f0;color:#00a568}
       .to-service-pack{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:28px;align-items:center;border:1px solid rgba(0,180,114,.18);border-radius:28px;background:linear-gradient(135deg,#f7fbf8,#fff);padding:28px;box-shadow:0 22px 54px rgba(15,23,42,.08)}
       .to-service-pack img{width:100%;height:auto;border-radius:20px;box-shadow:0 18px 44px rgba(20,60,40,.12)}
+      .to-service-pack--offer{grid-template-columns:minmax(0,1.05fr) minmax(300px,.82fr);background:linear-gradient(135deg,#111816,#163d2b);border-color:transparent;color:#fff;overflow:hidden}
+      .to-service-pack--offer img{box-shadow:none;background:rgba(255,255,255,.05)}
+      .to-service-pack--offer .parts-section-head span{background:rgba(0,180,114,.16);color:#83e6b7}
+      .to-service-pack--offer .parts-section-head h2{color:#fff}
+      .to-service-pack--offer .parts-section-head p{color:#cfe2d8}
       .to-service-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
       .to-service-list article,.to-card-bullets article,.to-logistics-compare article{border:1px solid rgba(0,180,114,.16);border-radius:18px;background:#fff;padding:16px;box-shadow:0 12px 30px rgba(15,23,42,.05)}
       .to-service-list strong,.to-card-bullets strong,.to-logistics-compare strong{display:block;color:#111827;font-size:16px;margin-bottom:6px}
       .to-service-list p,.to-card-bullets p,.to-logistics-compare p{margin:0;color:#5b6862;font-size:14px;line-height:1.55}
+      .to-service-pack--offer .to-service-list article{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12);box-shadow:none}
+      .to-service-pack--offer .to-service-list strong{color:#fff}
+      .to-service-pack--offer .to-service-list p{color:#cfe2d8}
       .to-card-bullets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 12px}
+      .to-model-hooks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}
+      .to-model-card{position:relative;overflow:hidden;border-radius:22px;padding:18px;background:#fff;border:1px solid rgba(0,180,114,.14);box-shadow:0 16px 40px rgba(15,23,42,.06);min-height:210px}
+      .to-model-card::after{content:"";position:absolute;right:-34px;top:-34px;width:110px;height:110px;border-radius:50%;background:rgba(0,180,114,.09)}
+      .to-model-card b{display:inline-block;margin-bottom:8px;padding:6px 10px;border-radius:999px;background:#eaf8f0;color:#107449;font-size:13px}
+      .to-model-card h3{margin:0 0 8px;color:#111827;font-size:19px;line-height:1.25}
+      .to-model-card p{margin:0;color:#5b6862;font-size:14px;line-height:1.55}
+      .to-model-card small{display:block;margin-top:12px;color:#1b7a4b;font-weight:800}
+      .to-deep{background:#101816;color:#fff}
+      .to-deep .parts-section-head span{background:rgba(0,180,114,.14);color:#83e6b7}
+      .to-deep .parts-section-head h2{color:#fff}
+      .to-deep .parts-section-head p{color:#b8cdc2}
+      .to-deep .fear-card{background:#17231d;border-color:rgba(127,216,169,.22);box-shadow:none}
+      .to-deep .fear-card:hover{border-color:#7fd8a9;box-shadow:0 20px 44px rgba(0,0,0,.22)}
+      .to-deep .fear-card summary strong{color:#fff}
+      .to-deep .fear-card p{color:#cfe2d8}
+      .to-deep .fear-card summary span{background:rgba(0,180,114,.13)}
+      .to-deep .to-section-cta{background:#f4fbf7;color:#245643}
       .to-logistics-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
       .to-logistics-compare article:first-child{border-color:rgba(234,179,8,.28);background:#fffbeb}
       .to-logistics-compare article:nth-child(2){border-color:rgba(0,180,114,.22);background:#effaf4}
@@ -51,6 +77,8 @@
       @media(max-width:860px){.to-card-preview{grid-template-columns:1fr}}
       @media(max-width:860px){
         .to-hero-points,.to-service-pack,.to-logistics-compare{grid-template-columns:1fr}
+        .to-hero-form{max-width:none;justify-self:stretch}
+        .to-model-hooks{grid-template-columns:1fr}
         .to-service-list,.to-card-bullets{grid-template-columns:1fr}
         .to-service-pack{padding:20px}
       }
@@ -61,6 +89,7 @@
         .cards-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1080px;margin:0 auto}
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
       }
+      @media(max-width:1100px) and (min-width:861px){.to-model-hooks{grid-template-columns:repeat(2,minmax(0,1fr))}}
       .brand-seo-cards span{width:52px;height:52px;font-size:24px;border-radius:16px;background:#eef7f1}
       .fear-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
       @media(max-width:1020px){.fear-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -121,7 +150,7 @@
             </nav>
             <p class="brand-seo-kicker">Комплекти ТО з Китаю</p>
             <h1>Комплект ТО для китайського авто + карта робіт для вашого СТО</h1>
-            <p class="brand-seo-lead">Підбираємо оригінальні розхідники по VIN, привозимо з Китаю і додаємо технологічну карту: де відкрутити, що перевірити, які рідини залити і з яким моментом затягнути. Ваше звичне СТО отримує не просто коробку деталей, а зрозумілий маршрут роботи.</p>
+            <p class="brand-seo-lead">Підберемо оригінальні розхідники по VIN, привеземо з Китаю і додамо карту робіт для механіка. У вас буде комплект, ціна доставки і зрозуміла інструкція для СТО.</p>
             <div class="brand-seo-tags">
               <span>BYD</span>
               <span>Zeekr</span>
@@ -135,7 +164,7 @@
               <span><b>3</b> карта для механіка</span>
             </div>
           </div>
-          <form class="brand-seo-form" id="to-form" data-telegram-parts-form>
+          <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
             <strong>Отримати склад ТО і дві ціни</strong>
             <input name="car" placeholder="Модель, рік і пробіг" required>
             <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -148,21 +177,21 @@
 
       <section class="brand-seo-section">
         <div class="container">
-          <div class="to-service-pack">
-            <img src="../assets/images/to/to-box-schemes.svg" alt="Комплект ТО EVLine зі схемами заміни" loading="lazy">
+          <div class="to-service-pack to-service-pack--offer">
             <div>
               <div class="parts-section-head" style="text-align:left;margin:0 0 8px">
-                <span>Що ви купуєте</span>
-                <h2>Не просто розхідники, а комплект без “сірих зон” для сервісу</h2>
-                <p>У сучасних китайських EV і PHEV навіть звичайне ТО має нюанси: діелектричні рідини, електронний ручник, редуктор, точки підйому, окремі контури охолодження. Ми збираємо це в одну поставку і одну зрозумілу карту.</p>
+                <span>Що ви отримуєте</span>
+                <h2>Повний комплект ТО під вашу модель, пробіг і VIN</h2>
+                <p>Ми знаємо, що потрібно міняти на планових пробігах у сучасних BYD, Zeekr, Li Auto, Denza, Xiaomi та інших китайських авто. Підбираємо оригінальні позиції, привозимо їх з Китаю і додаємо схеми робіт для вашого сервісу.</p>
               </div>
               <div class="to-service-list">
-                <article><strong>Партномери по VIN</strong><p>Без “поставимо аналог, наче підходить”. Перевіряємо конкретну комплектацію.</p></article>
-                <article><strong>Оригінал з Китаю</strong><p>Фільтри, оливи, охолоджуючі рідини, колодки і сервісні дрібниці.</p></article>
-                <article><strong>Карта робіт</strong><p>Порядок демонтажу, точки доступу, моменти затяжки, що перевірити до і після.</p></article>
-                <article><strong>Дві логістики</strong><p>Авіа, якщо ТО вже горить. Море, якщо плануєте заздалегідь і хочете дешевше.</p></article>
+                <article><strong>Список по пробігу</strong><p>10, 20, 30, 60 тис. км — перевіряємо регламент саме вашої комплектації.</p></article>
+                <article><strong>Оригінальні розхідники</strong><p>Фільтри, оливи, рідини, колодки, редукторне масло, сервісні дрібниці.</p></article>
+                <article><strong>Схеми безкоштовно</strong><p>При купівлі комплекту даємо карту робіт для механіка: доступ, порядок, моменти.</p></article>
+                <article><strong>Авіа або море</strong><p>Терміново — авіа. Планово — море, щоб не переплачувати за доставку.</p></article>
               </div>
             </div>
+            <img src="../assets/images/to/to-service-kit.svg" alt="Комплект ТО EVLine з картою робіт" loading="lazy">
           </div>
         </div>
       </section>
@@ -172,7 +201,7 @@
           <div class="parts-section-head">
             <span>Проблема</span>
             <h2>Чому звичайне СТО може помилитися навіть на простому ТО</h2>
-            <p>Проблема не в тому, що механік поганий. Проблема в тому, що він часто не бачить регламенту саме для цієї моделі і замінює критичні речі “по досвіду” зі звичайними авто.</p>
+            <p>Механік може бути хорошим, але без карти конкретної моделі він часто діє “по досвіду” зі звичайними авто.</p>
           </div>
           <div class="brand-seo-cards cards-4">
             <article><span>🔧</span><h3>Немає карти доступу</h3><p>Де знімати захист, які кліпси не ламати, які точки підйому не чіпати — це не завжди очевидно.</p></article>
@@ -214,8 +243,43 @@
         </div>
       </section>
 
-
       <section class="brand-seo-section">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>Приклади запитів</span>
+            <h2>З чим до нас уже логічно звертатися</h2>
+            <p>Точний регламент підтверджуємо по VIN, але ось типові задачі, які власники сучасних китайських авто можуть закривати комплектом заздалегідь.</p>
+          </div>
+          <div class="to-model-hooks">
+            <article class="to-model-card">
+              <b>BYD Song Plus / Seal / Han</b>
+              <h3>Планове ТО EV або DM-i</h3>
+              <p>Фільтри, олива ДВЗ для DM-i, гальмівна рідина, рідини охолодження, редукторне масло.</p>
+              <small>Карта: сервісний режим, рідини, моменти</small>
+            </article>
+            <article class="to-model-card">
+              <b>Zeekr 001 / X / 7X</b>
+              <h3>EV-обслуговування без дилера</h3>
+              <p>Салонні фільтри, гальма, редуктор, 12V акумулятор, охолоджуючий контур батареї.</p>
+              <small>Карта: точки підйому і доступу</small>
+            </article>
+            <article class="to-model-card">
+              <b>Li Auto L7 / L9</b>
+              <h3>Гібрид з генератором</h3>
+              <p>Олива, фільтри, свічки, охолодження, гальмівна система, великий регламент за пробігом.</p>
+              <small>Карта: що міняти за пробігом</small>
+            </article>
+            <article class="to-model-card">
+              <b>Denza / Xiaomi / Avatr</b>
+              <h3>Нові моделі без локального досвіду</h3>
+              <p>Коли в Україні ще немає звичної бази по ТО, ми підбираємо комплект і схему з китайських джерел.</p>
+              <small>Карта: без експериментів на авто</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section to-deep">
         <div class="container">
           <div class="parts-section-head">
             <span>Неочевидні помилки</span>
@@ -268,22 +332,6 @@
         </div>
       </section>
 
-      <section class="brand-seo-section brand-seo-section--soft">
-        <div class="container">
-          <div class="to-card-preview">
-            <img src="../assets/images/to/to-card-sample.svg" alt="Зразок технологічної карти EVLine" loading="lazy">
-            <div>
-              <div class="parts-section-head" style="text-align:left;margin:0 0 8px">
-                <span>Схеми — у подарунок</span>
-                <h2>Купуєте комплект — усі схеми йдуть безкоштовно</h2>
-              </div>
-              <p style="color:#5b6862;line-height:1.7">До кожного комплекту додаємо карти на заміну <strong>кожної</strong> рідини і змінного елемента: порядок робіт, інструмент, моменти затяжки, партномери, фото/схеми доступу. Механік не вгадує, а йде по маршруту.</p>
-              <p style="color:#5b6862;line-height:1.7">Це працює не лише з ТО: замовляєте у нас запчастини після ДТП — отримуєте схеми заміни для кузовного сервісу.</p>
-              <p style="margin-top:16px"><a class="origin-pill-button" href="#to-form">Отримати комплект зі схемами</a></p>
-            </div>
-          </div>
-        </div>
-      </section>
       <section class="brand-seo-section">
         <div class="container">
           <div class="parts-section-head">
