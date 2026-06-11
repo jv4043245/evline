@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 540">
+<rect width="760" height="540" rx="16" fill="white" stroke="#d8e4dc" stroke-width="2"/>
+<rect x="0" y="0" width="760" height="84" rx="16" fill="#15201a"/>
+<text x="40" y="38" font-family="Arial" font-weight="bold" font-size="20" fill="white">Технологічна карта ТО · EVLine</text>
+<text x="40" y="62" font-family="Arial" font-size="13" fill="#9fb3a8">BYD Song Plus EV · заміна оливи редуктора · стор. 1 з 4</text>
+<text x="40" y="130" font-family="Arial" font-weight="bold" font-size="15" fill="#15201a">Партномери (оригінал)</text>
+<text x="40" y="154" font-family="Arial" font-size="13" fill="#6f7b75">Олива редуктора: BYD-XXXXXXX · Фільтр: BYD-XXXXXXX · Прокладка пробки: BYD-XXXXXXX</text>
+<text x="40" y="192" font-family="Arial" font-weight="bold" font-size="15" fill="#15201a">Порядок робіт · інструмент · момент затяжки</text>
+<rect x="60" y="210" width="640" height="26" rx="6" fill="white" stroke="#d8e4dc"/><rect x="60" y="244" width="640" height="26" rx="6" fill="#f6faf7" stroke="#d8e4dc"/><rect x="60" y="278" width="640" height="26" rx="6" fill="white" stroke="#d8e4dc"/><rect x="60" y="312" width="640" height="26" rx="6" fill="#f6faf7" stroke="#d8e4dc"/><rect x="60" y="346" width="640" height="26" rx="6" fill="white" stroke="#d8e4dc"/><text x="74" y="228" font-family="Arial" font-weight="bold" font-size="13" fill="#1b7a4b">1</text><text x="100" y="228" font-family="Arial" font-size="13" fill="#15201a">Зливна пробка редуктора</text><text x="400" y="228" font-family="Arial" font-size="13" fill="#6f7b75">ключ 17 мм</text><text x="640" y="228" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">35 Н·м</text><text x="74" y="262" font-family="Arial" font-weight="bold" font-size="13" fill="#1b7a4b">2</text><text x="100" y="262" font-family="Arial" font-size="13" fill="#15201a">Масляний фільтр</text><text x="400" y="262" font-family="Arial" font-size="13" fill="#6f7b75">знімач, чашка 76 мм</text><text x="640" y="262" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">25 Н·м</text><text x="74" y="296" font-family="Arial" font-weight="bold" font-size="13" fill="#1b7a4b">3</text><text x="100" y="296" font-family="Arial" font-size="13" fill="#15201a">Заливна пробка</text><text x="400" y="296" font-family="Arial" font-size="13" fill="#6f7b75">шестигранник 8 мм</text><text x="640" y="296" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">30 Н·м</text><text x="74" y="330" font-family="Arial" font-weight="bold" font-size="13" fill="#1b7a4b">4</text><text x="100" y="330" font-family="Arial" font-size="13" fill="#15201a">Захист картера</text><text x="400" y="330" font-family="Arial" font-size="13" fill="#6f7b75">Torx T40 × 6</text><text x="640" y="330" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">9 Н·м</text><text x="74" y="364" font-family="Arial" font-weight="bold" font-size="13" fill="#1b7a4b">5</text><text x="100" y="364" font-family="Arial" font-size="13" fill="#15201a">Контроль рівня</text><text x="400" y="364" font-family="Arial" font-size="13" fill="#6f7b75">щуп / отвір контролю</text><text x="640" y="364" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">—</text>
+<g transform="translate(60,400)">
+<rect width="300" height="110" rx="10" fill="#eef7f1"/>
+<circle cx="70" cy="55" r="34" fill="none" stroke="#1b7a4b" stroke-width="3"/>
+<circle cx="70" cy="55" r="12" fill="none" stroke="#3fa66a" stroke-width="3"/>
+<line x1="104" y1="55" x2="150" y2="30" stroke="#3fa66a" stroke-width="2"/>
+<line x1="104" y1="55" x2="150" y2="80" stroke="#3fa66a" stroke-width="2"/>
+<text x="160" y="34" font-family="Arial" font-size="12" fill="#15201a">зливна пробка</text>
+<text x="160" y="84" font-family="Arial" font-size="12" fill="#15201a">точка контролю рівня</text>
+</g>
+<text x="700" y="500" text-anchor="end" font-family="Arial" font-size="11" fill="#6f7b75">Для кваліфікованих механіків · не для ВВ-систем</text>
+<g transform="rotate(-24 380 290)" opacity="0.13">
+<text x="380" y="300" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="86" fill="#1b7a4b">ЗРАЗОК · EVLine</text>
+<text x="380" y="350" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="24" fill="#1b7a4b">замовлення №DEMO-0000</text>
+</g>
+</svg>

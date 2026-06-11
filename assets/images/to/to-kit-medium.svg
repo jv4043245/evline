@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360">
+<rect width="560" height="360" rx="20" fill="#eef7f1"/>
+<rect x="18" y="18" width="524" height="324" rx="14" fill="white" stroke="#d8e4dc"/>
+<text x="40" y="58" font-family="Arial" font-weight="bold" font-size="22" fill="#15201a">Розширене ТО</text>
+<text x="40" y="82" font-family="Arial" font-size="13" fill="#6f7b75">+ рідини та гальма: усе для повного кола обслуговування</text>
+<line x1="40" y1="96" x2="520" y2="96" stroke="#d8e4dc"/>
+<g transform="translate(50,130) scale(0.9)">
+<rect x="0" y="14" width="64" height="80" rx="8" fill="#3fa66a"/>
+<rect x="6" y="22" width="52" height="40" rx="5" fill="white" opacity=".92"/>
+<text x="32" y="47" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="13" fill="#15201a">OIL</text>
+<rect x="8" y="0" width="20" height="18" rx="4" fill="#1b7a4b"/>
+<rect x="34" y="6" width="22" height="10" rx="5" fill="#1b7a4b"/></g><g transform="translate(140,128) scale(0.9)">
+<rect x="0" y="10" width="56" height="64" rx="28" fill="white" stroke="#d8e4dc" stroke-width="3"/>
+<rect x="10" y="0" width="36" height="16" rx="8" fill="#1b7a4b"/>
+<g stroke="#3fa66a" stroke-width="4"><line x1="10" y1="24" x2="10" y2="62"/><line x1="19" y1="24" x2="19" y2="62"/><line x1="28" y1="24" x2="28" y2="62"/><line x1="37" y1="24" x2="37" y2="62"/><line x1="46" y1="24" x2="46" y2="62"/></g>
+<text x="28" y="92" text-anchor="middle" font-family="Arial" font-size="11" fill="#6f7b75">фільтри</text></g><g transform="translate(230,128) scale(1)">
+<rect x="6" y="16" width="40" height="62" rx="8" fill="white" stroke="#d8e4dc" stroke-width="3"/>
+<rect x="6" y="40" width="40" height="38" rx="8" fill="#3fa66a" opacity=".85"/>
+<rect x="14" y="2" width="24" height="14" rx="4" fill="#1b7a4b"/>
+<text x="26" y="60" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="11" fill="white">DOT4</text></g><g transform="translate(300,128) scale(1)">
+<rect x="6" y="16" width="40" height="62" rx="8" fill="white" stroke="#d8e4dc" stroke-width="3"/>
+<rect x="6" y="40" width="40" height="38" rx="8" fill="#3fa66a" opacity=".85"/>
+<rect x="14" y="2" width="24" height="14" rx="4" fill="#1b7a4b"/>
+<text x="26" y="60" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="11" fill="white">COOLANT</text></g><g transform="translate(380,150) scale(1)">
+<rect x="0" y="0" width="80" height="52" rx="6" fill="#15201a"/>
+<rect x="0" y="18" width="80" height="14" fill="#3fa66a"/>
+<text x="40" y="29" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="11" fill="white">колодки</text></g>
+<rect x="40" y="296" width="200" height="28" rx="14" fill="#3fa66a"/>
+<text x="140" y="315" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="13" fill="white">100% оригінал</text>
+<text x="520" y="318" text-anchor="end" font-family="Arial" font-size="11" fill="#6f7b75">ілюстрація · вміст залежить від моделі</text>
+</svg>
