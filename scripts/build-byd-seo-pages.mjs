@@ -665,8 +665,8 @@ const escapeHtml = (value) =>
 const techMessage = (text) => `https://t.me/evline_tech?text=${encodeURIComponent(text)}`;
 
 function langSwitch(page, lang) {
-  const ukHref = lang === "uk" ? "./index.html" : `../../${page.uaSlug}/index.html`;
-  const ruHref = lang === "uk" ? `../ru/${page.ruSlug}/index.html` : "./index.html";
+  const ukHref = `/${page.uaSlug}/`;
+  const ruHref = `/ru/${page.ruSlug}/`;
   return `<details class="language-switch">
             <summary aria-label="${lang === "uk" ? "Змінити мову" : "Изменить язык"}"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
             <div class="language-switch__menu">
@@ -678,8 +678,8 @@ function langSwitch(page, lang) {
 
 function header(page, lang) {
   const rel = lang === "uk" ? "../" : "../../";
-  const navHome = lang === "uk" ? "../" : "../";
-  const navByd = lang === "uk" ? "../byd.html" : "../byd.html";
+  const navHome = lang === "uk" ? "/" : "/ru/";
+  const navByd = lang === "uk" ? "/byd" : "/ru/byd";
   const labels =
     lang === "uk"
       ? { nav: "Основна навігація", parts: "Запчастини з Китаю", byd: "Програмування BYD", chat: "Telegram-чат з майстром", menu: "Відкрити меню" }
@@ -716,9 +716,9 @@ function footer(lang) {
     lang === "uk"
       ? { rights: "Усі права захищено.", parts: "Запчастини з Китаю", brands: "Марки авто", byd: "Програмування BYD" }
       : { rights: "Все права защищены.", parts: "Запчасти из Китая", brands: "Марки авто", byd: "Программирование BYD" };
-  const parts = lang === "uk" ? "../" : "../";
-  const brands = lang === "uk" ? "../zapchastyny-kytajskyh-avto/" : "../zapchasti-kitajskih-avto/";
-  const byd = lang === "uk" ? "../byd.html" : "../byd.html";
+  const parts = lang === "uk" ? "/" : "/ru/";
+  const brands = lang === "uk" ? "/zapchastyny-kytajskyh-avto/" : "/ru/zapchasti-kitajskih-avto/";
+  const byd = lang === "uk" ? "/byd" : "/ru/byd";
 
   return `<a class="floating-chat" href="https://t.me/evline_tech" target="_blank" rel="noopener" aria-label="Telegram"></a>
 
@@ -737,7 +737,7 @@ function footer(lang) {
 function jsonLd(page, lang) {
   const data = page[lang];
   const canonical = lang === "uk" ? `${siteUrl}/${page.uaSlug}/` : `${siteUrl}/ru/${page.ruSlug}/`;
-  const parent = lang === "uk" ? `${siteUrl}/byd.html` : `${siteUrl}/ru/byd.html`;
+  const parent = lang === "uk" ? `${siteUrl}/byd` : `${siteUrl}/ru/byd`;
   const parentName = lang === "uk" ? "Програмування BYD" : "Программирование BYD";
   const country = lang === "uk" ? "Україна" : "Украина";
   const city = lang === "uk" ? "Київ" : "Киев";
@@ -804,7 +804,7 @@ function pageHtml(page, lang) {
   const ukCanonical = `${siteUrl}/${page.uaSlug}/`;
   const ruCanonical = `${siteUrl}/ru/${page.ruSlug}/`;
   const currentName = escapeHtml(data.h1);
-  const parentHref = lang === "uk" ? "../byd.html" : "../byd.html";
+  const parentHref = lang === "uk" ? "/byd" : "/ru/byd";
   const parentLabel = lang === "uk" ? "Програмування BYD" : "Программирование BYD";
   const homeLabel = lang === "uk" ? "EVLine" : "EVLine";
   const formLabels =
@@ -1046,7 +1046,7 @@ function pageHtml(page, lang) {
 function sitemap() {
   const pairs = [
     { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly", role: "Organic home pages: direct, brand and search traffic." },
-    { uk: "byd.html", ru: "ru/byd.html", priority: "0.95", changefreq: "weekly" },
+    { uk: "byd", ru: "ru/byd", priority: "0.95", changefreq: "weekly" },
     ...pages.map((page) => ({ uk: `${page.uaSlug}/`, ru: `ru/${page.ruSlug}/`, priority: "0.78", changefreq: "monthly", role: "BYD programming SEO pain-point pages." })),
     { uk: "zapchastyny-kytajskyh-avto/", ru: "ru/zapchasti-kitajskih-avto/", priority: "0.9", changefreq: "weekly" },
     ...brandPairs.map(([uk, ru]) => ({ uk, ru, priority: "0.82", changefreq: "weekly" })),

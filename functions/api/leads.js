@@ -25,6 +25,7 @@ function detectType(payload, request) {
     pathSignal.includes("програмування") ||
     pathSignal.includes("programuv") ||
     pathSignal.includes("programming") ||
+    pathSignal.includes("/byd") ||
     pathSignal.includes("/byd.html")
   ) {
     return "byd";

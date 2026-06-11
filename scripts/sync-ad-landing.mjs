@@ -51,7 +51,7 @@ const brandMarqueeMarkup = (label) => `      <section class="parts-brand-marquee
 const languageSwitch = (indent, currentLang, ukHref, ruHref) => {
   const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
   const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
-  const linkHref = (href) => (href.endsWith("/") ? `${href}index.html` : href);
+  const linkHref = (href) => href;
   return `${indent}<details class="language-switch">
 ${indent}  <summary aria-label="Змінити мову"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
 ${indent}  <div class="language-switch__menu">
@@ -77,7 +77,7 @@ const commonFixes = (html, prefix, currentPath) =>
     .replace(/src="\/assets\//g, `src="${prefix}assets/`)
     .replace(/href="\/manifest\.webmanifest"/g, `href="${prefix}manifest.webmanifest"`)
     .replace(/href="\/"/g, `href="${prefix === "../" ? "../" : "../"}"`)
-    .replace(/href="\/програмування-byd\/"/g, `href="${prefix === "../" ? "../byd.html" : "../byd.html"}"`)
+    .replace(/href="\/програмування-byd\/"/g, 'href="/byd"')
     .replace(/https:\/\/evline\.com\.ua\/#business/g, "https://evline.com.ua/#business")
     .replace(/https:\/\/evline\.com\.ua\/#website/g, `https://evline.com.ua/${currentPath}#website`)
     .replace(/https:\/\/evline\.com\.ua\/#parts-service/g, `https://evline.com.ua/${currentPath}#parts-service`)
@@ -295,7 +295,7 @@ let ruHtml = commonFixes(sourceHtml, "../../", ruPath)
   .replace(/<div class="header-actions">\n\s*/m, `<div class="header-actions">\n${languageSwitch("          ", "ru", "../../запчастини-з-китаю/", "./")}\n          `);
 
 ruHtml = replaceMany(ruHtml, ruPairs)
-  .replace(/href="\.\.\/byd\.html"/g, 'href="../byd.html"')
+  .replace(/href="\.\.\/byd\.html"/g, 'href="/ru/byd"')
   .replace(/href="\.\.\/"/g, 'href="../"');
 ruHtml = cleanupGeneratedRu(ruHtml);
 ruHtml = normalizeBrandMarquee(ruHtml, "Марки китайских авто");
