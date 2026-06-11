@@ -170,6 +170,32 @@
   background: #fee2e2;
 }
 
+.admin-btn--icon {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.admin-btn--subtle-danger {
+  border-color: #f1d5d5;
+  background: #fff;
+  color: #a13a3a;
+  opacity: 0.58;
+}
+
+.admin-btn--subtle-danger:hover,
+.admin-btn--subtle-danger:focus-visible {
+  border-color: #ef4444;
+  background: #fff5f5;
+  opacity: 1;
+}
+
+.admin-btn[aria-busy="true"] {
+  opacity: 0.58;
+  cursor: wait;
+}
+
 .admin-btn--small {
   min-height: 30px;
   margin-top: 8px;
@@ -716,15 +742,6 @@ body.order-detail-open .order-detail {
   color: var(--green-dark);
 }
 
-.orders-table__delete {
-  opacity: 0.42;
-}
-
-.orders-table--manager tbody tr:hover .orders-table__delete,
-.orders-table__row--selected .orders-table__delete {
-  opacity: 1;
-}
-
 .badge {
   display: inline-flex;
   align-items: center;
@@ -829,8 +846,13 @@ body.order-detail-open .order-detail {
 .order-editor__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-top: 12px;
+}
+
+.order-editor__delete {
+  margin-left: auto;
 }
 
 .order-editor__section {

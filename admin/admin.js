@@ -632,7 +632,6 @@ function renderOrders() {
               <td>
                 <div class="orders-table__actions">
                   <button class="admin-btn admin-btn--small orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>
-                  <button class="admin-btn admin-btn--small admin-btn--danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}">Видалити</button>
                 </div>
               </td>
             </tr>
@@ -779,7 +778,9 @@ function renderOrderEditor(order) {
       <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
       <div class="order-editor__actions">
         <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
-        <button class="admin-btn admin-btn--danger" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}">Видалити заявку</button>
+        <button class="admin-btn admin-btn--icon admin-btn--subtle-danger order-editor__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}" aria-label="Видалити заявку ${escapeHtml(orderNumber)}" title="Видалити заявку">
+          <span aria-hidden="true">🗑</span>
+        </button>
       </div>
     </div>
 
@@ -1330,24 +1331,6 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
     return;
   }
 
-  const deleteButton = event.target.closest("[data-delete-order]");
-  if (deleteButton) {
-    deleteButton.disabled = true;
-    deleteButton.textContent = "Видаляю...";
-    deleteOrder(deleteButton.dataset.deleteOrder, deleteButton.dataset.deleteOrderNumber || "це замовлення")
-      .then((deleted) => {
-        if (deleted) return;
-        deleteButton.disabled = false;
-        deleteButton.textContent = "Видалити";
-      })
-      .catch((error) => {
-        alert(error.message);
-        deleteButton.disabled = false;
-        deleteButton.textContent = "Видалити";
-      });
-    return;
-  }
-
   if (event.target.closest("a")) return;
 
   const row = event.target.closest("[data-order-id]");
@@ -1398,17 +1381,17 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
   const deleteButton = event.target.closest("[data-delete-order]");
   if (deleteButton) {
     deleteButton.disabled = true;
-    deleteButton.textContent = "Видаляю...";
+    deleteButton.setAttribute("aria-busy", "true");
     try {
       const deleted = await deleteOrder(deleteButton.dataset.deleteOrder, deleteButton.dataset.deleteOrderNumber || "це замовлення");
       if (!deleted) {
         deleteButton.disabled = false;
-        deleteButton.textContent = "Видалити заявку";
+        deleteButton.removeAttribute("aria-busy");
       }
     } catch (error) {
       alert(error.message);
       deleteButton.disabled = false;
-      deleteButton.textContent = "Видалити заявку";
+      deleteButton.removeAttribute("aria-busy");
     }
     return;
   }
