@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480">
+<rect width="760" height="480" rx="20" fill="#eef7f1"/>
+<!-- стол -->
+<rect x="0" y="380" width="760" height="100" fill="#e2ece5"/>
+<!-- КОРОБКА -->
+<g>
+  <!-- задняя стенка открытой коробки -->
+  <path d="M150 200 L390 200 L370 150 L170 150 Z" fill="#caa97e"/>
+  <!-- внутренность -->
+  <rect x="150" y="200" width="240" height="30" fill="#8a6a44"/>
+  <!-- содержимое: канистра -->
+  <g transform="translate(180,128)">
+    <rect x="0" y="14" width="52" height="64" rx="7" fill="#3fa66a"/>
+    <rect x="5" y="22" width="42" height="30" rx="4" fill="white" opacity=".92"/>
+    <text x="26" y="42" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="11" fill="#15201a">OIL</text>
+    <rect x="7" y="2" width="16" height="14" rx="3" fill="#1b7a4b"/>
+  </g>
+  <!-- фильтр -->
+  <g transform="translate(250,140)">
+    <rect x="0" y="8" width="44" height="52" rx="22" fill="white" stroke="#d8e4dc" stroke-width="3"/>
+    <rect x="8" y="0" width="28" height="12" rx="6" fill="#1b7a4b"/>
+    <g stroke="#3fa66a" stroke-width="3"><line x1="9" y1="20" x2="9" y2="50"/><line x1="17" y1="20" x2="17" y2="50"/><line x1="25" y1="20" x2="25" y2="50"/><line x1="33" y1="20" x2="33" y2="50"/></g>
+  </g>
+  <!-- бутылка DOT4 -->
+  <g transform="translate(312,134)">
+    <rect x="4" y="12" width="32" height="52" rx="6" fill="white" stroke="#d8e4dc" stroke-width="3"/>
+    <rect x="4" y="32" width="32" height="32" rx="6" fill="#3fa66a" opacity=".85"/>
+    <rect x="10" y="2" width="20" height="11" rx="3" fill="#1b7a4b"/>
+    <text x="20" y="50" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="9" fill="white">DOT4</text>
+  </g>
+  <!-- передняя стенка коробки -->
+  <rect x="140" y="225" width="260" height="150" rx="8" fill="#dbb88a"/>
+  <!-- фирменный скотч EVLine поперек -->
+  <rect x="140" y="280" width="260" height="34" fill="#2e8f5b"/>
+  <circle cx="190" cy="297" r="13" fill="#67b34a"/>
+  <text x="190" y="302" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="12" fill="#15201a">EV</text>
+  <text x="212" y="303" font-family="Arial" font-weight="bold" font-style="italic" font-size="17" fill="white">Line</text>
+  <text x="395" y="303" text-anchor="end" font-family="Arial" font-size="11" fill="#d6f2e2">evline.com.ua </text>
+  <!-- боковые клапаны открытые -->
+  <path d="M140 225 L110 180 L160 192 Z" fill="#c8a06b"/>
+  <path d="M400 225 L430 180 L380 192 Z" fill="#c8a06b"/>
+  <!-- наклейка fragile -->
+  <rect x="155" y="332" width="92" height="28" rx="6" fill="white"/>
+  <text x="201" y="350" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="11" fill="#1b7a4b">ОРИГІНАЛ ✓</text>
+</g>
+<!-- СХЕМЫ / ИНСТРУКЦИИ рядом -->
+<g transform="translate(470,140)">
+  <!-- нижний лист -->
+  <rect x="14" y="18" width="220" height="240" rx="10" fill="white" stroke="#d8e4dc" transform="rotate(4 124 138)"/>
+  <!-- верхний лист -->
+  <rect x="0" y="0" width="220" height="240" rx="10" fill="white" stroke="#d8e4dc"/>
+  <rect x="0" y="0" width="220" height="46" rx="10" fill="#15201a"/>
+  <text x="16" y="22" font-family="Arial" font-weight="bold" font-size="12" fill="white">Технологічна карта ТО</text>
+  <text x="16" y="38" font-family="Arial" font-size="10" fill="#9fb3a8">EVLine · крок за кроком</text>
+  <!-- схема: деталь с выносками -->
+  <circle cx="60" cy="100" r="26" fill="none" stroke="#1b7a4b" stroke-width="3"/>
+  <circle cx="60" cy="100" r="9" fill="none" stroke="#3fa66a" stroke-width="3"/>
+  <line x1="86" y1="100" x2="130" y2="80" stroke="#3fa66a" stroke-width="2"/>
+  <line x1="86" y1="100" x2="130" y2="118" stroke="#3fa66a" stroke-width="2"/>
+  <text x="136" y="84" font-family="Arial" font-size="10" fill="#15201a">пробка · 35 Н·м</text>
+  <text x="136" y="122" font-family="Arial" font-size="10" fill="#15201a">контроль рівня</text>
+  <!-- строки таблицы -->
+  <g>
+    <rect x="16" y="150" width="188" height="18" rx="4" fill="#f6faf7"/>
+    <rect x="16" y="174" width="188" height="18" rx="4" fill="white" stroke="#d8e4dc"/>
+    <rect x="16" y="198" width="188" height="18" rx="4" fill="#f6faf7"/>
+    <text x="24" y="163" font-family="Arial" font-size="9.5" fill="#6f7b75">1 · злив оливи · ключ 17 мм</text>
+    <text x="24" y="187" font-family="Arial" font-size="9.5" fill="#6f7b75">2 · фільтр · чашка 76 мм · 25 Н·м</text>
+    <text x="24" y="211" font-family="Arial" font-size="9.5" fill="#6f7b75">3 · заливка · контроль течі</text>
+  </g>
+  <!-- ключ -->
+  <g transform="translate(150,210) rotate(-18)">
+    <rect x="8" y="6" width="58" height="9" rx="4" fill="#1b7a4b"/>
+    <circle cx="8" cy="10" r="11" fill="none" stroke="#1b7a4b" stroke-width="7"/>
+  </g>
+</g>
+<text x="380" y="448" text-anchor="middle" font-family="Arial" font-size="12" fill="#6f7b75">Комплект ТО EVLine: оригінальні розхідники + схеми заміни для вашого механіка</text>
+</svg>

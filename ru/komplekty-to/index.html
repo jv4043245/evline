@@ -53,6 +53,8 @@
       .fear-card summary em{display:inline-block;margin-top:10px;font-style:normal;font-size:12.5px;font-weight:700;color:#1b7a4b}
       .fear-card[open] summary em{display:none}
       .fear-card p{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:#5b6862}
+      .fear-cta{display:inline-block;font-size:13px;font-weight:700;color:#1b7a4b;text-decoration:none;border-bottom:1px dashed #7fd8a9}
+      .fear-cta:hover{color:#15201a}
 
 
     </style>
@@ -107,7 +109,7 @@
               <span>оригинал</span>
             </div>
           </div>
-          <form class="brand-seo-form" data-telegram-parts-form>
+          <form class="brand-seo-form" id="to-form" data-telegram-parts-form>
             <strong>Расчет ТО по VIN</strong>
             <input name="car" placeholder="Модель и пробег" required>
             <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -176,37 +178,62 @@
             <details class="fear-card">
               <summary><span>⚡</span><strong>В жидкости вашей батареи течет ток?</strong><em>подробнее ↓</em></summary>
               <p>Охлаждающая жидкость батареи должна быть диэлектриком. Со временем она становится проводящей и кислой — это меряется прибором, а не «на глаз». Если пропустить: коррозия контура, ошибки изоляции, перегрев и ускоренная деградация батареи.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="проверка жидкости батареи">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
-              <summary><span>🅿️</span><strong>Задние колодки нельзя менять «как обычно»</strong><em>подробнее ↓</em></summary>
+              <summary><span>🅿️</span><strong>Задние колодки нельзя менять без сервисного режима</strong><em>подробнее ↓</em></summary>
               <p>На авто с электронным ручником перед заменой колодок нужен сервисный режим EPB через диагностику. Если механик просто вдавит поршень — сломает электропривод суппорта. Так «экономная» замена колодок заканчивается покупкой суппорта.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="замена задних колодок (EPB)">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
               <summary><span>⛽</span><strong>У гибрида масло стареет, даже когда двигатель «спит»</strong><em>подробнее ↓</em></summary>
               <p>В DM-i бензин попадает в масло из-за коротких циклов работы ДВС — масло разжижается топливом. Поэтому его меняют по времени, а не по пробегу. Если пропустить: задиры и износ двигателя, который «почти не работал».</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="замена масла DM-i">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
-              <summary><span>🛞</span><strong>Домкрат не туда — минус батарея</strong><em>подробнее ↓</em></summary>
-              <p>У электромобиля все днище — это батарея. Подъем только за штатные точки, часто с адаптерами. Если пропустить: деформация или пробой корпуса батареи — самой дорогой детали авто. Спросите свое СТО, знает ли оно точки подъема вашей модели.</p>
+              <summary><span>🧪</span><strong>В вашем авто — два разных антифриза</strong><em>подробнее ↓</em></summary>
+              <p>У гибридов контур ДВС и контур батареи с электроникой — это разные жидкости с разными требованиями: обычный антифриз и диэлектрик. Если пропустить: СТО дольет «универсальный» в оба — коррозия, проводимость и дорогой ремонт двух контуров сразу.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="замена антифризов (два контура)">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
               <summary><span>🛑</span><strong>Колодки целы — не значит, что тормоза исправны</strong><em>подробнее ↓</em></summary>
               <p>Из-за рекуперации тормоза «спят»: жидкость годами впитывает влагу, направляющие закисают. Если пропустить: клин суппорта и «ватный» тормоз в худший момент. Влажность жидкости меряется тестером за минуту.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="тормозная жидкость и суппорты">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
               <summary><span>❄️</span><strong>Одна заправка кондиционера может убить компрессор</strong><em>подробнее ↓</em></summary>
               <p>Электрокомпрессор требует диэлектрического масла. Обычное СТО зальет универсальное — проводящее. Если пропустить: компрессор под замену, а там, где кондиционер охлаждает батарею — еще и перегрев батареи летом.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="обслуживание кондиционера">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
               <summary><span>🔋</span><strong>Почему электромобиль «умирает» утром</strong><em>подробнее ↓</em></summary>
               <p>12V аккумулятор питает всю электронику и умирает внезапно. А сопротивление изоляции ВВ-системы вообще проверяется только дилерским оборудованием. Если пропустить: авто-«кирпич» и скрытые утечки тока, которых никто не видит.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="проверка 12V и изоляции">Получить схему этой замены →</a></p>
             </details>
             <details class="fear-card">
               <summary><span>⚙️</span><strong>Единственная «передача» тоже имеет расходник</strong><em>подробнее ↓</em></summary>
               <p>Масло редуктора работает под ударным моментом электромотора с первого метра. Замена по регламенту — недорогая. Если пропустить: гул и ремонт редуктора, который стоит как десять ТО.</p>
+              <p><a class="fear-cta" href="#to-form" data-scheme="замена масла редуктора">Получить схему этой замены →</a></p>
             </details>
           </div>
           <p class="to-note" style="text-align:center;max-width:640px;margin:18px auto 0">Все эти проверки и предостережения уже прописаны в наших технологических картах — ваше СТО просто делает по списку.</p>
+        </div>
+      </section>
+
+      <section class="brand-seo-section brand-seo-section--soft">
+        <div class="container">
+          <div class="to-card-preview">
+            <img src="../../assets/images/to/to-box-schemes.svg" alt="Комплект ТО EVLine со схемами замены" loading="lazy">
+            <div>
+              <div class="parts-section-head" style="text-align:left;margin:0 0 8px">
+                <span>Схемы — в подарок</span>
+                <h2>Покупаете комплект — все схемы идут бесплатно</h2>
+              </div>
+              <p style="color:#5b6862;line-height:1.7">К каждому комплекту ТО прикладываем технологические карты на замену <strong>каждой</strong> жидкости и сменного элемента: порядок работ, инструмент, моменты затяжки, партномера. Ваш механик просто делает по списку.</p>
+              <p style="color:#5b6862;line-height:1.7">Это работает не только с ТО: заказываете у нас запчасти после ДТП — получаете схемы замены для вашего кузовного сервиса.</p>
+              <p style="margin-top:16px"><a class="origin-pill-button" href="#to-form">Получить комплект со схемами</a></p>
+            </div>
+          </div>
         </div>
       </section>
       <section class="brand-seo-section">
@@ -322,5 +349,16 @@
         </nav>
       </div>
     </footer>
+
+    <script>
+      document.querySelectorAll(".fear-cta").forEach(function(a){
+        a.addEventListener("click", function(){
+          var form = document.getElementById("to-form");
+          if(!form) return;
+          var part = form.querySelector('[name="part"]');
+          if(part) part.value = "Комплект ТО + схема: " + (a.dataset.scheme || "");
+        });
+      });
+    </script>
   </body>
 </html>
