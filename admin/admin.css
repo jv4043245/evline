@@ -523,6 +523,40 @@ body.order-detail-open .order-detail {
   font-size: 14px;
 }
 
+.orders-table--manager {
+  min-width: 1040px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.orders-table--manager .orders-table__col-number {
+  width: 132px;
+}
+
+.orders-table--manager .orders-table__col-client {
+  width: 17%;
+}
+
+.orders-table--manager .orders-table__col-request {
+  width: 28%;
+}
+
+.orders-table--manager .orders-table__col-status {
+  width: 145px;
+}
+
+.orders-table--manager .orders-table__col-money {
+  width: 132px;
+}
+
+.orders-table--manager .orders-table__col-track {
+  width: 17%;
+}
+
+.orders-table--manager .orders-table__col-actions {
+  width: 96px;
+}
+
 .orders-table th,
 .orders-table td {
   padding: 13px 18px;
@@ -538,6 +572,32 @@ body.order-detail-open .order-detail {
   text-transform: uppercase;
 }
 
+.orders-table--manager th,
+.orders-table--manager td {
+  padding: 12px 14px;
+}
+
+.orders-table--manager tbody td {
+  line-height: 1.35;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.orders-table--manager tbody tr:nth-child(even):not(.orders-table__row--selected) td {
+  background: #f8fbf9;
+}
+
+.orders-table--manager tbody tr:hover td {
+  background: #eef8f2;
+}
+
+.orders-table--manager tbody tr.orders-table__row--selected td {
+  background: #e9f8ef;
+}
+
+.orders-table--manager tbody tr.orders-table__row--selected td:first-child {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+
 .orders-table tr {
   cursor: pointer;
 }
@@ -550,11 +610,119 @@ body.order-detail-open .order-detail {
   background: #ecfdf5;
 }
 
+.orders-table__number-cell {
+  white-space: nowrap;
+}
+
+.order-number {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.orders-table__date,
+.order-type-pill,
+.orders-table__contact,
+.orders-table__primary {
+  display: block;
+}
+
+.orders-table__date {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-type-pill {
+  width: fit-content;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eaf7ef;
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.order-type-pill--byd {
+  background: #111827;
+  color: #fff;
+}
+
+.order-type-pill--other {
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.orders-table__primary {
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.orders-table__contact {
+  color: var(--green-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.orders-table__request-cell .muted {
+  display: block;
+  margin-top: 3px;
+}
+
+.orders-table__mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.orders-table__request {
+  max-width: 38ch;
+  color: #4b5d57;
+}
+
+.orders-table__money {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.orders-table__empty {
+  color: #93a19c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .orders-table__actions {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+}
+
+.orders-table__open {
+  border-color: rgba(0, 168, 107, 0.24);
+  background: #effaf2;
+  color: var(--green-dark);
+}
+
+.orders-table__delete {
+  opacity: 0.42;
+}
+
+.orders-table--manager tbody tr:hover .orders-table__delete,
+.orders-table__row--selected .orders-table__delete {
+  opacity: 1;
 }
 
 .badge {

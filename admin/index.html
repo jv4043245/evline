@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260611-manager-cleanup">
-    <script src="/admin/admin.js?v=20260611-manager-cleanup" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260611-orders-readable">
+    <script src="/admin/admin.js?v=20260611-orders-readable" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -100,7 +100,16 @@
             </div>
           </div>
           <div class="table-wrap">
-            <table class="orders-table">
+            <table class="orders-table orders-table--manager">
+              <colgroup>
+                <col class="orders-table__col-number">
+                <col class="orders-table__col-client">
+                <col class="orders-table__col-request">
+                <col class="orders-table__col-status">
+                <col class="orders-table__col-money">
+                <col class="orders-table__col-track">
+                <col class="orders-table__col-actions">
+              </colgroup>
               <thead>
                 <tr>
                   <th>№ / дата</th>

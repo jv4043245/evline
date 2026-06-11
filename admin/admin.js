@@ -573,6 +573,36 @@ function shortDateTime(value) {
   });
 }
 
+function mutedLine(value, className = "") {
+  const text = plainText(value);
+  if (!text) return "";
+  return `<br><span class="muted ${className}">${escapeHtml(text)}</span>`;
+}
+
+function orderTypePill(type) {
+  const label = typeLabels[type] || type || "-";
+  return `<span class="order-type-pill order-type-pill--${safeClass(type || "other")}">${escapeHtml(label)}</span>`;
+}
+
+function contactLine(order) {
+  const contact = plainText(order.customer_phone || order.customer_email || order.customer_telegram);
+  if (!contact) return `<span class="muted">контакт не вказано</span>`;
+  if (/^\+?[\d\s().-]{7,}$/.test(contact)) {
+    const href = contact.replace(/[^\d+]/g, "");
+    return `<a class="orders-table__contact" href="tel:${escapeHtml(href)}">${escapeHtml(contact)}</a>`;
+  }
+  return `<span class="orders-table__contact">${escapeHtml(contact)}</span>`;
+}
+
+function moneyCell(order) {
+  const revenue = Number(order.revenue_uah || 0);
+  const payment = paymentLabel(order.payment_status);
+  const revenueText = revenue > 0
+    ? `<strong class="orders-table__money">${money.format(revenue)}</strong>`
+    : `<span class="orders-table__empty">сума не вказана</span>`;
+  return `${revenueText}${mutedLine(payment)}`;
+}
+
 function renderOrders() {
   const root = document.querySelector("[data-orders]");
   if (!root) return;
@@ -580,25 +610,29 @@ function renderOrders() {
     ? state.orders
         .map((order) => {
           const request = order.item_name || order.service_name || order.request_text || "";
-          const contact = order.customer_phone || order.customer_email || order.customer_telegram || "";
           const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
           const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
           const publicNumber = order.order_number || "без номера";
           const trackingStatus = order.tracking_status_text
             ? `${order.tracking_status_text}${order.tracking_status_location ? ` · ${order.tracking_status_location}` : ""}`
             : "";
+          const nextAction = order.next_action_at ? `Далі: ${shortDate(order.next_action_at)}` : "";
+          const trackMain = order.tracking_carrier || order.tracking_number || trackingStatus || deliveryLine;
+          const trackCell = trackMain
+            ? `${textOrDash(trackMain)}${order.tracking_carrier ? mutedLine(order.tracking_number, "orders-table__mono") : ""}${trackMain !== trackingStatus ? mutedLine(trackingStatus) : ""}${trackMain !== deliveryLine ? mutedLine(deliveryLine) : ""}`
+            : `<span class="orders-table__empty">трек не вказано</span>`;
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
-              <td><strong>${textOrDash(publicNumber)}</strong><br><span class="muted">${escapeHtml(shortDateTime(order.created_at))}</span><br><span class="muted">${escapeHtml(typeLabels[order.type] || order.type || "-")}</span></td>
-              <td><strong>${textOrDash(order.customer_name || "Без імені")}</strong><br><span class="muted">${textOrDash(contact)}</span></td>
-              <td>${textOrDash(order.car)}<br><span class="muted">${textOrDash(order.vin)}</span><br><span class="muted">${textOrDash(request)}</span></td>
-              <td>${badge(order.status || "new")}<br><span class="muted">Далі: ${textOrDash(order.next_action_at ? shortDate(order.next_action_at) : "")}</span></td>
-              <td>${money.format(order.revenue_uah || 0)}<br><span class="muted">${escapeHtml(paymentLabel(order.payment_status))}</span></td>
-              <td>${textOrDash(order.tracking_carrier)}<br><span class="muted">${textOrDash(order.tracking_number)}</span>${trackingStatus ? `<br><span class="muted">${escapeHtml(trackingStatus)}</span>` : ""}${deliveryLine ? `<br><span class="muted">${escapeHtml(deliveryLine)}</span>` : ""}</td>
+              <td class="orders-table__number-cell"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
+              <td><strong class="orders-table__primary">${textOrDash(order.customer_name || "Без імені")}</strong>${contactLine(order)}</td>
+              <td class="orders-table__request-cell"><strong class="orders-table__primary">${textOrDash(order.car || "Авто не вказано")}</strong>${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
+              <td>${badge(order.status || "new")}${mutedLine(nextAction)}</td>
+              <td>${moneyCell(order)}</td>
+              <td>${trackCell}</td>
               <td>
                 <div class="orders-table__actions">
-                  <button class="admin-btn admin-btn--small" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>
-                  <button class="admin-btn admin-btn--small admin-btn--danger" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}">Видалити</button>
+                  <button class="admin-btn admin-btn--small orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>
+                  <button class="admin-btn admin-btn--small admin-btn--danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}">Видалити</button>
                 </div>
               </td>
             </tr>
@@ -1313,6 +1347,8 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
       });
     return;
   }
+
+  if (event.target.closest("a")) return;
 
   const row = event.target.closest("[data-order-id]");
   if (!row) return;
