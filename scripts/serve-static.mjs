@@ -291,7 +291,7 @@ function detectLeadType(payload, pathname = "") {
   const topic = text(payload.topic || payload.service || payload.form_type).toLowerCase();
   if (topic.includes("byd") || topic.includes("програм") || topic.includes("оновлен")) return "byd";
   const signal = `${pathname} ${text(payload.landing_page)} ${text(payload.referrer)}`.toLowerCase();
-  return signal.includes("програмування") || signal.includes("programuv") || signal.includes("programming") || signal.includes("/byd.html") ? "byd" : "parts";
+  return signal.includes("програмування") || signal.includes("programuv") || signal.includes("programming") || signal.includes("/byd") || signal.includes("/byd.html") ? "byd" : "parts";
 }
 
 function extractOrderId(value) {

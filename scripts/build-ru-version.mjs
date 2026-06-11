@@ -21,7 +21,7 @@ const techTelegramLinks = {
 function languageSwitch(indent, currentLang, ukHref, ruHref) {
   const ukCurrent = currentLang === "uk" ? ' aria-current="true"' : "";
   const ruCurrent = currentLang === "ru" ? ' aria-current="true"' : "";
-  const linkHref = (href) => (href.endsWith("/") ? `${href}index.html` : href);
+  const linkHref = (href) => href;
   return `${indent}<details class="language-switch">
 ${indent}  <summary aria-label="Змінити мову"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
 ${indent}  <div class="language-switch__menu">
@@ -267,7 +267,7 @@ const bydSeoPairs = [
 
 const sitePairs = [
   { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly", role: "Organic home pages: direct, brand and search traffic." },
-  { uk: "byd.html", ru: "ru/byd.html", priority: "0.95", changefreq: "weekly" },
+  { uk: "byd", ru: "ru/byd", priority: "0.95", changefreq: "weekly" },
   ...bydSeoPairs.map((pair) => ({ ...pair, priority: "0.78", changefreq: "monthly", role: "BYD programming SEO pain-point pages." })),
   { uk: "zapchastyny-kytajskyh-avto/", ru: "ru/zapchasti-kitajskih-avto/", priority: "0.9", changefreq: "weekly" },
   ...brands.map((brand) => ({ uk: `${brand.uaSlug}/`, ru: `ru/${brand.ruSlug}/`, priority: "0.82", changefreq: "weekly" })),
@@ -313,7 +313,7 @@ const headJsonIndexRu = `<script type="application/ld+json">
 </script>`;
 
 const headJsonBydRu = `<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd.html","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
+{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
@@ -781,8 +781,8 @@ function prepareStandaloneRu(html, kind) {
   const desc = isByd
     ? "Программирование, обновление и калибровка блоков BYD через VDS. Denza, Yangwang, Fang Cheng Bao. Проверка обновлений по VIN."
     : "Оригинальные и OEM запчасти для BYD, Zeekr, Xiaomi и других авто из Китая. Подбор по VIN, проверка, авиа от 14 дней.";
-  const ukPath = isByd ? "byd.html" : "";
-  const ruPath = isByd ? "ru/byd.html" : "ru/";
+  const ukPath = isByd ? "byd" : "";
+  const ruPath = isByd ? "ru/byd" : "ru/";
 
   let result = html
     .replace("<html lang=\"uk\">", "<html lang=\"ru-UA\">")
@@ -815,10 +815,10 @@ function prepareStandaloneRu(html, kind) {
   }
   result = result
     .replace(/href="zapchastyny-kytajskyh-avto\/"/g, 'href="zapchasti-kitajskih-avto/"')
-    .replace(/href="byd\.html"/g, 'href="byd.html"')
-    .replace(/href="ru\/"/g, isByd ? 'href="../byd.html"' : 'href="../"');
+    .replace(/href="byd\.html"/g, 'href="/ru/byd"')
+    .replace(/href="ru\/"/g, isByd ? 'href="/ru/"' : 'href="../"');
 
-  result = replaceLanguageSwitch(result, "ru", isByd ? "../byd.html" : "../", isByd ? "byd.html" : "./");
+  result = replaceLanguageSwitch(result, "ru", isByd ? "/byd" : "/", isByd ? "/ru/byd" : "/ru/");
 
   return result;
 }
@@ -910,7 +910,7 @@ function ruHeader(current = "", ukHref = "../../") {
         </a>
         <nav class="nav" id="site-nav" aria-label="Основная навигация">
           <a href="../"${current === "home" ? ' aria-current="page"' : ""}>Запчасти из Китая</a>
-          <a href="../byd.html"${current === "byd" ? ' aria-current="page"' : ""}>Программирование BYD</a>
+          <a href="/ru/byd"${current === "byd" ? ' aria-current="page"' : ""}>Программирование BYD</a>
         </nav>
         <div class="header-actions">
           ${languageSwitch("          ", "ru", ukHref, "./")}
@@ -932,7 +932,7 @@ function ruFooter() {
         <nav aria-label="Нижняя навигация">
           <a href="../">Запчасти из Китая</a>
           <a href="../zapchasti-kitajskih-avto/">Марки авто</a>
-          <a href="../byd.html">Программирование BYD</a>
+          <a href="/ru/byd">Программирование BYD</a>
         </nav>
       </div>
     </footer>`;
@@ -1227,8 +1227,8 @@ async function patchUkStandalone(fileName, ukPath, ruPath) {
       `${inlineLanguageSwitchCss}\n  .hdr-cta{display:flex`,
     );
   }
-  const selfHref = ukPath === "byd.html" ? "byd.html" : "./";
-  const ruHref = ruPath === "ru/" ? "ru/" : "ru/byd.html";
+  const selfHref = ukPath === "byd" ? "/byd" : "/";
+  const ruHref = ruPath === "ru/" ? "/ru/" : "/ru/byd";
   if (html.includes("class=\"language-switch\"") || html.includes("class=\"lang-link\"")) {
     html = replaceLanguageSwitch(html, "uk", selfHref, ruHref);
   } else {
@@ -1308,7 +1308,7 @@ ${urlNodes}
 await mkdir(path.join(root, "ru"), { recursive: true });
 
 await patchUkStandalone("index.html", "", "ru/");
-await patchUkStandalone("byd.html", "byd.html", "ru/byd.html");
+await patchUkStandalone("byd.html", "byd", "ru/byd");
 await patchUkHub();
 for (const brand of brands) {
   await patchUkSeoPage(brand.uaSlug, brand.ruSlug);

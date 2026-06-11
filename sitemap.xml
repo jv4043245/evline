@@ -21,19 +21,19 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://evline.com.ua/byd.html</loc>
-    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html" />
-    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd.html" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd.html" />
+    <loc>https://evline.com.ua/byd</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd" />
     <lastmod>2026-06-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://evline.com.ua/ru/byd.html</loc>
-    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd.html" />
-    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd.html" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd.html" />
+    <loc>https://evline.com.ua/ru/byd</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/byd" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/byd" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/byd" />
     <lastmod>2026-06-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
