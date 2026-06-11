@@ -451,6 +451,72 @@
   overflow-x: auto;
 }
 
+body.order-detail-open {
+  overflow: hidden;
+}
+
+.order-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  border: 0;
+  background: rgba(7, 19, 16, 0.34);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.order-detail {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 90;
+  width: min(720px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(7, 19, 16, 0.26);
+  transform: translateX(calc(100% + 24px));
+  transition: transform 0.22s ease;
+}
+
+body.order-detail-open .order-detail-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.order-detail-open .order-detail {
+  transform: translateX(0);
+}
+
+.order-detail[aria-hidden="true"] {
+  pointer-events: none;
+}
+
+.order-detail .admin-panel__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+}
+
+.order-detail .admin-panel__head h2 {
+  margin-bottom: 2px;
+}
+
+.order-detail .admin-panel__head p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.order-detail__close {
+  flex-shrink: 0;
+}
+
 .orders-table {
   width: 100%;
   border-collapse: collapse;
@@ -547,6 +613,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 18px;
+}
+
+.order-detail .order-editor {
+  flex: 1;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 32px;
 }
 
 .order-editor label,
@@ -867,6 +941,19 @@
   .tracking-sync-card {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .order-detail {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    border-radius: 0;
+    transform: translateX(100%);
+  }
+
+  .order-detail .admin-panel__head {
+    gap: 12px;
   }
 }
 

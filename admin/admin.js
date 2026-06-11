@@ -154,6 +154,7 @@ function setActiveTab(tab) {
     view.hidden = view.dataset.adminView !== nextTab;
   });
 
+  if (nextTab !== "orders") setOrderDetailOpen(false);
   if (nextTab === "delivery") renderShippingDirectory();
 }
 
@@ -606,6 +607,44 @@ function renderOrders() {
         })
         .join("")
     : `<tr><td colspan="8" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
+  highlightSelectedOrder();
+}
+
+function updateOrderDetailSubtitle(order) {
+  const node = document.querySelector("[data-order-detail-subtitle]");
+  if (!node) return;
+  if (!order) {
+    node.textContent = "Оберіть замовлення в таблиці.";
+    return;
+  }
+  const publicNumber = order.order_number || "без номера";
+  const request = order.item_name || order.service_name || order.car || order.customer_phone || "";
+  node.textContent = `${publicNumber}${request ? ` · ${request}` : ""}`;
+}
+
+function setOrderDetailOpen(open) {
+  const panel = document.querySelector("[data-order-detail-panel]");
+  document.body.classList.toggle("order-detail-open", Boolean(open));
+  if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function highlightSelectedOrder() {
+  const selectedId = state.selectedOrder?.id || "";
+  document.querySelectorAll("[data-order-id]").forEach((row) => {
+    row.classList.toggle("orders-table__row--selected", row.dataset.orderId === selectedId);
+  });
+}
+
+function closeOrderDetail(options = {}) {
+  setOrderDetailOpen(false);
+  if (options.clearSelection) {
+    state.selectedOrder = null;
+    state.selectedEvents = [];
+    state.selectedNotifications = [];
+    state.selectedTrackingEvents = [];
+    renderOrderEditor(null);
+    highlightSelectedOrder();
+  }
 }
 
 function messagePreview(order, status) {
@@ -670,6 +709,7 @@ function applyShippingSelection(form, options = {}) {
 function renderOrderEditor(order) {
   const form = document.querySelector("[data-order-editor]");
   if (!form) return;
+  updateOrderDetailSubtitle(order);
   if (!order) {
     form.innerHTML = `<p class="muted">Оберіть замовлення в таблиці.</p>`;
     return;
@@ -1008,14 +1048,10 @@ async function loadOrder(id) {
 
 async function openOrder(id, options = {}) {
   await loadOrder(id);
-  document.querySelectorAll("[data-order-id]").forEach((row) => {
-    row.classList.toggle("orders-table__row--selected", row.dataset.orderId === id);
-  });
+  highlightSelectedOrder();
+  setOrderDetailOpen(true);
   if (options.scroll !== false) {
-    document.querySelector("[data-order-editor]")?.closest(".admin-panel")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    document.querySelector("[data-order-editor]")?.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
@@ -1030,6 +1066,7 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
     renderOrderEditor(null);
+    closeOrderDetail();
   }
   await refresh();
   alert("Заявку видалено.");
@@ -1282,6 +1319,16 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
   const row = event.target.closest("[data-order-id]");
   if (!row) return;
   openOrder(row.dataset.orderId).catch((error) => alert(error.message));
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-close-order]")) return;
+  closeOrderDetail({ clearSelection: true });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !document.body.classList.contains("order-detail-open")) return;
+  closeOrderDetail({ clearSelection: true });
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("submit", async (event) => {

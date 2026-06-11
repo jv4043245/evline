@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css">
-    <script src="/admin/admin.js?v=20260609-attribution" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260611-order-drawer">
+    <script src="/admin/admin.js?v=20260611-order-drawer" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -118,14 +118,19 @@
           </div>
         </section>
 
-        <section class="admin-panel">
+        <button class="order-detail-backdrop" type="button" data-close-order aria-label="Закрити картку замовлення"></button>
+        <aside class="admin-panel order-detail" data-order-detail-panel aria-hidden="true" aria-label="Картка замовлення">
           <div class="admin-panel__head">
-            <h2>Картка замовлення</h2>
+            <div>
+              <h2>Картка замовлення</h2>
+              <p class="muted" data-order-detail-subtitle>Оберіть замовлення в таблиці.</p>
+            </div>
+            <button class="admin-btn admin-btn--small order-detail__close" type="button" data-close-order>Закрити</button>
           </div>
           <form class="order-editor" data-order-editor>
             <p class="muted">Оберіть замовлення в таблиці.</p>
           </form>
-        </section>
+        </aside>
       </section>
 
       <section class="admin-view" data-admin-view="analytics" hidden>
