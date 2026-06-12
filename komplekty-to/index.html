@@ -41,9 +41,14 @@
       .to-hero-copy{max-width:560px}
       .to-hero-media{position:relative;margin:0;min-width:0;align-self:center}
       .to-hero-media img{display:block;width:min(100%,780px);height:auto;margin:0 auto;mix-blend-mode:multiply;filter:drop-shadow(0 24px 42px rgba(15,23,42,.08))}
-      .to-hero-proof{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 12px}
-      .to-hero-proof span{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(0,180,114,.14);border-radius:999px;background:rgba(255,255,255,.76);color:#255241;font-size:12.5px;font-weight:850;box-shadow:0 10px 24px rgba(15,23,42,.04)}
-      .to-hero-proof b{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;border-radius:999px;background:#dff7e9;color:#087244;font-size:12px}
+      .to-hero-bonus{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 12px;padding:12px 14px;border:1px solid rgba(0,180,114,.18);border-radius:20px;background:linear-gradient(135deg,#e8f9ef,#fff);box-shadow:0 14px 34px rgba(15,23,42,.05)}
+      .to-hero-bonus strong{color:#00a86b;font-size:clamp(28px,3vw,38px);line-height:1;font-weight:950;letter-spacing:.01em}
+      .to-hero-bonus span{color:#163b2c;font-size:16px;font-weight:900}
+      .to-hero-includes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px;padding:0;list-style:none}
+      .to-hero-includes li{display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start;padding:12px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 10px 24px rgba(15,23,42,.045)}
+      .to-hero-includes b{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#00a86b;color:#fff;font-size:14px}
+      .to-hero-includes strong{display:block;color:#111827;font-size:14px;line-height:1.25}
+      .to-hero-includes small{display:block;margin-top:4px;color:#5b6862;font-size:12.5px;font-weight:650;line-height:1.35}
       .to-hero-form{max-width:520px;margin-top:14px;gap:7px;padding:13px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 18px 44px rgba(15,23,42,.08)}
       .to-hero-form strong{font-size:19px}
       .to-hero-form input{min-height:40px}
@@ -107,7 +112,7 @@
         .to-service-list,.to-card-bullets{grid-template-columns:1fr}
         .to-service-pack{padding:20px}
       }
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-hero-proof,.to-form-note{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}}
       .brand-seo-hero h1{font-size:clamp(25px,2.9vw,38px);line-height:1.18}
       .to-page .brand-seo-hero h1{max-width:650px;font-size:clamp(27px,2.85vw,38px);line-height:1.12}
       .to-page .brand-seo-lead{max-width:600px;font-size:clamp(16px,1.35vw,18px);line-height:1.45}
@@ -177,13 +182,16 @@
               <a href="../">EVLine</a><span>/</span><strong>Комплекти ТО з Китаю</strong>
             </nav>
             <p class="brand-seo-kicker">Комплекти ТО з Китаю</p>
-            <h1>Комплект ТО для китайського авто з картою робіт</h1>
-            <p class="brand-seo-lead">Безкоштовно дамо список ТО по VIN і пробігу. З комплектом додаємо карту робіт для механіка за заводським регламентом виробника.</p>
-            <div class="to-hero-proof" aria-label="Ключові переваги">
-              <span><b>1</b> ТО по VIN</span>
-              <span><b>2</b> Оригінал з Китаю</span>
-              <span><b>3</b> Карта для СТО</span>
+            <h1>Комплект ТО для китайського авто</h1>
+            <p class="brand-seo-lead">Оригінальні розхідники, рідини та фільтри з Китаю під вашу модель, пробіг і VIN.</p>
+            <div class="to-hero-bonus" aria-label="Безкоштовно додаємо до комплекту">
+              <strong>Безкоштовно</strong>
+              <span>додаємо до комплекту ТО</span>
             </div>
+            <ol class="to-hero-includes" aria-label="Що безкоштовно входить">
+              <li><b>1</b><span><strong>Список компонентів для вашого ТО</strong><small>Підбираємо за VIN, моделлю і пробігом.</small></span></li>
+              <li><b>2</b><span><strong>Регламент для механіка</strong><small>Що, де і в якому порядку міняти на СТО.</small></span></li>
+            </ol>
             <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
               <strong>Отримати список ТО</strong>
               <p class="to-form-note">Модель, пробіг і VIN — ми підготуємо склад комплекту.</p>
