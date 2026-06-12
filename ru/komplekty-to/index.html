@@ -42,9 +42,13 @@
       .to-protocols-copy{align-self:start;margin-top:clamp(8px,1.2vw,16px)}
       .to-protocols-list{display:grid;gap:12px;margin-top:0}
       .to-protocols-list article{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:start;padding:12px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 12px 28px rgba(15,23,42,.045)}
+      .to-protocols-list article:nth-child(3){border-color:rgba(0,180,114,.35);background:linear-gradient(135deg,#102019 0%,#1c5a3d 100%);box-shadow:0 16px 34px rgba(16,32,25,.16)}
       .to-protocols-list b{display:grid;place-items:center;width:38px;height:38px;border-radius:14px;background:#00b472;color:#fff;font-size:17px;font-weight:950}
+      .to-protocols-list article:nth-child(3) b{background:#dff8ea;color:#0f5c3c}
       .to-protocols-list strong{display:block;color:#111827;font-size:16px;line-height:1.22}
+      .to-protocols-list article:nth-child(3) strong{color:#fff}
       .to-protocols-list p{margin:5px 0 0;color:#5b6862;font-size:13.5px;line-height:1.45}
+      .to-protocols-list article:nth-child(3) p{color:#d8f7e7}
       .to-protocols-note{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:0;padding:12px 14px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.78);box-shadow:0 12px 28px rgba(15,23,42,.045);color:#255241;font-size:14px;font-weight:800;line-height:1.5}
       .to-protocols-note span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#00b472;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
       .to-savings-section{background:linear-gradient(180deg,#fff 0%,#f5fbf7 100%)}
@@ -212,6 +216,7 @@
               <div class="to-protocols-list">
                 <article><b>1</b><div><strong>Регламентный перечень деталей и материалов</strong><p>Оригинальные партномера, спецификации, объемы, количество и примечания под конкретную модель, VIN и пробег.</p></div></article>
                 <article><b>2</b><div><strong>Технологическая карта для механика</strong><p>Заводские схемы доступа, контрольные точки, последовательность работ и моменты затяжки. Это ответ на вопрос: как правильно выполнить работу.</p></div></article>
+                <article><b>3</b><div><strong>Официальные сервисные данные</strong><p>Состав ТО формируем по официальным дилерским регламентам производителя для вашей модели, года, пробега и VIN.</p></div></article>
               </div>
             </div>
             <p class="to-protocols-note"><span>Бесплатно</span> Список готовим после VIN, технологическую карту добавляем при покупке комплекта.</p>
