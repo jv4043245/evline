@@ -33,6 +33,17 @@
       .to-card-preview{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center}
       .to-card-preview img{width:100%;height:auto;border-radius:14px;box-shadow:0 14px 40px rgba(20,60,40,.14)}
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
+      .to-protocols-panel{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr);gap:clamp(22px,3vw,38px);align-items:center;padding:clamp(20px,3vw,34px);border:1px solid rgba(0,180,114,.16);border-radius:30px;background:linear-gradient(135deg,#f7fbf8 0%,#fff 58%,#eefaf4 100%);box-shadow:0 24px 64px rgba(15,23,42,.08)}
+      .to-protocols-media{margin:0}
+      .to-protocols-media img{display:block;width:100%;height:auto;border-radius:22px;box-shadow:0 18px 46px rgba(20,60,40,.13)}
+      .to-protocols-copy .parts-section-head{text-align:left;margin:0 0 14px}
+      .to-protocols-list{display:grid;gap:12px;margin-top:16px}
+      .to-protocols-list article{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start;padding:14px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 12px 28px rgba(15,23,42,.045)}
+      .to-protocols-list b{display:grid;place-items:center;width:42px;height:42px;border-radius:15px;background:#00b472;color:#fff;font-size:18px;font-weight:950}
+      .to-protocols-list strong{display:block;color:#111827;font-size:17px;line-height:1.25}
+      .to-protocols-list p{margin:6px 0 0;color:#5b6862;font-size:14px;line-height:1.55}
+      .to-protocols-note{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 0;color:#255241;font-size:14px;font-weight:800;line-height:1.5}
+      .to-protocols-note span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#00b472;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
@@ -104,6 +115,7 @@
         .to-page .site-header .container,
         .to-page .topbar .container{width:min(100% - 32px,var(--max))}
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
+        .to-protocols-panel{grid-template-columns:1fr;padding:20px}
         .to-service-pack,.to-logistics-compare{grid-template-columns:1fr}
         .to-hero-form{max-width:none;justify-self:stretch}
         .to-hero-media{order:-1}
@@ -112,7 +124,7 @@
         .to-service-list,.to-card-bullets{grid-template-columns:1fr}
         .to-service-pack{padding:20px}
       }
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{padding-right:54px}}
       .brand-seo-hero h1{font-size:clamp(25px,2.9vw,38px);line-height:1.18}
       .to-page .brand-seo-hero h1{max-width:650px;font-size:clamp(27px,2.85vw,38px);line-height:1.12}
       .to-page .brand-seo-lead{max-width:600px;font-size:clamp(16px,1.35vw,18px);line-height:1.45}
@@ -210,23 +222,24 @@
         </div>
       </section>
 
-      <section class="brand-seo-section">
+      <section class="brand-seo-section brand-seo-section--soft">
         <div class="container">
-          <div class="to-service-pack to-service-pack--offer">
-            <div>
+          <div class="to-protocols-panel">
+            <figure class="to-protocols-media">
+              <img src="../assets/images/to/to-protocols-preview.jpg" alt="Приклад технічного регламенту і технологічної карти EVLine для комплекту ТО" loading="lazy" width="1280" height="853">
+            </figure>
+            <div class="to-protocols-copy">
               <div class="parts-section-head" style="text-align:left;margin:0 0 8px">
-                <span>Що ви отримуєте</span>
-                <h2>Список ТО безкоштовно, карта робіт — безкоштовно з комплектом</h2>
-                <p>Ми знаємо, що потрібно міняти на планових пробігах у сучасних BYD, Zeekr, Li Auto, Denza, Xiaomi та інших китайських авто. По VIN даємо точний перелік, а при замовленні комплекту додаємо робочу карту для вашого сервісу.</p>
+                <span>Що саме додаємо</span>
+                <h2>Два документи, які перетворюють комплект на готовий план ТО</h2>
+                <p>Клієнт одразу бачить, що потрібно купити, а механік отримує зрозумілий маршрут робіт без експериментів на авто.</p>
               </div>
-              <div class="to-service-list">
-                <article><strong>Безкоштовний список</strong><p>10, 20, 30, 60 тис. км — даємо перелік того, що входить у ТО саме вашої комплектації.</p></article>
-                <article><strong>Оригінальні розхідники</strong><p>Фільтри, оливи, рідини, колодки, редукторне масло, сервісні дрібниці.</p></article>
-                <article><strong>Карта робіт безкоштовно</strong><p>При купівлі комплекту даємо детальний регламент для механіка: доступ, порядок, моменти затяжки.</p></article>
-                <article><strong>Авіа або море</strong><p>Терміново — авіа. Планово — море, щоб не переплачувати за доставку.</p></article>
+              <div class="to-protocols-list">
+                <article><b>1</b><div><strong>Технічний регламент для СТО</strong><p>Модель, VIN, пробіг, перелік робіт і запчастин, специфікації, кількість та примітки. Це відповідь на питання: що саме потрібно для вашого ТО.</p></div></article>
+                <article><b>2</b><div><strong>Технологічна карта для механіка</strong><p>Схеми доступу, контрольні точки, порядок робіт і моменти затягування. Це відповідь на питання: як правильно виконати роботу.</p></div></article>
               </div>
+              <p class="to-protocols-note"><span>Безкоштовно</span> Список готуємо після VIN, технологічну карту додаємо при купівлі комплекту.</p>
             </div>
-            <img src="../assets/images/to/to-service-kit.svg" alt="Комплект ТО EVLine з картою робіт" loading="lazy">
           </div>
         </div>
       </section>
