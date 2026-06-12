@@ -66,11 +66,11 @@
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
-      .to-page .brand-seo-hero{overflow:hidden;padding:clamp(28px,3.6vw,46px) 0 clamp(28px,3.6vw,46px);background:linear-gradient(180deg,#f7fbf8 0%,#fff 100%)}
-      .to-page .brand-seo-hero__grid{width:min(100% - 40px,1180px);grid-template-columns:minmax(0,.96fr) minmax(370px,1.04fr);gap:clamp(22px,3.2vw,46px);align-items:center}
-      .to-hero-copy{max-width:560px}
-      .to-hero-media{position:relative;margin:0;min-width:0;align-self:center}
-      .to-hero-media img{display:block;width:min(100%,780px);height:auto;margin:0 auto;mix-blend-mode:multiply;filter:drop-shadow(0 24px 42px rgba(15,23,42,.08))}
+      .to-page .brand-seo-hero{overflow:hidden;padding:clamp(24px,3.2vw,40px) 0 clamp(30px,3.6vw,46px);background:#fff}
+      .to-page .brand-seo-hero__grid{width:min(100% - 40px,1180px);grid-template-columns:minmax(0,.92fr) minmax(390px,1.08fr);gap:clamp(14px,2.4vw,34px) clamp(24px,3.6vw,48px);align-items:start}
+      .to-hero-copy{max-width:590px}
+      .to-hero-media{position:relative;margin:0;min-width:0;align-self:start;transform:translateY(clamp(-28px,-1.7vw,-14px))}
+      .to-hero-media img{display:block;width:min(100%,800px);height:auto;margin:0 auto;filter:drop-shadow(0 24px 42px rgba(15,23,42,.08))}
       .to-hero-bonus{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 12px;padding:12px 14px;border:1px solid rgba(0,180,114,.18);border-radius:20px;background:linear-gradient(135deg,#e8f9ef,#fff);box-shadow:0 14px 34px rgba(15,23,42,.05)}
       .to-hero-bonus strong{color:#00a86b;font-size:clamp(28px,3vw,38px);line-height:1;font-weight:950;letter-spacing:.01em}
       .to-hero-bonus span{color:#163b2c;font-size:16px;font-weight:900}
@@ -79,12 +79,12 @@
       .to-hero-includes b{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#00a86b;color:#fff;font-size:14px}
       .to-hero-includes strong{display:block;color:#111827;font-size:14px;line-height:1.25}
       .to-hero-includes small{display:block;margin-top:4px;color:#5b6862;font-size:12.5px;font-weight:650;line-height:1.35}
-      .to-hero-form{max-width:520px;margin-top:14px;gap:7px;padding:13px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 18px 44px rgba(15,23,42,.08)}
+      .to-hero-form{grid-column:1/-1;display:grid;grid-template-columns:max-content minmax(190px,.75fr) minmax(390px,1.35fr) max-content;align-items:center;width:100%;max-width:none;margin-top:0;gap:12px 16px;padding:15px;border-radius:22px;background:rgba(255,255,255,.94);box-shadow:0 18px 44px rgba(15,23,42,.08)}
       .to-hero-form strong{font-size:19px}
       .to-hero-form input{min-height:40px}
-      .to-hero-form button{min-height:44px}
-      .to-hero-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-      .to-hero-fields input:first-child{grid-column:1/-1}
+      .to-hero-form button{min-height:44px;white-space:nowrap}
+      .to-hero-fields{display:grid;grid-template-columns:1.2fr 1fr .85fr;gap:9px}
+      .to-hero-fields input:first-child{grid-column:auto}
       .to-form-note{margin:0;color:#64748b;font-size:14px;font-weight:650;line-height:1.45}
       .to-free-badge{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:5px 9px;border-radius:999px;background:#dff7e9;color:#087244;font-size:11px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
       .to-free-line{margin-top:10px;padding:8px 10px;border-radius:12px;background:#ecfdf3;color:#16603d;font-weight:850}
@@ -145,7 +145,8 @@
         .to-service-list,.to-card-bullets{grid-template-columns:1fr}
         .to-service-pack{padding:20px}
       }
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{padding-right:54px}.to-savings-panel{border-radius:24px;padding:16px}.to-savings-main{padding:20px;border-radius:20px}.to-savings-main h2 strong{font-size:52px}.to-savings-button{width:100%;padding:13px 14px}.to-savings-reasons{grid-template-columns:1fr}.to-savings-reasons article{min-height:auto;padding:16px}}
+      @media(max-width:1100px){.to-hero-form{grid-template-columns:1fr}.to-hero-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.to-hero-form button{width:100%}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{padding-right:54px}.to-savings-panel{border-radius:24px;padding:16px}.to-savings-main{padding:20px;border-radius:20px}.to-savings-main h2 strong{font-size:52px}.to-savings-button{width:100%;padding:13px 14px}.to-savings-reasons{grid-template-columns:1fr}.to-savings-reasons article{min-height:auto;padding:16px}}
       .brand-seo-hero h1{font-size:clamp(25px,2.9vw,38px);line-height:1.18}
       .to-page .brand-seo-hero h1{max-width:650px;font-size:clamp(27px,2.85vw,38px);line-height:1.12}
       .to-page .brand-seo-lead{max-width:600px;font-size:clamp(16px,1.35vw,18px);line-height:1.45}
@@ -225,21 +226,21 @@
               <li><b>1</b><span><strong>Список компонентів для вашого ТО</strong><small>Підбираємо за VIN, моделлю і пробігом.</small></span></li>
               <li><b>2</b><span><strong>Регламент для механіка</strong><small>Що, де і в якому порядку міняти на СТО.</small></span></li>
             </ol>
-            <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
-              <strong>Отримати список ТО</strong>
-              <p class="to-form-note">Модель, пробіг і VIN — ми підготуємо склад комплекту.</p>
-              <div class="to-hero-fields">
-                <input name="car" placeholder="Марка, модель і пробіг" required>
-                <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
-                <input name="phone" placeholder="+380..." autocomplete="tel" required>
-              </div>
-              <input type="hidden" name="part" value="Комплект ТО + технологічна карта">
-              <button type="submit">Отримати список ТО</button>
-            </form>
           </div>
           <figure class="to-hero-media">
             <img src="../assets/images/to/to-hero-complete-kit.png" alt="Комплект ТО EVLine з розхідниками, рідинами та технологічними протоколами для СТО" width="1536" height="1024" fetchpriority="high">
           </figure>
+          <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
+            <strong>Отримати список ТО</strong>
+            <p class="to-form-note">Модель, пробіг і VIN — ми підготуємо склад комплекту.</p>
+            <div class="to-hero-fields">
+              <input name="car" placeholder="Марка, модель і пробіг" required>
+              <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <input name="phone" placeholder="+380..." autocomplete="tel" required>
+            </div>
+            <input type="hidden" name="part" value="Комплект ТО + технологічна карта">
+            <button type="submit">Отримати список ТО</button>
+          </form>
         </div>
       </section>
 
