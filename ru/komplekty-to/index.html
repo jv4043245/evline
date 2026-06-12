@@ -33,9 +33,38 @@
       .to-card-preview{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center}
       .to-card-preview img{width:100%;height:auto;border-radius:14px;box-shadow:0 14px 40px rgba(20,60,40,.14)}
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
+      .to-page .site-header .container,
+      .to-page .topbar .container{width:min(100% - 40px,1140px)}
+      .to-page .brand-seo-breadcrumb{display:none}
+      .to-page .brand-seo-hero{overflow:hidden;padding:clamp(28px,3.6vw,46px) 0 clamp(28px,3.6vw,46px);background:linear-gradient(180deg,#f7fbf8 0%,#fff 100%)}
+      .to-page .brand-seo-hero__grid{width:min(100% - 40px,1180px);grid-template-columns:minmax(0,.96fr) minmax(370px,1.04fr);gap:clamp(22px,3.2vw,46px);align-items:center}
+      .to-hero-copy{max-width:560px}
+      .to-hero-media{position:relative;margin:0;min-width:0;align-self:center}
+      .to-hero-media img{display:block;width:min(100%,780px);height:auto;margin:0 auto;mix-blend-mode:multiply;filter:drop-shadow(0 24px 42px rgba(15,23,42,.08))}
+      .to-hero-proof{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 12px}
+      .to-hero-proof span{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(0,180,114,.14);border-radius:999px;background:rgba(255,255,255,.76);color:#255241;font-size:12.5px;font-weight:850;box-shadow:0 10px 24px rgba(15,23,42,.04)}
+      .to-hero-proof b{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;border-radius:999px;background:#dff7e9;color:#087244;font-size:12px}
+      .to-hero-form{max-width:520px;margin-top:14px;gap:7px;padding:13px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 18px 44px rgba(15,23,42,.08)}
+      .to-hero-form strong{font-size:19px}
+      .to-hero-form input{min-height:40px}
+      .to-hero-form button{min-height:44px}
+      .to-hero-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      .to-hero-fields input:first-child{grid-column:1/-1}
+      .to-form-note{margin:0;color:#64748b;font-size:14px;font-weight:650;line-height:1.45}
       @media(max-width:860px){.to-card-preview{grid-template-columns:1fr}}
       .brand-seo-hero h1{font-size:clamp(25px,2.9vw,38px);line-height:1.18}
+      .to-page .brand-seo-hero h1{max-width:650px;font-size:clamp(27px,2.85vw,38px);line-height:1.12}
+      .to-page .brand-seo-lead{max-width:600px;font-size:clamp(16px,1.35vw,18px);line-height:1.45}
       .brand-seo-hero__grid{grid-template-columns:minmax(0,1fr) minmax(330px,0.78fr)}
+      @media(max-width:860px){
+        .to-page .site-header .container,
+        .to-page .topbar .container{width:min(100% - 32px,var(--max))}
+        .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
+        .to-hero-form{max-width:none;justify-self:stretch}
+        .to-hero-media{order:-1}
+        .to-hero-media img{width:min(100%,680px)}
+      }
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media img{width:min(100%,300px)}.to-hero-proof,.to-form-note{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}}
       @media(min-width:861px){
         .cards-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1080px;margin:0 auto}
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
@@ -59,7 +88,7 @@
 </style>
     <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["AutoPartsStore"],"@id":"https://evline.com.ua/#business","name":"EVLine Ukraine","url":"https://evline.com.ua","logo":"https://evline.com.ua/assets/images/logo.png","telephone":"+380935251024","email":"evlineukraine@gmail.com","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 3, офис 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":{"@type":"Country","name":"Украина"},"sameAs":["https://t.me/evline_support"]},{"@type":"BreadcrumbList","@id":"https://evline.com.ua/ru/komplekty-to/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"EVLine","item":"https://evline.com.ua/ru/"},{"@type":"ListItem","position":2,"name":"Комплекты ТО из Китая","item":"https://evline.com.ua/ru/komplekty-to/"}]},{"@type":"Service","@id":"https://evline.com.ua/ru/komplekty-to/#service","name":"ТО для китайского авто: оригинальный комплект + карта, с которой справится любое СТО","serviceType":"Maintenance kits with technical instructions","provider":{"@id":"https://evline.com.ua/#business"},"areaServed":{"@type":"Country","name":"Украина"},"description":"Оригинальный комплект ТО из Китая + детальная технологическая карта для вашего СТО: партномера, моменты затяжки, схемы. Морем — существенно дешевле."},{"@type":"FAQPage","@id":"https://evline.com.ua/ru/komplekty-to/#faq","inLanguage":"ru-UA","mainEntity":[{"@type":"Question","name":"Мое СТО никогда не видело BYD. Точно справится?","acceptedAnswer":{"@type":"Answer","text":"Для работ уровня ТО — да: карта описывает процедуру до уровня «какой ключ и с каким моментом». В этом ее смысл: компетентным становится любой аккуратный механик."}},{"@type":"Question","name":"А высоковольтные работы?","acceptedAnswer":{"@type":"Answer","text":"В карты ТО высоковольтные процедуры не входят принципиально — это зона сертифицированных электриков. Все, что в комплекте, безопасно для обычного СТО."}},{"@type":"Question","name":"Можно купить карту отдельно, без комплекта?","acceptedAnswer":{"@type":"Answer","text":"Нет, карта идет только вместе с комплектом — это часть нашей услуги, а не отдельный товар. Каждый экземпляр маркируется номером заказа."}},{"@type":"Question","name":"Сколько реально экономлю морем?","acceptedAnswer":{"@type":"Answer","text":"Зависит от веса. Ориентир: доставка 10-килограммового комплекта авиа — около $155, морем — от $56, а от 30 кг тарифы еще ниже. Плюс сами расходники дешевле, чем у локальных продавцов."}},{"@type":"Question","name":"Откуда уверенность, что все оригинал?","acceptedAnswer":{"@type":"Answer","text":"Покупаем у официальных дилеров в Китае, проверяем и фотографируем каждую позицию перед отправкой — фотоотчет вы получаете до того, как комплект поедет."}}]}]}</script>
   </head>
-  <body class="parts-page brand-seo-page">
+  <body class="parts-page brand-seo-page to-page">
     <a class="skip-link" href="#main">К содержанию</a>
     <div class="topbar">
       <div class="container topbar__inner topbar__inner--center">
@@ -93,29 +122,33 @@
     <main id="main">
       <section class="brand-seo-hero">
         <div class="container brand-seo-hero__grid">
-          <div>
+          <div class="to-hero-copy">
             <nav class="brand-seo-breadcrumb" aria-label="Breadcrumb">
               <a href="../">EVLine</a><span>/</span><strong>Комплекты ТО из Китая</strong>
             </nav>
             <p class="brand-seo-kicker">Комплекты ТО из Китая</p>
-            <h1>ТО для китайского авто: комплект + технологическая карта</h1>
-            <p class="brand-seo-lead">Механики в Украине часто не знают, как обслуживать современные китайские авто — даже на уровне фильтров и масла. Мы прикладываем к комплекту технологическую карту именно для вашей модели: что, где, в каком порядке и с каким моментом. Ваш привычный сервис становится компетентным.</p>
-            <div class="brand-seo-tags">
-              <span>BYD</span>
-              <span>Zeekr</span>
-              <span>Li Auto</span>
-              <span>все китайские марки</span>
-              <span>оригинал</span>
+            <h1>Комплект ТО для китайского авто с картой работ</h1>
+            <p class="brand-seo-lead">Бесплатно дадим список ТО по VIN и пробегу. С комплектом добавляем карту работ для механика по заводскому регламенту производителя.</p>
+            <div class="to-hero-proof" aria-label="Ключевые преимущества">
+              <span><b>1</b> ТО по VIN</span>
+              <span><b>2</b> Оригинал из Китая</span>
+              <span><b>3</b> Карта для СТО</span>
             </div>
+            <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
+              <strong>Получить список ТО</strong>
+              <p class="to-form-note">Модель, пробег и VIN — подготовим состав комплекта.</p>
+              <div class="to-hero-fields">
+                <input name="car" placeholder="Марка, модель и пробег" required>
+                <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                <input name="phone" placeholder="+380..." autocomplete="tel" required>
+              </div>
+              <input type="hidden" name="part" value="Комплект ТО + технологическая карта">
+              <button type="submit">Получить список ТО</button>
+            </form>
           </div>
-          <form class="brand-seo-form" id="to-form" data-telegram-parts-form>
-            <strong>Расчет ТО по VIN</strong>
-            <input name="car" placeholder="Модель и пробег" required>
-            <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
-            <input name="part" value="Комплект ТО" required>
-            <button type="submit">Получить состав и цены</button>
-            <a href="tel:+380935251024">Или позвонить: +38 (093) 525-10-24</a>
-          </form>
+          <figure class="to-hero-media">
+            <img src="../../assets/images/to/to-hero-complete-kit.png" alt="Комплект ТО EVLine с расходниками, жидкостями и технологическими протоколами для СТО" width="1536" height="1024" fetchpriority="high">
+          </figure>
         </div>
       </section>
 
