@@ -33,15 +33,18 @@
       .to-card-preview{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center}
       .to-card-preview img{width:100%;height:auto;border-radius:14px;box-shadow:0 14px 40px rgba(20,60,40,.14)}
       .to-note{font-size:13px;color:#7d8a84;margin-top:10px}
-      .to-protocols-panel{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr);gap:clamp(22px,3vw,38px);align-items:center;padding:clamp(20px,3vw,34px);border:1px solid rgba(0,180,114,.16);border-radius:30px;background:linear-gradient(135deg,#f7fbf8 0%,#fff 58%,#eefaf4 100%);box-shadow:0 24px 64px rgba(15,23,42,.08)}
-      .to-protocols-media{margin:0}
-      .to-protocols-media img{display:block;width:100%;height:auto;border-radius:22px;box-shadow:0 18px 46px rgba(20,60,40,.13)}
+      .to-protocols-panel{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(300px,.58fr);gap:clamp(16px,2.2vw,26px);align-items:start;padding:clamp(16px,2.2vw,26px);border:1px solid rgba(0,180,114,.16);border-radius:30px;background:linear-gradient(135deg,#f7fbf8 0%,#fff 58%,#eefaf4 100%);box-shadow:0 24px 64px rgba(15,23,42,.08)}
+      .to-protocols-media{margin:0;align-self:start}
+      .to-protocols-media img{display:block;width:100%;height:auto;border-radius:20px;box-shadow:0 18px 46px rgba(20,60,40,.13)}
+      .to-protocols-copy{align-self:start}
       .to-protocols-copy .parts-section-head{text-align:left;margin:0 0 14px}
+      .to-protocols-copy .parts-section-head h2{font-size:clamp(23px,1.9vw,30px);line-height:1.12}
+      .to-protocols-copy .parts-section-head p{color:#255241;font-weight:850}
       .to-protocols-list{display:grid;gap:12px;margin-top:16px}
-      .to-protocols-list article{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start;padding:14px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 12px 28px rgba(15,23,42,.045)}
-      .to-protocols-list b{display:grid;place-items:center;width:42px;height:42px;border-radius:15px;background:#00b472;color:#fff;font-size:18px;font-weight:950}
-      .to-protocols-list strong{display:block;color:#111827;font-size:17px;line-height:1.25}
-      .to-protocols-list p{margin:6px 0 0;color:#5b6862;font-size:14px;line-height:1.55}
+      .to-protocols-list article{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:start;padding:12px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 12px 28px rgba(15,23,42,.045)}
+      .to-protocols-list b{display:grid;place-items:center;width:38px;height:38px;border-radius:14px;background:#00b472;color:#fff;font-size:17px;font-weight:950}
+      .to-protocols-list strong{display:block;color:#111827;font-size:16px;line-height:1.22}
+      .to-protocols-list p{margin:5px 0 0;color:#5b6862;font-size:13.5px;line-height:1.45}
       .to-protocols-note{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 0;color:#255241;font-size:14px;font-weight:800;line-height:1.5}
       .to-protocols-note span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#00b472;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
       .to-savings-section{background:linear-gradient(180deg,#fff 0%,#f5fbf7 100%)}
@@ -203,12 +206,12 @@
             <div class="to-protocols-copy">
               <div class="parts-section-head" style="text-align:left;margin:0 0 8px">
                 <span>Что именно добавляем</span>
-                <h2>Два документа, которые превращают комплект в готовый план ТО</h2>
-                <p>Клиент сразу понимает, что нужно купить, а механик получает понятный маршрут работ без экспериментов на автомобиле.</p>
+                <h2>Регламент и технологическая карта к комплекту ТО</h2>
+                <p>Все комплекты для ТО комплектуем:</p>
               </div>
               <div class="to-protocols-list">
-                <article><b>1</b><div><strong>Технический регламент для СТО</strong><p>Модель, VIN, пробег, перечень работ и запчастей, спецификации, количество и примечания. Это ответ на вопрос: что именно нужно для вашего ТО.</p></div></article>
-                <article><b>2</b><div><strong>Технологическая карта для механика</strong><p>Схемы доступа, контрольные точки, порядок работ и моменты затяжки. Это ответ на вопрос: как правильно выполнить работу.</p></div></article>
+                <article><b>1</b><div><strong>Регламентный перечень деталей и материалов</strong><p>Оригинальные партномера, спецификации, объемы, количество и примечания под конкретную модель, VIN и пробег.</p></div></article>
+                <article><b>2</b><div><strong>Технологическая карта для механика</strong><p>Заводские схемы доступа, контрольные точки, последовательность работ и моменты затяжки. Это ответ на вопрос: как правильно выполнить работу.</p></div></article>
               </div>
               <p class="to-protocols-note"><span>Бесплатно</span> Список готовим после VIN, технологическую карту добавляем при покупке комплекта.</p>
             </div>
