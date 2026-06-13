@@ -52,24 +52,28 @@
       .to-protocols-note{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:0;padding:12px 14px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.78);box-shadow:0 12px 28px rgba(15,23,42,.045);color:#255241;font-size:14px;font-weight:800;line-height:1.5}
       .to-protocols-note span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#00b472;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
       .to-savings-section{background:linear-gradient(180deg,#fff 0%,#f5fbf7 100%)}
-      .to-savings-panel{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(18px,3vw,34px);align-items:stretch;border:1px solid rgba(0,180,114,.16);border-radius:30px;background:#fff;padding:clamp(18px,3vw,30px);box-shadow:0 24px 64px rgba(15,23,42,.08)}
-      .to-savings-main{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;min-height:360px;padding:clamp(22px,3vw,34px);border-radius:24px;background:linear-gradient(145deg,#101816 0%,#163d2b 100%);color:#fff}
-      .to-savings-main::after{content:"";position:absolute;right:-46px;bottom:-70px;width:210px;height:210px;border-radius:50%;background:rgba(0,180,114,.22)}
-      .to-savings-eyebrow{display:inline-flex;width:max-content;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:rgba(0,180,114,.15);color:#83e6b7;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
-      .to-savings-main h2{position:relative;margin:18px 0 12px;color:#fff;font-size:clamp(28px,4.1vw,54px);line-height:1.02;letter-spacing:-.01em}
-      .to-savings-main h2 strong{display:block;color:#83e6b7;font-size:clamp(52px,7.2vw,88px);line-height:.9}
-      .to-savings-main p{position:relative;margin:0;color:#d5e5dd;font-size:16px;line-height:1.6}
-      .to-savings-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;margin-top:22px;padding:14px 18px;border-radius:999px;background:#00b472;color:#fff;text-decoration:none;font-size:15px;font-weight:950;box-shadow:0 16px 34px rgba(0,180,114,.22);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+      .to-savings-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(320px,.72fr) minmax(0,1.28fr);gap:clamp(18px,3vw,38px);align-items:center;border:1px solid rgba(0,180,114,.16);border-radius:32px;background:linear-gradient(135deg,#fff 0%,#fff 62%,#eefaf4 100%);padding:clamp(22px,3vw,36px);box-shadow:0 24px 64px rgba(15,23,42,.08)}
+      .to-savings-main{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;min-height:auto;color:#111827}
+      .to-savings-eyebrow{display:inline-flex;width:max-content;align-items:center;gap:8px;padding:7px 12px;border:1px solid rgba(0,180,114,.18);border-radius:999px;background:#eefaf4;color:#2f7a50;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+      .to-savings-main h2{margin:14px 0 12px;color:#111827;font-size:clamp(30px,4.2vw,50px);line-height:1.02}
+      .to-savings-main h2 span{display:inline-block;margin-right:10px;color:#55a92f;font-size:clamp(22px,2.4vw,34px);font-weight:950;vertical-align:middle}
+      .to-savings-main h2 strong{display:inline-block;color:#55a92f;font-size:clamp(72px,9vw,126px);font-weight:950;line-height:.78}
+      .to-savings-main h2 em{display:block;margin-top:8px;color:#050b18;font-size:clamp(23px,2.6vw,36px);font-style:normal;font-weight:950;line-height:1.05}
+      .to-savings-main p{margin:0;color:#5b6862;font-size:16px;line-height:1.58}
+      .to-savings-list{display:grid;gap:0;width:100%;max-width:470px;margin:20px 0 0;padding:0;list-style:none}
+      .to-savings-list li{display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(17,24,39,.09);color:#1f2937;font-size:17px;font-weight:850;line-height:1.25}
+      .to-savings-list li:last-child{border-bottom:0}
+      .to-savings-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(73,164,66,.5);border-radius:50%;background:#f8fff9;color:#49a442;font-size:16px}
+      .to-savings-original{display:flex;align-items:center;gap:12px;width:100%;max-width:420px;margin-top:14px;padding:8px;border:1px solid rgba(73,164,66,.35);border-radius:999px;background:#fff;color:#1f2937;font-size:13px;font-weight:800}
+      .to-savings-original strong{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:#071107;color:#74d947;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}
+      .to-savings-chain{display:flex;align-items:center;gap:10px;width:100%;max-width:420px;margin-top:14px;color:#5b6862;font-size:14px;font-weight:850}
+      .to-savings-chain b{color:#111827}
+      .to-savings-chain .brand{color:#46a72b;font-size:20px;font-style:italic;font-weight:950}
+      .to-savings-chain i{display:block;flex:1;max-width:72px;border-bottom:2px dashed #59bd39}
+      .to-savings-button{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;margin-top:18px;padding:14px 18px;border-radius:999px;background:#00b472;color:#fff;text-decoration:none;font-size:15px;font-weight:950;box-shadow:0 16px 34px rgba(0,180,114,.22);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
       .to-savings-button:hover{transform:translateY(-2px);background:#11c983;box-shadow:0 20px 42px rgba(0,180,114,.3)}
-      .to-savings-mini{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-      .to-savings-mini span{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.09);color:#effaf4;font-size:12px;font-weight:850}
-      .to-savings-reasons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-      .to-savings-reasons article{position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:170px;padding:18px;border:1px solid rgba(0,180,114,.16);border-radius:22px;background:linear-gradient(145deg,#fff 0%,#f7fbf8 100%);box-shadow:0 14px 34px rgba(15,23,42,.045);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-      .to-savings-reasons article:hover{transform:translateY(-3px);border-color:rgba(0,180,114,.35);box-shadow:0 18px 42px rgba(15,23,42,.08)}
-      .to-savings-reasons b{display:grid;place-items:center;width:42px;height:42px;margin-bottom:14px;border-radius:15px;background:#e8f9ef;color:#00a86b;font-size:21px}
-      .to-savings-reasons h3{margin:0 0 8px;color:#111827;font-size:18px;line-height:1.25}
-      .to-savings-reasons p{margin:0;color:#5b6862;font-size:14px;line-height:1.55}
-      .to-savings-footnote{grid-column:1/-1;margin:0;padding:12px 14px;border-radius:16px;background:#ecfdf3;color:#245643;font-size:13px;font-weight:800;line-height:1.45}
+      .to-savings-visual{position:relative;z-index:1;align-self:center;margin:0 -12px 0 0}
+      .to-savings-visual img{display:block;width:108%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
@@ -104,13 +108,14 @@
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
         .to-protocols-panel{grid-template-columns:1fr;padding:20px}
         .to-savings-panel{grid-template-columns:1fr}
-        .to-savings-main{min-height:auto}
+        .to-savings-visual{align-self:center;margin:0}
+        .to-savings-visual img{width:100%}
         .to-hero-form{max-width:none;justify-self:stretch}
         .to-hero-media{order:-1}
         .to-hero-media img{width:min(100%,680px)}
       }
       @media(max-width:1100px){.to-hero-form{grid-template-columns:1fr}.to-hero-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.to-hero-form button{width:100%}}
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:16px}.to-savings-main{padding:20px;border-radius:20px}.to-savings-main h2 strong{font-size:52px}.to-savings-button{width:100%;padding:13px 14px}.to-savings-reasons{grid-template-columns:1fr}.to-savings-reasons article{min-height:auto;padding:16px}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:18px}.to-savings-main h2 strong{font-size:72px}.to-savings-list li{grid-template-columns:36px 1fr;font-size:15px}.to-savings-icon{width:30px;height:30px;font-size:14px}.to-savings-button,.to-savings-original{width:100%;padding:13px 14px}.to-savings-chain{font-size:12px}.to-savings-chain .brand{font-size:17px}}
       @media(min-width:861px){
         .cards-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1080px;margin:0 auto}
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
@@ -228,25 +233,22 @@
         <div class="container">
           <div class="to-savings-panel">
             <div class="to-savings-main">
-              <div>
-                <span class="to-savings-eyebrow">Плановое ТО можно покупать умнее</span>
-                <h2><strong>до 30%</strong> экономии на каждом плановом ТО</h2>
-                <p>Точную цифру посчитаем после VIN, пробега, веса комплекта и способа доставки. Но логика простая: плановое ТО известно заранее, поэтому его не нужно покупать с локальной “срочной” полки.</p>
-                <div class="to-savings-mini" aria-label="Что входит в предложение">
-                  <span>📦 комплект ТО</span>
-                  <span>✅ только оригинал</span>
-                  <span>📄 карты для СТО</span>
-                </div>
-              </div>
+              <span class="to-savings-eyebrow">Экономия без потери качества</span>
+              <h2><span>до</span> <strong>30%</strong><em>экономии на каждом ТО</em></h2>
+              <p>Планируйте обслуживание заранее: комплект едет напрямую из Китая, без локальных наценок и без срочной авиадоставки.</p>
+              <ul class="to-savings-list">
+                <li><span class="to-savings-icon">↯</span><span>Без переплаты СТО</span></li>
+                <li><span class="to-savings-icon">⌁</span><span>Без переплаты магазину</span></li>
+                <li><span class="to-savings-icon">◎</span><span>Прямые поставки от производителя из Китая</span></li>
+                <li><span class="to-savings-icon">□</span><span>Бесплатные технические карты для вашего авто</span></li>
+              </ul>
+              <div class="to-savings-original"><strong>Original</strong><span>Для комплектов ТО — только оригинальные расходные материалы.</span></div>
+              <div class="to-savings-chain" aria-label="Цепочка поставки"><b>Производитель</b><i></i><span class="brand">EVLine</span><i></i><b>Вы</b></div>
               <a class="to-savings-button" href="#to-form">Посчитать комплект по VIN</a>
             </div>
-            <div class="to-savings-reasons">
-              <article><b>🏷️</b><h3>Без локальной наценки</h3><p>Не покупаете расходники “с полки”, где в цену уже заложены дефицит, срочность и запас продавца.</p></article>
-              <article><b>🚢</b><h3>Море вместо срочности</h3><p>Если до ТО еще 1,5-2 месяца, комплект едет морем. Это медленнее, зато заметно дешевле авиа.</p></article>
-              <article><b>🧪</b><h3>Для ТО — только оригинал</h3><p>Фильтры, жидкости и расходники подбираем из официальных каналов в Китае, без аналогов “должно подойти”.</p></article>
-              <article><b>📋</b><h3>Карты для механика бесплатно</h3><p>К комплекту добавляем регламент и технологическую карту, чтобы любое аккуратное СТО работало по понятному плану.</p></article>
-              <p class="to-savings-footnote">Для каждого авто можем посчитать два сценария: “срочно авиа” и “планово морем” — с разницей в стоимости до заказа.</p>
-            </div>
+            <figure class="to-savings-visual">
+              <img src="../../assets/images/to/to-savings-kit-visual.jpg" alt="Комплект ТО EVLine с оригинальными расходными материалами и техническими картами для СТО" width="1252" height="860" loading="lazy" decoding="async">
+            </figure>
           </div>
         </div>
       </section>
