@@ -63,7 +63,7 @@
       .to-savings-list{display:grid;gap:0;width:100%;max-width:470px;margin:20px 0 0;padding:0;list-style:none}
       .to-savings-list li{display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(17,24,39,.09);color:#1f2937;font-size:17px;font-weight:850;line-height:1.25}
       .to-savings-list li:last-child{border-bottom:0}
-      .to-savings-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(73,164,66,.5);border-radius:50%;background:#f8fff9;color:#49a442;font-size:16px}
+      .to-savings-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(73,164,66,.35);border-radius:50%;background:linear-gradient(135deg,#f8fff9,#e9f8ef);color:#21a866;font-size:15px;font-weight:950;box-shadow:inset 0 0 0 4px rgba(255,255,255,.72)}
       .to-savings-original{display:flex;align-items:center;gap:12px;width:100%;max-width:none;min-height:58px;margin:0;padding:8px;border:1px solid rgba(73,164,66,.35);border-radius:999px;background:#fff;color:#1f2937;font-size:13px;font-weight:800}
       .to-savings-original strong{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:#071107;color:#74d947;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}
       .to-savings-chain{display:grid;grid-template-columns:auto minmax(32px,1fr) auto minmax(32px,1fr) auto;align-items:center;gap:10px;width:100%;max-width:none;min-height:58px;margin:0;padding:10px 12px;border:1px solid rgba(73,164,66,.2);border-radius:999px;background:rgba(255,255,255,.82);color:#5b6862;font-size:13px;font-weight:850}
@@ -72,10 +72,10 @@
       .to-savings-chain-logo img{display:block;width:76px;height:auto}
       .to-savings-chain i{position:relative;display:block;height:2px;min-width:26px;background:linear-gradient(90deg,rgba(73,164,66,.12),#59bd39)}
       .to-savings-chain i::after{content:"";position:absolute;right:0;top:50%;width:7px;height:7px;border-top:2px solid #59bd39;border-right:2px solid #59bd39;transform:translateY(-50%) rotate(45deg)}
-      .to-savings-actions{position:relative;z-index:2;grid-area:actions;display:grid;grid-template-columns:minmax(210px,.78fr) minmax(280px,1fr) minmax(300px,1.05fr);gap:12px;align-items:stretch;width:100%}
+      .to-savings-actions{position:relative;z-index:2;grid-area:actions;display:grid;grid-template-columns:minmax(230px,.84fr) minmax(300px,1.08fr) minmax(230px,.82fr);gap:12px;align-items:stretch;width:100%}
       .to-savings-button{display:inline-flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:58px;margin:0;padding:14px 18px;border-radius:999px;background:#00b472;color:#fff;text-align:center;text-decoration:none;font-size:15px;font-weight:950;box-shadow:0 16px 34px rgba(0,180,114,.22);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
       .to-savings-button:hover{transform:translateY(-2px);background:#11c983;box-shadow:0 20px 42px rgba(0,180,114,.3)}
-      .to-savings-visual{position:relative;z-index:1;grid-area:visual;align-self:start;margin:-22px -6px -12px 0}
+      .to-savings-visual{position:relative;z-index:1;grid-area:visual;align-self:start;margin:-15px -6px 4px 0}
       .to-savings-visual img{display:block;width:104%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
@@ -298,19 +298,19 @@
               <h2><span>до</span> <strong>30%</strong><em>економії на кожному ТО</em></h2>
               <p>Плануйте обслуговування заздалегідь: комплект їде напряму з Китаю, без локальних націнок і без термінової авіадоставки.</p>
               <ul class="to-savings-list">
-                <li><span class="to-savings-icon">↯</span><span>Без переплати СТО</span></li>
-                <li><span class="to-savings-icon">⌁</span><span>Без переплати магазину</span></li>
-                <li><span class="to-savings-icon">◎</span><span>Прямі поставки від виробника з Китаю</span></li>
-                <li><span class="to-savings-icon">□</span><span>Безкоштовні технічні карти для вашого авто</span></li>
+                <li><span class="to-savings-icon">✓</span><span>Без переплати СТО</span></li>
+                <li><span class="to-savings-icon">✓</span><span>Без переплати магазину</span></li>
+                <li><span class="to-savings-icon">✓</span><span>Прямі поставки від виробника з Китаю</span></li>
+                <li><span class="to-savings-icon">✓</span><span>Безкоштовні технічні карти для вашого авто</span></li>
               </ul>
             </div>
             <figure class="to-savings-visual">
               <img src="../assets/images/to/to-savings-kit-visual-cutout.png" alt="Комплект ТО EVLine з оригінальними витратними матеріалами і технічними картами для СТО" width="1193" height="848" loading="lazy" decoding="async">
             </figure>
             <div class="to-savings-actions">
-              <a class="to-savings-button" href="#to-form">Порахувати комплект по VIN</a>
               <div class="to-savings-original"><strong>Original</strong><span>Для комплектів ТО — тільки оригінальні витратні матеріали.</span></div>
               <div class="to-savings-chain" aria-label="Ланцюг поставки"><span class="chain-node">Виробник</span><i></i><span class="to-savings-chain-logo"><img src="../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Ви</span></div>
+              <a class="to-savings-button" href="#to-form">Порахувати комплект по VIN</a>
             </div>
           </div>
         </div>
