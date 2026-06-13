@@ -52,8 +52,8 @@
       .to-protocols-note{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin:0;padding:12px 14px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.78);box-shadow:0 12px 28px rgba(15,23,42,.045);color:#255241;font-size:14px;font-weight:800;line-height:1.5}
       .to-protocols-note span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#00b472;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
       .to-savings-section{background:linear-gradient(180deg,#fff 0%,#f5fbf7 100%)}
-      .to-savings-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(320px,.72fr) minmax(0,1.28fr);gap:clamp(18px,3vw,38px);align-items:center;border:1px solid rgba(0,180,114,.16);border-radius:32px;background:linear-gradient(135deg,#fff 0%,#fff 62%,#eefaf4 100%);padding:clamp(22px,3vw,36px);box-shadow:0 24px 64px rgba(15,23,42,.08)}
-      .to-savings-main{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;min-height:auto;color:#111827}
+      .to-savings-panel{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(320px,.72fr) minmax(0,1.28fr);grid-template-areas:"main visual" "actions actions";gap:clamp(14px,2vw,24px) clamp(18px,3vw,38px);align-items:start;border:1px solid rgba(0,180,114,.16);border-radius:32px;background:linear-gradient(135deg,#fff 0%,#fff 62%,#eefaf4 100%);padding:clamp(22px,3vw,36px);box-shadow:0 24px 64px rgba(15,23,42,.08)}
+      .to-savings-main{position:relative;z-index:1;grid-area:main;display:flex;flex-direction:column;align-items:flex-start;min-height:auto;color:#111827}
       .to-savings-eyebrow{display:inline-flex;width:max-content;align-items:center;gap:8px;padding:7px 12px;border:1px solid rgba(0,180,114,.18);border-radius:999px;background:#eefaf4;color:#2f7a50;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
       .to-savings-main h2{margin:14px 0 12px;color:#111827;font-size:clamp(30px,4.2vw,50px);line-height:1.02}
       .to-savings-main h2 span{display:inline-block;margin-right:10px;color:#55a92f;font-size:clamp(22px,2.4vw,34px);font-weight:950;vertical-align:middle}
@@ -64,18 +64,19 @@
       .to-savings-list li{display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(17,24,39,.09);color:#1f2937;font-size:17px;font-weight:850;line-height:1.25}
       .to-savings-list li:last-child{border-bottom:0}
       .to-savings-icon{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(73,164,66,.5);border-radius:50%;background:#f8fff9;color:#49a442;font-size:16px}
-      .to-savings-original{display:flex;align-items:center;gap:12px;width:100%;max-width:420px;margin-top:14px;padding:8px;border:1px solid rgba(73,164,66,.35);border-radius:999px;background:#fff;color:#1f2937;font-size:13px;font-weight:800}
+      .to-savings-original{display:flex;align-items:center;gap:12px;width:100%;max-width:none;min-height:58px;margin:0;padding:8px;border:1px solid rgba(73,164,66,.35);border-radius:999px;background:#fff;color:#1f2937;font-size:13px;font-weight:800}
       .to-savings-original strong{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;background:#071107;color:#74d947;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}
-      .to-savings-chain{display:grid;grid-template-columns:auto minmax(32px,1fr) auto minmax(32px,1fr) auto;align-items:center;gap:10px;width:100%;max-width:430px;margin-top:14px;padding:10px 12px;border:1px solid rgba(73,164,66,.2);border-radius:20px;background:rgba(255,255,255,.82);color:#5b6862;font-size:13px;font-weight:850}
+      .to-savings-chain{display:grid;grid-template-columns:auto minmax(32px,1fr) auto minmax(32px,1fr) auto;align-items:center;gap:10px;width:100%;max-width:none;min-height:58px;margin:0;padding:10px 12px;border:1px solid rgba(73,164,66,.2);border-radius:999px;background:rgba(255,255,255,.82);color:#5b6862;font-size:13px;font-weight:850}
       .to-savings-chain .chain-node{display:inline-flex;align-items:center;justify-content:center;min-height:30px;color:#111827;white-space:nowrap}
       .to-savings-chain-logo{display:grid;place-items:center;width:94px;height:36px;border-radius:999px;background:#f7fff9;box-shadow:inset 0 0 0 1px rgba(73,164,66,.18),0 8px 18px rgba(15,23,42,.06)}
       .to-savings-chain-logo img{display:block;width:76px;height:auto}
       .to-savings-chain i{position:relative;display:block;height:2px;min-width:26px;background:linear-gradient(90deg,rgba(73,164,66,.12),#59bd39)}
       .to-savings-chain i::after{content:"";position:absolute;right:0;top:50%;width:7px;height:7px;border-top:2px solid #59bd39;border-right:2px solid #59bd39;transform:translateY(-50%) rotate(45deg)}
-      .to-savings-button{display:inline-flex;align-items:center;justify-content:center;width:max-content;max-width:100%;margin-top:18px;padding:14px 18px;border-radius:999px;background:#00b472;color:#fff;text-decoration:none;font-size:15px;font-weight:950;box-shadow:0 16px 34px rgba(0,180,114,.22);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+      .to-savings-actions{position:relative;z-index:2;grid-area:actions;display:grid;grid-template-columns:minmax(210px,.78fr) minmax(280px,1fr) minmax(300px,1.05fr);gap:12px;align-items:stretch;width:100%}
+      .to-savings-button{display:inline-flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:58px;margin:0;padding:14px 18px;border-radius:999px;background:#00b472;color:#fff;text-align:center;text-decoration:none;font-size:15px;font-weight:950;box-shadow:0 16px 34px rgba(0,180,114,.22);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
       .to-savings-button:hover{transform:translateY(-2px);background:#11c983;box-shadow:0 20px 42px rgba(0,180,114,.3)}
-      .to-savings-visual{position:relative;z-index:1;align-self:center;margin:0 -12px 0 0}
-      .to-savings-visual img{display:block;width:108%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
+      .to-savings-visual{position:relative;z-index:1;grid-area:visual;align-self:start;margin:-22px -6px -12px 0}
+      .to-savings-visual img{display:block;width:104%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
@@ -109,15 +110,16 @@
         .to-page .topbar .container{width:min(100% - 32px,var(--max))}
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
         .to-protocols-panel{grid-template-columns:1fr;padding:20px}
-        .to-savings-panel{grid-template-columns:1fr}
+        .to-savings-panel{grid-template-columns:1fr;grid-template-areas:"main" "visual" "actions"}
         .to-savings-visual{align-self:center;margin:0}
         .to-savings-visual img{width:100%}
+        .to-savings-actions{grid-template-columns:1fr;max-width:520px;margin:0 auto}
         .to-hero-form{max-width:none;justify-self:stretch}
         .to-hero-media{order:-1}
         .to-hero-media img{width:min(100%,680px)}
       }
       @media(max-width:1100px){.to-hero-form{grid-template-columns:1fr}.to-hero-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.to-hero-form button{width:100%}}
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:18px}.to-savings-main h2 strong{font-size:72px}.to-savings-list li{grid-template-columns:36px 1fr;font-size:15px}.to-savings-icon{width:30px;height:30px;font-size:14px}.to-savings-button,.to-savings-original{width:100%;padding:13px 14px}.to-savings-chain{grid-template-columns:auto minmax(14px,1fr) auto minmax(14px,1fr) auto;gap:6px;padding:9px 10px;font-size:11px}.to-savings-chain-logo{width:72px;height:32px}.to-savings-chain-logo img{width:58px}.to-savings-chain i{min-width:14px}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:18px}.to-savings-main h2 strong{font-size:72px}.to-savings-list li{grid-template-columns:36px 1fr;font-size:15px}.to-savings-icon{width:30px;height:30px;font-size:14px}.to-savings-button,.to-savings-original{width:100%;min-height:0;padding:13px 14px}.to-savings-chain{grid-template-columns:auto minmax(14px,1fr) auto minmax(14px,1fr) auto;gap:6px;min-height:0;padding:9px 10px;font-size:11px}.to-savings-chain-logo{width:72px;height:32px}.to-savings-chain-logo img{width:58px}.to-savings-chain i{min-width:14px}}
       @media(min-width:861px){
         .cards-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1080px;margin:0 auto}
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
@@ -244,13 +246,15 @@
                 <li><span class="to-savings-icon">◎</span><span>Прямые поставки от производителя из Китая</span></li>
                 <li><span class="to-savings-icon">□</span><span>Бесплатные технические карты для вашего авто</span></li>
               </ul>
-              <div class="to-savings-original"><strong>Original</strong><span>Для комплектов ТО — только оригинальные расходные материалы.</span></div>
-              <div class="to-savings-chain" aria-label="Цепочка поставки"><span class="chain-node">Производитель</span><i></i><span class="to-savings-chain-logo"><img src="../../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Вы</span></div>
-              <a class="to-savings-button" href="#to-form">Посчитать комплект по VIN</a>
             </div>
             <figure class="to-savings-visual">
               <img src="../../assets/images/to/to-savings-kit-visual-cutout.png" alt="Комплект ТО EVLine с оригинальными расходными материалами и техническими картами для СТО" width="1193" height="848" loading="lazy" decoding="async">
             </figure>
+            <div class="to-savings-actions">
+              <a class="to-savings-button" href="#to-form">Посчитать комплект по VIN</a>
+              <div class="to-savings-original"><strong>Original</strong><span>Для комплектов ТО — только оригинальные расходные материалы.</span></div>
+              <div class="to-savings-chain" aria-label="Цепочка поставки"><span class="chain-node">Производитель</span><i></i><span class="to-savings-chain-logo"><img src="../../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Вы</span></div>
+            </div>
           </div>
         </div>
       </section>
