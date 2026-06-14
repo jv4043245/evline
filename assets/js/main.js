@@ -158,7 +158,7 @@ function detectLeadType(payload = {}) {
     payload.form_type,
     window.location.pathname,
   ].join(" ").toLowerCase();
-  return joined.includes("byd") || joined.includes("програм") || joined.includes("оновлен") || joined.includes("obnovlen")
+  return joined.includes("byd") || joined.includes("zeekr") || joined.includes("зикр") || joined.includes("зікр") || joined.includes("програм") || joined.includes("оновлен") || joined.includes("obnovlen")
     ? "byd"
     : "parts";
 }

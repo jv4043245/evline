@@ -38,6 +38,24 @@
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
+  <url>
+    <loc>https://evline.com.ua/zeekr</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zeekr" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zeekr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zeekr" />
+    <lastmod>2026-06-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.93</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zeekr</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zeekr" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zeekr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zeekr" />
+    <lastmod>2026-06-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.93</priority>
+  </url>
   <!-- BYD programming SEO pain-point pages. -->
   <url>
     <loc>https://evline.com.ua/ukrainizatsiya-byd/</loc>
