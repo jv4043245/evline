@@ -151,14 +151,30 @@
       .to-section-cta{text-align:center;margin:22px auto 0;max-width:760px;padding:16px 18px;border:1px solid rgba(0,180,114,.18);border-radius:22px;background:#f4fbf7;color:#245643;font-weight:800}
       .to-section-cta a{color:#008f5c;text-decoration:none;border-bottom:1px dashed rgba(0,143,92,.4)}
       .to-process-compact{padding:12px 0;background:#f8fbf9;border-top:1px solid rgba(0,180,114,.09);border-bottom:1px solid rgba(0,180,114,.09)}
-      .to-process-compact .parts-section-head{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 8px}
-      .to-process-compact .parts-section-head span{margin:0;padding:5px 10px;font-size:12px}
-      .to-process-compact .parts-section-head h2{margin:0;font-size:clamp(18px,1.8vw,24px);line-height:1.1}
+      .to-process-compact .parts-section-head{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:none;margin:0 auto 8px;text-align:center}
+      .to-process-compact .parts-section-head span{flex:0 0 auto;margin:0;padding:5px 10px;font-size:12px;text-align:center}
+      .to-process-compact .parts-section-head h2{flex:0 0 auto;margin:0;font-size:clamp(18px,1.8vw,24px);line-height:1.1;text-align:center}
       .to-process-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;max-width:1120px;margin:0 auto}
       .to-process-strip article{display:grid;grid-template-columns:auto 1fr;gap:7px;align-items:start;border:1px solid rgba(0,180,114,.14);border-radius:13px;background:#fff;padding:8px 10px;box-shadow:0 5px 14px rgba(15,23,42,.03)}
       .to-process-strip strong{display:grid;place-items:center;width:25px;height:25px;border-radius:999px;background:#3fa66a;color:#fff;font-size:12px;font-weight:900}
       .to-process-strip h3{margin:0;color:#111827;font-size:13.5px;line-height:1.15}
       .to-process-strip p{grid-column:2;margin:1px 0 0;color:#5b6862;font-size:11.5px;line-height:1.28}
+      .to-cases-section{padding:clamp(34px,5vw,62px) 0;background:linear-gradient(180deg,#fff 0%,#f7fbf8 100%)}
+      .to-cases-section .parts-section-head{max-width:860px;margin-inline:auto;text-align:center}
+      .to-cases-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:1120px;margin:22px auto 0}
+      .to-case-card{position:relative;display:flex;flex-direction:column;min-height:258px;padding:18px;border:1px solid rgba(0,180,114,.16);border-radius:22px;background:#fff;box-shadow:0 16px 38px rgba(15,23,42,.055);overflow:hidden;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+      .to-case-card::after{content:"";position:absolute;right:-42px;top:-42px;width:116px;height:116px;border-radius:999px;background:rgba(0,180,114,.07);pointer-events:none}
+      .to-case-card:hover{transform:translateY(-3px);border-color:rgba(0,180,114,.34);box-shadow:0 22px 48px rgba(15,23,42,.1)}
+      .to-case-meta{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+      .to-case-model{display:block;color:#111827;font-size:18px;line-height:1.15;font-weight:900}
+      .to-case-km{flex:0 0 auto;border-radius:999px;background:#eaf8f0;color:#168656;padding:7px 10px;font-size:12px;line-height:1;font-weight:900;white-space:nowrap}
+      .to-case-card h3{position:relative;z-index:1;margin:0 0 10px;color:#245643;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+      .to-case-card ul{position:relative;z-index:1;display:grid;gap:7px;margin:0 0 14px;padding:0;list-style:none;color:#43524b;font-size:14px;line-height:1.35}
+      .to-case-card li{display:grid;grid-template-columns:auto 1fr;gap:8px}
+      .to-case-card li::before{content:"";width:7px;height:7px;margin-top:.42em;border-radius:999px;background:#3fa66a}
+      .to-case-link{position:relative;z-index:1;margin-top:auto;align-self:flex-start;color:#128656;font-size:13px;font-weight:900;text-decoration:none;border-bottom:1px dashed rgba(18,134,86,.42)}
+      .to-case-link:hover{color:#111827}
+      .to-cases-footnote{max-width:900px;margin:18px auto 0;text-align:center;color:#66746d;font-size:13.5px;line-height:1.55}
       .to-faq-list{max-width:920px;margin:0 auto;display:grid;gap:10px}
       .to-faq-list details{border:1px solid rgba(0,180,114,.14);border-radius:16px;background:#fff;box-shadow:0 10px 26px rgba(15,23,42,.05);overflow:hidden;transition:border-color .18s,box-shadow .18s}
       .to-faq-list details:hover,.to-faq-list details[open]{border-color:rgba(0,180,114,.32);box-shadow:0 14px 34px rgba(15,23,42,.08)}
@@ -200,8 +216,9 @@
       .brand-seo-cards span{width:52px;height:52px;font-size:24px;border-radius:16px;background:#eef7f1}
       .fear-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
       @media(max-width:1020px){.fear-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:1000px){.to-cases-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:900px){.to-process-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:560px){.fear-grid{grid-template-columns:1fr}.to-process-compact .parts-section-head{align-items:center}.to-process-strip{grid-template-columns:1fr}.to-faq-list summary{font-size:15.5px;padding-right:48px}}
+      @media(max-width:560px){.fear-grid{grid-template-columns:1fr}.to-process-compact .parts-section-head{align-items:center;flex-direction:column;gap:6px}.to-process-strip,.to-cases-grid{grid-template-columns:1fr}.to-faq-list summary{font-size:15.5px;padding-right:48px}}
       .fear-card{background:#fff;border:1px solid rgba(63,147,99,.18);border-radius:20px;padding:18px;box-shadow:0 14px 36px rgba(15,23,42,.06);transition:border-color .18s,box-shadow .18s}
       .fear-card:hover{border-color:#7fd8a9;box-shadow:0 20px 44px rgba(15,23,42,.1)}
       .fear-card summary{cursor:pointer;list-style:none;display:block}
@@ -427,6 +444,85 @@
         </div>
       </section>
 
+      <section class="to-cases-section" aria-label="Приклади комплектів ТО">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>Типові комплекти</span>
+            <h2>6 прикладів ТО, у яких легко впізнати своє авто</h2>
+            <p>Це орієнтири за відкритими сервісними регламентами. Точний склад комплекту підтверджуємо по VIN, моделі, пробігу, року випуску та історії робіт.</p>
+          </div>
+          <div class="to-cases-grid">
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">BYD Seal EV</strong><span class="to-case-km">40 000 км / 24 міс.</span></div>
+              <h3>EV-регламент</h3>
+              <ul>
+                <li>гальмівна рідина за віком автомобіля</li>
+                <li>олива редуктора електроприводу за регламентом</li>
+                <li>салонний / HEPA-фільтр та перевірка клімату</li>
+                <li>контроль охолодження, гальм і нижнього захисту</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="BYD Seal EV, 40 000 км / 24 міс.">Порахувати цей комплект →</a>
+            </article>
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">BYD Sealion 6 / Song Plus DM-i</strong><span class="to-case-km">40 000 км</span></div>
+              <h3>Гібридне ТО</h3>
+              <ul>
+                <li>моторна олива та масляний фільтр</li>
+                <li>гальмівна рідина, якщо настав інтервал</li>
+                <li>салонний і повітряний фільтри</li>
+                <li>паливний фільтр / адсорбер за регламентом комплектації</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="BYD Sealion 6 / Song Plus DM-i, 40 000 км">Порахувати цей комплект →</a>
+            </article>
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">BYD Song Plus / Seal U DM-i</strong><span class="to-case-km">80 000 км</span></div>
+              <h3>Великий DM-i</h3>
+              <ul>
+                <li>олива ДВЗ та фільтр</li>
+                <li>свічки запалювання</li>
+                <li>охолоджуюча рідина ДВЗ / електромодуля</li>
+                <li>EHS-олива та фільтр за сервісною картою</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="BYD Song Plus / Seal U DM-i, 80 000 км">Порахувати цей комплект →</a>
+            </article>
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">Zeekr 001 / X / 7X</strong><span class="to-case-km">40 000 км</span></div>
+              <h3>EV-привід</h3>
+              <ul>
+                <li>олива редуктора електроприводу</li>
+                <li>салонний фільтр і перевірка клімату</li>
+                <li>гальмівна рідина, якщо минуло 24 місяці</li>
+                <li>контроль батарейного охолодження та підвіски</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="Zeekr 001 / X / 7X, 40 000 км">Порахувати цей комплект →</a>
+            </article>
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">Xiaomi SU7</strong><span class="to-case-km">20 000 км / 12 міс.</span></div>
+              <h3>Перше велике EV-ТО</h3>
+              <ul>
+                <li>салонний фільтр / фільтр кондиціонера</li>
+                <li>діагностика охолодження батареї та інвертора</li>
+                <li>контроль гальмівної рідини, колодок і шин</li>
+                <li>перевірка 12V АКБ та електронних систем</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="Xiaomi SU7, 20 000 км / 12 міс.">Порахувати цей комплект →</a>
+            </article>
+            <article class="to-case-card">
+              <div class="to-case-meta"><strong class="to-case-model">Lynk &amp; Co 09 / 01 PHEV</strong><span class="to-case-km">100 000 км</span></div>
+              <h3>Великий регламент</h3>
+              <ul>
+                <li>олива ДВЗ та масляний фільтр</li>
+                <li>повітряний і салонний фільтри</li>
+                <li>комплект ременя ГРМ / натягувач за регламентом</li>
+                <li>контроль привідних ременів, гальм і рідин</li>
+              </ul>
+              <a class="to-case-link" href="#to-form" data-scheme="Lynk & Co 09 / 01 PHEV, 100 000 км">Порахувати цей комплект →</a>
+            </article>
+          </div>
+          <p class="to-cases-footnote">Мета блоку — швидко показати: ми працюємо не “олива + фільтр на око”, а збираємо комплект під конкретний регламент. Якщо вашої моделі тут немає, по VIN знайдемо саме її карту ТО.</p>
+        </div>
+      </section>
+
       <section class="brand-seo-faq" aria-label="FAQ">
         <div class="container">
           <div class="parts-section-head">
@@ -489,7 +585,7 @@
     </footer>
 
     <script>
-      document.querySelectorAll(".fear-cta").forEach(function(a){
+      document.querySelectorAll(".fear-cta, .to-case-link").forEach(function(a){
         a.addEventListener("click", function(){
           var form = document.getElementById("to-form");
           if(!form) return;
