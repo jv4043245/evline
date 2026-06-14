@@ -168,9 +168,14 @@
       .to-case-card{position:relative;display:flex;flex-direction:column;min-height:258px;padding:18px;border:1px solid rgba(0,180,114,.16);border-radius:22px;background:#fff;box-shadow:0 16px 38px rgba(15,23,42,.055);overflow:hidden;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
       .to-case-card::after{content:"";position:absolute;right:-42px;top:-42px;width:116px;height:116px;border-radius:999px;background:rgba(0,180,114,.07);pointer-events:none}
       .to-case-card:hover{transform:translateY(-3px);border-color:rgba(0,180,114,.34);box-shadow:0 22px 48px rgba(15,23,42,.1)}
-      .to-case-meta{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+      .to-case-meta{position:relative;z-index:1;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 10px;margin-bottom:12px}
+      .to-case-brand{display:inline-grid;place-items:center;min-width:58px;height:30px;padding:0 11px;border:1px solid rgba(15,23,42,.1);border-radius:999px;background:#111827;color:#fff;font-size:12px;font-weight:950;line-height:1;letter-spacing:.075em;text-transform:uppercase;box-shadow:0 10px 22px rgba(15,23,42,.08)}
+      .to-case-brand--byd{background:#fff;color:#d7131f;border-color:rgba(215,19,31,.24)}
+      .to-case-brand--zeekr{background:#111827;color:#fff;border-color:#111827}
+      .to-case-brand--xiaomi{background:#ff6900;color:#fff;border-color:#ff6900}
+      .to-case-brand--lynk{background:#0f172a;color:#fff;border-color:#0f172a;letter-spacing:.045em}
       .to-case-model{display:block;color:#111827;font-size:18px;line-height:1.15;font-weight:900}
-      .to-case-km{flex:0 0 auto;border-radius:999px;background:#eaf8f0;color:#168656;padding:7px 10px;font-size:12px;line-height:1;font-weight:900;white-space:nowrap}
+      .to-case-km{grid-column:1/-1;justify-self:start;border-radius:999px;background:#eaf8f0;color:#168656;padding:7px 10px;font-size:12px;line-height:1;font-weight:900;white-space:nowrap}
       .to-case-card h3{position:relative;z-index:1;margin:0 0 10px;color:#245643;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
       .to-case-card ul{position:relative;z-index:1;display:grid;gap:8px;margin:0 0 14px;padding:0;list-style:none;color:#43524b;font-size:13.5px;line-height:1.35}
       .to-case-card li{display:grid;grid-template-columns:auto 1fr;gap:8px}
@@ -457,7 +462,7 @@
           </div>
           <div class="to-cases-grid">
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">BYD Seal EV</strong><span class="to-case-km">40 000 км / 24 міс.</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--byd">BYD</span><strong class="to-case-model">Seal EV</strong><span class="to-case-km">40 000 км / 24 міс.</span></div>
               <h3>EV-регламент</h3>
               <ul>
                 <li><span><b>Гальмівна рідина HZY6 / DOT 4</b><small>прокачування за картою, обсяг підтверджуємо по VIN</small></span></li>
@@ -468,7 +473,7 @@
               <a class="to-case-link" href="#to-form" data-scheme="BYD Seal EV, 40 000 км / 24 міс.">Порахувати цей комплект →</a>
             </article>
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">BYD Sealion 6 / Song Plus DM-i</strong><span class="to-case-km">40 000 км</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--byd">BYD</span><strong class="to-case-model">Sealion 6 / Song Plus DM-i</strong><span class="to-case-km">40 000 км</span></div>
               <h3>Гібридне ТО</h3>
               <ul>
                 <li><span><b>Моторна олива SAE 0W-20, ACEA C5</b><small>обсяг з фільтром уточнюємо за двигуном DM-i та роком</small></span></li>
@@ -479,7 +484,7 @@
               <a class="to-case-link" href="#to-form" data-scheme="BYD Sealion 6 / Song Plus DM-i, 40 000 км">Порахувати цей комплект →</a>
             </article>
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">BYD Song Plus / Seal U DM-i</strong><span class="to-case-km">80 000 км</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--byd">BYD</span><strong class="to-case-model">Song Plus / Seal U DM-i</strong><span class="to-case-km">80 000 км</span></div>
               <h3>Великий DM-i</h3>
               <ul>
                 <li><span><b>Олива ДВЗ SAE 0W-20 + фільтр</b><small>обсяг, шайба зливної пробки і партномер — по VIN</small></span></li>
@@ -490,7 +495,7 @@
               <a class="to-case-link" href="#to-form" data-scheme="BYD Song Plus / Seal U DM-i, 80 000 км">Порахувати цей комплект →</a>
             </article>
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">Zeekr 001 / X / 7X</strong><span class="to-case-km">40 000 км</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--zeekr">ZEEKR</span><strong class="to-case-model">001 / X / 7X</strong><span class="to-case-km">40 000 км</span></div>
               <h3>EV-привід</h3>
               <ul>
                 <li><span><b>Олива редуктора електроприводу OEM</b><small>регламентно близько 40 000 км; обсяг залежить від приводу</small></span></li>
@@ -501,7 +506,7 @@
               <a class="to-case-link" href="#to-form" data-scheme="Zeekr 001 / X / 7X, 40 000 км">Порахувати цей комплект →</a>
             </article>
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">Xiaomi SU7</strong><span class="to-case-km">20 000 км / 12 міс.</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--xiaomi">XIAOMI</span><strong class="to-case-model">SU7</strong><span class="to-case-km">20 000 км / 12 міс.</span></div>
               <h3>Перше велике EV-ТО</h3>
               <ul>
                 <li><span><b>Фільтр кондиціонера / салону — 1 комплект</b><small>тип фільтра і партномер підбираємо за VIN</small></span></li>
@@ -512,7 +517,7 @@
               <a class="to-case-link" href="#to-form" data-scheme="Xiaomi SU7, 20 000 км / 12 міс.">Порахувати цей комплект →</a>
             </article>
             <article class="to-case-card">
-              <div class="to-case-meta"><strong class="to-case-model">Lynk &amp; Co 09 / 01 PHEV</strong><span class="to-case-km">100 000 км</span></div>
+              <div class="to-case-meta"><span class="to-case-brand to-case-brand--lynk">Lynk &amp; Co</span><strong class="to-case-model">09 / 01 PHEV</strong><span class="to-case-km">100 000 км</span></div>
               <h3>Великий регламент</h3>
               <ul>
                 <li><span><b>Олива ДВЗ 0W-20 / 5W-30 + фільтр</b><small>специфікація та обсяг залежать від двигуна і року випуску</small></span></li>
