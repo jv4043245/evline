@@ -150,6 +150,21 @@
       .to-logistics-compare article:nth-child(2){border-color:rgba(0,180,114,.22);background:#effaf4}
       .to-section-cta{text-align:center;margin:22px auto 0;max-width:760px;padding:16px 18px;border:1px solid rgba(0,180,114,.18);border-radius:22px;background:#f4fbf7;color:#245643;font-weight:800}
       .to-section-cta a{color:#008f5c;text-decoration:none;border-bottom:1px dashed rgba(0,143,92,.4)}
+      .to-process-compact{padding:clamp(30px,4vw,54px) 0;background:#fff}
+      .to-process-compact .parts-section-head{margin-bottom:16px}
+      .to-process-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:1040px;margin:0 auto}
+      .to-process-strip article{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;border:1px solid rgba(0,180,114,.14);border-radius:18px;background:#fff;padding:14px 15px;box-shadow:0 10px 26px rgba(15,23,42,.05)}
+      .to-process-strip strong{display:grid;place-items:center;width:32px;height:32px;border-radius:999px;background:#3fa66a;color:#fff;font-weight:900}
+      .to-process-strip h3{margin:0;color:#111827;font-size:16px;line-height:1.25}
+      .to-process-strip p{grid-column:2;margin:3px 0 0;color:#5b6862;font-size:13.5px;line-height:1.45}
+      .to-faq-list{max-width:920px;margin:0 auto;display:grid;gap:10px}
+      .to-faq-list details{border:1px solid rgba(0,180,114,.14);border-radius:16px;background:#fff;box-shadow:0 10px 26px rgba(15,23,42,.05);overflow:hidden;transition:border-color .18s,box-shadow .18s}
+      .to-faq-list details:hover,.to-faq-list details[open]{border-color:rgba(0,180,114,.32);box-shadow:0 14px 34px rgba(15,23,42,.08)}
+      .to-faq-list summary{position:relative;list-style:none;cursor:pointer;padding:18px 54px 18px 20px;color:#111827;font-weight:850;font-size:17px;line-height:1.3}
+      .to-faq-list summary::-webkit-details-marker{display:none}
+      .to-faq-list summary::after{content:"+";position:absolute;right:18px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:#eaf8f0;color:#128656;font-size:21px;font-weight:800}
+      .to-faq-list details[open] summary::after{content:"-";background:#3fa66a;color:#fff}
+      .to-faq-list .a{padding:0 20px 18px;color:#5b6862;font-size:15px;line-height:1.65}
       @media(max-width:860px){.to-card-preview{grid-template-columns:1fr}}
       @media(max-width:860px){
         .to-page .site-header .container,
@@ -183,7 +198,8 @@
       .brand-seo-cards span{width:52px;height:52px;font-size:24px;border-radius:16px;background:#eef7f1}
       .fear-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
       @media(max-width:1020px){.fear-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:560px){.fear-grid{grid-template-columns:1fr}}
+      @media(max-width:900px){.to-process-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:560px){.fear-grid{grid-template-columns:1fr}.to-process-strip{grid-template-columns:1fr}.to-faq-list summary{font-size:15.5px;padding-right:48px}}
       .fear-card{background:#fff;border:1px solid rgba(63,147,99,.18);border-radius:20px;padding:18px;box-shadow:0 14px 36px rgba(15,23,42,.06);transition:border-color .18s,box-shadow .18s}
       .fear-card:hover{border-color:#7fd8a9;box-shadow:0 20px 44px rgba(15,23,42,.1)}
       .fear-card summary{cursor:pointer;list-style:none;display:block}
@@ -341,89 +357,6 @@
         </div>
       </section>
 
-      <section class="brand-seo-section">
-        <div class="container">
-          <div class="parts-section-head">
-            <span>Проблема</span>
-            <h2>Чому звичайне СТО може помилитися навіть на простому ТО</h2>
-            <p>Механік може бути хорошим, але без карти конкретної моделі він часто діє “по досвіду” зі звичайними авто.</p>
-          </div>
-          <div class="brand-seo-cards cards-4">
-            <article><span>🔧</span><h3>Немає карти доступу</h3><p>Де знімати захист, які кліпси не ламати, які точки підйому не чіпати — це не завжди очевидно.</p></article>
-            <article><span>📄</span><h3>Регламент закритий</h3><p>Дилерські мануали не лежать у вільному доступі, тому сервіс часто працює “на дотик”.</p></article>
-            <article><span>🧪</span><h3>Рідини плутають</h3><p>Для батареї, кондиціонера і редуктора важливий точний тип рідини, а не загальна сумісність.</p></article>
-            <article><span>💸</span><h3>ТО дорожчає на місці</h3><p>Локальні продавці продають дефіцит і терміновість. Морем з Китаю це можна планувати дешевше.</p></article>
-          </div>
-        </div>
-      </section>
-
-      <section class="brand-seo-section brand-seo-section--soft">
-        <div class="container">
-          <div class="parts-section-head">
-            <span>Комплекти</span>
-            <h2>Три сценарії ТО — від фільтрів до великого регламенту</h2>
-            <p>Не продаємо “універсальний набір”. Склад залежить від моделі, пробігу, типу приводу і того, що вже робили раніше.</p>
-          </div>
-          <div class="brand-seo-cards cards-3">
-            <article class="to-kit">
-              <img src="../assets/images/to/to-kit-base.svg" alt="Базове ТО" loading="lazy">
-              <h3>Регламентне ТО <span class="to-kit__price">від $80</span></h3>
-              <p>Коли потрібні фільтри, олива для DM-i і базова перевірка. Добре підходить для планового обслуговування без складних робіт.</p>
-              <ul><li>олива + масляний фільтр (DM-i)</li><li>повітряний фільтр</li><li>салонний фільтр</li><li class="to-free-line"><span class="to-free-badge">Безкоштовно</span> технологічна карта робіт</li></ul>
-            </article>
-            <article class="to-kit">
-              <img src="../assets/images/to/to-kit-medium.svg" alt="Розширене ТО" loading="lazy">
-              <h3>Повне ТО EV/PHEV <span class="to-kit__price">від $180</span></h3>
-              <p>Коли треба вже не “поміняти фільтр”, а пройти вузли, які у звичайному сервісі часто не помічають: редуктор, гальма, охолодження, колодки.</p>
-              <ul><li>усе з Базового</li><li>гальмівна рідина (раз на 2 роки)</li><li>олива редуктора + фільтр</li><li>діелектрична охолоджуюча рідина</li><li>колодки за потреби</li><li class="to-free-line"><span class="to-free-badge">Безкоштовно</span> технологічна карта робіт</li></ul>
-            </article>
-            <article class="to-kit">
-              <img src="../assets/images/to/to-kit-major.svg" alt="Велике ТО" loading="lazy">
-              <h3>Великий регламент <span class="to-kit__price">від $450</span></h3>
-              <p>Для гібридів з пробігом і складніших процедур: привід ГРМ, свічки, помпа, повна заміна рідин, розширена карта доступу.</p>
-              <ul><li>усе з Розширеного</li><li>комплект приводу ГРМ (для DM-i, за регламентом)</li><li>свічки запалювання</li><li>помпа / ролики за станом</li><li>повна заміна рідин</li><li class="to-free-line"><span class="to-free-badge">Безкоштовно</span> розширена технологічна карта</li></ul>
-            </article>
-          </div>
-          <p class="to-note" style="text-align:center">Ціни орієнтовні — точний склад і вартість підтверджує менеджер після перевірки VIN.</p>
-        </div>
-      </section>
-
-      <section class="brand-seo-section">
-        <div class="container">
-          <div class="parts-section-head">
-            <span>Приклади запитів</span>
-            <h2>З чим до нас уже логічно звертатися</h2>
-            <p>Точний регламент підтверджуємо по VIN, але ось типові задачі, які власники сучасних китайських авто можуть закривати комплектом заздалегідь.</p>
-          </div>
-          <div class="to-model-hooks">
-            <article class="to-model-card">
-              <b>BYD Song Plus / Seal / Han</b>
-              <h3>Планове ТО EV або DM-i</h3>
-              <p>Фільтри, олива ДВЗ для DM-i, гальмівна рідина, рідини охолодження, редукторне масло.</p>
-              <small>Карта безкоштовно: сервісний режим, рідини, моменти</small>
-            </article>
-            <article class="to-model-card">
-              <b>Zeekr 001 / X / 7X</b>
-              <h3>EV-обслуговування без дилера</h3>
-              <p>Салонні фільтри, гальма, редуктор, 12V акумулятор, охолоджуючий контур батареї.</p>
-              <small>Карта безкоштовно: точки підйому і доступу</small>
-            </article>
-            <article class="to-model-card">
-              <b>Li Auto L7 / L9</b>
-              <h3>Гібрид з генератором</h3>
-              <p>Олива, фільтри, свічки, охолодження, гальмівна система, великий регламент за пробігом.</p>
-              <small>Карта безкоштовно: що міняти за пробігом</small>
-            </article>
-            <article class="to-model-card">
-              <b>Denza / Xiaomi / Avatr</b>
-              <h3>Нові моделі без локального досвіду</h3>
-              <p>Коли в Україні ще немає звичної бази по ТО, ми підбираємо комплект і схему з китайських джерел.</p>
-              <small>Карта безкоштовно: без експериментів на авто</small>
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section class="brand-seo-section to-deep">
         <div class="container">
           <div class="parts-section-head">
@@ -477,17 +410,17 @@
         </div>
       </section>
 
-      <section class="brand-seo-process">
+      <section class="to-process-compact">
         <div class="container">
           <div class="parts-section-head">
             <span>Процес</span>
             <h2>Як це працює</h2>
           </div>
-          <div class="brand-seo-process__grid">
-            <article><strong>1</strong><h3>Надсилаєте VIN</h3><p>І пробіг. Менеджер визначає, яке ТО за регламентом і що входить.</p></article>
-            <article><strong>2</strong><h3>Отримуєте список і дві ціни</h3><p>Терміново авіа або заздалегідь морем — з конкретною різницею в грошах.</p></article>
-            <article><strong>3</strong><h3>Ми перевіряємо комплект у Китаї</h3><p>Оригінальні позиції, фото перед відправкою, без заміни на “аналог” без погодження.</p></article>
-            <article><strong>4</strong><h3>СТО працює по карті</h3><p>Віддаєте механіку комплект і карту, яку ми додаємо безкоштовно. Далі можемо нагадати, коли наближатиметься наступне ТО.</p></article>
+          <div class="to-process-strip">
+            <article><strong>1</strong><div><h3>Надсилаєте VIN</h3><p>І пробіг авто.</p></div></article>
+            <article><strong>2</strong><div><h3>Отримуєте список</h3><p>Що входить у ваше ТО.</p></div></article>
+            <article><strong>3</strong><div><h3>Комплектуємо в Китаї</h3><p>Оригінальні позиції з перевіркою.</p></div></article>
+            <article><strong>4</strong><div><h3>Доставляємо вам або на СТО</h3><p>Разом із картою робіт для механіка.</p></div></article>
           </div>
         </div>
       </section>
@@ -498,13 +431,13 @@
             <span>FAQ</span>
             <h2>Питання про комплекти ТО</h2>
           </div>
-          <div class="parts-faq__grid">
-            <article><h3>Моє СТО ніколи не бачило BYD. Точно впорається?</h3><p>Для робіт рівня ТО — так: карта описує процедуру до рівня «який ключ, де відкрутити і з яким моментом затягнути». Це не заміна кваліфікації, але хороший механік отримує чіткий маршрут без експериментів.</p></article>
-            <article><h3>А високовольтні роботи?</h3><p>Високовольтні процедури ми не віддаємо звичайному СТО. Карта ТО стосується регламентних робіт, рідин, фільтрів, колодок, редуктора і перевірок без втручання у ВВ-контур.</p></article>
-            <article><h3>Чи можна купити карту окремо, без комплекту?</h3><p>Ні, карта входить у комплект безкоштовно — це частина нашої послуги, а не окремий товар. Кожен примірник маркується номером замовлення.</p></article>
-            <article><h3>Скільки реально економлю морем?</h3><p>Залежить від ваги. Орієнтир: доставка 10-кілограмового комплекту авіа — близько $155, морем — від $56, а від 30 кг тарифи ще нижчі. Плюс самі розхідники дешевші, ніж у локальних продавців.</p></article>
-            <article><h3>Звідки впевненість, що все оригінал?</h3><p>Купуємо у офіційних дилерів у Китаї, перевіряємо і фотографуємо кожну позицію перед відправкою — фотозвіт ви отримуєте до того, як комплект поїде.</p></article>
-            <article><h3>Чи можна замовити лише частину комплекту?</h3><p>Так. Якщо вам потрібна тільки охолоджуюча рідина, редукторне масло, колодки або комплект фільтрів — порахуємо окремо, але карту робіт підготуємо саме під замовлену процедуру.</p></article>
+          <div class="to-faq-list">
+            <details><summary>Моє СТО ніколи не бачило BYD. Точно впорається?</summary><div class="a">Для робіт рівня ТО — так: карта описує процедуру до рівня «який ключ, де відкрутити і з яким моментом затягнути». Це не заміна кваліфікації, але хороший механік отримує чіткий маршрут без експериментів.</div></details>
+            <details><summary>А високовольтні роботи?</summary><div class="a">Високовольтні процедури ми не віддаємо звичайному СТО. Карта ТО стосується регламентних робіт, рідин, фільтрів, колодок, редуктора і перевірок без втручання у ВВ-контур.</div></details>
+            <details><summary>Чи можна купити карту окремо, без комплекту?</summary><div class="a">Ні, карта входить у комплект безкоштовно — це частина нашої послуги, а не окремий товар. Кожен примірник маркується номером замовлення.</div></details>
+            <details><summary>Скільки реально економлю морем?</summary><div class="a">Залежить від ваги. Орієнтир: доставка 10-кілограмового комплекту авіа — близько $155, морем — від $56, а від 30 кг тарифи ще нижчі. Плюс самі розхідники дешевші, ніж у локальних продавців.</div></details>
+            <details><summary>Звідки впевненість, що все оригінал?</summary><div class="a">Купуємо у офіційних дилерів у Китаї, перевіряємо і фотографуємо кожну позицію перед відправкою — фотозвіт ви отримуєте до того, як комплект поїде.</div></details>
+            <details><summary>Чи можна замовити лише частину комплекту?</summary><div class="a">Так. Якщо вам потрібна тільки охолоджуюча рідина, редукторне масло, колодки або комплект фільтрів — порахуємо окремо, але карту робіт підготуємо саме під замовлену процедуру.</div></details>
           </div>
         </div>
       </section>
