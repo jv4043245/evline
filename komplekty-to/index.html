@@ -169,9 +169,11 @@
       .to-case-model{display:block;color:#111827;font-size:18px;line-height:1.15;font-weight:900}
       .to-case-km{flex:0 0 auto;border-radius:999px;background:#eaf8f0;color:#168656;padding:7px 10px;font-size:12px;line-height:1;font-weight:900;white-space:nowrap}
       .to-case-card h3{position:relative;z-index:1;margin:0 0 10px;color:#245643;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
-      .to-case-card ul{position:relative;z-index:1;display:grid;gap:7px;margin:0 0 14px;padding:0;list-style:none;color:#43524b;font-size:14px;line-height:1.35}
+      .to-case-card ul{position:relative;z-index:1;display:grid;gap:8px;margin:0 0 14px;padding:0;list-style:none;color:#43524b;font-size:13.5px;line-height:1.35}
       .to-case-card li{display:grid;grid-template-columns:auto 1fr;gap:8px}
       .to-case-card li::before{content:"";width:7px;height:7px;margin-top:.42em;border-radius:999px;background:#3fa66a}
+      .to-case-card li b{display:block;color:#111827;font-weight:900}
+      .to-case-card li small{display:block;margin-top:2px;color:#66746d;font-size:12px;line-height:1.35}
       .to-case-link{position:relative;z-index:1;margin-top:auto;align-self:flex-start;color:#128656;font-size:13px;font-weight:900;text-decoration:none;border-bottom:1px dashed rgba(18,134,86,.42)}
       .to-case-link:hover{color:#111827}
       .to-cases-footnote{max-width:900px;margin:18px auto 0;text-align:center;color:#66746d;font-size:13.5px;line-height:1.55}
@@ -449,17 +451,17 @@
           <div class="parts-section-head">
             <span>Типові комплекти</span>
             <h2>6 прикладів ТО, у яких легко впізнати своє авто</h2>
-            <p>Це орієнтири за відкритими сервісними регламентами. Точний склад комплекту підтверджуємо по VIN, моделі, пробігу, року випуску та історії робіт.</p>
+            <p>Нижче показуємо формат реальної комплектовки: не загальні “фільтри й рідини”, а специфікації, кількість і помітки, де точний обсяг залежить від VIN, приводу та року випуску.</p>
           </div>
           <div class="to-cases-grid">
             <article class="to-case-card">
               <div class="to-case-meta"><strong class="to-case-model">BYD Seal EV</strong><span class="to-case-km">40 000 км / 24 міс.</span></div>
               <h3>EV-регламент</h3>
               <ul>
-                <li>гальмівна рідина за віком автомобіля</li>
-                <li>олива редуктора електроприводу за регламентом</li>
-                <li>салонний / HEPA-фільтр та перевірка клімату</li>
-                <li>контроль охолодження, гальм і нижнього захисту</li>
+                <li><span><b>Гальмівна рідина HZY6 / DOT 4</b><small>прокачування за картою, обсяг підтверджуємо по VIN</small></span></li>
+                <li><span><b>Олива редуктора Castrol BOT-383 / OEM EV W5</b><small>передній / задній редуктор і обсяг залежать від приводу</small></span></li>
+                <li><span><b>Салонний або HEPA-фільтр — 1 комплект</b><small>партномер і виконання підбираємо під конкретний VIN</small></span></li>
+                <li><span><b>Карта контролю охолодження, гальм і захисту</b><small>точки доступу, кліпси, огляд низу та моменти затягування</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="BYD Seal EV, 40 000 км / 24 міс.">Порахувати цей комплект →</a>
             </article>
@@ -467,10 +469,10 @@
               <div class="to-case-meta"><strong class="to-case-model">BYD Sealion 6 / Song Plus DM-i</strong><span class="to-case-km">40 000 км</span></div>
               <h3>Гібридне ТО</h3>
               <ul>
-                <li>моторна олива та масляний фільтр</li>
-                <li>гальмівна рідина, якщо настав інтервал</li>
-                <li>салонний і повітряний фільтри</li>
-                <li>паливний фільтр / адсорбер за регламентом комплектації</li>
+                <li><span><b>Моторна олива SAE 0W-20, ACEA C5</b><small>обсяг з фільтром уточнюємо за двигуном DM-i та роком</small></span></li>
+                <li><span><b>Масляний фільтр — 1 шт.</b><small>оригінальний партномер під VIN, з ущільненнями за картою</small></span></li>
+                <li><span><b>Повітряний + салонний фільтр — 1 + 1 шт.</b><small>салонний: пиловий / вугільний / PM2.5 за комплектацією</small></span></li>
+                <li><span><b>Гальмівна рідина DOT 4 / HZY6</b><small>якщо настав віковий інтервал, прокачування за схемою</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="BYD Sealion 6 / Song Plus DM-i, 40 000 км">Порахувати цей комплект →</a>
             </article>
@@ -478,10 +480,10 @@
               <div class="to-case-meta"><strong class="to-case-model">BYD Song Plus / Seal U DM-i</strong><span class="to-case-km">80 000 км</span></div>
               <h3>Великий DM-i</h3>
               <ul>
-                <li>олива ДВЗ та фільтр</li>
-                <li>свічки запалювання</li>
-                <li>охолоджуюча рідина ДВЗ / електромодуля</li>
-                <li>EHS-олива та фільтр за сервісною картою</li>
+                <li><span><b>Олива ДВЗ SAE 0W-20 + фільтр</b><small>обсяг, шайба зливної пробки і партномер — по VIN</small></span></li>
+                <li><span><b>Свічки запалювання — 4 шт.</b><small>тепловий індекс і зазор беремо з карти конкретного двигуна</small></span></li>
+                <li><span><b>Охолоджуюча рідина ДВЗ / електромодуля</b><small>окремо перевіряємо контури, тип рідини і процедуру прокачування</small></span></li>
+                <li><span><b>EHS-олива та фільтр</b><small>тільки якщо це передбачено сервісною картою вашої версії</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="BYD Song Plus / Seal U DM-i, 80 000 км">Порахувати цей комплект →</a>
             </article>
@@ -489,10 +491,10 @@
               <div class="to-case-meta"><strong class="to-case-model">Zeekr 001 / X / 7X</strong><span class="to-case-km">40 000 км</span></div>
               <h3>EV-привід</h3>
               <ul>
-                <li>олива редуктора електроприводу</li>
-                <li>салонний фільтр і перевірка клімату</li>
-                <li>гальмівна рідина, якщо минуло 24 місяці</li>
-                <li>контроль батарейного охолодження та підвіски</li>
+                <li><span><b>Олива редуктора електроприводу OEM</b><small>регламентно близько 40 000 км; обсяг залежить від приводу</small></span></li>
+                <li><span><b>Салонний фільтр — 1 комплект</b><small>PM2.5 / вугільний варіант, партномер під VIN</small></span></li>
+                <li><span><b>Гальмівна рідина — інтервал 24 міс.</b><small>тип і обсяг підтверджуємо за сервісною картою</small></span></li>
+                <li><span><b>Охолодження батареї та інвертора</b><small>контроль рівня, герметичності, підвіски і нижніх екранів</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="Zeekr 001 / X / 7X, 40 000 км">Порахувати цей комплект →</a>
             </article>
@@ -500,10 +502,10 @@
               <div class="to-case-meta"><strong class="to-case-model">Xiaomi SU7</strong><span class="to-case-km">20 000 км / 12 міс.</span></div>
               <h3>Перше велике EV-ТО</h3>
               <ul>
-                <li>салонний фільтр / фільтр кондиціонера</li>
-                <li>діагностика охолодження батареї та інвертора</li>
-                <li>контроль гальмівної рідини, колодок і шин</li>
-                <li>перевірка 12V АКБ та електронних систем</li>
+                <li><span><b>Фільтр кондиціонера / салону — 1 комплект</b><small>тип фільтра і партномер підбираємо за VIN</small></span></li>
+                <li><span><b>Контур батареї та інвертора</b><small>перевірка рівня, герметичності й типу охолоджувача</small></span></li>
+                <li><span><b>Гальмівна система</b><small>стан DOT 4-контуру, колодки, диски, електронний ручник</small></span></li>
+                <li><span><b>12V АКБ + електронна діагностика</b><small>помилки блоків, оновлення сервісних лічильників, шини</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="Xiaomi SU7, 20 000 км / 12 міс.">Порахувати цей комплект →</a>
             </article>
@@ -511,15 +513,15 @@
               <div class="to-case-meta"><strong class="to-case-model">Lynk &amp; Co 09 / 01 PHEV</strong><span class="to-case-km">100 000 км</span></div>
               <h3>Великий регламент</h3>
               <ul>
-                <li>олива ДВЗ та масляний фільтр</li>
-                <li>повітряний і салонний фільтри</li>
-                <li>комплект ременя ГРМ / натягувач за регламентом</li>
-                <li>контроль привідних ременів, гальм і рідин</li>
+                <li><span><b>Олива ДВЗ 0W-20 / 5W-30 + фільтр</b><small>специфікація та обсяг залежать від двигуна і року випуску</small></span></li>
+                <li><span><b>Повітряний + салонний фільтр — 1 + 1 шт.</b><small>підбираємо виконання і партномери по VIN</small></span></li>
+                <li><span><b>Комплект ГРМ за регламентом</b><small>ремінь, натягувач, ролики / кріплення — тільки якщо передбачено версією</small></span></li>
+                <li><span><b>Свічки, гальма, охолоджувач і ремені</b><small>додаємо в комплект, якщо настав інтервал за картою</small></span></li>
               </ul>
               <a class="to-case-link" href="#to-form" data-scheme="Lynk & Co 09 / 01 PHEV, 100 000 км">Порахувати цей комплект →</a>
             </article>
           </div>
-          <p class="to-cases-footnote">Мета блоку — швидко показати: ми працюємо не “олива + фільтр на око”, а збираємо комплект під конкретний регламент. Якщо вашої моделі тут немає, по VIN знайдемо саме її карту ТО.</p>
+          <p class="to-cases-footnote">У реальному розрахунку додаємо оригінальні партномери, фото позицій перед відправкою, обсяг рідин, витратні ущільнення та техкарту для механіка. Якщо вашої моделі тут немає, по VIN знайдемо саме її карту ТО.</p>
         </div>
       </section>
 
