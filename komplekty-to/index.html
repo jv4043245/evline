@@ -85,14 +85,16 @@
       .to-hero-copy{max-width:590px}
       .to-hero-media{position:relative;margin:0;min-width:0;align-self:start;transform:translateY(clamp(5px,.5vw,9px))}
       .to-hero-media img{display:block;width:min(100%,800px);height:auto;margin:0 auto;filter:drop-shadow(0 24px 42px rgba(15,23,42,.08))}
-      .to-hero-bonus{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 12px;padding:12px 14px;border:1px solid rgba(0,180,114,.18);border-radius:20px;background:linear-gradient(135deg,#e8f9ef,#fff);box-shadow:0 14px 34px rgba(15,23,42,.05)}
+      .to-hero-bonus{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:14px 0 10px;padding:12px 14px;border:1px solid rgba(0,180,114,.2);border-radius:20px;background:linear-gradient(135deg,#e5f8ee 0%,#fff 72%);box-shadow:0 14px 34px rgba(15,23,42,.05)}
       .to-hero-bonus strong{color:#00a86b;font-size:clamp(28px,3vw,38px);line-height:1;font-weight:950;letter-spacing:.01em}
       .to-hero-bonus span{color:#163b2c;font-size:16px;font-weight:900}
-      .to-hero-includes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px;padding:0;list-style:none}
-      .to-hero-includes li{display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start;padding:12px;border:1px solid rgba(0,180,114,.16);border-radius:18px;background:rgba(255,255,255,.82);box-shadow:0 10px 24px rgba(15,23,42,.045)}
-      .to-hero-includes b{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#00a86b;color:#fff;font-size:14px}
-      .to-hero-includes strong{display:block;color:#111827;font-size:14px;line-height:1.25}
-      .to-hero-includes small{display:block;margin-top:4px;color:#5b6862;font-size:12.5px;font-weight:650;line-height:1.35}
+      .to-hero-includes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px;padding:6px;border:1px solid rgba(0,180,114,.14);border-radius:22px;background:rgba(232,249,239,.58);box-shadow:inset 0 0 0 1px rgba(255,255,255,.72),0 14px 30px rgba(15,23,42,.045);list-style:none}
+      .to-hero-includes li{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:start;padding:14px 14px 14px 16px;border:1px solid rgba(0,180,114,.25);border-radius:17px;background:linear-gradient(135deg,#f2fbf6 0%,#fff 58%,#ecf9f1 100%);box-shadow:0 14px 30px rgba(0,180,114,.07);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+      .to-hero-includes li:hover{transform:translateY(-2px);border-color:rgba(0,180,114,.42);box-shadow:0 18px 38px rgba(0,180,114,.12)}
+      .to-hero-includes li::after{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#00b472,#6ddf9c);z-index:-1}
+      .to-hero-includes b{display:grid;place-items:center;width:36px;height:36px;border-radius:13px;background:linear-gradient(135deg,#00b472,#2f9b61);color:#fff;font-size:15px;box-shadow:0 8px 18px rgba(0,180,114,.2)}
+      .to-hero-includes strong{display:block;color:#111827;font-size:15px;line-height:1.22}
+      .to-hero-includes small{display:block;margin-top:5px;color:#496056;font-size:12.8px;font-weight:720;line-height:1.35}
       .to-hero-form{grid-column:1/-1;display:grid;grid-template-columns:max-content minmax(190px,.75fr) minmax(390px,1.35fr) max-content;align-items:center;width:100%;max-width:none;margin-top:0;gap:12px 16px;padding:15px;border-radius:22px;background:rgba(255,255,255,.94);box-shadow:0 18px 44px rgba(15,23,42,.08)}
       .to-hero-form strong{font-size:19px}
       .to-hero-form input{min-height:40px}
@@ -283,8 +285,8 @@
               <span>додаємо до комплекту ТО</span>
             </div>
             <ol class="to-hero-includes" aria-label="Що безкоштовно входить">
-              <li><b>1</b><span><strong>Список компонентів для вашого ТО</strong><small>Підбираємо за VIN, моделлю і пробігом.</small></span></li>
-              <li><b>2</b><span><strong>Регламент для механіка</strong><small>Що, де і в якому порядку міняти на СТО.</small></span></li>
+              <li><b>1</b><span><strong>Список компонентів ТО</strong><small>Партномери, обсяги, рідини й фільтри за VIN.</small></span></li>
+              <li><b>2</b><span><strong>Регламент для механіка</strong><small>Схеми доступу, порядок робіт, моменти затягування.</small></span></li>
             </ol>
           </div>
           <figure class="to-hero-media">
