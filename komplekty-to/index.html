@@ -240,6 +240,21 @@
       .fear-card p{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:#5b6862}
       .fear-cta{display:inline-block;font-size:13px;font-weight:700;color:#1b7a4b;text-decoration:none;border-bottom:1px dashed #7fd8a9}
       .fear-cta:hover{color:#15201a}
+      .to-modal-backdrop{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,17,13,.56);backdrop-filter:blur(7px)}
+      .to-modal-backdrop.is-open{display:flex}
+      body.to-modal-open{overflow:hidden}
+      .to-modal{position:relative;width:min(100%,560px);border:1px solid rgba(0,180,114,.18);border-radius:28px;background:linear-gradient(180deg,#ffffff,#f8fdf9);box-shadow:0 32px 90px rgba(0,0,0,.3);padding:24px}
+      .to-modal__close{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:38px;height:38px;border:1px solid rgba(17,24,39,.08);border-radius:999px;background:#fff;color:#111827;font-size:24px;line-height:1;cursor:pointer}
+      .to-modal__eyebrow{display:inline-flex;margin-bottom:10px;padding:6px 10px;border-radius:999px;background:#eaf8f0;color:#087244;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+      .to-modal h2{margin:0;color:#111827;font-size:clamp(24px,3vw,32px);line-height:1.1}
+      .to-modal__lead{margin:8px 0 0;color:#5b6862;font-size:15px;line-height:1.55}
+      .to-modal__context{margin:14px 0 0;padding:12px 14px;border-radius:16px;background:#effaf4;color:#154b32;font-weight:850;line-height:1.4}
+      .to-modal-form{display:grid;gap:10px;margin-top:16px;padding:0;border:0;background:transparent;box-shadow:none;max-width:none}
+      .to-modal-form input{min-height:48px;border:1px solid rgba(17,24,39,.14);border-radius:14px;background:#fff;padding:0 14px;font:inherit;color:#111827}
+      .to-modal-form button{min-height:52px;border:0;border-radius:999px;background:#3fa66a;color:#fff;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 14px 30px rgba(63,166,106,.24)}
+      .to-modal__privacy{margin:8px 0 0;color:#7d8a84;font-size:13px;text-align:center}
+      .to-page .brand-seo-form [data-form-message]{color:#16603d!important}
+      @media(max-width:560px){.to-modal-backdrop{align-items:flex-end;padding:0;background:rgba(8,17,13,.48)}.to-modal{width:100%;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:22px 16px 18px}}
 
 
     </style>
@@ -355,7 +370,7 @@
             <div class="to-savings-actions">
               <div class="to-savings-original"><strong>Original</strong><span>Для комплектів ТО</span></div>
               <div class="to-savings-chain" aria-label="Ланцюг поставки"><span class="chain-node">Виробник</span><i></i><span class="to-savings-chain-logo"><img src="../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Ви</span></div>
-              <a class="to-savings-button" href="#to-form">Порахувати комплект по VIN</a>
+              <a class="to-savings-button" href="#to-form" data-scheme="комплект ТО по VIN з оригінальними розхідниками">Порахувати комплект по VIN</a>
             </div>
           </div>
         </div>
@@ -435,7 +450,7 @@
               <p><a class="fear-cta" href="#to-form" data-scheme="олива редуктора електромотора">Підібрати оливу редуктора →</a></p>
             </details>
           </div>
-          <p class="to-section-cta">У технологічній карті ми окремо прописуємо рідини, контури, кліпси, сервісні режими, точки доступу і моменти затягування. <a href="#to-form">Надішліть VIN</a> — покажемо, де саме ваше СТО може помилитися.</p>
+          <p class="to-section-cta">У технологічній карті ми окремо прописуємо рідини, контури, кліпси, сервісні режими, точки доступу і моменти затягування. <a href="#to-form" data-scheme="перевірка ризиків ТО по VIN">Надішліть VIN</a> — покажемо, де саме ваше СТО може помилитися.</p>
         </div>
       </section>
 
@@ -580,6 +595,24 @@
       </section>
     </main>
 
+    <div class="to-modal-backdrop" data-to-modal aria-hidden="true">
+      <div class="to-modal" role="dialog" aria-modal="true" aria-labelledby="to-modal-title">
+        <button class="to-modal__close" type="button" aria-label="Закрити форму" data-to-modal-close>×</button>
+        <span class="to-modal__eyebrow">Без переходу наверх</span>
+        <h2 id="to-modal-title">Порахувати комплект ТО</h2>
+        <p class="to-modal__lead">Залишайтесь у цьому місці сторінки. Ми підставимо тему, яку ви натиснули, і відкриємо Telegram з готовим текстом.</p>
+        <div class="to-modal__context" data-to-modal-context>Комплект ТО по VIN</div>
+        <form class="brand-seo-form to-modal-form" id="to-context-form" data-form-name="Контекстна форма ТО" data-telegram-parts-form>
+          <input name="car" placeholder="Марка, модель і пробіг" required>
+          <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <input name="phone" placeholder="+380..." autocomplete="tel" required>
+          <input type="hidden" name="part" value="Комплект ТО по VIN">
+          <button type="submit">Отримати розрахунок</button>
+          <p class="to-modal__privacy">Без спаму. Менеджер отримає саме цей запит.</p>
+        </form>
+      </div>
+    </div>
+
     <a class="floating-chat" href="https://t.me/evline_support" target="_blank" rel="noopener" aria-label="Telegram"></a>
 
     <footer class="site-footer">
@@ -594,14 +627,49 @@
     </footer>
 
     <script>
-      document.querySelectorAll(".fear-cta, .to-case-link").forEach(function(a){
-        a.addEventListener("click", function(){
-          var form = document.getElementById("to-form");
-          if(!form) return;
-          var part = form.querySelector('[name="part"]');
-          if(part) part.value = "Комплект ТО + схема: " + (a.dataset.scheme || "");
+      (function(){
+        var modal = document.querySelector("[data-to-modal]");
+        if(!modal) return;
+        var modalForm = document.getElementById("to-context-form");
+        var context = modal.querySelector("[data-to-modal-context]");
+        var firstInput = modalForm ? modalForm.querySelector("input") : null;
+        var hiddenPart = modalForm ? modalForm.querySelector('[name="part"]') : null;
+
+        function getTopic(link){
+          return link.dataset.scheme || link.textContent.replace(/\s+/g, " ").trim() || "Комплект ТО по VIN";
+        }
+
+        function openModal(topic){
+          var label = topic || "Комплект ТО по VIN";
+          if(context) context.textContent = label;
+          if(hiddenPart) hiddenPart.value = "Комплект ТО: " + label;
+          modal.classList.add("is-open");
+          modal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("to-modal-open");
+          window.setTimeout(function(){ if(firstInput) firstInput.focus(); }, 40);
+        }
+
+        function closeModal(){
+          modal.classList.remove("is-open");
+          modal.setAttribute("aria-hidden", "true");
+          document.body.classList.remove("to-modal-open");
+        }
+
+        document.querySelectorAll('.to-page a[href="#to-form"]').forEach(function(link){
+          link.addEventListener("click", function(event){
+            event.preventDefault();
+            event.stopPropagation();
+            openModal(getTopic(link));
+          });
         });
-      });
+
+        modal.addEventListener("click", function(event){
+          if(event.target === modal || event.target.closest("[data-to-modal-close]")) closeModal();
+        });
+        document.addEventListener("keydown", function(event){
+          if(event.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+        });
+      })();
     </script>
   </body>
 </html>
