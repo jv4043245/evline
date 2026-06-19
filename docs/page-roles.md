@@ -17,7 +17,14 @@ These pages are part of the main site navigation and should be treated as high-v
 | --- | --- | --- | --- |
 | BYD programming funnel | `/byd` | `/ru/byd` | Programming, diagnostics, calibration and software work for BYD |
 | Service kit funnel | `/komplekty-to/` | `/ru/komplekty-to/` | Maintenance kits with original consumables and technical cards for mechanics |
-| Repair shop partnership funnel | `/spivpratsya-sto/` | `/ru/sotrudnichestvo-sto/` | B2B partnership offer for repair shops working with modern Chinese cars |
+
+### Draft commercial sections
+
+These pages exist for review, but should stay hidden from client navigation and search until final approval.
+
+| Role | Ukrainian URL | Russian URL | Current state |
+| --- | --- | --- | --- |
+| Repair shop partnership funnel | `/spivpratsya-sto/` | `/ru/sotrudnichestvo-sto/` | Draft: noindex, not in sitemap, not linked from main navigation |
 
 ## Current decision
 

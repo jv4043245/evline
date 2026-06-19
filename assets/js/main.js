@@ -9,11 +9,6 @@ function ensureCoreNavItems() {
       const value = `${link.textContent || ""} ${link.getAttribute("href") || ""}`;
       return /komplekty-to|комплект|комплекти/i.test(value);
     });
-    const hasStoItem = links.some((link) => {
-      const value = `${link.textContent || ""} ${link.getAttribute("href") || ""}`;
-      return /spivpratsya-sto|sotrudnichestvo-sto|для сто/i.test(value);
-    });
-
     let insertAfter = links[1];
 
     if (!hasToItem) {
@@ -22,13 +17,6 @@ function ensureCoreNavItems() {
       item.textContent = isRu ? "Комплекты ТО" : "Комплект ТО";
       insertAfter.after(item);
       insertAfter = item;
-    }
-
-    if (!hasStoItem) {
-      const item = document.createElement("a");
-      item.href = isRu ? "/ru/sotrudnichestvo-sto/" : "/spivpratsya-sto/";
-      item.textContent = "Для СТО";
-      insertAfter.after(item);
     }
   });
 }

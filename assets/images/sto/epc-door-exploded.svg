@@ -1,0 +1,51 @@
+<svg width="960" height="680" viewBox="0 0 960 680" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="680" rx="38" fill="#F7FAF8"/>
+  <circle cx="170" cy="120" r="150" fill="#DFF2E8"/>
+  <circle cx="790" cy="560" r="190" fill="#EAF6EF"/>
+  <path d="M126 106h708c28 0 50 22 50 50v368c0 28-22 50-50 50H126c-28 0-50-22-50-50V156c0-28 22-50 50-50Z" fill="white" stroke="#CFEBDD" stroke-width="2"/>
+  <text x="108" y="160" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900">EPC / вибух-схема двері</text>
+  <text x="108" y="194" fill="#64748B" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">кожна накладка, кліпса, замок і ущільнювач мають свій парт-номер</text>
+
+  <g transform="translate(92 246)">
+    <path d="M96 72c34-39 92-58 174-58h142c64 0 116 18 156 54l48 44c15 14 23 34 20 55l-18 128c-4 28-28 49-56 49H104c-30 0-54-24-54-54V170c0-37 16-72 46-98Z" fill="#E8F7EE" stroke="#17A56C" stroke-width="5"/>
+    <path d="M184 56h210c43 0 82 15 112 45l38 37H149l35-82Z" fill="#BFE8D1" stroke="#17A56C" stroke-width="4"/>
+    <path d="M144 172h420" stroke="#17A56C" stroke-width="5" stroke-linecap="round"/>
+    <path d="M118 264h116M432 264h126" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="282" cy="306" r="28" fill="#0F172A"/>
+    <circle cx="282" cy="306" r="11" fill="#F7FAF8"/>
+  </g>
+
+  <g transform="translate(650 240)">
+    <rect x="0" y="20" width="122" height="54" rx="14" fill="#111714"/>
+    <rect x="28" y="94" width="118" height="40" rx="11" fill="#EAF6EF" stroke="#17A56C" stroke-width="3"/>
+    <rect x="-6" y="154" width="140" height="46" rx="12" fill="#EAF6EF" stroke="#17A56C" stroke-width="3"/>
+    <rect x="22" y="220" width="96" height="38" rx="10" fill="#EAF6EF" stroke="#17A56C" stroke-width="3"/>
+    <circle cx="62" cy="358" r="22" fill="#17A56C"/>
+    <text x="18" y="55" fill="white" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900">замок</text>
+    <text x="52" y="121" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800">ручка</text>
+    <text x="17" y="182" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800">ущільнювач</text>
+    <text x="46" y="246" fill="#0F172A" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800">кліпси</text>
+  </g>
+
+  <g stroke="#A3B9AF" stroke-width="2" stroke-dasharray="6 8">
+    <path d="M610 300C655 278 666 275 690 266"/>
+    <path d="M600 354C654 356 671 353 678 354"/>
+    <path d="M594 415C648 429 666 429 678 429"/>
+    <path d="M298 552C465 584 590 594 712 598"/>
+  </g>
+
+  <g transform="translate(112 520)">
+    <rect width="224" height="54" rx="27" fill="#111714"/>
+    <circle cx="29" cy="27" r="18" fill="#78C143"/>
+    <text x="20" y="34" fill="white" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="900">+</text>
+    <text x="60" y="34" fill="white" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900">підбір по VIN</text>
+  </g>
+  <g transform="translate(370 520)">
+    <rect width="232" height="54" rx="27" fill="#EAF6EF" stroke="#BCE7CF" stroke-width="2"/>
+    <text x="22" y="34" fill="#17633A" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900">оригінальний номер</text>
+  </g>
+  <g transform="translate(638 520)">
+    <rect width="214" height="54" rx="27" fill="#EAF6EF" stroke="#BCE7CF" stroke-width="2"/>
+    <text x="26" y="34" fill="#17633A" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900">без угадайки</text>
+  </g>
+</svg>
