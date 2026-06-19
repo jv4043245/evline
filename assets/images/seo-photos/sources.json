@@ -112,5 +112,41 @@
     "model_page": "GWM Tank 300",
     "source": "https://en.wikipedia.org/wiki/GWM_Tank_300",
     "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/2020_TANK_300.jpg/1920px-2020_TANK_300.jpg"
+  },
+  "volkswagen-id": {
+    "brand": "Volkswagen ID",
+    "model_page": "Volkswagen ID.6",
+    "source": "https://en.wikipedia.org/wiki/Volkswagen_ID.6",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Volkswagen_ID.6_X_001.jpg/1920px-Volkswagen_ID.6_X_001.jpg"
+  },
+  "polestar": {
+    "brand": "Polestar",
+    "model_page": "Polestar 2",
+    "source": "https://en.wikipedia.org/wiki/Polestar_2",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Polestar_2_IMG_2976.jpg/1920px-Polestar_2_IMG_2976.jpg"
+  },
+  "smart": {
+    "brand": "Smart",
+    "model_page": "Smart #1",
+    "source": "https://en.wikipedia.org/wiki/Smart_%231",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Smart_%231_IMG_6580.jpg/1920px-Smart_%231_IMG_6580.jpg"
+  },
+  "volvo-ex30": {
+    "brand": "Volvo EX30",
+    "model_page": "Volvo EX30",
+    "source": "https://en.wikipedia.org/wiki/Volvo_EX30",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Volvo_EX30_IMG_7936.jpg/1920px-Volvo_EX30_IMG_7936.jpg"
+  },
+  "audi-q5-etron": {
+    "brand": "Audi Q5 e-tron",
+    "model_page": "Audi Q5 e-tron",
+    "source": "https://en.wikipedia.org/wiki/Audi_Q5_e-tron",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Audi_Q5_e-tron_IMG_7635.jpg/1920px-Audi_Q5_e-tron_IMG_7635.jpg"
+  },
+  "mg": {
+    "brand": "MG",
+    "model_page": "MG4 EV",
+    "source": "https://en.wikipedia.org/wiki/MG4_EV",
+    "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/MG4_EV_IMG_7348.jpg/1920px-MG4_EV_IMG_7348.jpg"
   }
 }

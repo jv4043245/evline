@@ -43,8 +43,8 @@ const replaceMany = (html, pairs) => {
 
 const brandMarqueeMarkup = (label) => `      <section class="parts-brand-marquee" aria-label="${label}">
         <div class="parts-brand-marquee__track">
-          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span>
-          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span>
+          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span><span>SMART</span><span>VOLVO EX30</span><span>VOLKSWAGEN ID</span><span>POLESTAR</span><span>MG</span><span>AUDI Q5 E-TRON</span>
+          <span>BYD</span><span>XIAOMI</span><span>LYNK &amp; CO</span><span>LEOPARD</span><span>ZEEKR</span><span>NIO</span><span>XPENG</span><span>LI AUTO</span><span>AITO</span><span>AVATR</span><span>SMART</span><span>VOLVO EX30</span><span>VOLKSWAGEN ID</span><span>POLESTAR</span><span>MG</span><span>AUDI Q5 E-TRON</span>
         </div>
       </section>`;
 

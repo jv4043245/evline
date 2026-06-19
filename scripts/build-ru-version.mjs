@@ -4,7 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
-const lastmod = "2026-06-11";
+const lastmod = "2026-06-19";
 const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
 const techChatUrl = (message) => `https://t.me/evline_tech?text=${encodeURIComponent(message)}`;
 const techTelegramLinks = {
@@ -251,6 +251,72 @@ const brands = [
     focus: "автомобили Great Wall-группы: внедорожники, кроссоверы и электромобили со спросом на кузов, ходовую и оптику",
     popular: ["ходовая", "кузовные детали", "оптика", "ТО и расходники", "электроника"],
     note: "Для Tank, Wey и Ora важно сверять рынок, год и комплектацию, потому что детали могут отличаться даже у похожих моделей.",
+  },
+  {
+    uaSlug: "zapchastyny-volkswagen-id",
+    ruSlug: "zapchasti-volkswagen-id",
+    photo: "volkswagen-id.jpg",
+    name: "Volkswagen ID",
+    aliases: "Volkswagen ID, VW ID, ID.3, ID.4, ID.6, ID.7",
+    models: ["ID.3", "ID.4 X", "ID.4 Crozz", "ID.6 X", "ID.6 Crozz", "ID.7 Vizzion", "ID.Unyx"],
+    focus: "электромобили Volkswagen для китайского рынка, где важно не смешивать европейские и китайские версии деталей",
+    popular: ["кузовные детали", "оптика", "стекло", "ходовая", "расходные материалы"],
+    note: "Для Volkswagen ID из Китая важно отличать ID.4 X, ID.4 Crozz, ID.6 X и ID.6 Crozz: похожие детали могут иметь разные крепления, оптику и артикулы.",
+  },
+  {
+    uaSlug: "zapchastyny-polestar",
+    ruSlug: "zapchasti-polestar",
+    photo: "polestar.jpg",
+    name: "Polestar",
+    aliases: "Polestar, Polestar 2, Polestar 3, Polestar 4",
+    models: ["2", "3", "4"],
+    focus: "премиальные электромобили Volvo/Geely-группы, для которых важна проверка рынка, года и комплектации",
+    popular: ["оптика", "кузовные детали", "ходовая", "электроника", "элементы салона"],
+    note: "Polestar имеет версии для разных рынков, поэтому перед заказом сверяем VIN, год, комплектацию и совместимость электронных компонентов.",
+  },
+  {
+    uaSlug: "zapchastyny-smart",
+    ruSlug: "zapchasti-smart",
+    photo: "smart.jpg",
+    name: "Smart",
+    aliases: "Smart, Smart #1, Smart #3, Smart #5",
+    models: ["#1", "#3", "#5"],
+    focus: "новые электромобили Smart на платформе Geely SEA с ограниченным складским наличием деталей в Украине",
+    popular: ["бамперы", "фары", "кузовные детали", "подвеска", "расходные материалы"],
+    note: "Для Smart нового поколения важно подбирать деталь по VIN: #1, #3 и #5 имеют разные кузовные элементы, оптику и комплектации.",
+  },
+  {
+    uaSlug: "zapchastyny-volvo-ex30",
+    ruSlug: "zapchasti-volvo-ex30",
+    photo: "volvo-ex30.jpg",
+    name: "Volvo EX30",
+    aliases: "Volvo EX30, Volvo electric, Volvo China",
+    models: ["EX30", "EX30 Cross Country", "EX30 Twin Motor"],
+    focus: "компактные электромобили Volvo китайской сборки с общей логикой платформы Geely-группы",
+    popular: ["кузовные детали", "оптика", "стекло", "подвеска", "ТО и расходники"],
+    note: "Volvo EX30 нужно подбирать осторожно по VIN и рынку поставки: детали кузова, оптики и электронных компонентов могут отличаться по версии.",
+  },
+  {
+    uaSlug: "zapchastyny-audi-q5-etron",
+    ruSlug: "zapchasti-audi-q5-etron",
+    photo: "audi-q5-etron.jpg",
+    name: "Audi Q5 e-tron",
+    aliases: "Audi Q5 e-tron, Audi Q4 e-tron China, Audi China EV",
+    models: ["Q5 e-tron", "Q4 e-tron China", "Q6L e-tron"],
+    focus: "китайские электрические версии Audi, где европейские каталоги не всегда помогают с правильным артикулом",
+    popular: ["оптика", "кузовные детали", "стекло", "подвеска", "электронные компоненты"],
+    note: "Для Audi Q5 e-tron важно не подбирать детали по европейским аналогам наугад: китайская версия имеет собственные каталожные позиции.",
+  },
+  {
+    uaSlug: "zapchastyny-mg",
+    ruSlug: "zapchasti-mg",
+    photo: "mg.jpg",
+    name: "MG",
+    aliases: "MG, MG4, MG ZS EV, MG Marvel R, MG Cyberster",
+    models: ["MG4 EV", "ZS EV", "Marvel R", "Cyberster", "MG5 EV"],
+    focus: "массовые электромобили и гибриды SAIC/MG, для которых выгодно проверять оригинальные и OEM позиции в Китае",
+    popular: ["оптика", "кузовные детали", "ходовая", "ТО и расходники", "электрика"],
+    note: "По MG часто есть выбор между оригиналом, OEM и доступными аналогами, но совместимость все равно нужно подтверждать по VIN и рынку автомобиля.",
   },
 ];
 
