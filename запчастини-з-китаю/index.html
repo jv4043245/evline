@@ -151,12 +151,15 @@
   .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
   .ticker span{display:inline-block;font-size:26px;font-weight:600;color:var(--green-d);padding-right:60px;animation:tick 28s linear infinite}
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-  .brand-seo-strip{padding:28px 0;background:#fff;border-top:1px solid var(--line)}
-  .brand-seo-strip h2{font-size:24px;color:var(--green-d);margin-bottom:6px}
-  .brand-seo-strip .lead{max-width:560px;font-size:15px}
-  .brand-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px}
-  .brand-links a{display:inline-flex;min-height:36px;align-items:center;padding:0 13px;border:1px solid #cde7d8;border-radius:999px;background:#f7fbf8;color:var(--green-d);font-size:13px;font-weight:750;text-decoration:none;transition:.2s}
-  .brand-links a:hover{background:var(--green-l);transform:translateY(-2px)}
+  .brand-seo-strip{padding:14px 0;background:#fbfdfb;border-top:1px solid var(--line)}
+  .brand-seo-strip .wrap{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+  .brand-seo-strip .center{text-align:left}
+  .brand-seo-strip .tag{display:none}
+  .brand-seo-strip h2{font-size:13px;color:#607167;margin:0;white-space:nowrap}
+  .brand-seo-strip .lead{display:none}
+  .brand-links{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:0}
+  .brand-links a{display:inline-flex;min-height:24px;align-items:center;padding:0 9px;border:1px solid #dceee4;border-radius:999px;background:#fff;color:#467456;font-size:11px;font-weight:700;text-decoration:none;transition:.2s}
+  .brand-links a:hover{background:#edf7f1;color:var(--green-d);transform:translateY(-1px)}
   /* categories — тонкі горизонтальні плитки 4-в-ряд */
   .cat .grid2{grid-template-columns:repeat(4,1fr);gap:10px}
   .cat .card{display:flex;flex-direction:row;gap:11px;align-items:center;padding:12px 14px}
@@ -634,9 +637,9 @@
 <!-- SEO-навігація за марками: нижче основної воронки, без відволікання у шапці -->
 <section class="brand-seo-strip" aria-label="Сторінки запчастин за марками авто">
   <div class="wrap">
-    <div class="center"><span class="tag">За марками</span>
-      <h2>Потрібна конкретна марка?</h2>
-      <p class="lead">Окремі сторінки для підбору запчастин по VIN. Основна дія та сама — надіслати VIN і назву деталі менеджеру.</p>
+    <div class="center"><span class="tag">Марки авто</span>
+      <h2>Сторінки підбору за брендами</h2>
+      <p class="lead">Службова навігація для пошуку запчастин по VIN для популярних китайських авто та китайських версій світових брендів.</p>
     </div>
     <div class="brand-links">
       <a href="../zapchastyny-byd/">BYD</a>
