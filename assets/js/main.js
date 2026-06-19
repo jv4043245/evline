@@ -1,25 +1,39 @@
-function ensurePendingToNavItem() {
+function ensureCoreNavItems() {
   document.querySelectorAll(".nav").forEach((nav) => {
-    if (nav.querySelector("[data-to-nav-pending]")) return;
-
     const links = Array.from(nav.querySelectorAll("a"));
+    if (links.length < 2) return;
+
+    const text = document.documentElement.lang.toLowerCase();
+    const isRu = text.startsWith("ru") || window.location.pathname.startsWith("/ru/");
     const hasToItem = links.some((link) => {
       const value = `${link.textContent || ""} ${link.getAttribute("href") || ""}`;
       return /komplekty-to|комплект|комплекти/i.test(value);
     });
+    const hasStoItem = links.some((link) => {
+      const value = `${link.textContent || ""} ${link.getAttribute("href") || ""}`;
+      return /spivpratsya-sto|sotrudnichestvo-sto|для сто/i.test(value);
+    });
 
-    if (hasToItem || links.length < 2) return;
+    let insertAfter = links[1];
 
-    const item = document.createElement("span");
-    item.className = "nav__pending";
-    item.dataset.toNavPending = "";
-    item.setAttribute("aria-disabled", "true");
-    item.textContent = "Комплект ТО";
-    links[1].after(item);
+    if (!hasToItem) {
+      const item = document.createElement("a");
+      item.href = isRu ? "/ru/komplekty-to/" : "/komplekty-to/";
+      item.textContent = isRu ? "Комплекты ТО" : "Комплект ТО";
+      insertAfter.after(item);
+      insertAfter = item;
+    }
+
+    if (!hasStoItem) {
+      const item = document.createElement("a");
+      item.href = isRu ? "/ru/sotrudnichestvo-sto/" : "/spivpratsya-sto/";
+      item.textContent = "Для СТО";
+      insertAfter.after(item);
+    }
   });
 }
 
-ensurePendingToNavItem();
+ensureCoreNavItems();
 
 const navToggle = document.querySelector("[data-nav-toggle]");
 const siteNav = document.querySelector("#site-nav");

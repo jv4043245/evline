@@ -9,6 +9,16 @@ This file documents the intentional split between the organic funnels and paid-t
 | Organic home / main funnel | `/` | `/ru/` | Direct visits, brand traffic, organic search, general site entry |
 | Paid traffic landing | `/запчастини-з-китаю/` | `/ru/zapchasti-iz-kitaya/` | Google Ads, Telegram ads, campaign traffic, A/B conversion testing |
 
+## Core commercial sections
+
+These pages are part of the main site navigation and should be treated as high-value organic/commercial pages, not hidden SEO utility pages.
+
+| Role | Ukrainian URL | Russian URL | Main use |
+| --- | --- | --- | --- |
+| BYD programming funnel | `/byd` | `/ru/byd` | Programming, diagnostics, calibration and software work for BYD |
+| Service kit funnel | `/komplekty-to/` | `/ru/komplekty-to/` | Maintenance kits with original consumables and technical cards for mechanics |
+| Repair shop partnership funnel | `/spivpratsya-sto/` | `/ru/sotrudnichestvo-sto/` | B2B partnership offer for repair shops working with modern Chinese cars |
+
 ## Current decision
 
 Both versions stay live, but they do not have the same SEO role.

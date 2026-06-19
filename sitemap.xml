@@ -38,6 +38,42 @@
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
+  <url>
+    <loc>https://evline.com.ua/komplekty-to/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/komplekty-to/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/komplekty-to/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/komplekty-to/" />
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/komplekty-to/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/komplekty-to/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/komplekty-to/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/komplekty-to/" />
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/spivpratsya-sto/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/spivpratsya-sto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/sotrudnichestvo-sto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/spivpratsya-sto/" />
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/sotrudnichestvo-sto/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/spivpratsya-sto/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/sotrudnichestvo-sto/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/spivpratsya-sto/" />
+    <lastmod>2026-06-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
   <!-- BYD programming SEO pain-point pages. -->
   <url>
     <loc>https://evline.com.ua/ukrainizatsiya-byd/</loc>
