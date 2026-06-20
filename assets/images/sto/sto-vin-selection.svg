@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" role="img" aria-label="VIN parts selection">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7faf8"/>
+      <stop offset="1" stop-color="#e4f6ec"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#0f172a" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect width="900" height="420" rx="34" fill="url(#bg)"/>
+  <path d="M145 252c22-61 66-94 132-99h214c52 4 91 32 118 83l46 8c27 5 48 27 48 55v18H117v-29c0-18 11-31 28-36z" fill="#fff" stroke="#cfe8d8" stroke-width="8" filter="url(#shadow)"/>
+  <circle cx="245" cy="318" r="44" fill="#111827"/>
+  <circle cx="594" cy="318" r="44" fill="#111827"/>
+  <path d="M307 176h146c35 0 67 18 86 48H279c7-27 17-43 28-48z" fill="#dff4e8"/>
+  <rect x="88" y="66" width="318" height="92" rx="26" fill="#111827" filter="url(#shadow)"/>
+  <text x="122" y="123" fill="#fff" font-family="Arial, sans-serif" font-size="34" font-weight="900">VIN</text>
+  <text x="198" y="123" fill="#7fd8a9" font-family="Arial, sans-serif" font-size="24" font-weight="800">LC0C74C44...</text>
+  <g filter="url(#shadow)">
+    <rect x="548" y="74" width="226" height="168" rx="28" fill="#fff"/>
+    <path d="M590 124h112M590 164h144M590 204h86" stroke="#d8e7dd" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="730" cy="126" r="28" fill="#00b472"/>
+    <path d="M717 126l9 9 20-23" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
