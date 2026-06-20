@@ -27,50 +27,114 @@
     <script src="../assets/js/main.js?v=header-sto-1" defer></script>
     <style>
       .sto-page .brand-seo-hero {
+        padding: clamp(38px, 4.2vw, 60px) 0 clamp(28px, 3.2vw, 42px);
         background:
           radial-gradient(circle at 12% 10%, rgba(0, 180, 114, 0.13), transparent 32%),
           linear-gradient(180deg, #fbfdfb 0%, #fff 100%);
       }
+      .sto-page .brand-seo-hero__grid {
+        grid-template-columns: minmax(0, 1.08fr) minmax(390px, 0.92fr);
+        align-items: center;
+      }
+      .sto-page .brand-seo-hero__grid > div:first-child {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding-block: 14px;
+      }
+      .sto-page .brand-seo-hero h1 {
+        max-width: 690px;
+        font-size: clamp(38px, 4.25vw, 60px);
+        line-height: 1.02;
+      }
+      .sto-page .brand-seo-lead {
+        max-width: 680px;
+        margin-top: 18px;
+      }
+      .sto-page .brand-seo-tags {
+        gap: 7px;
+        margin-top: 20px;
+      }
+      .sto-page .brand-seo-tags span {
+        min-height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
       .sto-hero-panel {
         display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(168px, 0.72fr);
+        align-self: center;
+        align-items: stretch;
         gap: 14px;
-        padding: 22px;
+        padding: 18px;
         border: 1px solid rgba(0, 168, 107, 0.18);
         border-radius: 22px;
         background: linear-gradient(180deg, #fff 0%, #f3faf6 100%);
         box-shadow: 0 22px 56px rgba(15, 23, 42, 0.1);
       }
+      .sto-hero-panel__copy {
+        display: grid;
+        align-content: center;
+        gap: 12px;
+      }
       .sto-hero-panel strong {
         color: #0f172a;
-        font-size: clamp(24px, 3vw, 34px);
+        font-size: clamp(22px, 2.45vw, 30px);
         line-height: 1.08;
       }
       .sto-hero-panel p {
         margin: 0;
         color: #56645f;
+        font-size: 15px;
         font-weight: 650;
+        line-height: 1.45;
+      }
+      .sto-hero-panel__media {
+        position: relative;
+        min-height: 176px;
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid rgba(0, 168, 107, 0.16);
+        border-radius: 18px;
+        background: #eef8f1;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+      }
+      .sto-hero-panel__media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+      .sto-hero-panel__media::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 52%, rgba(15, 23, 42, 0.18));
+        pointer-events: none;
       }
       .sto-hero-panel__stats {
+        grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
       }
       .sto-hero-panel__stats span {
-        min-height: 92px;
+        min-height: 60px;
         display: grid;
         align-content: center;
-        gap: 5px;
-        padding: 14px;
+        gap: 4px;
+        padding: 9px 11px;
         border: 1px solid #dcefe2;
         border-radius: 16px;
         background: #fff;
         color: #64748b;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 750;
       }
       .sto-hero-panel__stats b {
         color: #0f172a;
-        font-size: 22px;
+        font-size: 19px;
         line-height: 1;
       }
       .sto-split-grid {
@@ -163,8 +227,9 @@
         gap: 14px;
       }
       .sto-offer-card {
-        min-height: 210px;
-        padding: 22px;
+        min-height: 274px;
+        overflow: hidden;
+        padding: 14px 18px 20px;
         border: 1px solid #dcefe2;
         border-radius: 20px;
         background: #fff;
@@ -175,6 +240,32 @@
         transform: translateY(-4px);
         border-color: #7fd8a9;
         box-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+      }
+      .sto-offer-card__media {
+        position: relative;
+        height: 104px;
+        margin: -2px -6px 16px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #eef8f1;
+      }
+      .sto-offer-card__media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.24s ease;
+      }
+      .sto-offer-card:hover .sto-offer-card__media img {
+        transform: scale(1.035);
+      }
+      .sto-offer-card__media::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,0) 45%, rgba(255,255,255,0.22) 100%);
+        pointer-events: none;
       }
       .sto-offer-card span {
         display: inline-flex;
@@ -363,9 +454,18 @@
         background: #f7faf8;
       }
       @media (max-width: 980px) {
+        .sto-page .brand-seo-hero__grid {
+          grid-template-columns: 1fr;
+        }
+        .sto-page .brand-seo-hero__grid > div:first-child {
+          min-height: auto;
+        }
         .sto-split-grid,
         .sto-form-card {
           grid-template-columns: 1fr;
+        }
+        .sto-hero-panel {
+          grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
         }
         .sto-tech-panel__visuals,
         .sto-tech-panel__points {
@@ -379,10 +479,18 @@
         }
       }
       @media (max-width: 640px) {
-        .sto-hero-panel__stats,
         .sto-offer-grid,
         .sto-flow {
           grid-template-columns: 1fr;
+        }
+        .sto-hero-panel__stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .sto-hero-panel {
+          grid-template-columns: 1fr;
+        }
+        .sto-hero-panel__media {
+          min-height: 196px;
         }
       }
     </style>
@@ -430,15 +538,20 @@
               <a href="../">EVLine</a><span>/</span><strong>Для СТО</strong>
             </nav>
             <p class="brand-seo-kicker">Партнерство для сервісів</p>
-            <h1>Співпраця з СТО по китайських авто</h1>
+            <h1>Партнерство для СТО</h1>
             <p class="brand-seo-lead">EVLine працює як ваш китайський відділ постачання: підбір по VIN, закупівля у Китаї, документи, фотозвіти, технічні карти і окремий канал для швидкої комунікації.</p>
             <div class="brand-seo-tags">
               <span>BYD</span><span>Zeekr</span><span>Xiaomi</span><span>Li Auto</span><span>NIO</span><span>XPENG</span><span>Smart</span>
             </div>
           </div>
           <div class="sto-hero-panel">
-            <strong>Ваш клієнт залишається вашим. Ми закриваємо складну частину.</strong>
-            <p>СТО отримує постачальника, який знає китайські каталоги, логістику і нюанси сучасних EV/PHEV.</p>
+            <div class="sto-hero-panel__copy">
+              <strong>Ваш клієнт залишається вашим. Ми закриваємо складну частину.</strong>
+              <p>СТО отримує постачальника, який знає китайські каталоги, логістику і нюанси сучасних EV/PHEV.</p>
+            </div>
+            <figure class="sto-hero-panel__media" aria-label="EVLine постачає запчастини для китайських авто">
+              <img src="../assets/images/vin-parts-visual.jpg" alt="Китайський електромобіль, запчастини та коробка EVLine для СТО" width="1400" height="900" loading="eager">
+            </figure>
             <div class="sto-hero-panel__stats">
               <span><b>VIN</b>точний підбір без вгадування</span>
               <span><b>14+</b>днів авіа з Китаю</span>
@@ -458,31 +571,37 @@
           </div>
           <div class="sto-offer-grid">
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/china-delivery-visual.jpg" alt="Логістика запчастин з Китаю для партнерських СТО" width="1802" height="900" loading="lazy"></div>
               <span>01 / ціна</span>
               <h3>Партнерські умови</h3>
               <p>Окремі ціни для СТО, прозорий розрахунок доставки і можливість закласти свою роботу без боротьби з локальними націнками.</p>
             </article>
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/vin-parts-visual.jpg" alt="Підбір запчастин по VIN для китайських авто" width="1400" height="900" loading="lazy"></div>
               <span>02 / VIN</span>
               <h3>Підбір без угадайки</h3>
               <p>Перевіряємо деталі по VIN, фото, комплектації і китайських каталогах. Менше помилок, повернень і завислих авто на підйомнику.</p>
             </article>
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/parts-gallery-01.jpg" alt="Реальна запчастина перед відправкою клієнту СТО" width="900" height="675" loading="lazy"></div>
               <span>03 / клієнт</span>
               <h3>Не перехоплюємо вашого клієнта</h3>
               <p>Можемо працювати напряму з СТО: ви ведете клієнта, ми залишаємося постачальником і технічним back office.</p>
             </article>
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/oem-parts-visual.jpg" alt="Оригінальні та OEM запчастини з документами для СТО" width="1400" height="900" loading="lazy"></div>
               <span>04 / документи</span>
               <h3>Офіційні платежі</h3>
               <p>Рахунки, підтвердження, документи для приватних клієнтів, страхових, автопарків, фондів і юридичних осіб.</p>
             </article>
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/to/to-protocols-preview.jpg" alt="Технологічні карти та регламенти для механіків СТО" width="1280" height="853" loading="lazy"></div>
               <span>05 / техніка</span>
               <h3>Техкарти для ТО</h3>
               <p>Для комплектів ТО готуємо перелік компонентів, схеми доступу, контрольні точки, порядок робіт і моменти затягування.</p>
             </article>
             <article class="sto-offer-card">
+              <div class="sto-offer-card__media"><img src="../assets/images/digital-blocks.png" alt="Електронні блоки і програмування сучасних китайських авто" width="1024" height="1024" loading="lazy"></div>
               <span>06 / софт</span>
               <h3>Коли проблема не в деталі</h3>
               <p>По BYD підключаємо напрям програмування: діагностика блоків, оновлення, калібрування, CarPlay, мультимедіа, BMS і ADAS.</p>
