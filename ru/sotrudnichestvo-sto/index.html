@@ -295,6 +295,17 @@
         font-weight: 700;
         line-height: 1.45;
       }
+      .sto-tech-card small {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 750;
+        line-height: 1.35;
+      }
+      .sto-tech-card small a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
       .sto-tech-panel__points {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -482,10 +493,11 @@
             </div>
             <div class="sto-tech-panel__visuals">
               <figure class="sto-tech-card">
-                <img src="../../assets/images/sto/epc-door-exploded.svg" alt="EPC схема двери с детализацией компонентов" width="960" height="680" loading="lazy">
+                <img src="https://patentimages.storage.googleapis.com/b1/95/61/353d57594b3bda/US20110285152A1-20111124-D00000.png" alt="Пример EPC exploded-view схемы бамперного узла с кронштейнами, болтами и точками крепления" width="1200" height="799" loading="lazy">
                 <figcaption>
                   <b>EPC / exploded-view схемы узлов</b>
-                  <span>Видим узел по деталям: карта двери, ручка, замок, уплотнители, клипсы, кронштейны, проводка и крепеж.</span>
+                  <span>Видим крупную деталь как набор отдельных позиций: балка, кронштейны, болты, клипсы, накладки, уплотнители и другие элементы под конкретный VIN.</span>
+                  <small>Иллюстративная схема на базе <a href="https://patents.google.com/patent/US20110285152A1/en" target="_blank" rel="noopener">US20110285152A1 / Google Patents</a></small>
                 </figcaption>
               </figure>
               <figure class="sto-tech-card sto-tech-card--protocol">
