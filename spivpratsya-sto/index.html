@@ -423,35 +423,55 @@
         line-height: 1.45;
       }
       .sto-form-section {
+        padding: 34px 0 42px;
         background:
           radial-gradient(circle at 12% 12%, rgba(0, 180, 114, 0.11), transparent 28%),
           linear-gradient(180deg, #fff 0%, #f7faf8 100%);
       }
       .sto-form-card {
         display: grid;
-        grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.78fr);
-        gap: 28px;
-        align-items: start;
-        padding: clamp(24px, 4vw, 42px);
+        grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+        gap: 18px;
+        align-items: center;
+        padding: clamp(18px, 2.5vw, 26px);
         border: 1px solid #dcefe2;
-        border-radius: 28px;
+        border-radius: 22px;
         background: #fff;
-        box-shadow: 0 22px 56px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
       }
       .sto-form-card h2 {
         margin: 0;
         color: #0f172a;
-        font-size: clamp(32px, 4vw, 54px);
-        line-height: 1.05;
+        font-size: clamp(24px, 2.3vw, 34px);
+        line-height: 1.08;
       }
       .sto-form-card p {
+        margin: 8px 0 0;
         color: #64748b;
-        font-size: 17px;
+        font-size: 14px;
         font-weight: 650;
+        line-height: 1.45;
       }
       .sto-form-card .brand-seo-form {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
         box-shadow: none;
         background: #f7faf8;
+      }
+      .sto-form-card .brand-seo-form strong,
+      .sto-form-card .brand-seo-form a {
+        display: none;
+      }
+      .sto-form-card .brand-seo-form input {
+        min-height: 46px;
+      }
+      .sto-form-card .brand-seo-form button {
+        min-height: 46px;
+        padding: 0 18px;
+        white-space: nowrap;
+        font-size: 15px;
       }
       @media (max-width: 980px) {
         .sto-page .brand-seo-hero__grid {
@@ -462,6 +482,9 @@
         }
         .sto-split-grid,
         .sto-form-card {
+          grid-template-columns: 1fr;
+        }
+        .sto-form-card .brand-seo-form {
           grid-template-columns: 1fr;
         }
         .sto-hero-panel {
@@ -694,19 +717,19 @@
       <section class="sto-form-section" id="partner-form">
         <div class="container sto-form-card">
           <div>
-            <span class="sto-mini-kicker">Партнерський запит</span>
-            <h2>Обговоримо формат для вашого СТО</h2>
-            <p>Напишіть, з якими авто працюєте і що потрібно частіше: кузов, оптика, ходова, ТО, програмування, документи або супровід клієнта. Менеджер запропонує зручний формат співпраці.</p>
+            <span class="sto-mini-kicker">Запит на співпрацю</span>
+            <h2>Заявка від СТО</h2>
+            <p>Залиште контакт — менеджер напише з партнерськими умовами.</p>
           </div>
           <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство">
             <strong>Заявка від СТО</strong>
             <input type="hidden" name="type" value="parts">
             <input type="hidden" name="topic" value="Співпраця з СТО">
-            <input name="name" placeholder="Назва СТО або ваше ім'я" required>
-            <input name="car" placeholder="Місто і які авто обслуговуєте" required>
+            <input name="name" placeholder="СТО або ім'я" required>
             <input name="phone" placeholder="+380..." autocomplete="tel" required>
-            <input name="message" placeholder="Що потрібно: запчастини, ТО, техкарти, документи...">
-            <button type="submit">Стати партнером EVLine</button>
+            <input name="car" placeholder="Місто" required>
+            <input type="hidden" name="message" value="Запит на партнерство від СТО">
+            <button type="submit">Надіслати</button>
             <a href="https://t.me/evline_support" target="_blank" rel="noopener">Або написати напряму в Telegram</a>
           </form>
         </div>
