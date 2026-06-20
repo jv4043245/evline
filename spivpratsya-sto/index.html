@@ -473,6 +473,52 @@
         white-space: nowrap;
         font-size: 15px;
       }
+      .sto-faq-list {
+        max-width: 920px;
+        margin: 22px auto 0;
+      }
+      .sto-faq-list details {
+        margin-bottom: 10px;
+        overflow: hidden;
+        border: 1px solid #dcefe2;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+      }
+      .sto-faq-list summary {
+        position: relative;
+        display: block;
+        padding: 18px 58px 18px 22px;
+        color: #0f172a;
+        font-size: 16px;
+        font-weight: 850;
+        line-height: 1.25;
+        cursor: pointer;
+        list-style: none;
+      }
+      .sto-faq-list summary::-webkit-details-marker {
+        display: none;
+      }
+      .sto-faq-list summary::after {
+        content: "+";
+        position: absolute;
+        top: 50%;
+        right: 22px;
+        transform: translateY(-50%);
+        color: #00b472;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .sto-faq-list details[open] summary::after {
+        content: "–";
+      }
+      .sto-faq-answer {
+        padding: 0 22px 18px;
+        color: #64748b;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.55;
+      }
       @media (max-width: 980px) {
         .sto-page .brand-seo-hero__grid {
           grid-template-columns: 1fr;
@@ -741,25 +787,23 @@
             <span>FAQ</span>
             <h2>Питання від СТО</h2>
           </div>
-          <div class="parts-faq__grid">
-            <article><h3>Чи можете працювати тільки з нами, без контакту з нашим клієнтом?</h3><p>Так. Якщо СТО веде клієнта самостійно, ми працюємо як постачальник: даємо ціну, строк, фото, документи і статуси замовлення.</p></article>
-            <article><h3>Чи є окремі ціни для СТО?</h3><p>Так, партнерські умови обговорюємо після першого контакту. Вони залежать від частоти замовлень, типу деталей і формату роботи.</p></article>
-            <article><h3>Чи можна замовляти дрібні позиції?</h3><p>Так. Привозимо навіть один болт, кліпсу, кронштейн, датчик або ущільнення, якщо це потрібно для завершення ремонту.</p></article>
-            <article><h3>Що робити, якщо причина не в запчастині?</h3><p>По BYD можемо підключити напрям програмування і діагностики. Якщо проблема у софті, блоці або калібруванні, не будемо продавати зайву деталь.</p></article>
-          </div>
-        </div>
-      </section>
-
-      <section class="brand-seo-links">
-        <div class="container">
-          <div class="brand-seo-links__panel">
-            <h2>Корисні напрямки EVLine</h2>
-            <div>
-              <a href="../">Запчастини з Китаю</a>
-              <a href="../komplekty-to/">Комплект ТО</a>
-              <a href="/byd">Програмування BYD</a>
-              <a href="../zapchastyny-kytajskyh-avto/">Марки авто</a>
-            </div>
+          <div class="sto-faq-list">
+            <details>
+              <summary>Чи можете працювати тільки з нами, без контакту з нашим клієнтом?</summary>
+              <div class="sto-faq-answer">Так. Якщо СТО веде клієнта самостійно, ми працюємо як постачальник: даємо ціну, строк, фото, документи і статуси замовлення.</div>
+            </details>
+            <details>
+              <summary>Чи є окремі ціни для СТО?</summary>
+              <div class="sto-faq-answer">Так, партнерські умови обговорюємо після першого контакту. Вони залежать від частоти замовлень, типу деталей і формату роботи.</div>
+            </details>
+            <details>
+              <summary>Чи можна замовляти дрібні позиції?</summary>
+              <div class="sto-faq-answer">Так. Привозимо навіть один болт, кліпсу, кронштейн, датчик або ущільнення, якщо це потрібно для завершення ремонту.</div>
+            </details>
+            <details>
+              <summary>Що робити, якщо причина не в запчастині?</summary>
+              <div class="sto-faq-answer">По BYD можемо підключити напрям програмування і діагностики. Якщо проблема у софті, блоці або калібруванні, не будемо продавати зайву деталь.</div>
+            </details>
           </div>
         </div>
       </section>
