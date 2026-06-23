@@ -214,15 +214,54 @@ function telegramFileId(message = {}) {
   return text(message.document?.file_id || message.photo?.file_id);
 }
 
-export function parsePaymentAmount(value) {
+function paymentAmountCandidates(value) {
   const input = text(value).replace(/\s+/g, " ");
-  if (!input) return { amount: 0, currency: "CNY" };
-  const currency = /(?:cny|rmb|yuan|юан|¥)/i.test(input) ? "CNY" : "CNY";
-  const matches = [...input.matchAll(/(?:^|[^\d])(\d{2,7}(?:[.,]\d{1,2})?)(?:\s*(?:cny|rmb|yuan|юан(?:ів|ей|я)?|¥))?/gi)];
-  const amounts = matches
-    .map((match) => Number(String(match[1]).replace(",", ".")))
-    .filter((amount) => Number.isFinite(amount) && amount > 0);
-  return { amount: amounts[0] || 0, currency };
+  if (!input) return [];
+
+  const matches = [...input.matchAll(/([¥￥])?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*(?:([¥￥])|(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
+  return matches
+    .map((match) => {
+      const rawNumber = String(match[2] || "");
+      const numberOffset = String(match[0]).indexOf(rawNumber);
+      const start = match.index + Math.max(0, numberOffset);
+      const end = start + rawNumber.length;
+      const before = input[start - 1] || "";
+      const after = input[end] || "";
+      const hasCurrency = Boolean(match[1] || match[3] || match[4]);
+      const amount = Number(rawNumber.replace(",", "."));
+      const context = input.slice(Math.max(0, start - 30), Math.min(input.length, end + 30)).toLowerCase();
+      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber };
+    })
+    .filter((candidate) => {
+      if (!Number.isFinite(candidate.amount) || candidate.amount <= 0) return false;
+      if (candidate.before === ":" || candidate.after === ":") return false;
+      if (!candidate.hasCurrency && /^0\d+$/.test(candidate.rawNumber)) return false;
+      return true;
+    });
+}
+
+export function parsePaymentAmount(value, { requestedAmount = 0 } = {}) {
+  const candidates = paymentAmountCandidates(value);
+  if (!candidates.length) return { amount: 0, currency: "CNY" };
+
+  const withCurrency = candidates.filter((candidate) => candidate.hasCurrency);
+  const pool = withCurrency.length ? withCurrency : candidates;
+  const requested = number(requestedAmount);
+
+  if (requested > 0) {
+    const plausibleWithCommission = pool
+      .filter((candidate) => candidate.amount >= requested && candidate.amount <= requested * 1.2)
+      .sort((a, b) => b.amount - a.amount);
+    if (plausibleWithCommission.length) return { amount: plausibleWithCommission[0].amount, currency: "CNY" };
+
+    const aboveRequested = pool
+      .filter((candidate) => candidate.amount >= requested)
+      .sort((a, b) => Math.abs(a.amount - requested) - Math.abs(b.amount - requested));
+    if (aboveRequested.length) return { amount: aboveRequested[0].amount, currency: "CNY" };
+  }
+
+  const chosen = [...pool].sort((a, b) => b.amount - a.amount)[0];
+  return { amount: chosen?.amount || 0, currency: "CNY" };
 }
 
 async function paymentByReply(env, chatId, replyMessageId) {
@@ -279,7 +318,11 @@ async function attachPaymentReceipt(env, payment, {
   const commissionPercent = requestedAmount > 0 && commissionAmount > 0
     ? (commissionAmount / requestedAmount) * 100
     : 0;
-  const nextStatus = parsedPaid > 0 ? "paid" : "needs_review";
+  const suspiciousAmount = parsedPaid > 0 && (
+    parsedPaid < requestedAmount ||
+    (requestedAmount > 0 && commissionPercent > 20)
+  );
+  const nextStatus = parsedPaid > 0 && !suspiciousAmount ? "paid" : "needs_review";
 
   await env.DB.prepare(
     `UPDATE supplier_payments SET
@@ -339,7 +382,7 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   });
   let matchedBy = payment ? "telegram_reply" : "";
   let matchConfidence = payment ? "high" : "";
-  const parsed = parsePaymentAmount(caption);
+  let parsed = parsePaymentAmount(caption);
 
   if (!payment && parsed.amount > 0) {
     const byAmount = await paymentByAmount(env, chatId, parsed.amount);
@@ -356,6 +399,7 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   }
 
   if (!payment) return { handled: false };
+  parsed = parsePaymentAmount(caption, { requestedAmount: payment.requested_amount });
 
   const result = await attachPaymentReceipt(env, payment, {
     chatId,
@@ -369,8 +413,13 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   });
 
   const orderNumber = result.order?.order_number || result.order?.id || payment.order_id;
+  const paymentStatus = text(result.payment?.status);
   const lines = [
-    parsed.amount > 0 ? "✅ Оплату постачальнику зафіксовано." : "🧾 Скрин оплати прив'язано, суму треба перевірити вручну.",
+    parsed.amount > 0 && paymentStatus === "paid"
+      ? "✅ Оплату постачальнику зафіксовано."
+      : parsed.amount > 0
+        ? "⚠️ Суму зі скрина/підпису знайдено, але оплату треба перевірити вручну."
+        : "🧾 Скрин оплати прив'язано, суму треба перевірити вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
     parsed.amount > 0 ? `Сума зі скрина/підпису: ${formatAmount(parsed.amount, parsed.currency)}` : "",
