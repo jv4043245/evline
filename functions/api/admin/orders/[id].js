@@ -7,6 +7,7 @@ import {
   normalizeOrderStatus,
   queueOrderNotification,
 } from "../../../_lib/crm.js";
+import { listSupplierPayments } from "../../../_lib/supplier-payments.js";
 import { queueGoogleAdsConversionsForStatus } from "../../../_lib/google-ads.js";
 
 function statusDates(status) {
@@ -49,7 +50,15 @@ export async function onRequestGet({ params, env }) {
     .bind(params.id)
     .all();
 
-  return json({ order, events: events.results, notifications: notifications.results, tracking_events: trackingEvents.results });
+  const supplierPayments = await listSupplierPayments(env, params.id);
+
+  return json({
+    order,
+    events: events.results,
+    notifications: notifications.results,
+    tracking_events: trackingEvents.results,
+    supplier_payments: supplierPayments,
+  });
 }
 
 export async function onRequestPatch({ request, params, env }) {
@@ -208,6 +217,8 @@ export async function onRequestPatch({ request, params, env }) {
     .bind(params.id)
     .all();
 
+  const supplierPayments = await listSupplierPayments(env, params.id);
+
   return json({
     ok: true,
     order: updated,
@@ -217,6 +228,7 @@ export async function onRequestPatch({ request, params, env }) {
     events: events.results,
     notifications: notifications.results,
     tracking_events: trackingEvents.results,
+    supplier_payments: supplierPayments,
   });
 }
 
@@ -240,6 +252,7 @@ export async function onRequestDelete({ params, env }) {
   await safeDelete(env, "DELETE FROM notification_queue WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_status_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_items WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM supplier_payments WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM orders WHERE id = ?", params.id);
 
   let leadDeleted = false;

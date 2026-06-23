@@ -327,7 +327,7 @@ async function templateForStatus(env, status) {
   return template || { template_key: key, body: ORDER_STATUS_LABELS[status] || "Оновлення статусу замовлення" };
 }
 
-async function sendTelegramMessage(env, chatId, body) {
+export async function sendTelegramMessage(env, chatId, body) {
   if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",

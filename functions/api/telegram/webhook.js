@@ -1,5 +1,6 @@
 import { json, readPayload, text } from "../../_lib/http.js";
 import { loadOrder, retryLatestOrderNotification } from "../../_lib/crm.js";
+import { handleSupplierPaymentTelegramUpdate } from "../../_lib/supplier-payments.js";
 
 function extractOrderId(value) {
   const input = text(value);
@@ -28,6 +29,7 @@ function buildSetupMessage(message, chatId) {
     "Для менеджерського чату скопіюйте цей Chat ID у Cloudflare:",
     "• запчастини: TELEGRAM_PARTS_CHAT_ID",
     "• програмування BYD: TELEGRAM_TECH_CHAT_ID",
+    "• оплати постачальникам: TELEGRAM_PAYMENTS_CHAT_ID",
     "",
     "Для клієнта використовуйте команду з картки замовлення:",
     "/start order_<id>"
@@ -59,10 +61,26 @@ export async function onRequestPost({ request, env }) {
   const update = await readPayload(request);
   const message = update.message || update.edited_message || update.callback_query?.message || {};
   const chatId = text(message.chat?.id);
-  const incomingText = text(update.message?.text || update.callback_query?.data);
+  const incomingText = text(update.message?.text || update.message?.caption || update.callback_query?.data);
   const orderId = extractOrderId(incomingText);
 
   if (!chatId) return json({ ok: true, skipped: "no_chat_id" });
+
+  if (update.message) {
+    const paymentResult = await handleSupplierPaymentTelegramUpdate(env, update.message).catch((error) => ({
+      handled: false,
+      error: error.message || String(error),
+    }));
+    if (paymentResult.handled) {
+      if (paymentResult.message) {
+        await sendTelegram(env, chatId, paymentResult.message).catch(() => {});
+      }
+      return json({ ok: true, supplier_payment: paymentResult.payment || null, handled: "supplier_payment" });
+    }
+    if ((update.message.photo || update.message.document) && !incomingText) {
+      return json({ ok: true, skipped: "unmatched_file_message" });
+    }
+  }
 
   if (!orderId) {
     const fallbackMessage = isSetupCommand(incomingText)

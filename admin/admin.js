@@ -6,6 +6,7 @@ const state = {
   selectedEvents: [],
   selectedNotifications: [],
   selectedTrackingEvents: [],
+  selectedSupplierPayments: [],
   shipping: {
     carriers: [],
     rates: [],
@@ -49,6 +50,13 @@ const paymentLabels = {
   partial: "часткова оплата",
   paid: "оплачено",
   refunded: "повернення",
+};
+
+const supplierPaymentStatusLabels = {
+  requested: "Очікує оплати",
+  needs_review: "Перевірити",
+  paid: "Оплачено",
+  canceled: "Скасовано",
 };
 
 const shippingModeLabels = {
@@ -603,6 +611,116 @@ function moneyCell(order) {
   return `${revenueText}${mutedLine(payment)}`;
 }
 
+function supplierAmount(amount, currency = "CNY") {
+  const value = Number(amount || 0);
+  const formatted = new Intl.NumberFormat("uk-UA", {
+    maximumFractionDigits: value % 1 ? 2 : 0,
+  }).format(value);
+  return `${formatted} ${escapeHtml(currency || "CNY")}`;
+}
+
+function supplierPaymentBadge(status) {
+  const value = status || "requested";
+  return `<span class="supplier-payment-status supplier-payment-status--${safeClass(value)}">${escapeHtml(supplierPaymentStatusLabels[value] || value)}</span>`;
+}
+
+function renderSupplierPayments(order) {
+  const rows = state.selectedSupplierPayments || [];
+  const requestedPlaceholder = order.type === "byd" ? "VDS / програмування" : "постачальник / Taobao / склад";
+  return `
+    <section class="supplier-payments wide">
+      <div class="supplier-payments__head">
+        <div>
+          <strong>Оплата постачальнику</strong>
+          <span>Запит у Telegram-групу оплат і фіксація скрина після оплати.</span>
+        </div>
+      </div>
+
+      <div class="supplier-payments__create">
+        <label>
+          Постачальник
+          <input data-supplier-payment-input="supplier_name" placeholder="${escapeHtml(requestedPlaceholder)}">
+        </label>
+        <label>
+          Сума
+          <input data-supplier-payment-input="requested_amount" type="number" step="0.01" min="0" placeholder="1000">
+        </label>
+        <label>
+          Валюта
+          <select data-supplier-payment-input="requested_currency">
+            <option value="CNY">CNY</option>
+            <option value="USD">USD</option>
+            <option value="UAH">UAH</option>
+          </select>
+        </label>
+        <label class="wide">
+          Коментар до оплати
+          <textarea data-supplier-payment-input="notes" rows="2" placeholder="Що саме оплачуємо, посилання, примітка по QR або постачальнику"></textarea>
+        </label>
+        <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-payment="${escapeHtml(order.id)}">
+          Надіслати запит на оплату в Telegram
+        </button>
+      </div>
+
+      ${rows.length ? `
+        <div class="supplier-payments__list">
+          ${rows.map((payment) => `
+            <article class="supplier-payment-card" data-supplier-payment-card="${escapeHtml(payment.id)}">
+              <div class="supplier-payment-card__main">
+                <div>
+                  <strong>${textOrDash(payment.payment_number || payment.id)}</strong>
+                  ${supplierPaymentBadge(payment.status)}
+                  <span>${escapeHtml(shortDateTime(payment.created_at))}</span>
+                </div>
+                <div>
+                  <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b>
+                  <span>${payment.supplier_name ? escapeHtml(payment.supplier_name) : "постачальник не вказаний"}</span>
+                </div>
+              </div>
+              <div class="supplier-payment-card__telegram">
+                <span>Запит: ${payment.request_message_id ? `msg ${escapeHtml(payment.request_message_id)}` : "не відправлено"}</span>
+                <span>Скрин: ${payment.receipt_message_id ? `msg ${escapeHtml(payment.receipt_message_id)}` : "ще немає"}</span>
+                ${payment.matched_by ? `<span>Збіг: ${escapeHtml(payment.matched_by)} · ${escapeHtml(payment.match_confidence || "-")}</span>` : ""}
+              </div>
+              <div class="supplier-payment-card__edit">
+                <label>
+                  Статус
+                  <select data-supplier-payment-field="status">
+                    ${Object.entries(supplierPaymentStatusLabels).map(([value, label]) => `<option value="${value}" ${payment.status === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label>
+                  Сплачено з комісією
+                  <input data-supplier-payment-field="paid_amount" type="number" step="0.01" min="0" value="${Number(payment.paid_amount || 0)}">
+                </label>
+                <label>
+                  Валюта
+                  <select data-supplier-payment-field="paid_currency">
+                    ${["CNY", "USD", "UAH"].map((currency) => `<option value="${currency}" ${(payment.paid_currency || payment.requested_currency || "CNY") === currency ? "selected" : ""}>${currency}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="wide">
+                  Коментар
+                  <textarea data-supplier-payment-field="notes" rows="2">${escapeHtml(payment.notes || "")}</textarea>
+                </label>
+                <button class="admin-btn admin-btn--small wide" type="button" data-update-supplier-payment="${escapeHtml(payment.id)}">
+                  Оновити оплату
+                </button>
+              </div>
+              ${Number(payment.paid_amount || 0) > 0 ? `
+                <p class="supplier-payment-card__summary">
+                  Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}
+                  ${Number(payment.commission_amount || 0) > 0 ? ` · комісія ${supplierAmount(payment.commission_amount, payment.paid_currency)} (${Number(payment.commission_percent || 0).toFixed(1)}%)` : ""}
+                </p>
+              ` : `<p class="muted">Після оплати надішліть скрин відповіддю на повідомлення бота. Без OCR суму можна внести тут вручну.</p>`}
+            </article>
+          `).join("")}
+        </div>
+      ` : `<p class="muted supplier-payments__empty">Запитів на оплату постачальнику ще немає.</p>`}
+    </section>
+  `;
+}
+
 function renderOrders() {
   const root = document.querySelector("[data-orders]");
   if (!root) return;
@@ -674,6 +792,7 @@ function closeOrderDetail(options = {}) {
     state.selectedEvents = [];
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
+    state.selectedSupplierPayments = [];
     renderOrderEditor(null);
     highlightSelectedOrder();
   }
@@ -916,6 +1035,8 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <input value="${escapeHtml(currentRateLabel)}" readonly data-shipping-rate-display>
     </label>
 
+    ${renderSupplierPayments(order)}
+
     <div class="order-editor__section wide">
       <strong>Фінанси</strong>
       <span>Витрати: ${money.format(costs)} · маржа: ${money.format(profit)}</span>
@@ -1076,6 +1197,7 @@ async function loadOrder(id) {
   state.selectedEvents = data.events || [];
   state.selectedNotifications = data.notifications || [];
   state.selectedTrackingEvents = data.tracking_events || [];
+  state.selectedSupplierPayments = data.supplier_payments || [];
   renderOrderEditor(state.selectedOrder);
 }
 
@@ -1098,12 +1220,33 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
     state.selectedEvents = [];
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
+    state.selectedSupplierPayments = [];
     renderOrderEditor(null);
     closeOrderDetail();
   }
   await refresh();
   alert("Заявку видалено.");
   return true;
+}
+
+function collectSupplierPaymentCreatePayload(form) {
+  const value = (name) => form.querySelector(`[data-supplier-payment-input="${name}"]`)?.value || "";
+  return {
+    supplier_name: value("supplier_name"),
+    requested_amount: value("requested_amount"),
+    requested_currency: value("requested_currency") || "CNY",
+    notes: value("notes"),
+  };
+}
+
+function collectSupplierPaymentUpdatePayload(card) {
+  const value = (name) => card.querySelector(`[data-supplier-payment-field="${name}"]`)?.value || "";
+  return {
+    status: value("status") || "requested",
+    paid_amount: value("paid_amount"),
+    paid_currency: value("paid_currency") || "CNY",
+    notes: value("notes"),
+  };
 }
 
 async function loadShipping() {
@@ -1361,6 +1504,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
   state.selectedEvents = result.events || [];
   state.selectedNotifications = result.notifications || state.selectedNotifications;
   state.selectedTrackingEvents = result.tracking_events || state.selectedTrackingEvents;
+  state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
   renderOrderEditor(result.order);
   await refresh();
 });
@@ -1414,6 +1558,55 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
     } finally {
       notifyManagerButton.disabled = false;
       notifyManagerButton.textContent = "Надіслати менеджеру в Telegram";
+    }
+    return;
+  }
+
+  const createSupplierPaymentButton = event.target.closest("[data-create-supplier-payment]");
+  if (createSupplierPaymentButton) {
+    const payload = collectSupplierPaymentCreatePayload(event.currentTarget);
+    if (!Number(payload.requested_amount || 0)) {
+      alert("Вкажіть суму оплати постачальнику.");
+      return;
+    }
+    createSupplierPaymentButton.disabled = true;
+    createSupplierPaymentButton.textContent = "Надсилаю в Telegram...";
+    try {
+      const result = await api(`/api/admin/orders/${encodeURIComponent(createSupplierPaymentButton.dataset.createSupplierPayment)}/supplier-payments`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      state.selectedOrder = result.order || state.selectedOrder;
+      state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+      renderOrderEditor(state.selectedOrder);
+      alert("Запит на оплату надіслано в Telegram.");
+    } catch (error) {
+      alert(error.message);
+      createSupplierPaymentButton.disabled = false;
+      createSupplierPaymentButton.textContent = "Надіслати запит на оплату в Telegram";
+    }
+    return;
+  }
+
+  const updateSupplierPaymentButton = event.target.closest("[data-update-supplier-payment]");
+  if (updateSupplierPaymentButton) {
+    const card = updateSupplierPaymentButton.closest("[data-supplier-payment-card]");
+    if (!card) return;
+    updateSupplierPaymentButton.disabled = true;
+    updateSupplierPaymentButton.textContent = "Оновлюю...";
+    try {
+      const result = await api(`/api/admin/supplier-payments/${encodeURIComponent(updateSupplierPaymentButton.dataset.updateSupplierPayment)}`, {
+        method: "PATCH",
+        body: JSON.stringify(collectSupplierPaymentUpdatePayload(card)),
+      });
+      state.selectedOrder = result.order || state.selectedOrder;
+      state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+      renderOrderEditor(state.selectedOrder);
+      alert("Оплату оновлено.");
+    } catch (error) {
+      alert(error.message);
+      updateSupplierPaymentButton.disabled = false;
+      updateSupplierPaymentButton.textContent = "Оновити оплату";
     }
     return;
   }

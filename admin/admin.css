@@ -874,6 +874,102 @@ body.order-detail-open .order-detail {
   flex-shrink: 0;
 }
 
+.supplier-payments {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(0, 180, 114, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.supplier-payments__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.supplier-payments__head strong,
+.supplier-payments__head span {
+  display: block;
+}
+
+.supplier-payments__head span,
+.supplier-payment-card span,
+.supplier-payment-card__summary {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.supplier-payments__create,
+.supplier-payment-card__edit {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.supplier-payments__list {
+  display: grid;
+  gap: 10px;
+}
+
+.supplier-payment-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.supplier-payment-card__main,
+.supplier-payment-card__telegram {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.supplier-payment-card__main > div,
+.supplier-payment-card__telegram span {
+  display: grid;
+  gap: 3px;
+}
+
+.supplier-payment-card__summary {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.supplier-payment-status {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.supplier-payment-status--paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.supplier-payment-status--needs_review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.supplier-payment-status--canceled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .tracking-sync-card {
   grid-column: 1 / -1;
   display: flex;
@@ -1117,7 +1213,9 @@ body.order-detail-open .order-detail {
   .order-editor,
   .cost-form,
   .shipping-form,
-  .shipping-rate-block {
+  .shipping-rate-block,
+  .supplier-payments__create,
+  .supplier-payment-card__edit {
     grid-template-columns: 1fr;
   }
 
