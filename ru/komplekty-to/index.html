@@ -57,10 +57,10 @@
       .to-savings-eyebrow{position:relative;display:inline-flex;width:max-content;max-width:100%;align-items:center;gap:10px;padding:8px 14px 8px 10px;border:1px solid rgba(166,243,196,.34);border-radius:999px;background:linear-gradient(135deg,#063b22 0%,#087445 58%,#00a866 100%);color:#fff;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.05em;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 12px 28px rgba(0,132,78,.22)}
       .to-savings-eyebrow::before{content:"";display:block;width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:#f3fff7;box-shadow:inset 0 0 0 1px rgba(255,255,255,.9),0 2px 8px rgba(0,0,0,.12)}
       .to-savings-eyebrow::after{content:"";position:absolute;left:17px;top:50%;width:8px;height:4px;border-left:2px solid #057b49;border-bottom:2px solid #057b49;transform:translateY(-65%) rotate(-45deg)}
-      .to-savings-main h2{margin:14px 0 12px;color:#111827;font-size:clamp(30px,4.2vw,50px);line-height:1.02}
-      .to-savings-main h2 span{display:inline-block;margin-right:10px;color:#55a92f;font-size:clamp(22px,2.4vw,34px);font-weight:950;vertical-align:middle}
-      .to-savings-main h2 strong{display:inline-block;color:#55a92f;font-size:clamp(72px,9vw,126px);font-weight:950;line-height:.78}
-      .to-savings-main h2 em{display:block;margin-top:8px;color:#050b18;font-size:clamp(23px,2.6vw,36px);font-style:normal;font-weight:950;line-height:1.05}
+      .to-savings-main h1,.to-savings-main h2{margin:14px 0 12px;color:#111827;font-size:clamp(30px,4.2vw,50px);line-height:1.02}
+      .to-savings-main h1 span,.to-savings-main h2 span{display:inline-block;margin-right:10px;color:#55a92f;font-size:clamp(22px,2.4vw,34px);font-weight:950;vertical-align:middle}
+      .to-savings-main h1 strong,.to-savings-main h2 strong{display:inline-block;color:#55a92f;font-size:clamp(72px,9vw,126px);font-weight:950;line-height:.78}
+      .to-savings-main h1 em,.to-savings-main h2 em{display:block;margin-top:8px;color:#050b18;font-size:clamp(23px,2.6vw,36px);font-style:normal;font-weight:950;line-height:1.05}
       .to-savings-main p{margin:0;color:#5b6862;font-size:16px;line-height:1.58}
       .to-savings-list{display:grid;gap:0;width:100%;max-width:470px;margin:20px 0 0;padding:0;list-style:none}
       .to-savings-list li{display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(17,24,39,.09);color:#1f2937;font-size:17px;font-weight:850;line-height:1.25}
@@ -79,6 +79,20 @@
       .to-savings-button:hover{transform:translateY(-2px);background:#11c983;box-shadow:0 16px 34px rgba(0,180,114,.26)}
       .to-savings-visual{position:relative;z-index:1;grid-area:visual;align-self:start;margin:11px -6px 4px 0}
       .to-savings-visual img{display:block;width:104%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
+      .to-savings-section--hero{padding:clamp(24px,3vw,42px) 0 clamp(26px,3.4vw,46px);background:#fff}
+      .to-savings-section--hero .to-savings-panel{grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr);grid-template-areas:"main visual" "benefits benefits";align-items:start}
+      .to-savings-section--hero .to-savings-main p{max-width:540px;color:#44564e;font-size:17px;font-weight:720;line-height:1.5}
+      .to-savings-section--hero .to-savings-list{grid-area:benefits;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;max-width:none;margin:0}
+      .to-savings-section--hero .to-savings-list li{grid-template-columns:30px 1fr;gap:9px;align-items:center;min-height:62px;padding:10px 12px;border:1px solid rgba(0,180,114,.14);border-radius:14px;background:rgba(255,255,255,.78);font-size:14.5px;line-height:1.22}
+      .to-savings-section--hero .to-savings-icon{width:26px;height:26px;font-size:13px}
+      .to-savings-section--hero .to-savings-hero-form{width:100%;max-width:540px;margin:16px 0 0;padding:13px;grid-template-columns:1fr;gap:8px;border-radius:18px}
+      .to-savings-section--hero .to-savings-hero-form strong{font-size:18px}
+      .to-savings-section--hero .to-savings-hero-form .to-hero-fields{grid-template-columns:1fr 1fr;gap:8px}
+      .to-savings-section--hero .to-savings-hero-form .to-hero-fields input:first-child{grid-column:1/-1}
+      .to-savings-section--hero .to-savings-hero-form button{width:100%}
+      .to-savings-section--hero .to-savings-mobile-eyebrow{display:none}
+      .to-savings-section--hero .to-savings-visual-eyebrow{position:absolute;left:50%;top:-48px;z-index:2;transform:translateX(-50%);white-space:nowrap}
+      @media(min-width:861px){.to-savings-section--hero .to-savings-main{transform:translateY(-12px)}.to-savings-section--hero .to-savings-visual{align-self:center;margin:0 -10px -18px -30px;transform:translateY(22px)}.to-savings-section--hero .to-savings-visual img{width:104%}}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
@@ -115,7 +129,11 @@
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
         .to-protocols-panel{grid-template-columns:1fr;padding:20px}
         .to-savings-panel{grid-template-columns:1fr;grid-template-areas:"main" "visual" "actions"}
+        .to-savings-section--hero .to-savings-panel{grid-template-areas:"main" "visual" "benefits"}
+        .to-savings-section--hero .to-savings-mobile-eyebrow{display:inline-flex;margin-bottom:2px}
+        .to-savings-section--hero .to-savings-visual-eyebrow{display:none}
         .to-savings-visual{align-self:center;margin:0}
+        .to-savings-section--hero .to-savings-visual{margin-top:14px}
         .to-savings-visual img{width:100%}
         .to-savings-actions{grid-template-columns:1fr;max-width:520px;margin:0 auto}
         .to-hero-form{max-width:none;justify-self:stretch}
@@ -123,7 +141,7 @@
         .to-hero-media img{width:min(100%,680px)}
       }
       @media(max-width:1100px){.to-hero-form{grid-template-columns:1fr}.to-hero-fields{grid-template-columns:repeat(3,minmax(0,1fr))}.to-hero-form button{width:100%}}
-      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:18px}.to-savings-main h2 strong{font-size:72px}.to-savings-list li{grid-template-columns:36px 1fr;font-size:15px}.to-savings-icon{width:30px;height:30px;font-size:14px}.to-savings-button,.to-savings-original{width:100%;min-height:0;padding:10px 12px}.to-savings-chain{grid-template-columns:auto minmax(14px,1fr) auto minmax(14px,1fr) auto;gap:6px;min-height:0;padding:7px 10px;font-size:11px}.to-savings-chain-logo{width:70px;height:28px}.to-savings-chain-logo img{width:56px}.to-savings-chain i{min-width:14px}}
+      @media(max-width:520px){.to-page .brand-seo-hero{padding:22px 0 24px}.to-hero-media{transform:none}.to-hero-media img{width:min(100%,330px)}.to-form-note{display:none}.to-hero-bonus{padding:10px 12px}.to-hero-bonus strong{font-size:28px}.to-hero-bonus span{font-size:14px}.to-hero-includes{grid-template-columns:1fr;gap:8px}.to-hero-includes li{padding:10px}.to-hero-includes small{display:none}.to-hero-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.to-hero-fields input:first-child{grid-column:1/-1}.to-protocols-panel{border-radius:24px;padding:16px}.to-protocols-list article{grid-template-columns:36px 1fr;padding:12px}.to-protocols-list b{width:36px;height:36px;border-radius:13px}.to-protocols-list strong{font-size:15px}.to-protocols-list p{font-size:13px}.to-protocols-note{justify-content:flex-start;padding:12px}.to-savings-panel{border-radius:24px;padding:18px}.to-savings-main h1 strong,.to-savings-main h2 strong{font-size:72px}.to-savings-list li{grid-template-columns:36px 1fr;font-size:15px}.to-savings-icon{width:30px;height:30px;font-size:14px}.to-savings-button,.to-savings-original{width:100%;min-height:0;padding:10px 12px}.to-savings-chain{grid-template-columns:auto minmax(14px,1fr) auto minmax(14px,1fr) auto;gap:6px;min-height:0;padding:7px 10px;font-size:11px}.to-savings-chain-logo{width:70px;height:28px}.to-savings-chain-logo img{width:56px}.to-savings-chain i{min-width:14px}.to-savings-section--hero{padding:18px 0 22px}.to-savings-section--hero .to-savings-main p{font-size:15px}.to-savings-section--hero .to-savings-list{grid-template-columns:1fr}.to-savings-section--hero .to-savings-actions{grid-template-columns:1fr}}
       @media(min-width:861px){
         .cards-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1080px;margin:0 auto}
         .cards-3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1020px;margin:0 auto;gap:18px}
@@ -254,38 +272,39 @@
     </header>
 
     <main id="main">
-      <section class="brand-seo-hero">
-        <div class="container brand-seo-hero__grid">
-          <div class="to-hero-copy">
-            <nav class="brand-seo-breadcrumb" aria-label="Breadcrumb">
-              <a href="../">EVLine</a><span>/</span><strong>Комплекты ТО из Китая</strong>
-            </nav>
-            <p class="brand-seo-kicker">Комплекты ТО из Китая</p>
-            <h1>Комплект ТО для китайского авто</h1>
-            <p class="brand-seo-lead">Оригинальные расходники, жидкости и фильтры из Китая под вашу модель, пробег и VIN.</p>
-            <div class="to-hero-bonus" aria-label="Бесплатно добавляем к комплекту">
-              <strong>Бесплатно</strong>
-              <span>добавляем к комплекту ТО</span>
+      <section class="brand-seo-section to-savings-section to-savings-section--hero">
+        <div class="container">
+          <div class="to-savings-panel">
+            <div class="to-savings-main">
+              <nav class="brand-seo-breadcrumb" aria-label="Breadcrumb">
+                <a href="../">EVLine</a><span>/</span><strong>Комплекты ТО из Китая</strong>
+              </nav>
+              <span class="to-savings-eyebrow to-savings-mobile-eyebrow">Оригинальные компоненты ТО</span>
+              <h1><span>до</span> <strong>55%</strong><em>экономии на каждом ТО</em></h1>
+              <p>Комплект едет напрямую из Китая без локальных наценок. Подбираем по VIN, к заказу добавляем регламент и техкарту для СТО.</p>
+              <form class="brand-seo-form to-hero-form to-savings-hero-form" id="to-form" data-telegram-parts-form>
+                <strong>Посчитать комплект по VIN</strong>
+                <p class="to-form-note">Модель, пробег и VIN — подготовим состав комплекта.</p>
+                <div class="to-hero-fields">
+                  <input name="car" placeholder="Марка, модель и пробег" required>
+                  <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                  <input name="phone" placeholder="+380..." autocomplete="tel" required>
+                </div>
+                <input type="hidden" name="part" value="Комплект ТО по VIN + технологическая карта">
+                <button type="submit">Посчитать комплект</button>
+              </form>
             </div>
-            <ol class="to-hero-includes" aria-label="Что бесплатно входит">
-              <li><b>1</b><span><strong>Список компонентов ТО</strong><small>Партномера, объемы, жидкости и фильтры по VIN.</small></span></li>
-              <li><b>2</b><span><strong>Регламент для механика</strong><small>Схемы доступа, порядок работ, моменты затяжки.</small></span></li>
-            </ol>
+            <figure class="to-savings-visual">
+              <span class="to-savings-eyebrow to-savings-visual-eyebrow">Оригинальные компоненты ТО</span>
+              <img src="../../assets/images/to/to-savings-kit-visual-clean.png?v=cutout-1" alt="Комплект ТО EVLine с оригинальными расходными материалами и техническими картами для СТО" width="1314" height="931" fetchpriority="high" decoding="async">
+            </figure>
+            <ul class="to-savings-list">
+              <li><span class="to-savings-icon">✓</span><span>Без переплаты СТО</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Без переплаты магазину</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Прямые поставки от производителя из Китая</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Техническая карта к заказу</span></li>
+            </ul>
           </div>
-          <figure class="to-hero-media">
-            <img src="../../assets/images/to/to-hero-complete-kit.png?v=transparent-2" alt="Комплект ТО EVLine с расходниками, жидкостями и технологическими протоколами для СТО" width="1536" height="1024" fetchpriority="high">
-          </figure>
-          <form class="brand-seo-form to-hero-form" id="to-form" data-telegram-parts-form>
-            <strong>Получить список ТО</strong>
-            <p class="to-form-note">Модель, пробег и VIN — подготовим состав комплекта.</p>
-            <div class="to-hero-fields">
-              <input name="car" placeholder="Марка, модель и пробег" required>
-              <input name="vin" placeholder="VIN-код" autocomplete="off" autocapitalize="characters" spellcheck="false">
-              <input name="phone" placeholder="+380..." autocomplete="tel" required>
-            </div>
-            <input type="hidden" name="part" value="Комплект ТО + технологическая карта">
-            <button type="submit">Получить список ТО</button>
-          </form>
         </div>
       </section>
 
@@ -308,32 +327,6 @@
               </div>
             </div>
             <p class="to-protocols-note"><span>Бесплатно</span> Список готовим после VIN, технологическую карту добавляем при покупке комплекта.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="brand-seo-section to-savings-section">
-        <div class="container">
-          <div class="to-savings-panel">
-            <div class="to-savings-main">
-              <span class="to-savings-eyebrow">Оригинальные компоненты ТО</span>
-              <h2><span>до</span> <strong>55%</strong><em>экономии на каждом ТО</em></h2>
-              <p>Планируйте обслуживание заранее: комплект едет напрямую из Китая, без локальных наценок и без срочной авиадоставки.</p>
-              <ul class="to-savings-list">
-                <li><span class="to-savings-icon">✓</span><span>Без переплаты СТО</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Без переплаты магазину</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Прямые поставки от производителя из Китая</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Бесплатные технические карты для вашего авто</span></li>
-              </ul>
-            </div>
-            <figure class="to-savings-visual">
-              <img src="../../assets/images/to/to-savings-kit-visual-cutout.png?v=savings-2" alt="Комплект ТО EVLine с оригинальными расходными материалами и техническими картами для СТО" width="1193" height="908" loading="lazy" decoding="async">
-            </figure>
-            <div class="to-savings-actions">
-              <div class="to-savings-original"><strong>Original</strong><span>Для комплектов ТО</span></div>
-              <div class="to-savings-chain" aria-label="Цепочка поставки"><span class="chain-node">Производитель</span><i></i><span class="to-savings-chain-logo"><img src="../../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Вы</span></div>
-              <a class="to-savings-button" href="#to-form" data-scheme="комплект ТО по VIN с оригинальными расходниками">Посчитать комплект по VIN</a>
-            </div>
           </div>
         </div>
       </section>
