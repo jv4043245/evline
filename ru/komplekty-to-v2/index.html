@@ -80,17 +80,16 @@
       .to-savings-visual{position:relative;z-index:1;grid-area:visual;align-self:start;margin:11px -6px 4px 0}
       .to-savings-visual img{display:block;width:104%;max-width:none;height:auto;filter:drop-shadow(0 26px 48px rgba(15,23,42,.12))}
       .to-savings-section--hero{padding:clamp(24px,3vw,42px) 0 clamp(26px,3.4vw,46px);background:#fff}
-      .to-savings-section--hero .to-savings-panel{grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr);grid-template-areas:"main visual" "actions actions";align-items:start}
+      .to-savings-section--hero .to-savings-panel{grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr);grid-template-areas:"main visual" "benefits benefits";align-items:start}
       .to-savings-section--hero .to-savings-main p{max-width:540px;color:#44564e;font-size:17px;font-weight:720;line-height:1.5}
-      .to-savings-section--hero .to-savings-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:540px;margin-top:14px}
-      .to-savings-section--hero .to-savings-list li{grid-template-columns:30px 1fr;gap:9px;align-items:center;padding:8px 10px;border:1px solid rgba(0,180,114,.14);border-radius:14px;background:rgba(255,255,255,.76);font-size:14.5px;line-height:1.2}
+      .to-savings-section--hero .to-savings-list{grid-area:benefits;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;max-width:none;margin:0}
+      .to-savings-section--hero .to-savings-list li{grid-template-columns:30px 1fr;gap:9px;align-items:center;min-height:62px;padding:10px 12px;border:1px solid rgba(0,180,114,.14);border-radius:14px;background:rgba(255,255,255,.78);font-size:14.5px;line-height:1.22}
       .to-savings-section--hero .to-savings-icon{width:26px;height:26px;font-size:13px}
       .to-savings-section--hero .to-savings-hero-form{width:100%;max-width:540px;margin:16px 0 0;padding:13px;grid-template-columns:1fr;gap:8px;border-radius:18px}
       .to-savings-section--hero .to-savings-hero-form strong{font-size:18px}
       .to-savings-section--hero .to-savings-hero-form .to-hero-fields{grid-template-columns:1fr 1fr;gap:8px}
       .to-savings-section--hero .to-savings-hero-form .to-hero-fields input:first-child{grid-column:1/-1}
       .to-savings-section--hero .to-savings-hero-form button{width:100%}
-      .to-savings-section--hero .to-savings-actions{grid-template-columns:minmax(220px,.82fr) minmax(320px,1.18fr);max-width:780px;margin:0}
       .to-page .site-header .container,
       .to-page .topbar .container{width:min(100% - 40px,1140px)}
       .to-page .brand-seo-breadcrumb{display:none}
@@ -127,7 +126,7 @@
         .to-page .brand-seo-hero__grid{width:min(100% - 32px,1120px);grid-template-columns:1fr}
         .to-protocols-panel{grid-template-columns:1fr;padding:20px}
         .to-savings-panel{grid-template-columns:1fr;grid-template-areas:"main" "visual" "actions"}
-        .to-savings-section--hero .to-savings-panel{grid-template-areas:"main" "visual" "actions"}
+        .to-savings-section--hero .to-savings-panel{grid-template-areas:"main" "visual" "benefits"}
         .to-savings-visual{align-self:center;margin:0}
         .to-savings-visual img{width:100%}
         .to-savings-actions{grid-template-columns:1fr;max-width:520px;margin:0 auto}
@@ -288,20 +287,16 @@
                 <input type="hidden" name="part" value="Комплект ТО по VIN + технологическая карта">
                 <button type="submit">Посчитать комплект</button>
               </form>
-              <ul class="to-savings-list">
-                <li><span class="to-savings-icon">✓</span><span>Без переплаты СТО</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Без переплаты магазину</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Прямые поставки от производителя из Китая</span></li>
-                <li><span class="to-savings-icon">✓</span><span>Техническая карта к заказу</span></li>
-              </ul>
             </div>
             <figure class="to-savings-visual">
               <img src="../../assets/images/to/to-savings-kit-visual-cutout.png?v=savings-2" alt="Комплект ТО EVLine с оригинальными расходными материалами и техническими картами для СТО" width="1193" height="908" fetchpriority="high" decoding="async">
             </figure>
-            <div class="to-savings-actions">
-              <div class="to-savings-original"><strong>Original</strong><span>Для комплектов ТО</span></div>
-              <div class="to-savings-chain" aria-label="Цепочка поставки"><span class="chain-node">Производитель</span><i></i><span class="to-savings-chain-logo"><img src="../../assets/logo.svg" alt="EVLine" width="902" height="368"></span><i></i><span class="chain-node">Вы</span></div>
-            </div>
+            <ul class="to-savings-list">
+              <li><span class="to-savings-icon">✓</span><span>Без переплаты СТО</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Без переплаты магазину</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Прямые поставки от производителя из Китая</span></li>
+              <li><span class="to-savings-icon">✓</span><span>Техническая карта к заказу</span></li>
+            </ul>
           </div>
         </div>
       </section>
