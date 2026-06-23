@@ -44,7 +44,7 @@ function buildPaymentRequestMessage(order, payment) {
     payment.notes ? `Коментар: ${payment.notes}` : "",
     "",
     "Після оплати надішліть скрин відповіддю на це повідомлення.",
-    "Якщо в підписі до скрина буде сума з комісією, CRM внесе її автоматично.",
+    "CRM прив'яже скрин до цієї оплати та внесе підсумкову суму, якщо її вдасться розпізнати.",
     "Адмінка: https://evline.com.ua/admin/",
   ];
   return lines.filter(Boolean).join("\n");
@@ -214,6 +214,59 @@ function telegramFileId(message = {}) {
   return text(message.document?.file_id || message.photo?.file_id);
 }
 
+function aiText(value) {
+  if (!value) return "";
+  if (typeof value === "string") return text(value);
+  if (typeof value.response === "string") return text(value.response);
+  if (typeof value.text === "string") return text(value.text);
+  if (typeof value.description === "string") return text(value.description);
+  if (Array.isArray(value.result)) return text(value.result.map(aiText).filter(Boolean).join("\n"));
+  return text(JSON.stringify(value));
+}
+
+async function downloadTelegramFile(env, fileId) {
+  if (!env.TELEGRAM_BOT_TOKEN || !fileId) return null;
+
+  const fileResponse = await fetch(
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`
+  );
+  const fileData = await fileResponse.json().catch(() => ({}));
+  const filePath = text(fileData.result?.file_path);
+  if (!fileResponse.ok || !fileData.ok || !filePath) return null;
+
+  const imageResponse = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
+  if (!imageResponse.ok) return null;
+
+  return {
+    bytes: new Uint8Array(await imageResponse.arrayBuffer()),
+    content_type: text(imageResponse.headers.get("content-type")),
+    file_path: filePath,
+  };
+}
+
+async function recognizePaymentScreenshot(env, fileId) {
+  if (!env.AI?.run || !fileId) return { text: "", source: "" };
+
+  const image = await downloadTelegramFile(env, fileId);
+  if (!image?.bytes?.length) return { text: "", source: "" };
+
+  const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+    image: Array.from(image.bytes),
+    max_tokens: 256,
+    prompt: [
+      "Read this Chinese payment confirmation screenshot.",
+      "Extract only payment amounts and labels.",
+      "Return plain text. Include total paid amount, supplier amount, commission amount, and currency if visible.",
+      "Do not invent values. Prefer the large top amount as total paid.",
+    ].join(" "),
+  });
+
+  return {
+    text: aiText(result),
+    source: "workers_ai",
+  };
+}
+
 function paymentAmountCandidates(value) {
   const input = text(value).replace(/\s+/g, " ");
   if (!input) return [];
@@ -247,6 +300,11 @@ export function parsePaymentAmount(value, { requestedAmount = 0 } = {}) {
   const withCurrency = candidates.filter((candidate) => candidate.hasCurrency);
   const pool = withCurrency.length ? withCurrency : candidates;
   const requested = number(requestedAmount);
+
+  if (withCurrency.length) {
+    const chosen = [...withCurrency].sort((a, b) => b.amount - a.amount)[0];
+    return { amount: chosen?.amount || 0, currency: "CNY" };
+  }
 
   if (requested > 0) {
     const plausibleWithCommission = pool
@@ -318,11 +376,8 @@ async function attachPaymentReceipt(env, payment, {
   const commissionPercent = requestedAmount > 0 && commissionAmount > 0
     ? (commissionAmount / requestedAmount) * 100
     : 0;
-  const suspiciousAmount = parsedPaid > 0 && (
-    parsedPaid < requestedAmount ||
-    (requestedAmount > 0 && commissionPercent > 20)
-  );
-  const nextStatus = parsedPaid > 0 && !suspiciousAmount ? "paid" : "needs_review";
+  const amountBelowRequest = parsedPaid > 0 && requestedAmount > 0 && parsedPaid < requestedAmount * 0.95;
+  const nextStatus = parsedPaid > 0 && !amountBelowRequest ? "paid" : "needs_review";
 
   await env.DB.prepare(
     `UPDATE supplier_payments SET
@@ -399,13 +454,25 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   }
 
   if (!payment) return { handled: false };
-  parsed = parsePaymentAmount(caption, { requestedAmount: payment.requested_amount });
+
+  let receiptText = caption;
+  let ocrResult = { text: "", source: "" };
+  if (fileId && !receiptText) {
+    ocrResult = await recognizePaymentScreenshot(env, fileId).catch((error) => ({
+      text: "",
+      source: "workers_ai_failed",
+      error: error.message || String(error),
+    }));
+    receiptText = text(ocrResult.text);
+  }
+
+  parsed = parsePaymentAmount(receiptText, { requestedAmount: payment.requested_amount });
 
   const result = await attachPaymentReceipt(env, payment, {
     chatId,
     messageId,
     fileId,
-    caption,
+    caption: receiptText,
     paidAmount: parsed.amount,
     paidCurrency: parsed.currency,
     matchedBy,
@@ -418,14 +485,12 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     parsed.amount > 0 && paymentStatus === "paid"
       ? "✅ Оплату постачальнику зафіксовано."
       : parsed.amount > 0
-        ? "⚠️ Суму зі скрина/підпису знайдено, але оплату треба перевірити вручну."
-        : "🧾 Скрин оплати прив'язано, суму треба перевірити вручну.",
+        ? "✅ Суму знайдено, оплату зафіксовано."
+        : "🧾 Скрин оплати прив'язано, суму треба внести вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
-    parsed.amount > 0 ? `Сума зі скрина/підпису: ${formatAmount(parsed.amount, parsed.currency)}` : "",
-    parsed.amount > 0 && result.payment?.commission_amount > 0
-      ? `Комісія: ${formatAmount(result.payment.commission_amount, parsed.currency)} (${Number(result.payment.commission_percent || 0).toFixed(1)}%)`
-      : "",
+    parsed.amount > 0 ? `Підсумкова сума: ${formatAmount(parsed.amount, parsed.currency)}` : "",
+    ocrResult.source ? `Розпізнавання: ${ocrResult.source}` : "",
     "Адмінка: https://evline.com.ua/admin/",
   ];
 

@@ -710,9 +710,8 @@ function renderSupplierPayments(order) {
               ${Number(payment.paid_amount || 0) > 0 ? `
                 <p class="supplier-payment-card__summary">
                   Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}
-                  ${Number(payment.commission_amount || 0) > 0 ? ` · комісія ${supplierAmount(payment.commission_amount, payment.paid_currency)} (${Number(payment.commission_percent || 0).toFixed(1)}%)` : ""}
                 </p>
-              ` : `<p class="muted">Після оплати надішліть скрин відповіддю на повідомлення бота. Без OCR суму можна внести тут вручну.</p>`}
+              ` : `<p class="muted">Після оплати надішліть скрин відповіддю на повідомлення бота. Якщо суму не буде розпізнано, її можна внести тут вручну.</p>`}
             </article>
           `).join("")}
         </div>
