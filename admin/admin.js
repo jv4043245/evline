@@ -1579,7 +1579,11 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedOrder = result.order || state.selectedOrder;
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
       renderOrderEditor(state.selectedOrder);
-      alert("Запит на оплату надіслано в Telegram.");
+      if (result.supplier_payment?.migrated_from_chat_id && result.supplier_payment?.request_chat_id) {
+        alert(`Запит на оплату надіслано в Telegram.\n\nTelegram змінив ID групи оплат. Оновіть TELEGRAM_PAYMENTS_CHAT_ID у Cloudflare на:\n${result.supplier_payment.request_chat_id}`);
+      } else {
+        alert("Запит на оплату надіслано в Telegram.");
+      }
     } catch (error) {
       alert(error.message);
       createSupplierPaymentButton.disabled = false;
