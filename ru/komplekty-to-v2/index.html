@@ -90,6 +90,7 @@
       .to-savings-section--hero .to-savings-hero-form .to-hero-fields{grid-template-columns:1fr 1fr;gap:8px}
       .to-savings-section--hero .to-savings-hero-form .to-hero-fields input:first-child{grid-column:1/-1}
       .to-savings-section--hero .to-savings-hero-form button{width:100%}
+      .to-savings-section--hero .to-savings-mobile-eyebrow{display:none}
       .to-savings-section--hero .to-savings-visual-eyebrow{position:absolute;left:50%;top:-48px;z-index:2;transform:translateX(-50%);white-space:nowrap}
       @media(min-width:861px){.to-savings-section--hero .to-savings-main{transform:translateY(-12px)}.to-savings-section--hero .to-savings-visual{align-self:center;margin:0 -10px -18px -30px;transform:translateY(22px)}.to-savings-section--hero .to-savings-visual img{width:104%}}
       .to-page .site-header .container,
@@ -129,8 +130,10 @@
         .to-protocols-panel{grid-template-columns:1fr;padding:20px}
         .to-savings-panel{grid-template-columns:1fr;grid-template-areas:"main" "visual" "actions"}
         .to-savings-section--hero .to-savings-panel{grid-template-areas:"main" "visual" "benefits"}
+        .to-savings-section--hero .to-savings-mobile-eyebrow{display:inline-flex;margin-bottom:2px}
+        .to-savings-section--hero .to-savings-visual-eyebrow{display:none}
         .to-savings-visual{align-self:center;margin:0}
-        .to-savings-section--hero .to-savings-visual{margin-top:58px}
+        .to-savings-section--hero .to-savings-visual{margin-top:14px}
         .to-savings-visual img{width:100%}
         .to-savings-actions{grid-template-columns:1fr;max-width:520px;margin:0 auto}
         .to-hero-form{max-width:none;justify-self:stretch}
@@ -276,6 +279,7 @@
               <nav class="brand-seo-breadcrumb" aria-label="Breadcrumb">
                 <a href="../">EVLine</a><span>/</span><strong>Комплекты ТО из Китая</strong>
               </nav>
+              <span class="to-savings-eyebrow to-savings-mobile-eyebrow">Оригинальные компоненты ТО</span>
               <h1><span>до</span> <strong>55%</strong><em>экономии на каждом ТО</em></h1>
               <p>Комплект едет напрямую из Китая без локальных наценок. Подбираем по VIN, к заказу добавляем регламент и техкарту для СТО.</p>
               <form class="brand-seo-form to-hero-form to-savings-hero-form" id="to-form" data-telegram-parts-form>
