@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="ru-UA">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Технический back office для СТО по китайским авто | EVLine</title>
+    <meta name="description" content="EVLine для СТО: подбор запчастей по VIN, EPC-схемы, техкарты, документы и поставка из Китая. Клиент остается за сервисом.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#00b472">
+    <link rel="canonical" href="https://evline.com.ua/ru/sotrudnichestvo-sto-v2/">
+    <link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/spivpratsya-sto-v2/">
+    <link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/sotrudnichestvo-sto-v2/">
+    <link rel="alternate" hreflang="x-default" href="https://evline.com.ua/spivpratsya-sto-v2/">
+    <link rel="icon" href="../../assets/images/favicon.png">
+    <link rel="manifest" href="../../manifest.webmanifest">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://evline.com.ua/ru/sotrudnichestvo-sto-v2/">
+    <meta property="og:title" content="Технический back office для СТО по китайским авто | EVLine">
+    <meta property="og:description" content="Подбор по VIN, EPC-схемы, техкарты, документы и поставка из Китая для СТО. Клиент остается за сервисом.">
+    <meta property="og:image" content="https://evline.com.ua/assets/images/og-evline-social.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Технический back office для СТО по китайским авто | EVLine">
+    <meta name="twitter:description" content="VIN-подбор, EPC-схемы, техкарты, документы и поставка из Китая для СТО.">
+    <meta name="twitter:image" content="https://evline.com.ua/assets/images/og-evline-social.png">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
+    <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=sto-1">
+    <script src="../../assets/js/main.js?v=header-sto-1" defer></script>
+    <style>
+      .sto-page .brand-seo-hero {
+        padding: clamp(38px, 4.2vw, 60px) 0 clamp(28px, 3.2vw, 42px);
+        background:
+          radial-gradient(circle at 12% 10%, rgba(0, 180, 114, 0.13), transparent 32%),
+          linear-gradient(180deg, #fbfdfb 0%, #fff 100%);
+      }
+      .sto-page .brand-seo-hero__grid {
+        grid-template-columns: minmax(0, 1.08fr) minmax(390px, 0.92fr);
+        align-items: center;
+      }
+      .sto-page .brand-seo-hero__grid > div:first-child {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding-block: 14px;
+      }
+      .sto-page .brand-seo-hero h1 {
+        max-width: 690px;
+        font-size: clamp(38px, 4.25vw, 60px);
+        line-height: 1.02;
+      }
+      .sto-page .brand-seo-lead {
+        max-width: 680px;
+        margin-top: 18px;
+      }
+      .sto-page .brand-seo-tags {
+        gap: 7px;
+        margin-top: 20px;
+      }
+      .sto-page .brand-seo-tags span {
+        min-height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .sto-hero-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(168px, 0.72fr);
+        align-self: center;
+        align-items: stretch;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid rgba(0, 168, 107, 0.18);
+        border-radius: 22px;
+        background: linear-gradient(180deg, #fff 0%, #f3faf6 100%);
+        box-shadow: 0 22px 56px rgba(15, 23, 42, 0.1);
+      }
+      .sto-hero-panel__copy {
+        display: grid;
+        align-content: center;
+        gap: 12px;
+      }
+      .sto-hero-panel strong {
+        color: #0f172a;
+        font-size: clamp(22px, 2.45vw, 30px);
+        line-height: 1.08;
+      }
+      .sto-hero-panel p {
+        margin: 0;
+        color: #56645f;
+        font-size: 15px;
+        font-weight: 650;
+        line-height: 1.45;
+      }
+      .sto-hero-panel__media {
+        position: relative;
+        min-height: 176px;
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid rgba(0, 168, 107, 0.16);
+        border-radius: 18px;
+        background: #eef8f1;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+      }
+      .sto-hero-panel__media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+      .sto-hero-panel__media::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 52%, rgba(15, 23, 42, 0.18));
+        pointer-events: none;
+      }
+      .sto-hero-panel__stats {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .sto-hero-panel__stats span {
+        min-height: 60px;
+        display: grid;
+        align-content: center;
+        gap: 4px;
+        padding: 9px 11px;
+        border: 1px solid #dcefe2;
+        border-radius: 16px;
+        background: #fff;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .sto-hero-panel__stats b {
+        color: #0f172a;
+        font-size: 19px;
+        line-height: 1;
+      }
+      .sto-split-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 28px;
+        align-items: center;
+      }
+      .sto-dark-card {
+        padding: clamp(24px, 4vw, 38px);
+        border-radius: 26px;
+        color: #fff;
+        background:
+          radial-gradient(circle at 14% 0%, rgba(127, 216, 169, 0.22), transparent 34%),
+          linear-gradient(135deg, #101714, #18211d);
+        box-shadow: 0 22px 54px rgba(15, 23, 42, 0.16);
+      }
+      .sto-dark-card span,
+      .sto-mini-kicker {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        margin-bottom: 14px;
+        padding: 0 12px;
+        border-radius: 999px;
+        color: #7fd8a9;
+        background: rgba(127, 216, 169, 0.1);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .sto-dark-card h2 {
+        margin: 0;
+        color: #fff;
+        font-size: clamp(32px, 3.5vw, 52px);
+        line-height: 1.04;
+      }
+      .sto-dark-card p {
+        margin: 16px 0 0;
+        color: #cbd5d0;
+        font-size: 17px;
+        font-weight: 500;
+        line-height: 1.48;
+      }
+      .sto-value-list {
+        display: grid;
+        gap: 12px;
+      }
+      .sto-value-list article {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        padding: 18px;
+        border: 1px solid rgba(63, 147, 99, 0.18);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055);
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+      .sto-value-list article:hover {
+        transform: translateY(-3px);
+        border-color: #7fd8a9;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+      }
+      .sto-value-list span {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border-radius: 14px;
+        color: #17633a;
+        background: #eef8f1;
+        font-weight: 950;
+      }
+      .sto-value-list h3 {
+        margin: 0 0 5px;
+        color: #0f172a;
+        font-size: 18px;
+      }
+      .sto-value-list p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.48;
+      }
+      .sto-offer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .sto-offer-card {
+        min-height: 274px;
+        overflow: hidden;
+        padding: 14px 18px 20px;
+        border: 1px solid #dcefe2;
+        border-radius: 20px;
+        background: #fff;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+      .sto-offer-card:hover {
+        transform: translateY(-4px);
+        border-color: #7fd8a9;
+        box-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+      }
+      .sto-offer-card__media {
+        position: relative;
+        height: 104px;
+        margin: -2px -6px 16px;
+        overflow: hidden;
+        border-radius: 16px;
+        background: #eef8f1;
+      }
+      .sto-offer-card__media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.24s ease;
+      }
+      .sto-offer-card:hover .sto-offer-card__media img {
+        transform: scale(1.035);
+      }
+      .sto-offer-card__media::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,0) 45%, rgba(255,255,255,0.22) 100%);
+        pointer-events: none;
+      }
+      .sto-offer-card span {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        margin-bottom: 14px;
+        padding: 0 12px;
+        border-radius: 999px;
+        color: #17633a;
+        background: #eef8f1;
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .sto-offer-card h3 {
+        margin: 0 0 9px;
+        color: #0f172a;
+        font-size: 21px;
+        line-height: 1.14;
+      }
+      .sto-offer-card p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.48;
+      }
+      .sto-flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .sto-flow article {
+        min-height: 158px;
+        padding: 18px;
+        border: 1px solid #dcefe2;
+        border-radius: 18px;
+        background: #fff;
+      }
+      .sto-flow strong {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        margin-bottom: 12px;
+        border-radius: 50%;
+        color: #fff;
+        background: #00a86b;
+      }
+      .sto-flow h3 {
+        margin: 0 0 7px;
+        color: #0f172a;
+        font-size: 17px;
+        line-height: 1.16;
+      }
+      .sto-flow p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.45;
+      }
+      .sto-tech-panel {
+        display: grid;
+        gap: 22px;
+        padding: clamp(24px, 4vw, 40px);
+        border: 1px solid #dcefe2;
+        border-radius: 26px;
+        background: #f7faf8;
+        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.07);
+      }
+      .sto-tech-panel__intro {
+        max-width: 1040px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .sto-tech-panel__intro h2 {
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .sto-tech-panel__intro .brand-seo-lead {
+        max-width: 1040px;
+        margin: 12px auto 0;
+        color: #64748b;
+        font-size: clamp(15px, 1.25vw, 18px);
+        line-height: 1.55;
+      }
+      .sto-tech-panel__visuals {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.82fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+      .sto-tech-card {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        margin: 0;
+        padding: 16px;
+        border: 1px solid #dcefe2;
+        border-radius: 22px;
+        background: #fff;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+      }
+      .sto-tech-card img {
+        width: 100%;
+        height: auto;
+        max-height: 360px;
+        object-fit: contain;
+        border-radius: 18px;
+        background: #f7faf8;
+      }
+      .sto-tech-card--protocol img {
+        object-fit: contain;
+        object-position: center;
+      }
+      .sto-tech-card figcaption {
+        display: grid;
+        gap: 4px;
+      }
+      .sto-tech-card b {
+        color: #0f172a;
+        font-size: 18px;
+        line-height: 1.15;
+      }
+      .sto-tech-card span {
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.45;
+      }
+      .sto-tech-card small {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 750;
+        line-height: 1.35;
+      }
+      .sto-tech-card small a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .sto-tech-panel__points {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .sto-tech-panel__points article {
+        padding: 18px;
+        border: 1px solid rgba(0, 168, 107, 0.18);
+        border-radius: 18px;
+        background: #fff;
+      }
+      .sto-tech-panel__points strong {
+        display: block;
+        margin-bottom: 7px;
+        color: #17633a;
+        font-size: 15px;
+        text-transform: uppercase;
+      }
+      .sto-tech-panel__points p {
+        margin: 0;
+        color: #56645f;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.48;
+      }
+      .sto-form-section {
+        padding: 34px 0 42px;
+        background:
+          radial-gradient(circle at 12% 12%, rgba(0, 180, 114, 0.11), transparent 28%),
+          linear-gradient(180deg, #fff 0%, #f7faf8 100%);
+      }
+      .sto-form-card {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+        gap: 18px;
+        align-items: center;
+        padding: clamp(18px, 2.5vw, 26px);
+        border: 1px solid #dcefe2;
+        border-radius: 22px;
+        background: #fff;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+      }
+      .sto-form-card h2 {
+        margin: 0;
+        color: #0f172a;
+        font-size: clamp(24px, 2.3vw, 34px);
+        line-height: 1.08;
+      }
+      .sto-form-card p {
+        margin: 8px 0 0;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 650;
+        line-height: 1.45;
+      }
+      .sto-form-card .brand-seo-form {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        box-shadow: none;
+        background: #f7faf8;
+      }
+      .sto-form-card .brand-seo-form strong,
+      .sto-form-card .brand-seo-form a {
+        display: none;
+      }
+      .sto-form-card .brand-seo-form input {
+        min-height: 46px;
+      }
+      .sto-form-card .brand-seo-form button {
+        min-height: 46px;
+        padding: 0 18px;
+        white-space: nowrap;
+        font-size: 15px;
+      }
+      .sto-faq-list {
+        max-width: 920px;
+        margin: 22px auto 0;
+      }
+      .sto-faq-list details {
+        margin-bottom: 10px;
+        overflow: hidden;
+        border: 1px solid #dcefe2;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+      }
+      .sto-faq-list summary {
+        position: relative;
+        display: block;
+        padding: 18px 58px 18px 22px;
+        color: #0f172a;
+        font-size: 16px;
+        font-weight: 850;
+        line-height: 1.25;
+        cursor: pointer;
+        list-style: none;
+      }
+      .sto-faq-list summary::-webkit-details-marker {
+        display: none;
+      }
+      .sto-faq-list summary::after {
+        content: "+";
+        position: absolute;
+        top: 50%;
+        right: 22px;
+        transform: translateY(-50%);
+        color: #00b472;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .sto-faq-list details[open] summary::after {
+        content: "–";
+      }
+      .sto-faq-answer {
+        padding: 0 22px 18px;
+        color: #64748b;
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.55;
+      }
+      @media (max-width: 980px) {
+        .sto-page .brand-seo-hero__grid {
+          grid-template-columns: 1fr;
+        }
+        .sto-page .brand-seo-hero__grid > div:first-child {
+          min-height: auto;
+        }
+        .sto-split-grid,
+        .sto-form-card {
+          grid-template-columns: 1fr;
+        }
+        .sto-form-card .brand-seo-form {
+          grid-template-columns: 1fr;
+        }
+        .sto-hero-panel {
+          grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);
+        }
+        .sto-tech-panel__visuals,
+        .sto-tech-panel__points {
+          grid-template-columns: 1fr;
+        }
+        .sto-offer-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .sto-flow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 640px) {
+        .sto-offer-grid,
+        .sto-flow {
+          grid-template-columns: 1fr;
+        }
+        .sto-hero-panel__stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .sto-hero-panel {
+          grid-template-columns: 1fr;
+        }
+        .sto-hero-panel__media {
+          min-height: 196px;
+        }
+      }
+    </style>
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["AutoPartsStore","AutoRepair"],"@id":"https://evline.com.ua/#business","name":"EVLine Ukraine","url":"https://evline.com.ua","logo":"https://evline.com.ua/assets/images/logo.png","telephone":"+380935251024","email":"evlineukraine@gmail.com","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Оболонська набережна, 3, офіс 1","addressLocality":"Київ","addressCountry":"UA"},"areaServed":{"@type":"Country","name":"Україна"},"sameAs":["https://t.me/evline_support"]},{"@type":"BreadcrumbList","@id":"https://evline.com.ua/ru/sotrudnichestvo-sto-v2/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"EVLine","item":"https://evline.com.ua/ru/"},{"@type":"ListItem","position":2,"name":"СТО back office","item":"https://evline.com.ua/ru/sotrudnichestvo-sto-v2/"}]},{"@type":"Service","@id":"https://evline.com.ua/ru/sotrudnichestvo-sto-v2/#service","name":"Технический back office для СТО по китайским авто","serviceType":"B2B auto parts sourcing and technical support for repair shops","provider":{"@id":"https://evline.com.ua/#business"},"areaServed":{"@type":"Country","name":"Украина"},"description":"Подбор запчастей по VIN, EPC-схемы, техкарты, документы и поставка из Китая для СТО, которые обслуживают современные китайские авто."}]}</script>
+  </head>
+  <body class="parts-page brand-seo-page sto-page">
+    <a class="skip-link" href="#main">К содержанию</a>
+    <div class="topbar">
+      <div class="container topbar__inner topbar__inner--center">
+        <div><span aria-hidden="true">📞</span> <a href="tel:+380935251024">+38 (093) 525-10-24</a> <span aria-hidden="true">✉️</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../" aria-label="EVLine">
+          <img src="../../assets/images/logo.png" alt="EVLine" width="245" height="100">
+        </a>
+        <nav class="nav" id="site-nav" aria-label="Основная навигация">
+          <a href="/ru/">Запчасти из Китая</a>
+          <a href="/ru/byd">Программирование BYD</a>
+          <a href="/ru/komplekty-to/">Комплекты ТО</a>
+        </nav>
+        <div class="header-actions">
+          <details class="language-switch">
+            <summary aria-label="Сменить язык"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
+            <div class="language-switch__menu">
+              <a href="/spivpratsya-sto-v2/" lang="uk">Українська</a>
+              <a href="./" lang="ru" aria-current="true">Русский</a>
+            </div>
+          </details>
+          <a class="btn btn--primary" href="#partner-form">Стать партнером</a>
+          <button class="nav-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="brand-seo-hero">
+        <div class="container brand-seo-hero__grid">
+          <div>
+            <nav class="brand-seo-breadcrumb" aria-label="Хлебные крошки">
+              <a href="../">EVLine</a><span>/</span><strong>Для СТО</strong>
+            </nav>
+            <p class="brand-seo-kicker">Технический back office для СТО</p>
+            <h1>Запчасти и техбаза для СТО по китайским авто</h1>
+            <p class="brand-seo-lead">Подбор под VIN, EPC-схемы, техкарты, документы и поставка из Китая. Вы ведете клиента и ремонт, EVLine закрывает запчасти и технический back office.</p>
+            <div class="brand-seo-tags">
+              <span>VIN</span><span>EPC</span><span>техкарты</span><span>электросхемы</span><span>BYD</span><span>документы</span>
+            </div>
+          </div>
+          <div class="sto-hero-panel">
+            <div class="sto-hero-panel__copy">
+              <strong>Клиент остается за вашим сервисом.</strong>
+              <p>Мы не выходим на клиента: даем мастеру точную позицию, фото, цену, срок и документы.</p>
+            </div>
+            <figure class="sto-hero-panel__media" aria-label="EVLine поставляет запчасти для китайских авто">
+              <img src="../../assets/images/vin-parts-visual.jpg" alt="Китайский электромобиль, запчасти и коробка EVLine для СТО" width="1400" height="900" loading="eager">
+            </figure>
+            <div class="sto-hero-panel__stats">
+              <span><b>VIN</b>подбор детали</span>
+              <span><b>EPC</b>схемы узлов</span>
+              <span><b>ТО</b>регламенты</span>
+              <span><b>B2B</b>поставка</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section brand-seo-section--soft">
+        <div class="container sto-split-grid">
+          <div class="sto-dark-card">
+            <span>Без лишних звеньев</span>
+            <h2>Закрываем то, что тормозит ремонт</h2>
+            <p>Каталоги, партномера, фото, поставщики, документы и статусы заказа — на нашей стороне.</p>
+          </div>
+          <div class="sto-value-list">
+            <article><span>1</span><div><h3>Канал для мастеров</h3><p>VIN, фото, статус и вопрос по техкарте — в одном рабочем чате.</p></div></article>
+            <article><span>2</span><div><h3>Аргументы клиенту</h3><p>Оригинал/OEM, сроки, риски и варианты замены — коротко и по делу.</p></div></article>
+            <article><span>3</span><div><h3>Проверка в Китае</h3><p>Фото детали, маркировки и упаковки до отправки.</p></div></article>
+            <article><span>4</span><div><h3>Комплекты ТО</h3><p>Расходники, схема доступа, контрольные точки, моменты затяжки.</p></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section">
+        <div class="container">
+          <div class="sto-tech-panel">
+            <div class="sto-tech-panel__intro">
+              <span class="sto-mini-kicker">Техническая база</span>
+              <h2>Не угадываем по картинке. Подбираем под VIN.</h2>
+              <p class="brand-seo-lead">Работаем с EPC, exploded-view схемами, электросхемами и дилерскими инструментами. Находим конкретную позицию: отдельно или в сборе, с учетом года, комплектации и рынка авто.</p>
+            </div>
+            <div class="sto-tech-panel__visuals">
+              <figure class="sto-tech-card">
+                <img src="https://patentimages.storage.googleapis.com/b1/95/61/353d57594b3bda/US20110285152A1-20111124-D00000.png" alt="Пример EPC exploded-view схемы бамперного узла с кронштейнами, болтами и точками крепления" width="1200" height="799" loading="lazy">
+                <figcaption>
+                  <b>EPC / exploded-view схемы узлов</b>
+                  <span>Разбираем узел на позиции: балка, кронштейны, болты, клипсы, накладки и крепеж под конкретный VIN.</span>
+                </figcaption>
+              </figure>
+              <figure class="sto-tech-card sto-tech-card--protocol">
+                <img src="../../assets/images/to/to-protocols-preview.jpg" alt="Пример технического регламента EVLine для СТО" width="1280" height="860" loading="lazy">
+                <figcaption>
+                  <b>Регламенты и технологические карты</b>
+                  <span>Для ТО и части работ даем порядок действий, контрольные точки, объемы жидкостей и моменты затяжки.</span>
+                </figcaption>
+              </figure>
+            </div>
+            <div class="sto-tech-panel__points">
+              <article><strong>VDS / ZCar</strong><p>Для BYD и ZCar подключаем диагностику и программные задачи.</p></article>
+              <article><strong>Электросхемы</strong><p>Проверяем питание, датчики, блоки, разъемы и проводку.</p></article>
+              <article><strong>Партномер под VIN</strong><p>Находим позицию в сборе или отдельно, с учетом года, комплектации и рынка.</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sto-form-section" id="partner-form">
+        <div class="container sto-form-card">
+          <div>
+            <span class="sto-mini-kicker">Запрос на сотрудничество</span>
+            <h2>Проверим формат на вашем запросе</h2>
+            <p>Оставьте контакт и VIN/модель. Покажем, как будем закрывать подбор, технику и поставку для вашего сервиса.</p>
+          </div>
+          <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство RU v2">
+            <strong>Заявка от СТО</strong>
+            <input type="hidden" name="type" value="parts">
+            <input type="hidden" name="topic" value="Сотрудничество с СТО v2">
+            <input name="name" placeholder="СТО или имя" required>
+            <input name="phone" placeholder="+380..." autocomplete="tel" required>
+            <input name="car" placeholder="VIN, модель или город" required>
+            <input type="hidden" name="message" value="Запрос на партнерство от СТО v2">
+            <button type="submit">Обсудить сотрудничество</button>
+            <a href="https://t.me/evline_support" target="_blank" rel="noopener">Или написать напрямую в Telegram</a>
+          </form>
+        </div>
+      </section>
+
+      <section class="origin-contact" id="contacts">
+        <div class="container origin-contact__card">
+          <div>
+            <p>Нужен партнер по китайским авто?</p>
+            <a class="origin-contact__phone" href="tel:+380935251024">+38 (093) 525-10-24</a>
+            <a class="origin-pill-button" href="https://t.me/evline_support" target="_blank" rel="noopener">Написать в Telegram</a>
+          </div>
+          <div class="origin-contact__details">
+            <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
+            <span>г. Киев, Оболонская набережная, 3, офис 1</span>
+            <strong>EVLine Ukraine</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <a class="floating-chat" href="https://t.me/evline_support" target="_blank" rel="noopener" aria-label="Telegram-чат с менеджером"></a>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner site-footer__inner--links">
+        <div>©2021-<span data-year>2026</span> EVLine - Все права защищены.</div>
+        <nav aria-label="Нижняя навигация">
+          <a href="/ru/">Запчасти из Китая</a>
+          <a href="/ru/komplekty-to/">Комплекты ТО</a>
+          <a href="/ru/byd">Программирование BYD</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
