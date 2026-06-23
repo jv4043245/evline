@@ -143,6 +143,12 @@
         gap: 28px;
         align-items: center;
       }
+      .sto-page .sto-compact-support {
+        padding-bottom: clamp(22px, 3vw, 34px);
+      }
+      .sto-page .sto-compact-tech {
+        padding-top: clamp(22px, 3vw, 34px);
+      }
       .sto-dark-card {
         padding: clamp(24px, 4vw, 38px);
         border-radius: 26px;
@@ -436,7 +442,7 @@
         line-height: 1.48;
       }
       .sto-form-section {
-        padding: 34px 0 42px;
+        padding: 24px 0 34px;
         background:
           radial-gradient(circle at 12% 12%, rgba(0, 180, 114, 0.11), transparent 28%),
           linear-gradient(180deg, #fff 0%, #f7faf8 100%);
@@ -444,9 +450,9 @@
       .sto-form-card {
         display: grid;
         grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
-        gap: 18px;
+        gap: 14px;
         align-items: center;
-        padding: clamp(18px, 2.5vw, 26px);
+        padding: clamp(16px, 2vw, 22px);
         border: 1px solid #dcefe2;
         border-radius: 22px;
         background: #fff;
@@ -455,7 +461,7 @@
       .sto-form-card h2 {
         margin: 0;
         color: #0f172a;
-        font-size: clamp(24px, 2.3vw, 34px);
+        font-size: clamp(22px, 2vw, 30px);
         line-height: 1.08;
       }
       .sto-form-card p {
@@ -644,7 +650,7 @@
         </div>
       </section>
 
-      <section class="brand-seo-section brand-seo-section--soft">
+      <section class="brand-seo-section brand-seo-section--soft sto-compact-support">
         <div class="container sto-split-grid">
           <div class="sto-dark-card">
             <span>Без зайвих ланок</span>
@@ -660,7 +666,7 @@
         </div>
       </section>
 
-      <section class="brand-seo-section">
+      <section class="brand-seo-section sto-compact-tech">
         <div class="container">
           <div class="sto-tech-panel">
             <div class="sto-tech-panel__intro">
@@ -697,8 +703,8 @@
         <div class="container sto-form-card">
           <div>
             <span class="sto-mini-kicker">Запит на співпрацю</span>
-            <h2>Перевіримо формат на вашому запиті</h2>
-            <p>Залиште контакт і VIN/модель. Покажемо, як будемо закривати підбір, техніку і поставку для вашого сервісу.</p>
+            <h2>Надіслати запит</h2>
+            <p>Контакт, VIN або модель — відповімо щодо запчастин і співпраці.</p>
           </div>
           <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство v2">
             <strong>Заявка від СТО</strong>
@@ -708,7 +714,7 @@
             <input name="phone" placeholder="+380..." autocomplete="tel" required>
             <input name="car" placeholder="VIN, модель або місто" required>
             <input type="hidden" name="message" value="Запит на партнерство від СТО v2">
-            <button type="submit">Обговорити співпрацю</button>
+            <button type="submit">Надіслати запит</button>
             <a href="https://t.me/evline_support" target="_blank" rel="noopener">Або написати напряму в Telegram</a>
           </form>
         </div>

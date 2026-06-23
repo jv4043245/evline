@@ -143,6 +143,12 @@
         gap: 28px;
         align-items: center;
       }
+      .sto-page .sto-compact-support {
+        padding-bottom: clamp(22px, 3vw, 34px);
+      }
+      .sto-page .sto-compact-tech {
+        padding-top: clamp(22px, 3vw, 34px);
+      }
       .sto-dark-card {
         padding: clamp(24px, 4vw, 38px);
         border-radius: 26px;
@@ -436,7 +442,7 @@
         line-height: 1.48;
       }
       .sto-form-section {
-        padding: 34px 0 42px;
+        padding: 24px 0 34px;
         background:
           radial-gradient(circle at 12% 12%, rgba(0, 180, 114, 0.11), transparent 28%),
           linear-gradient(180deg, #fff 0%, #f7faf8 100%);
@@ -444,9 +450,9 @@
       .sto-form-card {
         display: grid;
         grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
-        gap: 18px;
+        gap: 14px;
         align-items: center;
-        padding: clamp(18px, 2.5vw, 26px);
+        padding: clamp(16px, 2vw, 22px);
         border: 1px solid #dcefe2;
         border-radius: 22px;
         background: #fff;
@@ -455,7 +461,7 @@
       .sto-form-card h2 {
         margin: 0;
         color: #0f172a;
-        font-size: clamp(24px, 2.3vw, 34px);
+        font-size: clamp(22px, 2vw, 30px);
         line-height: 1.08;
       }
       .sto-form-card p {
@@ -644,7 +650,7 @@
         </div>
       </section>
 
-      <section class="brand-seo-section brand-seo-section--soft">
+      <section class="brand-seo-section brand-seo-section--soft sto-compact-support">
         <div class="container sto-split-grid">
           <div class="sto-dark-card">
             <span>Без лишних звеньев</span>
@@ -653,14 +659,14 @@
           </div>
           <div class="sto-value-list">
             <article><span>1</span><div><h3>Канал для мастеров</h3><p>VIN, фото, статус и вопрос по техкарте — в одном рабочем чате.</p></div></article>
-            <article><span>2</span><div><h3>Аргументы клиенту</h3><p>Оригинал/OEM, сроки, риски и варианты замены — коротко и по делу.</p></div></article>
+            <article><span>2</span><div><h3>Аргументы для клиента</h3><p>Оригинал/OEM, сроки, риски и варианты замены — коротко и по делу.</p></div></article>
             <article><span>3</span><div><h3>Проверка в Китае</h3><p>Фото детали, маркировки и упаковки до отправки.</p></div></article>
             <article><span>4</span><div><h3>Комплекты ТО</h3><p>Расходники, схема доступа, контрольные точки, моменты затяжки.</p></div></article>
           </div>
         </div>
       </section>
 
-      <section class="brand-seo-section">
+      <section class="brand-seo-section sto-compact-tech">
         <div class="container">
           <div class="sto-tech-panel">
             <div class="sto-tech-panel__intro">
@@ -697,8 +703,8 @@
         <div class="container sto-form-card">
           <div>
             <span class="sto-mini-kicker">Запрос на сотрудничество</span>
-            <h2>Проверим формат на вашем запросе</h2>
-            <p>Оставьте контакт и VIN/модель. Покажем, как будем закрывать подбор, технику и поставку для вашего сервиса.</p>
+            <h2>Отправить запрос</h2>
+            <p>Контакт, VIN или модель — ответим по запчастям и сотрудничеству.</p>
           </div>
           <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство RU v2">
             <strong>Заявка от СТО</strong>
@@ -708,7 +714,7 @@
             <input name="phone" placeholder="+380..." autocomplete="tel" required>
             <input name="car" placeholder="VIN, модель или город" required>
             <input type="hidden" name="message" value="Запрос на партнерство от СТО v2">
-            <button type="submit">Обсудить сотрудничество</button>
+            <button type="submit">Отправить запрос</button>
             <a href="https://t.me/evline_support" target="_blank" rel="noopener">Или написать напрямую в Telegram</a>
           </form>
         </div>
