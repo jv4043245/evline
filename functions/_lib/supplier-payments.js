@@ -1,5 +1,5 @@
 import { number, text } from "./http.js";
-import { loadOrder, nextPublicNumber, sendTelegramMessage } from "./crm.js";
+import { loadOrder, nextPublicNumber, sendTelegramMessageDetailed } from "./crm.js";
 
 export const SUPPLIER_PAYMENT_STATUS_LABELS = {
   requested: "Очікує оплати",
@@ -117,7 +117,7 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     throw error;
   }
 
-  const telegramMessageId = await sendTelegramMessage(env, chatId, payment.request_text);
+  const telegramResult = await sendTelegramMessageDetailed(env, chatId, payment.request_text);
 
   await env.DB.prepare(
     `INSERT INTO supplier_payments (
@@ -137,8 +137,8 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
       payment.requested_amount,
       payment.requested_currency,
       payment.paid_currency,
-      chatId,
-      telegramMessageId,
+      telegramResult.chat_id,
+      telegramResult.message_id,
       payment.request_text,
       payment.notes,
       payment.requested_at
@@ -147,8 +147,9 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
 
   return {
     ...payment,
-    request_chat_id: chatId,
-    request_message_id: telegramMessageId,
+    request_chat_id: telegramResult.chat_id,
+    request_message_id: telegramResult.message_id,
+    migrated_from_chat_id: telegramResult.migrated_from_chat_id,
   };
 }
 

@@ -327,7 +327,7 @@ async function templateForStatus(env, status) {
   return template || { template_key: key, body: ORDER_STATUS_LABELS[status] || "Оновлення статусу замовлення" };
 }
 
-export async function sendTelegramMessage(env, chatId, body) {
+async function telegramSendMessage(env, chatId, body) {
   if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -338,9 +338,43 @@ export async function sendTelegramMessage(env, chatId, body) {
       disable_web_page_preview: true,
     }),
   });
-  const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.description || "Telegram sendMessage failed");
-  return String(data.result?.message_id || "");
+  const data = await response.json().catch(() => ({}));
+  return {
+    ...data,
+    http_ok: response.ok,
+    requested_chat_id: String(chatId),
+  };
+}
+
+export async function sendTelegramMessageDetailed(env, chatId, body) {
+  let data = await telegramSendMessage(env, chatId, body);
+  let effectiveChatId = String(chatId);
+  let migratedFromChatId = "";
+
+  if ((!data.http_ok || !data.ok) && data.parameters?.migrate_to_chat_id) {
+    migratedFromChatId = String(chatId);
+    effectiveChatId = String(data.parameters.migrate_to_chat_id);
+    data = await telegramSendMessage(env, effectiveChatId, body);
+  }
+
+  if (!data.http_ok || !data.ok) {
+    const error = new Error(data.description || "Telegram sendMessage failed");
+    if (data.parameters?.migrate_to_chat_id) {
+      error.migrate_to_chat_id = String(data.parameters.migrate_to_chat_id);
+    }
+    throw error;
+  }
+
+  return {
+    chat_id: effectiveChatId,
+    message_id: String(data.result?.message_id || ""),
+    migrated_from_chat_id: migratedFromChatId,
+  };
+}
+
+export async function sendTelegramMessage(env, chatId, body) {
+  const result = await sendTelegramMessageDetailed(env, chatId, body);
+  return result.message_id;
 }
 
 export function buildManagerOrderMessage(order, origin = "https://evline.com.ua", prefix = "") {

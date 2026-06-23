@@ -21,7 +21,10 @@ export async function onRequestPost({ request, params, env }) {
     });
   } catch (error) {
     return json(
-      { error: error.message || String(error) },
+      {
+        error: error.message || String(error),
+        ...(error.migrate_to_chat_id ? { migrate_to_chat_id: error.migrate_to_chat_id } : {}),
+      },
       { status: error.status || 500 }
     );
   }
