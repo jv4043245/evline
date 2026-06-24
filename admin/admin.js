@@ -74,6 +74,121 @@ const supplierPaymentStatusLabels = {
   canceled: "Скасовано",
 };
 
+const supplierDirectory = ["Zeekr", "BYD", "Buble"];
+
+const defaultShippingCarriers = [
+  {
+    id: "mist-china",
+    name: "Meest",
+    code: "meest",
+    active: 1,
+    tracking_url_template: "https://cab.meest.cn/",
+    notes: "Основний перевізник для доставок з Китаю.",
+  },
+  {
+    id: "brock-bridge",
+    name: "Brock Bridge",
+    code: "brock-bridge",
+    active: 1,
+    tracking_url_template: "",
+    notes: "Додатковий перевізник. Тариф і строки менеджер уточнює під вантаж.",
+  },
+  {
+    id: "ukr-china",
+    name: "Ukr China",
+    code: "ukr-china",
+    active: 1,
+    tracking_url_template: "https://ukr-china.com",
+    notes: "Додатковий перевізник для доставок з Китаю.",
+  },
+  {
+    id: "meest-commerce",
+    name: "Meest Commerce",
+    code: "meest-commerce",
+    active: 1,
+    tracking_url_template: "",
+    notes: "Додатковий канал Meest для комерційних відправлень.",
+  },
+];
+
+const defaultShippingRates = [
+  {
+    id: "mist-china-air",
+    carrier_id: "mist-china",
+    mode: "air",
+    currency: "USD",
+    rate: 11.3,
+    unit: "kg",
+    min_charge: 0,
+    min_weight_kg: 30,
+    min_volume_m3: 0,
+    exchange_rate_uah: 42,
+    estimated_days_min: 12,
+    estimated_days_max: 15,
+    active: 1,
+  },
+  {
+    id: "mist-china-sea",
+    carrier_id: "mist-china",
+    mode: "sea",
+    currency: "USD",
+    rate: 2.5,
+    unit: "kg",
+    min_charge: 0,
+    min_weight_kg: 0,
+    min_volume_m3: 0,
+    exchange_rate_uah: 42,
+    estimated_days_min: 60,
+    estimated_days_max: 65,
+    active: 1,
+  },
+  {
+    id: "ukr-china-air",
+    carrier_id: "ukr-china",
+    mode: "air",
+    currency: "UAH",
+    rate: 0,
+    unit: "kg",
+    min_charge: 0,
+    min_weight_kg: 0,
+    min_volume_m3: 0,
+    exchange_rate_uah: 0,
+    estimated_days_min: 14,
+    estimated_days_max: 14,
+    active: 1,
+  },
+  {
+    id: "ukr-china-sea",
+    carrier_id: "ukr-china",
+    mode: "sea",
+    currency: "UAH",
+    rate: 0,
+    unit: "kg",
+    min_charge: 0,
+    min_weight_kg: 0,
+    min_volume_m3: 0,
+    exchange_rate_uah: 0,
+    estimated_days_min: 55,
+    estimated_days_max: 60,
+    active: 1,
+  },
+  ...["brock-bridge", "meest-commerce"].flatMap((carrierId) => ["air", "sea"].map((mode) => ({
+    id: `${carrierId}-${mode}`,
+    carrier_id: carrierId,
+    mode,
+    currency: "UAH",
+    rate: 0,
+    unit: "kg",
+    min_charge: 0,
+    min_weight_kg: 0,
+    min_volume_m3: 0,
+    exchange_rate_uah: 0,
+    estimated_days_min: 0,
+    estimated_days_max: 0,
+    active: 1,
+  }))),
+];
+
 const shippingModeLabels = {
   air: "Авіа",
   sea: "Море",
@@ -522,20 +637,44 @@ function numeric(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function allCarriers() {
+  const carriers = new Map(defaultShippingCarriers.map((carrier) => [carrier.id, carrier]));
+  for (const carrier of state.shipping.carriers) {
+    const defaults = carriers.get(carrier.id);
+    carriers.set(carrier.id, defaults ? { ...carrier, name: defaults.name, code: defaults.code || carrier.code } : carrier);
+  }
+  return Array.from(carriers.values()).sort((a, b) => {
+    const activeDiff = Number(b.active !== 0) - Number(a.active !== 0);
+    return activeDiff || String(a.name || "").localeCompare(String(b.name || ""), "uk");
+  });
+}
+
 function activeCarriers() {
-  return state.shipping.carriers.filter((carrier) => Number(carrier.active) !== 0);
+  return allCarriers().filter((carrier) => Number(carrier.active) !== 0);
 }
 
 function carrierById(id) {
+  return allCarriers().find((carrier) => carrier.id === id) || null;
+}
+
+function persistedCarrierById(id) {
   return state.shipping.carriers.find((carrier) => carrier.id === id) || null;
 }
 
+function allRates() {
+  const rates = new Map(defaultShippingRates.map((rate) => [rate.id, rate]));
+  for (const rate of state.shipping.rates) {
+    rates.set(rate.id, rate);
+  }
+  return Array.from(rates.values());
+}
+
 function ratesForCarrier(carrierId) {
-  return state.shipping.rates.filter((rate) => rate.carrier_id === carrierId);
+  return allRates().filter((rate) => rate.carrier_id === carrierId);
 }
 
 function rateById(id) {
-  return state.shipping.rates.find((rate) => rate.id === id) || null;
+  return allRates().find((rate) => rate.id === id) || null;
 }
 
 function selectRate(carrierId, mode, preferredRateId = "") {
@@ -725,6 +864,24 @@ function supplierPaymentBadge(status) {
   return `<span class="supplier-payment-status supplier-payment-status--${safeClass(value)}">${escapeHtml(supplierPaymentStatusLabels[value] || value)}</span>`;
 }
 
+function supplierDirectoryOptions(selectedName = "") {
+  const normalized = plainText(selectedName);
+  const hasDirectoryMatch = supplierDirectory.some((name) => name === normalized);
+  return [
+    `<option value="">Оберіть постачальника</option>`,
+    ...supplierDirectory.map((name) => `<option value="${escapeHtml(name)}" ${normalized === name ? "selected" : ""}>${escapeHtml(name)}</option>`),
+    `<option value="__custom__" ${normalized && !hasDirectoryMatch ? "selected" : ""}>Інший / додати вручну</option>`,
+  ].join("");
+}
+
+function syncSupplierCustomField(root) {
+  const select = root.querySelector("[data-supplier-payment-supplier]");
+  const customLabel = root.querySelector("[data-supplier-payment-custom]");
+  if (!select || !customLabel) return;
+  customLabel.hidden = select.value !== "__custom__";
+  if (!customLabel.hidden) customLabel.querySelector("input")?.focus();
+}
+
 function renderSupplierPayments(order) {
   const rows = state.selectedSupplierPayments || [];
   const requestedPlaceholder = order.type === "byd" ? "VDS / програмування" : "постачальник / Taobao / склад";
@@ -740,7 +897,13 @@ function renderSupplierPayments(order) {
       <div class="supplier-payments__create">
         <label>
           Постачальник
-          <input data-supplier-payment-input="supplier_name" placeholder="${escapeHtml(requestedPlaceholder)}">
+          <select data-supplier-payment-input="supplier_name" data-supplier-payment-supplier>
+            ${supplierDirectoryOptions()}
+          </select>
+        </label>
+        <label data-supplier-payment-custom hidden>
+          Інший постачальник
+          <input data-supplier-payment-input="supplier_name_custom" placeholder="${escapeHtml(requestedPlaceholder)}">
         </label>
         <label>
           Сума
@@ -939,6 +1102,7 @@ function shippingCarrierOptions(selectedId) {
   return [
     `<option value="">Не вибрано</option>`,
     ...carriers.map((carrier) => `<option value="${escapeHtml(carrier.id)}" ${selectedId === carrier.id ? "selected" : ""}>${escapeHtml(carrier.name)}</option>`),
+    `<option value="__custom__">Інший / додати вручну</option>`,
   ].join("");
 }
 
@@ -950,6 +1114,17 @@ function shippingModeOptions(selectedMode) {
 
 function applyShippingSelection(form, options = {}) {
   const carrierId = form.elements.shipping_carrier_id?.value || "";
+  if (carrierId === "__custom__") {
+    if (form.elements.shipping_carrier_id) form.elements.shipping_carrier_id.value = "";
+    if (form.querySelector("[data-shipping-rate-display]")) {
+      form.querySelector("[data-shipping-rate-display]").value = "Внесіть перевізника вручну або додайте його в тарифах";
+    }
+    if (form.querySelector("[data-shipping-hint]")) {
+      form.querySelector("[data-shipping-hint]").textContent = "Внесіть перевізника вручну або додайте його в тарифах";
+    }
+    form.elements.tracking_carrier?.focus();
+    return;
+  }
   const mode = form.elements.shipping_mode?.value || "air";
   const rate = selectRate(carrierId, mode, form.elements.shipping_rate_id?.value || "");
   const carrier = carrierById(carrierId);
@@ -1419,8 +1594,9 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
 
 function collectSupplierPaymentCreatePayload(form) {
   const value = (name) => form.querySelector(`[data-supplier-payment-input="${name}"]`)?.value || "";
+  const supplierChoice = value("supplier_name");
   return {
-    supplier_name: value("supplier_name"),
+    supplier_name: supplierChoice === "__custom__" ? value("supplier_name_custom") : supplierChoice,
     requested_amount: value("requested_amount"),
     requested_currency: value("requested_currency") || "CNY",
     notes: value("notes"),
@@ -1704,6 +1880,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
+  if (event.target.matches("[data-supplier-payment-supplier]")) {
+    syncSupplierCustomField(event.currentTarget);
+  }
   if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number']")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
@@ -1868,7 +2047,7 @@ document.querySelector("[data-shipping-list]")?.addEventListener("click", (event
 document.querySelector("[data-shipping-form]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = shippingFormPayload(event.currentTarget);
-  const method = payload.id && carrierById(payload.id) ? "PATCH" : "POST";
+  const method = payload.id && persistedCarrierById(payload.id) ? "PATCH" : "POST";
   const data = await api("/api/admin/shipping", {
     method,
     body: JSON.stringify(payload),
