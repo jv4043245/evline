@@ -1,6 +1,8 @@
 import { number, text } from "./http.js";
 import { loadOrder, nextPublicNumber, sendTelegramMessageDetailed } from "./crm.js";
 
+const PAYMENT_OCR_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+
 export const SUPPLIER_PAYMENT_STATUS_LABELS = {
   requested: "Очікує оплати",
   needs_review: "Потрібна перевірка",
@@ -244,13 +246,8 @@ async function downloadTelegramFile(env, fileId) {
   };
 }
 
-async function recognizePaymentScreenshot(env, fileId) {
-  if (!env.AI?.run || !fileId) return { text: "", source: "" };
-
-  const image = await downloadTelegramFile(env, fileId);
-  if (!image?.bytes?.length) return { text: "", source: "" };
-
-  const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+async function runPaymentOcrModel(env, image) {
+  return env.AI.run(PAYMENT_OCR_MODEL, {
     image: Array.from(image.bytes),
     max_tokens: 256,
     prompt: [
@@ -260,6 +257,33 @@ async function recognizePaymentScreenshot(env, fileId) {
       "Do not invent values. Prefer the large top amount as total paid.",
     ].join(" "),
   });
+}
+
+async function acceptPaymentOcrModelLicense(env) {
+  await env.AI.run(PAYMENT_OCR_MODEL, { prompt: "agree", max_tokens: 1 });
+}
+
+function shortOcrError(error) {
+  return text(error?.message || error).replace(/\s+/g, " ").slice(0, 140);
+}
+
+async function recognizePaymentScreenshot(env, fileId) {
+  if (!env.AI?.run || !fileId) return { text: "", source: "" };
+
+  const image = await downloadTelegramFile(env, fileId);
+  if (!image?.bytes?.length) return { text: "", source: "" };
+
+  let result;
+  try {
+    result = await runPaymentOcrModel(env, image);
+  } catch (error) {
+    await acceptPaymentOcrModelLicense(env).catch(() => {});
+    try {
+      result = await runPaymentOcrModel(env, image);
+    } catch (retryError) {
+      throw new Error(`${shortOcrError(retryError)}; first attempt: ${shortOcrError(error)}`);
+    }
+  }
 
   return {
     text: aiText(result),
@@ -271,7 +295,7 @@ function paymentAmountCandidates(value) {
   const input = text(value).replace(/\s+/g, " ");
   if (!input) return [];
 
-  const matches = [...input.matchAll(/([¥￥])?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*(?:([¥￥])|(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
+  const matches = [...input.matchAll(/([¥￥])?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*(?:(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
   return matches
     .map((match) => {
       const rawNumber = String(match[2] || "");
@@ -280,7 +304,7 @@ function paymentAmountCandidates(value) {
       const end = start + rawNumber.length;
       const before = input[start - 1] || "";
       const after = input[end] || "";
-      const hasCurrency = Boolean(match[1] || match[3] || match[4]);
+      const hasCurrency = Boolean(match[1] || match[3]);
       const amount = Number(rawNumber.replace(",", "."));
       const context = input.slice(Math.max(0, start - 30), Math.min(input.length, end + 30)).toLowerCase();
       return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber };
@@ -490,7 +514,9 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
     parsed.amount > 0 ? `Підсумкова сума: ${formatAmount(parsed.amount, parsed.currency)}` : "",
-    ocrResult.source ? `Розпізнавання: ${ocrResult.source}` : "",
+    ocrResult.source
+      ? `Розпізнавання: ${ocrResult.source}${ocrResult.error ? ` (${shortOcrError(ocrResult.error)})` : ""}`
+      : "",
     "Адмінка: https://evline.com.ua/admin/",
   ];
 
