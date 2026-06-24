@@ -3,6 +3,7 @@ const state = {
   activeTab: localStorage.getItem("evline_admin_tab") || "orders",
   orders: [],
   selectedOrder: null,
+  orderEditorTab: "main",
   selectedEvents: [],
   selectedNotifications: [],
   selectedTrackingEvents: [],
@@ -84,6 +85,7 @@ const googleAdsStatusLabels = {
 };
 
 const adminTabs = new Set(["orders", "analytics", "delivery"]);
+const orderEditorTabs = new Set(["main", "delivery", "payment", "messages", "history"]);
 
 const money = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -819,6 +821,7 @@ function closeOrderDetail(options = {}) {
   setOrderDetailOpen(false);
   if (options.clearSelection) {
     state.selectedOrder = null;
+    state.orderEditorTab = "main";
     state.selectedEvents = [];
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
@@ -826,6 +829,25 @@ function closeOrderDetail(options = {}) {
     renderOrderEditor(null);
     highlightSelectedOrder();
   }
+}
+
+function activeOrderEditorTab() {
+  return orderEditorTabs.has(state.orderEditorTab) ? state.orderEditorTab : "main";
+}
+
+function setOrderEditorTab(tab) {
+  state.orderEditorTab = orderEditorTabs.has(tab) ? tab : "main";
+  const active = activeOrderEditorTab();
+  document.querySelectorAll("[data-order-tab]").forEach((button) => {
+    const selected = button.dataset.orderTab === active;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-selected", selected ? "true" : "false");
+  });
+  document.querySelectorAll("[data-order-pane]").forEach((pane) => {
+    const selected = pane.dataset.orderPane === active;
+    pane.classList.toggle("is-active", selected);
+    pane.hidden = !selected;
+  });
 }
 
 function messagePreview(order, status) {
@@ -935,6 +957,17 @@ function renderOrderEditor(order) {
 
     <input type="hidden" name="id" value="${escapeHtml(order.id)}">
 
+    <div class="order-editor__tabs wide" role="tablist" aria-label="Розділи картки замовлення">
+      <button class="order-editor__tab ${activeOrderEditorTab() === "main" ? "is-active" : ""}" type="button" data-order-tab="main" role="tab" aria-selected="${activeOrderEditorTab() === "main" ? "true" : "false"}">Заявка</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" type="button" data-order-tab="delivery" role="tab" aria-selected="${activeOrderEditorTab() === "delivery" ? "true" : "false"}">Доставка</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" type="button" data-order-tab="payment" role="tab" aria-selected="${activeOrderEditorTab() === "payment" ? "true" : "false"}">Оплата</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "messages" ? "is-active" : ""}" type="button" data-order-tab="messages" role="tab" aria-selected="${activeOrderEditorTab() === "messages" ? "true" : "false"}">Повідомлення</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "history" ? "is-active" : ""}" type="button" data-order-tab="history" role="tab" aria-selected="${activeOrderEditorTab() === "history" ? "true" : "false"}">Історія</button>
+    </div>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "main" ? "is-active" : ""}" data-order-pane="main" ${activeOrderEditorTab() === "main" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
     <label>
       Статус
       <select name="status" data-status-input>
@@ -1001,6 +1034,12 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <textarea name="request_text" rows="3">${escapeHtml(order.request_text || "")}</textarea>
     </label>
 
+      </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" data-order-pane="delivery" ${activeOrderEditorTab() === "delivery" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
     <label>
       Перевізник
       <input name="tracking_carrier" value="${escapeHtml(order.tracking_carrier || "")}" placeholder="Meest China">
@@ -1065,6 +1104,12 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <input value="${escapeHtml(currentRateLabel)}" readonly data-shipping-rate-display>
     </label>
 
+      </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" data-order-pane="payment" ${activeOrderEditorTab() === "payment" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
     ${renderSupplierPayments(order)}
 
     <div class="order-editor__section wide">
@@ -1095,6 +1140,13 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       Інші витрати, грн
       <input name="other_cost_uah" type="number" step="0.01" min="0" value="${Number(order.other_cost_uah || 0)}">
     </label>
+
+      </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "messages" ? "is-active" : ""}" data-order-pane="messages" ${activeOrderEditorTab() === "messages" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
     <label>
       Наступна дія
       <input name="next_action_at" type="date" value="${escapeHtml(order.next_action_at ? String(order.next_action_at).slice(0, 10) : "")}">
@@ -1117,6 +1169,12 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <textarea name="manager_notes" rows="4">${escapeHtml(order.manager_notes || "")}</textarea>
     </label>
 
+      </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "history" ? "is-active" : ""}" data-order-pane="history" ${activeOrderEditorTab() === "history" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
     <div class="order-editor__history wide">
       <strong>Історія доставки</strong>
       ${renderTrackingEvents()}
@@ -1130,7 +1188,10 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       ${renderNotifications()}
     </div>
 
-    <button class="admin-btn admin-btn--primary wide" type="submit">Зберегти замовлення</button>
+      </div>
+    </section>
+
+    <button class="admin-btn admin-btn--primary wide order-editor__save" type="submit">Зберегти замовлення</button>
   `;
 
   form.querySelector("[data-status-input]")?.addEventListener("change", (event) => {
@@ -1232,6 +1293,7 @@ async function loadOrder(id) {
 }
 
 async function openOrder(id, options = {}) {
+  if (state.selectedOrder?.id !== id) state.orderEditorTab = "main";
   await loadOrder(id);
   highlightSelectedOrder();
   setOrderDetailOpen(true);
@@ -1552,6 +1614,12 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const tabButton = event.target.closest("[data-order-tab]");
+  if (tabButton) {
+    setOrderEditorTab(tabButton.dataset.orderTab);
+    return;
+  }
+
   const deleteButton = event.target.closest("[data-delete-order]");
   if (deleteButton) {
     deleteButton.disabled = true;

@@ -837,6 +837,52 @@ body.order-detail-open .order-detail {
   padding-bottom: 32px;
 }
 
+.order-editor__tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  margin: -6px -2px 2px;
+  padding: 8px 2px;
+  overflow-x: auto;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.order-editor__tab {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.order-editor__tab.is-active {
+  border-color: rgba(0, 168, 107, 0.3);
+  background: #eaf8ef;
+  color: var(--green-dark);
+}
+
+.order-editor__pane {
+  display: none;
+}
+
+.order-editor__pane.is-active {
+  display: block;
+}
+
+.order-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .order-editor label,
 .cost-form label,
 .shipping-form label {
@@ -901,6 +947,13 @@ body.order-detail-open .order-detail {
 
 .order-editor__section--delivery .admin-btn {
   flex-shrink: 0;
+}
+
+.order-editor__save {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  box-shadow: 0 -10px 28px rgba(10, 31, 24, 0.08);
 }
 
 .supplier-payments {
