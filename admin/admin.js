@@ -585,16 +585,18 @@ function renderShippingDirectory() {
     root.innerHTML = `<p class="muted">Потрібно застосувати міграцію D1 для довідника доставки.</p>`;
     return;
   }
-  root.innerHTML = state.shipping.carriers.length
-    ? state.shipping.carriers
+  const carriers = allCarriers();
+  root.innerHTML = carriers.length
+    ? carriers
         .map((carrier) => {
           const rates = ratesForCarrier(carrier.id);
+          const isPersisted = Boolean(persistedCarrierById(carrier.id));
           return `
             <article class="shipping-card ${Number(carrier.active) === 0 ? "shipping-card--inactive" : ""}">
               <div class="shipping-card__head">
                 <div>
                   <strong>${textOrDash(carrier.name)}</strong>
-                  <span class="muted">${textOrDash(carrier.code)}${carrierTrackingLabel(carrier)}${Number(carrier.active) === 0 ? " · вимкнено" : ""}</span>
+                  <span class="muted">${textOrDash(carrier.code)}${carrierTrackingLabel(carrier)}${Number(carrier.active) === 0 ? " · вимкнено" : ""}${isPersisted ? "" : " · шаблон"}</span>
                 </div>
                 <button class="admin-btn admin-btn--small" type="button" data-edit-shipping-carrier="${escapeHtml(carrier.id)}">Редагувати</button>
               </div>
@@ -612,10 +614,10 @@ function renderShippingDirectory() {
           `;
         })
         .join("")
-    : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад Meest China.</p>`;
+    : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад Meest.</p>`;
 
-  if (!document.querySelector("[data-shipping-form]")?.elements.namedItem("id")?.value && state.shipping.carriers[0]) {
-    fillShippingForm(state.shipping.carriers[0].id);
+  if (!document.querySelector("[data-shipping-form]")?.elements.namedItem("id")?.value && carriers[0]) {
+    fillShippingForm(carriers[0].id);
   }
 }
 
