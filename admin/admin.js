@@ -39,6 +39,20 @@ const statusLabels = {
   canceled: "Скасовано",
 };
 
+const compactStatusLabels = {
+  new: "Нова",
+  accepted: "В роботі",
+  proposal_sent: "КП",
+  paid: "Оплачено",
+  sourcing_china: "Пошук CN",
+  china_warehouse: "Склад CN",
+  left_china: "Виїхало CN",
+  in_ukraine: "В Україні",
+  ready_for_pickup: "Готово",
+  completed: "Завершено",
+  canceled: "Скасовано",
+};
+
 const typeLabels = {
   parts: "Запчастини",
   byd: "BYD",
@@ -490,8 +504,9 @@ function renderShippingDirectory() {
   }
 }
 
-function badge(status) {
-  return `<span class="badge badge--${safeClass(status)}">${escapeHtml(statusLabels[status] || status || "new")}</span>`;
+function badge(status, compact = false) {
+  const labels = compact ? compactStatusLabels : statusLabels;
+  return `<span class="badge ${compact ? "badge--compact" : ""} badge--${safeClass(status)}">${escapeHtml(labels[status] || statusLabels[status] || status || "new")}</span>`;
 }
 
 function paymentLabel(value) {
@@ -608,7 +623,9 @@ function moneyCell(order) {
   const revenue = Number(order.revenue_uah || 0);
   const payment = paymentLabel(order.payment_status);
   const paymentState = order.payment_status || "unknown";
-  const clientBadge = `<span class="orders-table__finance-badge orders-table__finance-badge--${safeClass(paymentState)}">${escapeHtml(payment === "оплата не вказана" ? "не вказано" : payment)}</span>`;
+  const clientBadge = paymentState === "unknown"
+    ? ""
+    : `<span class="orders-table__finance-badge orders-table__finance-badge--${safeClass(paymentState)}">${escapeHtml(payment)}</span>`;
   const revenueText = revenue > 0 ? money.format(revenue) : "не вказано";
   const chips = [
     supplierPaymentChip(order),
@@ -623,7 +640,7 @@ function moneyCell(order) {
         <strong>${escapeHtml(revenueText)}</strong>
         ${clientBadge}
       </div>
-      ${chips ? `<div class="orders-table__finance-chips">${chips}</div>` : `<span class="orders-table__empty">оплата не вказана</span>`}
+      ${chips ? `<div class="orders-table__finance-chips">${chips}</div>` : `<span class="orders-table__finance-note">оплата не вказана</span>`}
     </div>
   `;
 }
@@ -823,9 +840,9 @@ function renderOrders() {
               <td class="orders-table__number-cell"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
               <td><strong class="orders-table__primary">${textOrDash(order.customer_name || "Без імені")}</strong>${contactLine(order)}</td>
               <td class="orders-table__request-cell"><strong class="orders-table__primary">${textOrDash(order.car || "Авто не вказано")}</strong>${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
-              <td>${badge(order.status || "new")}${mutedLine(nextAction)}</td>
+              <td>${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
               <td>${moneyCell(order)}</td>
-              <td>${trackCell}</td>
+              <td class="orders-table__track-cell">${trackCell}</td>
               <td>
                 <div class="orders-table__actions">
                   <button class="admin-btn admin-btn--small orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>

@@ -550,37 +550,38 @@ body.order-detail-open .order-detail {
 }
 
 .orders-table--manager {
-  min-width: 1120px;
+  min-width: 1240px;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed;
 }
 
 .orders-table--manager .orders-table__col-number {
-  width: 132px;
-}
-
-.orders-table--manager .orders-table__col-client {
-  width: 17%;
-}
-
-.orders-table--manager .orders-table__col-request {
-  width: 25%;
-}
-
-.orders-table--manager .orders-table__col-status {
   width: 122px;
 }
 
+.orders-table--manager .orders-table__col-client {
+  width: 13%;
+}
+
+.orders-table--manager .orders-table__col-request {
+  width: 23%;
+}
+
+.orders-table--manager .orders-table__col-status {
+  width: 96px;
+}
+
 .orders-table--manager .orders-table__col-money {
-  width: 230px;
+  width: 290px;
 }
 
 .orders-table--manager .orders-table__col-track {
-  width: 15%;
+  width: 17%;
 }
 
 .orders-table--manager .orders-table__col-actions {
-  width: 96px;
+  width: 84px;
 }
 
 .orders-table th,
@@ -699,6 +700,7 @@ body.order-detail-open .order-detail {
   color: var(--green-dark);
   font-weight: 800;
   text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
 .orders-table__request-cell .muted {
@@ -724,9 +726,11 @@ body.order-detail-open .order-detail {
 
 .orders-table__finance-main {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   min-width: 0;
+  row-gap: 3px;
 }
 
 .orders-table__finance-main > span {
@@ -737,9 +741,10 @@ body.order-detail-open .order-detail {
 }
 
 .orders-table__finance-main strong {
+  min-width: 0;
   color: var(--ink);
   font-size: 15px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .orders-table__finance-badge {
@@ -775,7 +780,7 @@ body.order-detail-open .order-detail {
 .orders-table__finance-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .orders-table__finance-chip {
@@ -783,7 +788,7 @@ body.order-detail-open .order-detail {
   align-items: center;
   gap: 4px;
   min-height: 22px;
-  padding: 0 7px;
+  padding: 0 6px;
   border: 1px solid rgba(13, 148, 95, 0.14);
   border-radius: 999px;
   background: #f1faf4;
@@ -822,10 +827,28 @@ body.order-detail-open .order-detail {
   color: #52615d;
 }
 
+.orders-table__finance-note {
+  color: #93a19c;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .orders-table__empty {
   color: #93a19c;
   font-size: 12px;
   font-weight: 800;
+}
+
+.orders-table__track-cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.orders-table__track-cell .muted {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 3px;
 }
 
 .orders-table__actions {
@@ -851,6 +874,12 @@ body.order-detail-open .order-detail {
   color: var(--green-dark);
   font-weight: 800;
   white-space: nowrap;
+}
+
+.badge--compact {
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 
 .badge--new {
