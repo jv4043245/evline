@@ -659,6 +659,26 @@ function carrierById(id) {
   return allCarriers().find((carrier) => carrier.id === id) || null;
 }
 
+function normalizeCarrierName(value) {
+  return plainText(value).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function carrierByName(name) {
+  const normalized = normalizeCarrierName(name);
+  if (!normalized) return null;
+  const aliases = {
+    "meest china": "mist-china",
+    "mist china": "mist-china",
+    "meest": "mist-china",
+    "mist": "mist-china",
+    "ukr-china": "ukr-china",
+    "ukr china": "ukr-china",
+    "ukrchina": "ukr-china",
+  };
+  const aliasId = aliases[normalized];
+  return allCarriers().find((carrier) => carrier.id === aliasId || normalizeCarrierName(carrier.name) === normalized || normalizeCarrierName(carrier.code) === normalized) || null;
+}
+
 function persistedCarrierById(id) {
   return state.shipping.carriers.find((carrier) => carrier.id === id) || null;
 }
@@ -1104,7 +1124,7 @@ function shippingCarrierOptions(selectedId) {
   return [
     `<option value="">Не вибрано</option>`,
     ...carriers.map((carrier) => `<option value="${escapeHtml(carrier.id)}" ${selectedId === carrier.id ? "selected" : ""}>${escapeHtml(carrier.name)}</option>`),
-    `<option value="__custom__">Інший / додати вручну</option>`,
+    `<option value="__custom__" ${selectedId === "__custom__" ? "selected" : ""}>Інший / додати вручну</option>`,
   ].join("");
 }
 
@@ -1115,18 +1135,25 @@ function shippingModeOptions(selectedMode) {
 }
 
 function applyShippingSelection(form, options = {}) {
-  const carrierId = form.elements.shipping_carrier_id?.value || "";
-  if (carrierId === "__custom__") {
+  const carrierChoice = form.elements.shipping_carrier_choice?.value || form.elements.shipping_carrier_id?.value || "";
+  const customCarrier = form.querySelector("[data-shipping-carrier-custom]");
+  if (carrierChoice === "__custom__") {
     if (form.elements.shipping_carrier_id) form.elements.shipping_carrier_id.value = "";
+    if (customCarrier) customCarrier.hidden = false;
+    const customName = plainText(form.querySelector("[data-shipping-carrier-custom-input]")?.value);
+    if (form.elements.tracking_carrier) form.elements.tracking_carrier.value = customName;
     if (form.querySelector("[data-shipping-rate-display]")) {
       form.querySelector("[data-shipping-rate-display]").value = "Внесіть перевізника вручну або додайте його в тарифах";
     }
     if (form.querySelector("[data-shipping-hint]")) {
       form.querySelector("[data-shipping-hint]").textContent = "Внесіть перевізника вручну або додайте його в тарифах";
     }
-    form.elements.tracking_carrier?.focus();
+    form.querySelector("[data-shipping-carrier-custom-input]")?.focus();
     return;
   }
+  if (form.elements.shipping_carrier_id) form.elements.shipping_carrier_id.value = carrierChoice;
+  if (customCarrier) customCarrier.hidden = true;
+  const carrierId = carrierChoice;
   const mode = form.elements.shipping_mode?.value || "air";
   const rate = selectRate(carrierId, mode, form.elements.shipping_rate_id?.value || "");
   const carrier = carrierById(carrierId);
@@ -1142,8 +1169,10 @@ function applyShippingSelection(form, options = {}) {
   if (form.elements.shipping_rate_unit) form.elements.shipping_rate_unit.value = rate?.unit || "";
   if (form.elements.shipping_exchange_rate_uah) form.elements.shipping_exchange_rate_uah.value = rate?.exchange_rate_uah || 0;
 
-  if (carrier && form.elements.tracking_carrier && !plainText(form.elements.tracking_carrier.value)) {
+  if (carrier && form.elements.tracking_carrier) {
     form.elements.tracking_carrier.value = carrier.name || "";
+  } else if (form.elements.tracking_carrier) {
+    form.elements.tracking_carrier.value = "";
   }
   if (carrier?.tracking_url_template && form.elements.tracking_url && !plainText(form.elements.tracking_url.value) && plainText(form.elements.tracking_number?.value)) {
     form.elements.tracking_url.value = carrier.tracking_url_template.replace("{tracking}", plainText(form.elements.tracking_number.value));
@@ -1173,12 +1202,13 @@ function renderOrderEditor(order) {
     Number(order.ad_cost_uah || 0) +
     Number(order.other_cost_uah || 0);
   const profit = Number(order.revenue_uah || 0) - costs;
-  const matchedCarrier = state.shipping.carriers.find((carrier) => carrier.name === order.tracking_carrier);
+  const matchedCarrier = carrierByName(order.tracking_carrier);
   const selectedCarrierId = order.shipping_carrier_id || matchedCarrier?.id || "";
   const selectedMode = order.shipping_mode || "air";
   const selectedRate = selectRate(selectedCarrierId, selectedMode, order.shipping_rate_id);
   const currentRateLabel = selectedRate ? rateLabel(selectedRate) : "Оберіть перевізника і тип доставки";
   const selectedCarrier = carrierById(selectedCarrierId) || matchedCarrier || null;
+  const customCarrierName = order.tracking_carrier && !matchedCarrier ? order.tracking_carrier : "";
   const autoTrackingAvailable = Number(selectedCarrier?.tracking_auto_enabled) === 1 || /meest|mist/i.test(`${order.tracking_carrier || ""} ${order.tracking_number || ""}`);
   const trackingStatus = order.tracking_status_text
     ? `${order.tracking_status_text}${order.tracking_status_location ? ` (${order.tracking_status_location})` : ""}`
@@ -1315,8 +1345,16 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
 
     <label>
       Перевізник
-      <input name="tracking_carrier" value="${escapeHtml(order.tracking_carrier || "")}" placeholder="Meest China">
+      <select name="shipping_carrier_choice" data-shipping-carrier>
+        ${shippingCarrierOptions(customCarrierName ? "__custom__" : selectedCarrierId)}
+      </select>
     </label>
+    <label data-shipping-carrier-custom ${customCarrierName ? "" : "hidden"}>
+      Інший перевізник
+      <input name="tracking_carrier_custom" value="${escapeHtml(customCarrierName)}" placeholder="Назва перевізника" data-shipping-carrier-custom-input>
+    </label>
+    <input type="hidden" name="shipping_carrier_id" value="${escapeHtml(selectedCarrierId)}">
+    <input type="hidden" name="tracking_carrier" value="${escapeHtml(order.tracking_carrier || selectedCarrier?.name || "")}">
     <label>
       Трек-номер
       <input name="tracking_number" value="${escapeHtml(order.tracking_number || "")}">
@@ -1352,12 +1390,6 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     <input type="hidden" name="shipping_rate_currency" value="${escapeHtml(order.shipping_rate_currency || selectedRate?.currency || "")}" data-shipping-currency>
     <input type="hidden" name="shipping_rate_unit" value="${escapeHtml(order.shipping_rate_unit || selectedRate?.unit || "")}" data-shipping-unit>
     <input type="hidden" name="shipping_exchange_rate_uah" value="${Number(order.shipping_exchange_rate_uah || selectedRate?.exchange_rate_uah || 0)}" data-shipping-exchange>
-    <label>
-      Перевізник доставки
-      <select name="shipping_carrier_id" data-shipping-carrier>
-        ${shippingCarrierOptions(selectedCarrierId)}
-      </select>
-    </label>
     <label>
       Тип доставки
       <select name="shipping_mode" data-shipping-mode>
@@ -1876,6 +1908,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("input", (event) => {
+  if (event.target.matches("[data-shipping-carrier-custom-input]")) {
+    applyShippingSelection(event.currentTarget, { overwriteCost: false });
+  }
   if (event.target.matches("[data-shipping-weight], [data-shipping-volume]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
@@ -1885,7 +1920,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
   if (event.target.matches("[data-supplier-payment-supplier]")) {
     syncSupplierCustomField(event.currentTarget);
   }
-  if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number']")) {
+  if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number'], [data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
 });
