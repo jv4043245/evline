@@ -1003,20 +1003,46 @@ function renderOrderEditor(order) {
   const orderNumber = order.order_number || "без номера";
   const customerNumber = order.customer_number || "без номера";
   const leadNumber = order.lead_number || "";
+  const managerContact = order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support");
+  const customerContact = order.customer_phone || order.customer_email || order.customer_telegram;
+  const primaryRequest = order.item_name || order.service_name || order.request_text || "";
+  const serviceIds = [
+    plainText(orderNumber) || "без номера",
+    customerNumber && customerNumber !== "без номера" ? customerNumber : "",
+    leadNumber || "",
+  ].filter(Boolean).join(" · ");
 
   form.innerHTML = `
     <div class="order-editor__meta">
-      <p><strong>${textOrDash(orderNumber)}</strong> · клієнт ${textOrDash(customerNumber)}${leadNumber ? ` · лід ${textOrDash(leadNumber)}` : ""}</p>
-      <p><strong>${textOrDash(order.customer_name || "Без імені")}</strong> · ${textOrDash(order.customer_phone || order.customer_email || order.customer_telegram)}</p>
-      <p>${textOrDash(order.car)} · VIN: ${textOrDash(order.vin)}</p>
-      <p class="muted">${textOrDash(order.request_text || order.item_name || order.service_name)}</p>
-      <p class="muted">Менеджер напряму: ${textOrDash(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}</p>
+      <div class="order-editor__meta-head">
+        <div>
+          <span class="order-editor__meta-kicker">Клієнт</span>
+          <strong class="order-editor__meta-title">${textOrDash(order.customer_name || "Без імені")}</strong>
+          <div class="order-editor__meta-contact">${customerContact ? contactLine(order) : `<span class="muted">контакт не вказано</span>`}</div>
+        </div>
+        <span class="order-editor__meta-manager">${textOrDash(managerContact)}</span>
+      </div>
+      <div class="order-editor__meta-grid">
+        <div class="order-editor__meta-field">
+          <span>VIN</span>
+          <strong class="orders-table__mono">${textOrDash(order.vin)}</strong>
+        </div>
+        <div class="order-editor__meta-field">
+          <span>Авто</span>
+          <strong>${textOrDash(order.car || "Авто не вказано")}</strong>
+        </div>
+        <div class="order-editor__meta-field order-editor__meta-field--wide">
+          <span>Запчастина / послуга</span>
+          <strong>${textOrDash(primaryRequest)}</strong>
+        </div>
+      </div>
       <div class="order-editor__actions">
         <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
         <button class="admin-btn admin-btn--icon admin-btn--subtle-danger order-editor__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}" aria-label="Видалити заявку ${escapeHtml(orderNumber)}" title="Видалити заявку">
           <span aria-hidden="true">🗑</span>
         </button>
       </div>
+      <p class="order-editor__meta-ids">${escapeHtml(serviceIds)}</p>
     </div>
 
     <input type="hidden" name="id" value="${escapeHtml(order.id)}">
