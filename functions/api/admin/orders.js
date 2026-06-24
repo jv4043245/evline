@@ -16,6 +16,13 @@ function orderSelect(options = {}) {
       orders.*,
       ${options.hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
       ${options.hasLeadNumber ? "leads.lead_number" : "NULL"} AS lead_number,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_count, 0)" : "0"} AS supplier_payment_count,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_paid_count, 0)" : "0"} AS supplier_payment_paid_count,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_open_count, 0)" : "0"} AS supplier_payment_open_count,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_review_count, 0)" : "0"} AS supplier_payment_review_count,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_requested_amount, 0)" : "0"} AS supplier_payment_requested_amount,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_paid_amount, 0)" : "0"} AS supplier_payment_paid_amount,
+      ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_currency, 'CNY')" : "'CNY'"} AS supplier_payment_currency,
       (
         COALESCE(orders.revenue_uah, 0)
         - COALESCE(orders.purchase_cost_uah, 0)
@@ -28,6 +35,22 @@ function orderSelect(options = {}) {
     FROM orders
     LEFT JOIN customers ON customers.id = orders.customer_id
     LEFT JOIN leads ON leads.id = orders.lead_id
+    ${options.hasSupplierPayments ? `
+      LEFT JOIN (
+        SELECT
+          order_id,
+          COUNT(*) AS supplier_payment_count,
+          SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS supplier_payment_paid_count,
+          SUM(CASE WHEN status IN ('requested', 'needs_review') THEN 1 ELSE 0 END) AS supplier_payment_open_count,
+          SUM(CASE WHEN status = 'needs_review' THEN 1 ELSE 0 END) AS supplier_payment_review_count,
+          SUM(COALESCE(requested_amount, 0)) AS supplier_payment_requested_amount,
+          SUM(COALESCE(paid_amount, 0)) AS supplier_payment_paid_amount,
+          COALESCE(MAX(NULLIF(paid_currency, '')), MAX(NULLIF(requested_currency, '')), 'CNY') AS supplier_payment_currency
+        FROM supplier_payments
+        WHERE status != 'canceled'
+        GROUP BY order_id
+      ) supplier_summary ON supplier_summary.order_id = orders.id
+    ` : ""}
   `;
 }
 
@@ -94,6 +117,7 @@ export async function onRequestGet({ request, env }) {
     hasOrderNumber: await tableHasColumn(env, "orders", "order_number"),
     hasCustomerNumber: await tableHasColumn(env, "customers", "customer_number"),
     hasLeadNumber: await tableHasColumn(env, "leads", "lead_number"),
+    hasSupplierPayments: await tableHasColumn(env, "supplier_payments", "id"),
   };
   const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
@@ -157,6 +181,13 @@ export async function onRequestGet({ request, env }) {
       "ad_cost_uah",
       "other_cost_uah",
       "gross_profit_uah",
+      "supplier_payment_count",
+      "supplier_payment_paid_count",
+      "supplier_payment_open_count",
+      "supplier_payment_review_count",
+      "supplier_payment_requested_amount",
+      "supplier_payment_paid_amount",
+      "supplier_payment_currency",
       "manager_notes",
     ];
     const body = [

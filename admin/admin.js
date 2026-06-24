@@ -605,10 +605,11 @@ function contactLine(order) {
 function moneyCell(order) {
   const revenue = Number(order.revenue_uah || 0);
   const payment = paymentLabel(order.payment_status);
+  const supplierLine = supplierPaymentLine(order);
   const revenueText = revenue > 0
     ? `<strong class="orders-table__money">${money.format(revenue)}</strong>`
     : `<span class="orders-table__empty">сума не вказана</span>`;
-  return `${revenueText}${mutedLine(payment)}`;
+  return `${revenueText}${supplierLine || mutedLine(payment)}`;
 }
 
 function supplierAmount(amount, currency = "CNY") {
@@ -617,6 +618,36 @@ function supplierAmount(amount, currency = "CNY") {
     maximumFractionDigits: value % 1 ? 2 : 0,
   }).format(value);
   return `${formatted} ${escapeHtml(currency || "CNY")}`;
+}
+
+function supplierPaymentLine(order) {
+  const count = Number(order.supplier_payment_count || 0);
+  if (!count) return "";
+
+  const paid = Number(order.supplier_payment_paid_count || 0);
+  const open = Number(order.supplier_payment_open_count || 0);
+  const review = Number(order.supplier_payment_review_count || 0);
+  const paidAmount = Number(order.supplier_payment_paid_amount || 0);
+  const currency = order.supplier_payment_currency || "CNY";
+  let stateName = "pending";
+  let label = "Постач. очікує";
+
+  if (review > 0) {
+    stateName = "review";
+    label = "Постач. перевірити";
+  } else if (paid > 0 && paid === count) {
+    stateName = "paid";
+    label = "Постач. оплачено";
+  } else if (paid > 0) {
+    stateName = "partial";
+    label = "Постач. частково";
+  } else if (open > 0) {
+    stateName = "pending";
+    label = "Постач. очікує";
+  }
+
+  const amount = paidAmount > 0 ? ` · ${supplierAmount(paidAmount, currency)}` : "";
+  return `<br><span class="orders-table__supplier-payment orders-table__supplier-payment--${stateName}">${escapeHtml(label)}${amount}</span>`;
 }
 
 function supplierPaymentBadge(status) {
@@ -1578,6 +1609,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedOrder = result.order || state.selectedOrder;
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
       renderOrderEditor(state.selectedOrder);
+      await loadOrders();
       if (result.supplier_payment?.migrated_from_chat_id && result.supplier_payment?.request_chat_id) {
         alert(`Запит на оплату надіслано в Telegram.\n\nTelegram змінив ID групи оплат. Оновіть TELEGRAM_PAYMENTS_CHAT_ID у Cloudflare на:\n${result.supplier_payment.request_chat_id}`);
       } else {
@@ -1605,6 +1637,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedOrder = result.order || state.selectedOrder;
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
       renderOrderEditor(state.selectedOrder);
+      await loadOrders();
       alert("Оплату оновлено.");
     } catch (error) {
       alert(error.message);

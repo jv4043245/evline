@@ -723,6 +723,35 @@ body.order-detail-open .order-detail {
   white-space: nowrap;
 }
 
+.orders-table__supplier-payment {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 6px;
+  padding: 0 8px;
+  border: 1px solid rgba(13, 148, 95, 0.14);
+  border-radius: 999px;
+  background: #f1faf4;
+  color: #177245;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.orders-table__supplier-payment--pending,
+.orders-table__supplier-payment--partial {
+  border-color: rgba(146, 64, 14, 0.16);
+  background: #fff7df;
+  color: #9a5a0b;
+}
+
+.orders-table__supplier-payment--review {
+  border-color: rgba(185, 28, 28, 0.14);
+  background: #fff1f1;
+  color: #b91c1c;
+}
+
 .orders-table__empty {
   color: #93a19c;
   font-size: 12px;
