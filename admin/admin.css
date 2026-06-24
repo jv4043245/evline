@@ -121,6 +121,9 @@
 .admin-header select,
 .filters input,
 .filters select,
+.manual-order-form input,
+.manual-order-form select,
+.manual-order-form textarea,
 .order-editor input,
 .order-editor select,
 .order-editor textarea,
@@ -412,6 +415,73 @@
 .admin-panel__head h2 {
   margin: 0;
   font-size: 22px;
+}
+
+.admin-panel__title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.manual-order-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 18px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #f8fbf9 0%, #fff 100%);
+}
+
+.manual-order-form[hidden] {
+  display: none;
+}
+
+.manual-order-form__head,
+.manual-order-form__wide,
+.manual-order-form__actions {
+  grid-column: 1 / -1;
+}
+
+.manual-order-form__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.manual-order-form__head strong,
+.manual-order-form__head span {
+  display: block;
+}
+
+.manual-order-form__head strong {
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.manual-order-form__head span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.manual-order-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.manual-order-form textarea {
+  resize: vertical;
+}
+
+.manual-order-form__actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .mini-chart {
@@ -1502,8 +1572,20 @@ body.order-detail-open .order-detail {
     flex: 1;
   }
 
+  .admin-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-panel__title-actions,
+  .filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .summary-grid,
   .google-ads-summary,
+  .manual-order-form,
   .order-editor,
   .cost-form,
   .shipping-form,
@@ -1514,6 +1596,9 @@ body.order-detail-open .order-detail {
   }
 
   .order-editor .wide,
+  .manual-order-form__head,
+  .manual-order-form__wide,
+  .manual-order-form__actions,
   .cost-form .wide,
   .shipping-form .wide,
   .shipping-rate-block {

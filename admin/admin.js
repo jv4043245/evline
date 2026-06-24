@@ -1742,6 +1742,48 @@ function shippingFormPayload(form) {
   };
 }
 
+function setManualOrderFormOpen(open) {
+  const form = document.querySelector("[data-manual-order-form]");
+  const button = document.querySelector("[data-manual-order-toggle]");
+  if (!form) return;
+  form.hidden = !open;
+  if (button) button.textContent = open ? "Закрити форму" : "+ Додати заявку";
+  if (open) {
+    form.querySelector("input[name='customer_phone']")?.focus();
+  }
+}
+
+function manualOrderPayload(form) {
+  const payload = Object.fromEntries(new FormData(form));
+  const channel = plainText(payload.medium) || "phone";
+  const topic = plainText(payload.item_name);
+  payload.source = "manual";
+  payload.medium = channel;
+  payload.campaign = `manual-${channel}`;
+  payload.status = "new";
+  payload.payment_status = "unknown";
+  payload.manager_notes = plainText(payload.manager_notes);
+  if (payload.type === "byd") {
+    payload.service_name = topic;
+    payload.item_name = "";
+  }
+  return payload;
+}
+
+function manualOrderHasUsefulData(payload) {
+  return [
+    payload.customer_name,
+    payload.customer_phone,
+    payload.customer_email,
+    payload.customer_telegram,
+    payload.car,
+    payload.vin,
+    payload.item_name,
+    payload.service_name,
+    payload.request_text,
+  ].some((value) => plainText(value));
+}
+
 document.querySelector("[data-token-form]")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const token = new FormData(event.currentTarget).get("token");
@@ -1752,6 +1794,47 @@ document.querySelector("[data-token-form]")?.addEventListener("submit", (event) 
 document.querySelector("[data-clear-token]")?.addEventListener("click", () => {
   localStorage.removeItem("evline_admin_token");
   setAuthVisible(true);
+});
+
+document.querySelector("[data-manual-order-toggle]")?.addEventListener("click", () => {
+  const form = document.querySelector("[data-manual-order-form]");
+  setManualOrderFormOpen(Boolean(form?.hidden));
+});
+
+document.querySelector("[data-manual-order-cancel]")?.addEventListener("click", () => {
+  const form = document.querySelector("[data-manual-order-form]");
+  form?.reset();
+  setManualOrderFormOpen(false);
+});
+
+document.querySelector("[data-manual-order-form]")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submitButton = form.querySelector("button[type='submit']");
+  const payload = manualOrderPayload(form);
+  if (!manualOrderHasUsefulData(payload)) {
+    alert("Заповніть хоча б контакт, авто, VIN або запит клієнта.");
+    return;
+  }
+  submitButton.disabled = true;
+  submitButton.setAttribute("aria-busy", "true");
+  submitButton.textContent = "Створюю...";
+  try {
+    const result = await api("/api/admin/orders", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    form.reset();
+    setManualOrderFormOpen(false);
+    await refresh();
+    if (result.order?.id) await openOrder(result.order.id, { scroll: false });
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.removeAttribute("aria-busy");
+    submitButton.textContent = "Створити заявку";
+  }
 });
 
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);

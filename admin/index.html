@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260624-order-card-meta-cleanup">
-    <script src="/admin/admin.js?v=20260624-order-card-meta-cleanup" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260624-manual-order-create">
+    <script src="/admin/admin.js?v=20260624-manual-order-create" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -74,7 +74,10 @@
 
         <section class="admin-panel">
           <div class="admin-panel__head">
-            <h2>Замовлення менеджера</h2>
+            <div class="admin-panel__title-actions">
+              <h2>Замовлення менеджера</h2>
+              <button class="admin-btn admin-btn--primary" type="button" data-manual-order-toggle>+ Додати заявку</button>
+            </div>
             <div class="filters">
               <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек...">
               <select id="status-filter">
@@ -99,6 +102,72 @@
               </select>
             </div>
           </div>
+          <form class="manual-order-form" data-manual-order-form hidden>
+            <input type="hidden" name="status" value="new">
+            <input type="hidden" name="source" value="manual">
+            <input type="hidden" name="payment_status" value="unknown">
+            <div class="manual-order-form__head">
+              <div>
+                <strong>Нова заявка вручну</strong>
+                <span>Для дзвінків, пошти, Viber та інших каналів поза сайтом.</span>
+              </div>
+              <button class="admin-btn admin-btn--small" type="button" data-manual-order-cancel>Скасувати</button>
+            </div>
+            <label>
+              Напрям
+              <select name="type">
+                <option value="parts">Запчастини</option>
+                <option value="byd">Програмування BYD</option>
+                <option value="other">Інше</option>
+              </select>
+            </label>
+            <label>
+              Канал
+              <select name="medium" data-manual-order-medium>
+                <option value="phone">Телефон</option>
+                <option value="email">Пошта</option>
+                <option value="viber">Viber</option>
+                <option value="telegram">Telegram</option>
+                <option value="instagram">Instagram</option>
+                <option value="other">Інше</option>
+              </select>
+            </label>
+            <label>
+              Ім'я
+              <input name="customer_name" placeholder="за наявності">
+            </label>
+            <label>
+              Телефон
+              <input name="customer_phone" inputmode="tel" placeholder="+380...">
+            </label>
+            <label>
+              Telegram
+              <input name="customer_telegram" placeholder="@username">
+            </label>
+            <label>
+              Email
+              <input name="customer_email" type="email" placeholder="за потреби">
+            </label>
+            <label>
+              Авто / модель
+              <input name="car" placeholder="Zeekr 001, BYD Song Plus...">
+            </label>
+            <label>
+              VIN
+              <input name="vin" placeholder="за наявності">
+            </label>
+            <label class="manual-order-form__wide">
+              Що потрібно
+              <input name="item_name" placeholder="бампер, блок ABS, комплект ТО...">
+            </label>
+            <label class="manual-order-form__wide">
+              Коментар
+              <textarea name="request_text" rows="2" placeholder="Деталі запиту, джерело, домовленості..."></textarea>
+            </label>
+            <div class="manual-order-form__actions">
+              <button class="admin-btn admin-btn--primary" type="submit">Створити заявку</button>
+            </div>
+          </form>
           <div class="table-wrap">
             <table class="orders-table orders-table--manager">
               <colgroup>

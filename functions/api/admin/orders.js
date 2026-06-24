@@ -54,6 +54,23 @@ function orderSelect(options = {}) {
   `;
 }
 
+async function tableColumns(env, table) {
+  const rows = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
+  return new Set((rows.results || []).map((row) => row.name));
+}
+
+async function insertKnownFields(env, table, fields) {
+  const columns = await tableColumns(env, table);
+  const available = fields.filter(([name]) => columns.has(name));
+  if (!available.length) return;
+  await env.DB.prepare(
+    `INSERT INTO ${table} (${available.map(([name]) => name).join(", ")})
+    VALUES (${available.map(() => "?").join(", ")})`
+  )
+    .bind(...available.map(([, value]) => value))
+    .run();
+}
+
 function buildWhere(url, options = {}) {
   const clauses = [];
   const binds = [];
@@ -207,19 +224,65 @@ export async function onRequestPost({ request, env }) {
   const payload = await readPayload(request);
   const now = new Date().toISOString();
   const customerId = await upsertCustomer(env, payload);
+  const type = text(payload.type) || "parts";
+  const leadId = crypto.randomUUID();
+  const leadNumber = await nextPublicNumber(env, "lead", "L");
   const orderId = crypto.randomUUID();
   const orderNumber = await nextPublicNumber(env, "order", "O");
   const status = normalizeOrderStatus(payload.status);
+  const orderItem = text(payload.item_name || payload.part);
+  const orderService = text(payload.service_name);
+  const leadTopic = text(orderItem || orderService);
+  const leadDetails = text(payload.request_text || payload.message);
+  const leadMessage = [
+    leadTopic ? `${type === "byd" ? "Послуга" : "Запчастина"}: ${leadTopic}` : "",
+    leadDetails,
+  ].filter(Boolean).join("\n");
+
+  await insertKnownFields(env, "leads", [
+    ["id", leadId],
+    ["lead_number", leadNumber],
+    ["created_at", now],
+    ["updated_at", now],
+    ["type", type],
+    ["status", "new"],
+    ["quality", "unknown"],
+    ["name", text(payload.customer_name || payload.name)],
+    ["phone", text(payload.customer_phone || payload.phone)],
+    ["email", text(payload.customer_email || payload.email)],
+    ["telegram", text(payload.customer_telegram || payload.telegram)],
+    ["car", text(payload.car)],
+    ["vin", text(payload.vin).toUpperCase()],
+    ["message", leadMessage],
+    ["source", text(payload.source)],
+    ["medium", text(payload.medium)],
+    ["campaign", text(payload.campaign)],
+    ["term", text(payload.term)],
+    ["content", text(payload.content)],
+    ["gclid", text(payload.gclid)],
+    ["gbraid", text(payload.gbraid)],
+    ["wbraid", text(payload.wbraid)],
+    ["fbclid", text(payload.fbclid)],
+    ["landing_page", text(payload.landing_page)],
+    ["referrer", text(payload.referrer)],
+    ["page_url", text(payload.page_url)],
+    ["form_id", text(payload.form_id)],
+    ["form_name", text(payload.form_name)],
+    ["submitted_at", text(payload.submitted_at || now)],
+    ["attribution_type", text(payload.attribution_type) || "manual"],
+    ["manager_notes", text(payload.manager_notes)],
+  ]);
 
   const orderFields = [
     ["id", orderId],
     ["order_number", orderNumber],
     ["created_at", now],
     ["updated_at", now],
+    ["lead_id", leadId],
     ["customer_id", customerId],
-    ["type", text(payload.type) || "parts"],
+    ["type", type],
     ["status", status],
-    ["manager_contact", text(payload.manager_contact) || managerContactForType(payload.type)],
+    ["manager_contact", text(payload.manager_contact) || managerContactForType(type)],
     ["customer_name", text(payload.customer_name || payload.name)],
     ["customer_phone", text(payload.customer_phone || payload.phone)],
     ["customer_email", text(payload.customer_email || payload.email)],
@@ -227,8 +290,8 @@ export async function onRequestPost({ request, env }) {
     ["telegram_chat_id", text(payload.telegram_chat_id)],
     ["car", text(payload.car)],
     ["vin", text(payload.vin).toUpperCase()],
-    ["item_name", text(payload.item_name || payload.part)],
-    ["service_name", text(payload.service_name)],
+    ["item_name", orderItem],
+    ["service_name", orderService],
     ["request_text", text(payload.request_text || payload.message)],
     ["tracking_carrier", text(payload.tracking_carrier)],
     ["tracking_number", text(payload.tracking_number)],
@@ -244,6 +307,11 @@ export async function onRequestPost({ request, env }) {
     ["fbclid", text(payload.fbclid)],
     ["landing_page", text(payload.landing_page)],
     ["referrer", text(payload.referrer)],
+    ["page_url", text(payload.page_url)],
+    ["form_id", text(payload.form_id)],
+    ["form_name", text(payload.form_name)],
+    ["submitted_at", text(payload.submitted_at || now)],
+    ["attribution_type", text(payload.attribution_type) || "manual"],
     ["shipping_carrier_id", text(payload.shipping_carrier_id)],
     ["shipping_rate_id", text(payload.shipping_rate_id)],
     ["shipping_mode", text(payload.shipping_mode)],
@@ -265,20 +333,7 @@ export async function onRequestPost({ request, env }) {
     ["client_notes", text(payload.client_notes)],
     ["next_action_at", text(payload.next_action_at)],
   ];
-  const insertOrder = (fields) =>
-    env.DB.prepare(
-      `INSERT INTO orders (${fields.map(([name]) => name).join(", ")})
-      VALUES (${fields.map(() => "?").join(", ")})`
-    )
-      .bind(...fields.map(([, value]) => value))
-      .run();
-
-  try {
-    await insertOrder(orderFields);
-  } catch (error) {
-    if (!/gbraid|wbraid|order_number|no such column/i.test(error.message || String(error))) throw error;
-    await insertOrder(orderFields.filter(([name]) => !["gbraid", "wbraid", "order_number"].includes(name)));
-  }
+  await insertKnownFields(env, "orders", orderFields);
 
   await env.DB.prepare(
     `INSERT INTO order_status_events (
