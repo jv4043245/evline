@@ -626,21 +626,25 @@ function moneyCell(order) {
   const clientBadge = paymentState === "unknown"
     ? ""
     : `<span class="orders-table__finance-badge orders-table__finance-badge--${safeClass(paymentState)}">${escapeHtml(payment)}</span>`;
-  const revenueText = revenue > 0 ? money.format(revenue) : "не вказано";
+  const clientLine = revenue > 0 ? `
+    <div class="orders-table__finance-main">
+      <span>Клієнту</span>
+      <strong>${escapeHtml(money.format(revenue))}</strong>
+      ${clientBadge}
+    </div>
+  ` : "";
   const chips = [
     supplierPaymentChip(order),
     deliveryChip(order),
     marginChip(order),
   ].filter(Boolean).join("");
 
+  if (!clientLine && !chips) return "";
+
   return `
     <div class="orders-table__finance">
-      <div class="orders-table__finance-main">
-        <span>Клієнт</span>
-        <strong>${escapeHtml(revenueText)}</strong>
-        ${clientBadge}
-      </div>
-      ${chips ? `<div class="orders-table__finance-chips">${chips}</div>` : `<span class="orders-table__finance-note">оплата не вказана</span>`}
+      ${clientLine}
+      ${chips ? `<div class="orders-table__finance-chips">${chips}</div>` : ""}
     </div>
   `;
 }
