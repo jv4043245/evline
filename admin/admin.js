@@ -772,7 +772,7 @@ function orderTypePill(type) {
 
 function contactLine(order) {
   const contact = plainText(order.customer_phone || order.customer_email || order.customer_telegram);
-  if (!contact) return `<span class="muted">контакт не вказано</span>`;
+  if (!contact) return "";
   if (/^\+?[\d\s().-]{7,}$/.test(contact)) {
     const href = contact.replace(/[^\d+]/g, "");
     return `<a class="orders-table__contact" href="tel:${escapeHtml(href)}">${escapeHtml(contact)}</a>`;
@@ -1013,6 +1013,8 @@ function renderOrders() {
     ? state.orders
         .map((order) => {
           const request = order.item_name || order.service_name || order.request_text || "";
+          const customerName = plainText(order.customer_name);
+          const carName = plainText(order.car);
           const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
           const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
           const publicNumber = order.order_number || "без номера";
@@ -1023,12 +1025,12 @@ function renderOrders() {
           const trackMain = order.tracking_carrier || order.tracking_number || trackingStatus || deliveryLine;
           const trackCell = trackMain
             ? `${textOrDash(trackMain)}${order.tracking_carrier ? mutedLine(order.tracking_number, "orders-table__mono") : ""}${trackMain !== trackingStatus ? mutedLine(trackingStatus) : ""}${trackMain !== deliveryLine ? mutedLine(deliveryLine) : ""}`
-            : `<span class="orders-table__empty">трек не вказано</span>`;
+            : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
               <td class="orders-table__number-cell"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
-              <td><strong class="orders-table__primary">${textOrDash(order.customer_name || "Без імені")}</strong>${contactLine(order)}</td>
-              <td class="orders-table__request-cell"><strong class="orders-table__primary">${textOrDash(order.car || "Авто не вказано")}</strong>${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
+              <td>${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}</td>
+              <td class="orders-table__request-cell">${carName ? `<strong class="orders-table__primary">${escapeHtml(carName)}</strong>` : ""}${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
               <td>${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
               <td>${moneyCell(order)}</td>
               <td class="orders-table__track-cell">${trackCell}</td>
