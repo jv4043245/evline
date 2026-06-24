@@ -1220,6 +1220,8 @@ function renderOrderEditor(order) {
   const leadNumber = order.lead_number || "";
   const managerContact = order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support");
   const customerContact = order.customer_phone || order.customer_email || order.customer_telegram;
+  const customerName = plainText(order.customer_name);
+  const carName = plainText(order.car);
   const primaryRequest = order.item_name || order.service_name || order.request_text || "";
   const serviceIds = [
     plainText(orderNumber) || "без номера",
@@ -1232,10 +1234,13 @@ function renderOrderEditor(order) {
       <div class="order-editor__meta-head">
         <div>
           <span class="order-editor__meta-kicker">Клієнт</span>
-          <strong class="order-editor__meta-title">${textOrDash(order.customer_name || "Без імені")}</strong>
+          ${customerName ? `<strong class="order-editor__meta-title">${escapeHtml(customerName)}</strong>` : ""}
           <div class="order-editor__meta-contact">${customerContact ? contactLine(order) : `<span class="muted">контакт не вказано</span>`}</div>
         </div>
-        <span class="order-editor__meta-manager">${textOrDash(managerContact)}</span>
+        <span class="order-editor__meta-manager" title="Менеджер">
+          <span>Менеджер</span>
+          <strong>${textOrDash(managerContact)}</strong>
+        </span>
       </div>
       <div class="order-editor__meta-grid">
         <div class="order-editor__meta-field">
@@ -1244,7 +1249,7 @@ function renderOrderEditor(order) {
         </div>
         <div class="order-editor__meta-field">
           <span>Авто</span>
-          <strong>${textOrDash(order.car || "Авто не вказано")}</strong>
+          ${carName ? `<strong>${escapeHtml(carName)}</strong>` : ""}
         </div>
         <div class="order-editor__meta-field order-editor__meta-field--wide">
           <span>Запчастина / послуга</span>
