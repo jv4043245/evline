@@ -845,7 +845,9 @@ function renderOrders() {
               <td class="orders-table__track-cell">${trackCell}</td>
               <td>
                 <div class="orders-table__actions">
-                  <button class="admin-btn admin-btn--small orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}">Відкрити</button>
+                  <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
+                    <span aria-hidden="true">✎</span>
+                  </button>
                 </div>
               </td>
             </tr>
