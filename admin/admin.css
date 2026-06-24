@@ -550,7 +550,7 @@ body.order-detail-open .order-detail {
 }
 
 .orders-table--manager {
-  min-width: 1040px;
+  min-width: 1120px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -564,19 +564,19 @@ body.order-detail-open .order-detail {
 }
 
 .orders-table--manager .orders-table__col-request {
-  width: 28%;
+  width: 25%;
 }
 
 .orders-table--manager .orders-table__col-status {
-  width: 145px;
+  width: 122px;
 }
 
 .orders-table--manager .orders-table__col-money {
-  width: 132px;
+  width: 230px;
 }
 
 .orders-table--manager .orders-table__col-track {
-  width: 17%;
+  width: 15%;
 }
 
 .orders-table--manager .orders-table__col-actions {
@@ -716,40 +716,110 @@ body.order-detail-open .order-detail {
   color: #4b5d57;
 }
 
-.orders-table__money {
-  display: block;
+.orders-table__finance {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.orders-table__finance-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.orders-table__finance-main > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.orders-table__finance-main strong {
   color: var(--ink);
   font-size: 15px;
   white-space: nowrap;
 }
 
-.orders-table__supplier-payment {
+.orders-table__finance-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  margin-top: 6px;
-  padding: 0 8px;
-  border: 1px solid rgba(13, 148, 95, 0.14);
+  min-height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
-  background: #f1faf4;
-  color: #177245;
-  font-size: 11px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
 }
 
-.orders-table__supplier-payment--pending,
-.orders-table__supplier-payment--partial {
+.orders-table__finance-badge--paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.orders-table__finance-badge--partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.orders-table__finance-badge--unpaid,
+.orders-table__finance-badge--refunded {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.orders-table__finance-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.orders-table__finance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid rgba(13, 148, 95, 0.14);
+  border-radius: 999px;
+  background: #f1faf4;
+  color: #177245;
+  font-size: 10.5px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.orders-table__finance-chip > span {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.orders-table__finance-chip > b {
+  color: inherit;
+}
+
+.orders-table__finance-chip--pending,
+.orders-table__finance-chip--partial {
   border-color: rgba(146, 64, 14, 0.16);
   background: #fff7df;
   color: #9a5a0b;
 }
 
-.orders-table__supplier-payment--review {
+.orders-table__finance-chip--review {
   border-color: rgba(185, 28, 28, 0.14);
   background: #fff1f1;
   color: #b91c1c;
+}
+
+.orders-table__finance-chip--neutral {
+  border-color: rgba(100, 116, 139, 0.14);
+  background: #f8fafc;
+  color: #52615d;
 }
 
 .orders-table__empty {

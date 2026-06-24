@@ -607,11 +607,25 @@ function contactLine(order) {
 function moneyCell(order) {
   const revenue = Number(order.revenue_uah || 0);
   const payment = paymentLabel(order.payment_status);
-  const supplierLine = supplierPaymentLine(order);
-  const revenueText = revenue > 0
-    ? `<strong class="orders-table__money">${money.format(revenue)}</strong>`
-    : `<span class="orders-table__empty">сума не вказана</span>`;
-  return `${revenueText}${supplierLine || mutedLine(payment)}`;
+  const paymentState = order.payment_status || "unknown";
+  const clientBadge = `<span class="orders-table__finance-badge orders-table__finance-badge--${safeClass(paymentState)}">${escapeHtml(payment === "оплата не вказана" ? "не вказано" : payment)}</span>`;
+  const revenueText = revenue > 0 ? money.format(revenue) : "не вказано";
+  const chips = [
+    supplierPaymentChip(order),
+    deliveryChip(order),
+    marginChip(order),
+  ].filter(Boolean).join("");
+
+  return `
+    <div class="orders-table__finance">
+      <div class="orders-table__finance-main">
+        <span>Клієнт</span>
+        <strong>${escapeHtml(revenueText)}</strong>
+        ${clientBadge}
+      </div>
+      ${chips ? `<div class="orders-table__finance-chips">${chips}</div>` : `<span class="orders-table__empty">оплата не вказана</span>`}
+    </div>
+  `;
 }
 
 function supplierAmount(amount, currency = "CNY") {
@@ -622,7 +636,7 @@ function supplierAmount(amount, currency = "CNY") {
   return `${formatted} ${escapeHtml(currency || "CNY")}`;
 }
 
-function supplierPaymentLine(order) {
+function supplierPaymentChip(order) {
   const count = Number(order.supplier_payment_count || 0);
   if (!count) return "";
 
@@ -648,8 +662,41 @@ function supplierPaymentLine(order) {
     label = "Постач. очікує";
   }
 
-  const amount = paidAmount > 0 ? ` · ${supplierAmount(paidAmount, currency)}` : "";
-  return `<br><span class="orders-table__supplier-payment orders-table__supplier-payment--${stateName}">${escapeHtml(label)}${amount}</span>`;
+  const amount = paidAmount > 0 ? supplierAmount(paidAmount, currency) : "";
+  const value = amount
+    ? `${stateName === "partial" ? "частк." : "опл."} ${amount}`
+    : label.replace("Постач. ", "");
+  return financeChip("Постач.", value, stateName);
+}
+
+function deliveryChip(order) {
+  const delivery = Number(order.delivery_cost_uah || 0);
+  if (delivery <= 0) return "";
+  return financeChip("Дост.", money.format(delivery), "neutral");
+}
+
+function marginChip(order) {
+  const revenue = Number(order.revenue_uah || 0);
+  const costs =
+    Number(order.purchase_cost_uah || 0) +
+    Number(order.delivery_cost_uah || 0) +
+    Number(order.customs_cost_uah || 0) +
+    Number(order.processing_cost_uah || 0) +
+    Number(order.ad_cost_uah || 0) +
+    Number(order.other_cost_uah || 0);
+  if (revenue <= 0 || costs <= 0) return "";
+
+  const profit = Number(order.gross_profit_uah || 0);
+  return financeChip("Маржа", money.format(profit), profit >= 0 ? "paid" : "review");
+}
+
+function financeChip(label, value, stateName = "neutral") {
+  return `
+    <span class="orders-table__finance-chip orders-table__finance-chip--${safeClass(stateName)}">
+      <span>${escapeHtml(label)}</span>
+      <b>${escapeHtml(value)}</b>
+    </span>
+  `;
 }
 
 function supplierPaymentBadge(status) {
