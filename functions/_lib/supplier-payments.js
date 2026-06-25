@@ -543,7 +543,8 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   const caption = text(message.caption || message.text);
   const fileId = telegramFileId(message);
   const replyMessageId = text(message.reply_to_message?.message_id);
-  if (!chatId || (!replyMessageId && !caption && !fileId)) return { handled: false };
+  const parentReplyMessageId = text(message.reply_to_message?.reply_to_message?.message_id);
+  if (!chatId || (!replyMessageId && !parentReplyMessageId && !caption && !fileId)) return { handled: false };
 
   let payment = await paymentByReply(env, chatId, replyMessageId).catch((error) => {
     if (/no such table/i.test(error.message || String(error))) return null;
@@ -552,6 +553,15 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   let matchedBy = payment ? "telegram_reply" : "";
   let matchConfidence = payment ? "high" : "";
   let parsed = parsePaymentAmount(caption);
+
+  if (!payment && parentReplyMessageId) {
+    payment = await paymentByReply(env, chatId, parentReplyMessageId).catch((error) => {
+      if (/no such table/i.test(error.message || String(error))) return null;
+      throw error;
+    });
+    matchedBy = payment ? "telegram_nested_reply" : "";
+    matchConfidence = payment ? "high" : "";
+  }
 
   if (!payment && parsed.amount > 0) {
     const byAmount = await paymentByAmount(env, chatId, parsed.amount);
