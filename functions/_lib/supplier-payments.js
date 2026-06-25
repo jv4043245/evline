@@ -16,6 +16,11 @@ const SUPPLIER_PAYMENT_QR_IMAGES = [
     url: "https://evline.com.ua/assets/images/suppliers/byd-payment-qr.jpg",
     caption: "QR для оплати постачальнику BYD",
   },
+  {
+    aliases: ["zeekr", "ziker", "z e e k r", "зікр", "зікер", "зикр", "зикер"],
+    url: "https://evline.com.ua/assets/images/suppliers/zeekr-payment-qr.jpg",
+    caption: "QR для оплати постачальнику Zeekr",
+  },
 ];
 
 function normalizeCurrency(value, fallback = "CNY") {
