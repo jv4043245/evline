@@ -1613,10 +1613,10 @@ body.order-detail-open .order-detail {
 
 .china-photo-preview {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  max-width: 520px;
+  max-width: 680px;
   padding: 8px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 6px;
@@ -1635,6 +1635,12 @@ body.order-detail-open .order-detail {
   color: var(--ink);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.china-photo-preview .admin-btn--small {
+  min-height: 32px;
+  margin-top: 0;
+  white-space: nowrap;
 }
 
 .china-preorder-form__actions {
@@ -2074,6 +2080,19 @@ body.order-detail-open .order-detail {
   .shipping-form .wide,
   .shipping-rate-block {
     grid-column: auto;
+  }
+
+  .china-photo-preview {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .china-photo-preview img {
+    width: 72px;
+  }
+
+  .china-photo-preview .admin-btn--small {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .order-editor__meta-head,

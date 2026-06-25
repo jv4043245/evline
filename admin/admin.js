@@ -2205,7 +2205,17 @@ function renderChinaPhotoPreview(form, dataUrl, fileName = "") {
   preview.innerHTML = `
     <img src="${escapeHtml(dataUrl)}" alt="Фото детали">
     <span>${escapeHtml(fileName || "Фото добавлено")}</span>
+    <button class="admin-btn admin-btn--small" type="button" data-china-photo-remove>Удалить фото</button>
   `;
+}
+
+function clearChinaPhoto(form) {
+  if (!form) return;
+  const input = form.querySelector("[data-china-photo-input]");
+  const hidden = form.querySelector("[data-china-photo-data]");
+  if (input) input.value = "";
+  if (hidden) hidden.value = "";
+  renderChinaPhotoPreview(form, "", "");
 }
 
 async function prepareChinaPhoto(form) {
@@ -2379,6 +2389,12 @@ document.querySelector("[data-china-photo-input]")?.addEventListener("change", a
   }
 });
 
+document.querySelector("[data-china-preorder-form]")?.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-china-photo-remove]");
+  if (!removeButton) return;
+  clearChinaPhoto(removeButton.closest("form"));
+});
+
 document.querySelector("[data-china-preorder-form]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -2403,7 +2419,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
   try {
     const result = await createChinaPreorder(payload);
     form.reset();
-    renderChinaPhotoPreview(form, "", "");
+    clearChinaPhoto(form);
     const custom = document.querySelector("[data-china-custom-supplier]");
     if (custom) custom.hidden = true;
     await Promise.all([loadChinaPreorders(), loadOrders()]);
