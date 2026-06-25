@@ -1770,6 +1770,10 @@ body.order-detail-open .order-detail {
     text-transform: uppercase;
   }
 
+  .orders-table--manager td:empty {
+    display: none;
+  }
+
   .orders-table--manager td:nth-child(1)::before,
   .orders-table--manager td:nth-child(4)::before,
   .orders-table--manager td:nth-child(7)::before {
