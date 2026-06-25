@@ -10,13 +10,91 @@ export const SUPPLIER_PAYMENT_STATUS_LABELS = {
   canceled: "Скасовано",
 };
 
+const SUPPLIER_PAYMENT_QR_IMAGES = [
+  {
+    aliases: ["byd", "b y d", "біді", "бид", "bioid", "biod"],
+    url: "https://evline.com.ua/assets/images/suppliers/byd-payment-qr.jpg",
+    caption: "QR для оплати постачальнику BYD",
+  },
+];
+
 function normalizeCurrency(value, fallback = "CNY") {
   const currency = text(value).toUpperCase();
   return currency || fallback;
 }
 
+function supplierNameKey(value) {
+  return text(value)
+    .toLowerCase()
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function supplierPaymentQrImage(supplierName) {
+  const key = supplierNameKey(supplierName);
+  if (!key) return null;
+  return SUPPLIER_PAYMENT_QR_IMAGES.find((item) =>
+    item.aliases.some((alias) => key.includes(alias))
+  ) || null;
+}
+
 function paymentChatId(env) {
   return text(env.TELEGRAM_PAYMENTS_CHAT_ID || env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+}
+
+async function telegramSendPhoto(env, chatId, photo, { caption = "", replyToMessageId = "" } = {}) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+
+  const payload = {
+    chat_id: chatId,
+    photo,
+    caption,
+  };
+  if (replyToMessageId) {
+    payload.reply_parameters = {
+      message_id: Number(replyToMessageId),
+      allow_sending_without_reply: true,
+    };
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  return {
+    ...data,
+    http_ok: response.ok,
+    requested_chat_id: String(chatId),
+  };
+}
+
+async function sendTelegramPhotoDetailed(env, chatId, photo, options = {}) {
+  let data = await telegramSendPhoto(env, chatId, photo, options);
+  let effectiveChatId = String(chatId);
+  let migratedFromChatId = "";
+
+  if ((!data.http_ok || !data.ok) && data.parameters?.migrate_to_chat_id) {
+    migratedFromChatId = String(chatId);
+    effectiveChatId = String(data.parameters.migrate_to_chat_id);
+    data = await telegramSendPhoto(env, effectiveChatId, photo, options);
+  }
+
+  if (!data.http_ok || !data.ok) {
+    const error = new Error(data.description || "Telegram sendPhoto failed");
+    if (data.parameters?.migrate_to_chat_id) {
+      error.migrate_to_chat_id = String(data.parameters.migrate_to_chat_id);
+    }
+    throw error;
+  }
+
+  return {
+    chat_id: effectiveChatId,
+    message_id: String(data.result?.message_id || ""),
+    migrated_from_chat_id: migratedFromChatId,
+  };
 }
 
 function publicPaymentNumber(value) {
@@ -120,6 +198,15 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
   }
 
   const telegramResult = await sendTelegramMessageDetailed(env, chatId, payment.request_text);
+  const qrImage = supplierPaymentQrImage(payment.supplier_name);
+  const qrTelegramResult = qrImage
+    ? await sendTelegramPhotoDetailed(env, telegramResult.chat_id, qrImage.url, {
+      caption: qrImage.caption,
+      replyToMessageId: telegramResult.message_id,
+    }).catch((error) => ({
+      error: error.message || String(error),
+    }))
+    : null;
 
   await env.DB.prepare(
     `INSERT INTO supplier_payments (
@@ -152,6 +239,9 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     request_chat_id: telegramResult.chat_id,
     request_message_id: telegramResult.message_id,
     migrated_from_chat_id: telegramResult.migrated_from_chat_id,
+    qr_photo_sent: Boolean(qrTelegramResult?.message_id),
+    qr_photo_message_id: qrTelegramResult?.message_id || "",
+    qr_photo_error: qrTelegramResult?.error || "",
   };
 }
 
