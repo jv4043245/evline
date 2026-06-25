@@ -140,6 +140,9 @@
 .manual-order-form input,
 .manual-order-form select,
 .manual-order-form textarea,
+.china-preorder-form input,
+.china-preorder-form select,
+.china-preorder-form textarea,
 .order-editor input,
 .order-editor select,
 .order-editor textarea,
@@ -1564,23 +1567,111 @@ body.order-detail-open .order-detail {
 .china-preorder-form {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  align-items: start;
   padding: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.14);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f8fbff;
+  background: #fff;
 }
 
 .china-preorder-form__head {
   grid-column: 1 / -1;
   display: grid;
-  gap: 3px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+.china-preorder-form__head > span:not(.china-flag) {
+  grid-column: 2;
+}
+
+.china-flag {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 15px;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 1px 0 0 3px;
+  border-radius: 2px;
+  background: #de2910;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.china-flag span {
+  color: #ffde00;
+  font-size: 8px;
+  line-height: 1;
 }
 
 .china-preorder-form__head span,
 .china-preorder-card span,
 .china-preorder-card p {
   color: var(--muted);
+  font-size: 13px;
+}
+
+.china-preorder-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.china-preorder-form label.wide {
+  grid-column: 1 / -1;
+}
+
+.china-preorder-form textarea {
+  resize: vertical;
+}
+
+.china-photo-field input[type="file"] {
+  min-height: auto;
+  padding: 8px;
+}
+
+.china-photo-preview {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  max-width: 520px;
+  padding: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.china-photo-preview img {
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.china-photo-preview span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.china-preorder-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.china-preorder-form__actions .admin-btn--small {
+  min-height: 34px;
+  margin-top: 0;
+  padding: 0 14px;
   font-size: 13px;
 }
 
@@ -1985,6 +2076,7 @@ body.order-detail-open .order-detail {
   .summary-grid,
   .google-ads-summary,
   .manual-order-form,
+  .china-preorder-form,
   .order-editor,
   .cost-form,
   .shipping-form,
@@ -1997,6 +2089,9 @@ body.order-detail-open .order-detail {
   }
 
   .order-editor .wide,
+  .china-preorder-form label.wide,
+  .china-preorder-form__head,
+  .china-preorder-form__actions,
   .manual-order-form__head,
   .manual-order-form__wide,
   .manual-order-form__actions,

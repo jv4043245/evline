@@ -161,8 +161,16 @@ function randomToken(bytes = 32) {
 function assertUrlLike(value) {
   const url = text(value);
   if (!url) return "";
+  if (/^data:image\/(?:png|jpe?g|webp);base64,/i.test(url)) {
+    if (url.length > 1_250_000) {
+      const error = new Error("image_url is too large");
+      error.status = 400;
+      throw error;
+    }
+    return url;
+  }
   if (!/^https:\/\//i.test(url)) {
-    const error = new Error("image_url must start with https://");
+    const error = new Error("image_url must be an HTTPS or uploaded image");
     error.status = 400;
     throw error;
   }

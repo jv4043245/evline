@@ -2142,6 +2142,83 @@ function manualOrderHasUsefulData(payload) {
   ].some((value) => plainText(value));
 }
 
+function readFileDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Не удалось прочитать фото."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Не удалось открыть фото."));
+    image.src = dataUrl;
+  });
+}
+
+function canvasToBlob(canvas, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", quality);
+  });
+}
+
+async function compressChinaPhoto(file) {
+  if (!file) return "";
+  if (!file.type.startsWith("image/")) throw new Error("Выберите файл изображения.");
+
+  const source = await readFileDataUrl(file);
+  const image = await loadImage(source);
+  const maxSide = 1200;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+    const blob = await canvasToBlob(canvas, quality);
+    if (!blob) continue;
+    const dataUrl = await readFileDataUrl(blob);
+    if (dataUrl.length <= 1_200_000) return dataUrl;
+  }
+
+  throw new Error("Фото слишком большое. Выберите изображение поменьше.");
+}
+
+function renderChinaPhotoPreview(form, dataUrl, fileName = "") {
+  if (!form) return;
+  const preview = form.querySelector("[data-china-photo-preview]");
+  if (!preview) return;
+  if (!dataUrl) {
+    preview.hidden = true;
+    preview.innerHTML = "";
+    return;
+  }
+  preview.hidden = false;
+  preview.innerHTML = `
+    <img src="${escapeHtml(dataUrl)}" alt="Фото детали">
+    <span>${escapeHtml(fileName || "Фото добавлено")}</span>
+  `;
+}
+
+async function prepareChinaPhoto(form) {
+  const input = form.querySelector("[data-china-photo-input]");
+  const hidden = form.querySelector("[data-china-photo-data]");
+  const file = input?.files?.[0];
+  if (!hidden || !file) return hidden?.value || "";
+  const dataUrl = await compressChinaPhoto(file);
+  hidden.value = dataUrl;
+  renderChinaPhotoPreview(form, dataUrl, file.name);
+  return dataUrl;
+}
+
 function chinaPreorderPayload(form) {
   const payload = Object.fromEntries(new FormData(form));
   const supplierName = plainText(payload.supplier_name) === "__custom__"
@@ -2158,7 +2235,6 @@ function chinaPreorderPayload(form) {
     quantity: plainText(payload.quantity) || "1",
     image_url: plainText(payload.image_url),
     request_text: plainText(payload.request_text),
-    manager_comment: plainText(payload.manager_comment),
   };
 }
 
@@ -2196,7 +2272,6 @@ async function createChinaPreorder(payload) {
       quantity: payload.quantity,
       image_url: payload.image_url,
       request_text: payload.request_text,
-      manager_comment: payload.manager_comment,
     }),
   });
 }
@@ -2287,10 +2362,33 @@ document.querySelector("[data-china-search]")?.addEventListener("input", () => {
   window.__chinaSearchTimer = setTimeout(loadChinaPreorders, 250);
 });
 
+document.querySelector("[data-china-photo-input]")?.addEventListener("change", async (event) => {
+  const form = event.currentTarget.closest("form");
+  const hidden = form?.querySelector("[data-china-photo-data]");
+  if (hidden) hidden.value = "";
+  renderChinaPhotoPreview(form, "", "");
+  const file = event.currentTarget.files?.[0];
+  if (!file || !form) return;
+  try {
+    await prepareChinaPhoto(form);
+  } catch (error) {
+    event.currentTarget.value = "";
+    if (hidden) hidden.value = "";
+    renderChinaPhotoPreview(form, "", "");
+    alert(error.message);
+  }
+});
+
 document.querySelector("[data-china-preorder-form]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const button = form.querySelector("button[type='submit']");
+  try {
+    await prepareChinaPhoto(form);
+  } catch (error) {
+    alert(error.message);
+    return;
+  }
   const payload = chinaPreorderPayload(form);
   if (!plainText(payload.supplier_name)) {
     alert("Выберите поставщика.");
@@ -2305,6 +2403,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
   try {
     const result = await createChinaPreorder(payload);
     form.reset();
+    renderChinaPhotoPreview(form, "", "");
     const custom = document.querySelector("[data-china-custom-supplier]");
     if (custom) custom.hidden = true;
     await Promise.all([loadChinaPreorders(), loadOrders()]);
@@ -2319,7 +2418,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
     alert(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Создать предзаказ и ссылку";
+    button.textContent = "Предзаказ в Китай";
   }
 });
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {

@@ -234,6 +234,7 @@
 
           <form class="china-preorder-form" data-china-preorder-form>
             <div class="china-preorder-form__head">
+              <span class="china-flag" aria-hidden="true"><span>★</span></span>
               <strong>Новый предзаказ</strong>
               <span>Если заявка уже есть в CRM, укажите её внутренний order_id. Если нет — будет создана легкая заявка.</span>
             </div>
@@ -279,19 +280,20 @@
               Количество
               <input name="quantity" type="number" min="1" step="1" value="1">
             </label>
-            <label class="wide">
-              Фото, URL
-              <input name="image_url" type="url" placeholder="https://...">
+            <label class="wide china-photo-field">
+              Фото
+              <input name="image_file" type="file" accept="image/*" data-china-photo-input>
+              <input name="image_url" type="hidden" data-china-photo-data>
+              <span class="muted">Можно загрузить фото детали с компьютера. Позже подключим Google Drive как постоянное хранилище.</span>
+              <div class="china-photo-preview" data-china-photo-preview hidden></div>
             </label>
             <label class="wide">
               Текст для поставщика
-              <textarea name="request_text" rows="3" placeholder="Пока пишем по-русски для согласования интерфейса. Без контактов клиента, цен клиента и внутренней маржи."></textarea>
+              <textarea name="request_text" rows="4" placeholder="Пока пишем по-русски для согласования интерфейса. Без контактов клиента, цен клиента и внутренней маржи."></textarea>
             </label>
-            <label class="wide">
-              Уточнение для поставщика
-              <textarea name="manager_comment" rows="2" placeholder="сторона, цвет, год, OEM, упаковка"></textarea>
-            </label>
-            <button class="admin-btn admin-btn--primary wide" type="submit">Создать предзаказ и ссылку</button>
+            <div class="china-preorder-form__actions">
+              <button class="admin-btn admin-btn--primary admin-btn--small" type="submit">Предзаказ в Китай</button>
+            </div>
           </form>
 
           <div class="china-preorders" data-china-preorders>
