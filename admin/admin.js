@@ -1030,13 +1030,13 @@ function renderOrders() {
             : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
-              <td class="orders-table__number-cell"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
-              <td>${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}</td>
-              <td class="orders-table__request-cell">${carName ? `<strong class="orders-table__primary">${escapeHtml(carName)}</strong>` : ""}${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
-              <td>${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
-              <td>${moneyCell(order)}</td>
-              <td class="orders-table__track-cell">${trackCell}</td>
-              <td>
+              <td class="orders-table__number-cell" data-label="№ / дата"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
+              <td data-label="Клієнт">${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}</td>
+              <td class="orders-table__request-cell" data-label="Авто / запит">${carName ? `<strong class="orders-table__primary">${escapeHtml(carName)}</strong>` : ""}${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
+              <td data-label="Статус">${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
+              <td data-label="Сума">${moneyCell(order)}</td>
+              <td class="orders-table__track-cell" data-label="Трек">${trackCell}</td>
+              <td data-label="Дії">
                 <div class="orders-table__actions">
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
