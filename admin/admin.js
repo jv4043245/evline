@@ -8,6 +8,8 @@ const state = {
   selectedNotifications: [],
   selectedTrackingEvents: [],
   selectedSupplierPayments: [],
+  selectedSupplierRequests: [],
+  chinaPreorders: [],
   shipping: {
     carriers: [],
     rates: [],
@@ -74,6 +76,35 @@ const supplierPaymentStatusLabels = {
   needs_review: "Перевірити",
   paid: "Оплачено",
   canceled: "Скасовано",
+};
+
+const supplierRequestStatusLabels = {
+  draft: "Чернетка",
+  sent: "Надіслано",
+  viewed: "Переглянуто",
+  quoted: "Є пропозиція",
+  needs_info: "Потрібно уточнення",
+  no_stock: "Немає в наявності",
+  accepted: "Варіант обрано",
+  purchased: "Викуплено",
+  china_tracking: "Доставка по Китаю",
+  china_warehouse: "На складі в Китаї",
+  problem: "Проблема",
+  closed: "Закрито",
+  canceled: "Скасовано",
+};
+
+const supplierQuoteTypeLabels = {
+  original: "Original",
+  oem: "OEM",
+  aftermarket: "Аналог",
+  used: "б/у",
+};
+
+const supplierAvailabilityLabels = {
+  in_stock: "є в наявності",
+  order_needed: "під замовлення",
+  no_stock: "немає",
 };
 
 const supplierDirectory = ["Zeekr", "BYD", "Buble"];
@@ -215,8 +246,8 @@ const googleAdsStatusLabels = {
   failed: "помилка",
 };
 
-const adminTabs = new Set(["orders", "analytics", "delivery"]);
-const orderEditorTabs = new Set(["main", "delivery", "payment", "messages", "history"]);
+const adminTabs = new Set(["orders", "china", "analytics", "delivery"]);
+const orderEditorTabs = new Set(["main", "suppliers", "delivery", "payment", "messages", "history"]);
 
 const money = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -797,6 +828,7 @@ function moneyCell(order) {
     </div>
   ` : "";
   const chips = [
+    supplierRequestChip(order),
     supplierPaymentChip(order),
     deliveryChip(order),
     marginChip(order),
@@ -853,6 +885,19 @@ function supplierPaymentChip(order) {
   return financeChip("Постач.", value, stateName);
 }
 
+function supplierRequestChip(order) {
+  const count = Number(order.supplier_request_count || 0);
+  if (!count) return "";
+
+  const quoted = Number(order.supplier_request_quoted_count || 0);
+  const accepted = Number(order.supplier_request_accepted_count || 0);
+  const problem = Number(order.supplier_request_problem_count || 0);
+  if (accepted > 0) return financeChip("Запити CN", `${accepted}/${count} обрано`, "paid");
+  if (quoted > 0) return financeChip("Запити CN", `${quoted}/${count} ціна`, "partial");
+  if (problem > 0) return financeChip("Запити CN", `${problem}/${count} уточн.`, "review");
+  return financeChip("Запити CN", `${count} очікує`, "neutral");
+}
+
 function deliveryChip(order) {
   const delivery = Number(order.delivery_cost_uah || 0);
   if (delivery <= 0) return "";
@@ -888,6 +933,11 @@ function supplierPaymentBadge(status) {
   return `<span class="supplier-payment-status supplier-payment-status--${safeClass(value)}">${escapeHtml(supplierPaymentStatusLabels[value] || value)}</span>`;
 }
 
+function supplierRequestBadge(status) {
+  const value = status || "sent";
+  return `<span class="supplier-request-status supplier-request-status--${safeClass(value)}">${escapeHtml(supplierRequestStatusLabels[value] || value)}</span>`;
+}
+
 function supplierDirectoryOptions(selectedName = "") {
   const normalized = plainText(selectedName);
   const hasDirectoryMatch = supplierDirectory.some((name) => name === normalized);
@@ -904,6 +954,289 @@ function syncSupplierCustomField(root) {
   if (!select || !customLabel) return;
   customLabel.hidden = select.value !== "__custom__";
   if (!customLabel.hidden) customLabel.querySelector("input")?.focus();
+}
+
+function syncSupplierRequestCustomField(root) {
+  const select = root.querySelector("[data-supplier-request-supplier]");
+  const customLabel = root.querySelector("[data-supplier-request-custom]");
+  if (!select || !customLabel) return;
+  customLabel.hidden = select.value !== "__custom__";
+  if (!customLabel.hidden) customLabel.querySelector("input")?.focus();
+}
+
+function supplierUrl(pathOrUrl) {
+  const raw = plainText(pathOrUrl);
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `${window.location.origin}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
+function supplierImageList(images = []) {
+  const urls = images.map((image) => plainText(image.image_url)).filter(Boolean);
+  if (!urls.length) return "";
+  return `
+    <div class="supplier-request-images">
+      ${urls.map((url) => `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Фото постачальника" loading="lazy"></a>`).join("")}
+    </div>
+  `;
+}
+
+function selectedSupplierQuote(bundle = {}) {
+  const quotes = bundle.quotes || [];
+  return quotes.find((quote) => quote.status === "selected")
+    || quotes.find((quote) => quote.status === "new" && quote.availability !== "no_stock" && Number(quote.price_cny || 0) > 0)
+    || null;
+}
+
+function chinaPreorderStage(bundle = {}) {
+  const request = bundle.request || {};
+  const quote = selectedSupplierQuote(bundle);
+  const payment = bundle.payment || {};
+  if (request.status === "china_tracking" || request.status === "china_warehouse") return "Трек получен";
+  if (payment.status === "paid") return "Оплачено";
+  if (payment.status === "requested" || payment.status === "needs_review") return "Ждём оплату";
+  if (request.status === "accepted") return "Согласовано";
+  if (quote) return "Цена получена";
+  if (request.status === "no_stock") return "Нет в наличии";
+  if (request.status === "needs_info") return "Нужно уточнение";
+  return "Ждём ответ";
+}
+
+function renderChinaPreorders() {
+  const root = document.querySelector("[data-china-preorders]");
+  if (!root) return;
+  const rows = state.chinaPreorders || [];
+  if (!rows.length) {
+    root.innerHTML = `<p class="muted">Активных предзаказов пока нет.</p>`;
+    return;
+  }
+
+  root.innerHTML = rows.map((bundle) => {
+    const request = bundle.request || {};
+    const order = bundle.order || {};
+    const quote = selectedSupplierQuote(bundle);
+    const payment = bundle.payment || null;
+    const link = supplierUrl(bundle.supplier_url || bundle.supplier_link);
+    const receiptLink = payment?.receipt_telegram_file_id && request.access_token
+      ? `/api/supplier/request/${encodeURIComponent(request.access_token)}/payment-receipt`
+      : "";
+    const trackingEvent = (bundle.tracking_events || []).find((event) => plainText(event.tracking_number));
+    const canSendPayment = quote && !payment && !["closed", "canceled"].includes(request.status);
+    return `
+      <article class="china-preorder-card" data-china-preorder="${escapeHtml(request.id)}">
+        <div class="china-preorder-card__head">
+          <div>
+            <strong>${escapeHtml(request.public_number || request.id || "Предзаказ")}</strong>
+            <span>${escapeHtml(chinaPreorderStage(bundle))} · ${escapeHtml(request.supplier_name || "поставщик")}</span>
+          </div>
+          ${supplierRequestBadge(request.status)}
+        </div>
+        <div class="china-preorder-card__grid">
+          <div>
+            <span>Заказ CRM</span>
+            <button class="admin-link-button" type="button" data-open-order="${escapeHtml(request.order_id)}">${escapeHtml(order.order_number || request.order_id || "-")}</button>
+          </div>
+          <div><span>Клиент</span><strong>${escapeHtml(order.customer_name || "-")}</strong></div>
+          <div><span>Авто</span><strong>${escapeHtml(request.car || order.car || "-")}</strong></div>
+          <div><span>VIN</span><strong class="orders-table__mono">${escapeHtml(request.vin || order.vin || "-")}</strong></div>
+          <div class="wide"><span>Деталь</span><strong>${escapeHtml(request.item_name || order.item_name || "-")}</strong></div>
+          <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
+        </div>
+        ${supplierImageList(bundle.request_images || [])}
+        <div class="china-preorder-card__text">
+          <span>Текст поставщику</span>
+          <p>${escapeHtml(request.request_text_ru || request.request_text || "-")}</p>
+          ${request.manager_comment ? `<p><b>Уточнение:</b> ${escapeHtml(request.manager_comment)}</p>` : ""}
+        </div>
+        <div class="china-preorder-card__quote">
+          <strong>Ответ поставщика</strong>
+          ${quote ? `
+            <div class="china-preorder-card__quote-line">
+              <b>${supplierAmount(quote.price_cny, "CNY")}</b>
+              <span>${quote.purchase_days ? `${Number(quote.purchase_days)} дн.` : "срок не указан"}</span>
+              <span>${escapeHtml(quote.status || "new")}</span>
+            </div>
+            ${quote.comment_cn ? `<p>${escapeHtml(quote.comment_ru || quote.comment_translated || quote.comment_cn)}</p>` : ""}
+          ` : `<p class="muted">Поставщик ещё не ответил.</p>`}
+        </div>
+        <div class="china-preorder-card__payment">
+          <strong>Оплата</strong>
+          ${payment ? `
+            <div class="china-preorder-card__quote-line">
+              ${supplierPaymentBadge(payment.status)}
+              <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b>
+              ${receiptLink ? `<a href="${escapeHtml(receiptLink)}" target="_blank" rel="noopener">открыть скрин оплаты</a>` : `<span>скрина ещё нет</span>`}
+            </div>
+          ` : `<p class="muted">Запрос на оплату ещё не отправляли.</p>`}
+        </div>
+        ${trackingEvent ? `
+          <div class="china-preorder-card__tracking">
+            <strong>Трек</strong>
+            <span class="orders-table__mono">${escapeHtml(trackingEvent.tracking_number)}</span>
+          </div>
+        ` : ""}
+        <div class="china-preorder-card__actions">
+          <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Открыть карточку</a>
+          <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопировать ссылку</button>
+          ${canSendPayment ? `
+            <button class="admin-btn admin-btn--primary admin-btn--small" type="button" data-china-send-payment="${escapeHtml(request.id)}" data-china-quote-id="${escapeHtml(quote.id)}">
+              Отправить на оплату
+            </button>
+          ` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderSupplierTrackingEvents(events = []) {
+  if (!events.length) return `<p class="muted">Китайський трек і статуси ще не вносилися.</p>`;
+  return `
+    <ol class="event-list supplier-tracking-events">
+      ${events.map((event) => `
+        <li>
+          <strong>${escapeHtml(supplierRequestStatusLabels[event.status] || event.status || "Статус")}</strong>
+          <span>${escapeHtml(shortDateTime(event.created_at))}${event.tracking_number ? ` · ${escapeHtml(event.tracking_number)}` : ""}</span>
+          ${event.comment_cn ? `<p lang="zh-CN">${escapeHtml(event.comment_cn)}</p>` : ""}
+          ${event.comment_translated ? `<p>${escapeHtml(event.comment_translated)}</p>` : ""}
+        </li>
+      `).join("")}
+    </ol>
+  `;
+}
+
+function renderSupplierQuoteCard(quote, request) {
+  const selected = quote.status === "selected";
+  const rejected = quote.status === "rejected";
+  const canSelect = quote.status === "new" && quote.availability !== "no_stock" && Number(quote.price_cny || 0) > 0 && !["canceled", "closed"].includes(request.status);
+  return `
+    <article class="supplier-quote-card ${selected ? "supplier-quote-card--selected" : ""} ${rejected ? "supplier-quote-card--rejected" : ""}">
+      <div class="supplier-quote-card__head">
+        <div>
+          <strong>${escapeHtml(supplierQuoteTypeLabels[quote.quote_type] || quote.quote_type || "Original")}</strong>
+          <span>${escapeHtml(supplierAvailabilityLabels[quote.availability] || quote.availability || "-")} · ${escapeHtml(shortDateTime(quote.created_at))}</span>
+        </div>
+        <b>${supplierAmount(quote.price_cny, "CNY")}</b>
+      </div>
+      <div class="supplier-quote-card__meta">
+        ${quote.part_number ? `<span>№ ${escapeHtml(quote.part_number)}</span>` : ""}
+        ${quote.quantity ? `<span>К-сть: ${Number(quote.quantity)}</span>` : ""}
+        ${quote.purchase_days ? `<span>Викуп: ${Number(quote.purchase_days)} дн.</span>` : ""}
+        ${quote.china_delivery_days ? `<span>Китай: ${Number(quote.china_delivery_days)} дн.</span>` : ""}
+        <span>${escapeHtml(quote.status || "new")}</span>
+      </div>
+      ${quote.comment_cn ? `<p lang="zh-CN">${escapeHtml(quote.comment_cn)}</p>` : ""}
+      ${quote.comment_translated ? `<p>${escapeHtml(quote.comment_translated)}</p>` : ""}
+      ${supplierImageList(quote.images || [])}
+      ${selected ? `<strong class="supplier-quote-card__selected">Обрано для роботи</strong>` : canSelect ? `
+        <button class="admin-btn admin-btn--small" type="button" data-select-supplier-quote="${escapeHtml(quote.id)}" data-supplier-request-id="${escapeHtml(quote.supplier_request_id)}">
+          Відправити на оплату
+        </button>
+      ` : `<span class="muted">Цей варіант не можна обрати.</span>`}
+    </article>
+  `;
+}
+
+function renderSupplierRequests(order) {
+  const rows = state.selectedSupplierRequests || [];
+  return `
+    <section class="supplier-requests wide">
+      <div class="supplier-requests__head">
+        <div>
+          <strong>Запити постачальникам</strong>
+          <span>Magic-link для WeChat/WhatsApp і відповіді з китайського інтерфейсу.</span>
+        </div>
+      </div>
+
+      <div class="supplier-requests__create">
+        <label>
+          Постачальник
+          <select data-supplier-request-input="supplier_name" data-supplier-request-supplier>
+            ${supplierDirectoryOptions()}
+          </select>
+        </label>
+        <label data-supplier-request-custom hidden>
+          Інший постачальник
+          <input data-supplier-request-input="supplier_name_custom" placeholder="Назва постачальника">
+        </label>
+        <label>
+          Запчастина
+          <input data-supplier-request-input="item_name" value="${escapeHtml(order.item_name || order.service_name || "")}" placeholder="що шукаємо">
+        </label>
+        <label>
+          Кількість
+          <input data-supplier-request-input="quantity" type="number" min="1" step="1" value="1">
+        </label>
+        <label class="wide">
+          Фото, URL
+          <input data-supplier-request-input="image_url" type="url" placeholder="https://...">
+        </label>
+        <label class="wide">
+          Опис для постачальника
+          <textarea data-supplier-request-input="request_text" rows="3" placeholder="Китайською або простим текстом без імені клієнта, телефону, адреси, маржі чи внутрішніх фінансів"></textarea>
+        </label>
+        <label class="wide">
+          Коментар EVLine
+          <textarea data-supplier-request-input="manager_comment" rows="2" placeholder="сторона, колір, рік, комплектація, OEM номер, нова/б/у, пакування"></textarea>
+        </label>
+        <p class="supplier-request-warning wide">
+          Перед копіюванням посилання перевірте: VIN підтверджено, фото/сторона/колір/рік вказані, у тексті немає контактів клієнта або внутрішніх сум EVLine.
+        </p>
+        <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-request="${escapeHtml(order.id)}">
+          Створити запит і посилання
+        </button>
+      </div>
+
+      ${rows.length ? `
+        <div class="supplier-requests__list">
+          ${rows.map((bundle) => {
+            const request = bundle.request || {};
+            const link = supplierUrl(bundle.supplier_url || bundle.supplier_link);
+            const dashboardLink = supplierUrl(bundle.dashboard_url || bundle.dashboard_link);
+            return `
+              <article class="supplier-request-card" data-supplier-request-card="${escapeHtml(request.id)}">
+                <div class="supplier-request-card__head">
+                  <div>
+                    <strong>${textOrDash(request.public_number || request.id)}</strong>
+                    ${supplierRequestBadge(request.status)}
+                    <span>${textOrDash(request.supplier_name)} · ${escapeHtml(shortDateTime(request.created_at))}</span>
+                  </div>
+                  <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Відкрити CN</a>
+                </div>
+                <div class="supplier-request-card__body">
+                  <div class="supplier-request-card__info">
+                    <span>Авто: <b>${textOrDash(request.car)}</b></span>
+                    <span>VIN: <b class="orders-table__mono">${textOrDash(request.vin)}</b></span>
+                    <span>Позиція: <b>${textOrDash(request.item_name)}</b></span>
+                    <span>К-сть: <b>${Number(request.quantity || 1)}</b></span>
+                  </div>
+                  ${supplierImageList(bundle.request_images || [])}
+                  <label class="supplier-link-field">
+                    Посилання для постачальника
+                    <input value="${escapeHtml(link)}" readonly>
+                  </label>
+                  <div class="supplier-request-card__actions">
+                    <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопіювати посилання</button>
+                    ${dashboardLink ? `<button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(dashboardLink)}">Скопіювати список</button>` : ""}
+                  </div>
+                </div>
+                <div class="supplier-request-card__quotes">
+                  <strong>Пропозиції</strong>
+                  ${bundle.quotes?.length
+                    ? bundle.quotes.map((quote) => renderSupplierQuoteCard(quote, request)).join("")
+                    : `<p class="muted">Постачальник ще не відповів.</p>`}
+                </div>
+                <details class="supplier-request-card__events">
+                  <summary>Китайський трек і події</summary>
+                  ${renderSupplierTrackingEvents(bundle.tracking_events || [])}
+                </details>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      ` : `<p class="muted supplier-requests__empty">Запитів постачальникам ще немає.</p>`}
+    </section>
+  `;
 }
 
 function renderSupplierPayments(order) {
@@ -1085,6 +1418,7 @@ function closeOrderDetail(options = {}) {
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
     state.selectedSupplierPayments = [];
+    state.selectedSupplierRequests = [];
     renderOrderEditor(null);
     highlightSelectedOrder();
   }
@@ -1271,6 +1605,7 @@ function renderOrderEditor(order) {
 
     <div class="order-editor__tabs wide" role="tablist" aria-label="Розділи картки замовлення">
       <button class="order-editor__tab ${activeOrderEditorTab() === "main" ? "is-active" : ""}" type="button" data-order-tab="main" role="tab" aria-selected="${activeOrderEditorTab() === "main" ? "true" : "false"}">Заявка</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "suppliers" ? "is-active" : ""}" type="button" data-order-tab="suppliers" role="tab" aria-selected="${activeOrderEditorTab() === "suppliers" ? "true" : "false"}">Постачальники</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" type="button" data-order-tab="delivery" role="tab" aria-selected="${activeOrderEditorTab() === "delivery" ? "true" : "false"}">Доставка</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" type="button" data-order-tab="payment" role="tab" aria-selected="${activeOrderEditorTab() === "payment" ? "true" : "false"}">Оплата</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "messages" ? "is-active" : ""}" type="button" data-order-tab="messages" role="tab" aria-selected="${activeOrderEditorTab() === "messages" ? "true" : "false"}">Повідомлення</button>
@@ -1345,6 +1680,14 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       Запит клієнта
       <textarea name="request_text" rows="3">${escapeHtml(order.request_text || "")}</textarea>
     </label>
+
+      </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "suppliers" ? "is-active" : ""}" data-order-pane="suppliers" ${activeOrderEditorTab() === "suppliers" ? "" : "hidden"}>
+      <div class="order-editor__grid">
+
+    ${renderSupplierRequests(order)}
 
       </div>
     </section>
@@ -1603,7 +1946,19 @@ async function loadOrder(id) {
   state.selectedNotifications = data.notifications || [];
   state.selectedTrackingEvents = data.tracking_events || [];
   state.selectedSupplierPayments = data.supplier_payments || [];
+  state.selectedSupplierRequests = data.supplier_requests || [];
   renderOrderEditor(state.selectedOrder);
+}
+
+async function loadChinaPreorders() {
+  const params = new URLSearchParams({
+    status: document.querySelector("[data-china-status]")?.value || "active",
+    q: document.querySelector("[data-china-search]")?.value || "",
+    limit: "120",
+  });
+  const data = await api(`/api/admin/supplier-requests?${params}`);
+  state.chinaPreorders = data.preorders || [];
+  renderChinaPreorders();
 }
 
 async function openOrder(id, options = {}) {
@@ -1627,6 +1982,7 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
     state.selectedNotifications = [];
     state.selectedTrackingEvents = [];
     state.selectedSupplierPayments = [];
+    state.selectedSupplierRequests = [];
     renderOrderEditor(null);
     closeOrderDetail();
   }
@@ -1702,7 +2058,7 @@ async function refresh() {
     if (exportLink) exportLink.href = `/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`;
     const googleAdsExport = document.querySelector("[data-google-ads-export]");
     if (googleAdsExport) googleAdsExport.href = `/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`;
-    await Promise.all([loadSummary(), loadOrders(), loadShipping(), loadGoogleAds()]);
+    await Promise.all([loadSummary(), loadOrders(), loadChinaPreorders(), loadShipping(), loadGoogleAds()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     setAuthVisible(false);
   } catch (error) {
@@ -1786,6 +2142,78 @@ function manualOrderHasUsefulData(payload) {
   ].some((value) => plainText(value));
 }
 
+function chinaPreorderPayload(form) {
+  const payload = Object.fromEntries(new FormData(form));
+  const supplierName = plainText(payload.supplier_name) === "__custom__"
+    ? plainText(payload.supplier_name_custom)
+    : plainText(payload.supplier_name);
+  return {
+    order_id: plainText(payload.order_id),
+    supplier_name: supplierName,
+    customer_name: plainText(payload.customer_name),
+    customer_phone: plainText(payload.customer_phone),
+    car: plainText(payload.car),
+    vin: plainText(payload.vin).toUpperCase(),
+    item_name: plainText(payload.item_name),
+    quantity: plainText(payload.quantity) || "1",
+    image_url: plainText(payload.image_url),
+    request_text: plainText(payload.request_text),
+    manager_comment: plainText(payload.manager_comment),
+  };
+}
+
+async function createChinaPreorder(payload) {
+  let orderId = payload.order_id;
+  if (!orderId) {
+    const orderResult = await api("/api/admin/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "parts",
+        status: "new",
+        source: "manual",
+        medium: "china-preorder",
+        campaign: "manual-china-preorder",
+        customer_name: payload.customer_name,
+        customer_phone: payload.customer_phone,
+        car: payload.car,
+        vin: payload.vin,
+        item_name: payload.item_name,
+        request_text: payload.request_text,
+        manager_notes: "Создано из мини-CRM Предзаказы Китай",
+      }),
+    });
+    orderId = orderResult.order?.id || "";
+  }
+  if (!orderId) throw new Error("Не удалось определить заказ CRM для предзаказа.");
+
+  return api(`/api/admin/orders/${encodeURIComponent(orderId)}/supplier-requests`, {
+    method: "POST",
+    body: JSON.stringify({
+      supplier_name: payload.supplier_name,
+      car: payload.car,
+      vin: payload.vin,
+      item_name: payload.item_name,
+      quantity: payload.quantity,
+      image_url: payload.image_url,
+      request_text: payload.request_text,
+      manager_comment: payload.manager_comment,
+    }),
+  });
+}
+
+function collectSupplierRequestCreatePayload(form) {
+  const value = (name) => form.querySelector(`[data-supplier-request-input="${name}"]`)?.value || "";
+  const supplierChoice = value("supplier_name");
+  return {
+    supplier_name: supplierChoice === "__custom__" ? value("supplier_name_custom") : supplierChoice,
+    item_name: value("item_name"),
+    quantity: value("quantity") || "1",
+    image_url: value("image_url"),
+    request_text: value("request_text"),
+    manager_comment: value("manager_comment"),
+  };
+}
+
 document.querySelector("[data-token-form]")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const token = new FormData(event.currentTarget).get("token");
@@ -1841,8 +2269,58 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
 });
 
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
+document.querySelector("[data-refresh-china]")?.addEventListener("click", loadChinaPreorders);
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
+});
+
+document.querySelector("[data-china-supplier]")?.addEventListener("change", (event) => {
+  const custom = document.querySelector("[data-china-custom-supplier]");
+  if (!custom) return;
+  custom.hidden = event.currentTarget.value !== "__custom__";
+  if (!custom.hidden) custom.querySelector("input")?.focus();
+});
+
+document.querySelector("[data-china-status]")?.addEventListener("change", loadChinaPreorders);
+document.querySelector("[data-china-search]")?.addEventListener("input", () => {
+  clearTimeout(window.__chinaSearchTimer);
+  window.__chinaSearchTimer = setTimeout(loadChinaPreorders, 250);
+});
+
+document.querySelector("[data-china-preorder-form]")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type='submit']");
+  const payload = chinaPreorderPayload(form);
+  if (!plainText(payload.supplier_name)) {
+    alert("Выберите поставщика.");
+    return;
+  }
+  if (!plainText(payload.item_name) && !plainText(payload.request_text)) {
+    alert("Укажите деталь или текст запроса.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Создаю...";
+  try {
+    const result = await createChinaPreorder(payload);
+    form.reset();
+    const custom = document.querySelector("[data-china-custom-supplier]");
+    if (custom) custom.hidden = true;
+    await Promise.all([loadChinaPreorders(), loadOrders()]);
+    const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
+    if (link) {
+      navigator.clipboard?.writeText(link).catch(() => null);
+      alert("Предзаказ создан. Ссылка поставщика скопирована.");
+    } else {
+      alert("Предзаказ создан.");
+    }
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Создать предзаказ и ссылку";
+  }
 });
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {
   event.preventDefault();
@@ -1972,6 +2450,58 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
   openOrder(row.dataset.orderId).catch((error) => alert(error.message));
 });
 
+document.querySelector("[data-china-preorders]")?.addEventListener("click", async (event) => {
+  const openButton = event.target.closest("[data-open-order]");
+  if (openButton) {
+    state.orderEditorTab = "suppliers";
+    setActiveTab("orders");
+    openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-copy-supplier-link]");
+  if (copyButton) {
+    const value = copyButton.dataset.copySupplierLink || "";
+    navigator.clipboard?.writeText(value).then(() => {
+      const original = copyButton.textContent;
+      copyButton.textContent = "Скопировано";
+      setTimeout(() => { copyButton.textContent = original; }, 1500);
+    });
+    return;
+  }
+
+  const paymentButton = event.target.closest("[data-china-send-payment]");
+  if (!paymentButton) return;
+  const requestId = paymentButton.dataset.chinaSendPayment || "";
+  const bundle = (state.chinaPreorders || []).find((item) => item.request?.id === requestId) || {};
+  const quote = selectedSupplierQuote(bundle) || {};
+  const request = bundle.request || {};
+  const confirmText = [
+    "Клиент согласовал цену?",
+    "",
+    `Поставщик: ${request.supplier_name || "-"}`,
+    `Сумма: ${supplierAmount(quote.price_cny, "CNY")}`,
+    "После подтверждения запрос на оплату уйдёт в Telegram.",
+  ].join("\n");
+  if (!confirm(confirmText)) return;
+  paymentButton.disabled = true;
+  paymentButton.textContent = "Отправляю...";
+  try {
+    const result = await api(`/api/admin/supplier-requests/${encodeURIComponent(requestId)}/send-payment`, {
+      method: "POST",
+      body: JSON.stringify({ quote_id: paymentButton.dataset.chinaQuoteId || "", client_approved: true }),
+    });
+    state.chinaPreorders = result.preorders || state.chinaPreorders;
+    renderChinaPreorders();
+    await loadOrders();
+    alert("Запрос на оплату отправлен в Telegram.");
+  } catch (error) {
+    alert(error.message);
+    paymentButton.disabled = false;
+    paymentButton.textContent = "Отправить на оплату";
+  }
+});
+
 document.addEventListener("click", (event) => {
   if (!event.target.closest("[data-close-order]")) return;
   closeOrderDetail({ clearSelection: true });
@@ -1996,6 +2526,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
   state.selectedNotifications = result.notifications || state.selectedNotifications;
   state.selectedTrackingEvents = result.tracking_events || state.selectedTrackingEvents;
   state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+  state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
   renderOrderEditor(result.order);
   await refresh();
 });
@@ -2012,6 +2543,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
   if (event.target.matches("[data-supplier-payment-supplier]")) {
     syncSupplierCustomField(event.currentTarget);
+  }
+  if (event.target.matches("[data-supplier-request-supplier]")) {
+    syncSupplierRequestCustomField(event.currentTarget);
   }
   if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number'], [data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
@@ -2061,6 +2595,92 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
     } finally {
       notifyManagerButton.disabled = false;
       notifyManagerButton.textContent = "Надіслати менеджеру в Telegram";
+    }
+    return;
+  }
+
+  const copySupplierLinkButton = event.target.closest("[data-copy-supplier-link]");
+  if (copySupplierLinkButton) {
+    const value = copySupplierLinkButton.dataset.copySupplierLink || "";
+    navigator.clipboard?.writeText(value).then(() => {
+      const original = copySupplierLinkButton.textContent;
+      copySupplierLinkButton.textContent = "Скопійовано";
+      setTimeout(() => { copySupplierLinkButton.textContent = original; }, 1500);
+    });
+    return;
+  }
+
+  const createSupplierRequestButton = event.target.closest("[data-create-supplier-request]");
+  if (createSupplierRequestButton) {
+    const payload = collectSupplierRequestCreatePayload(event.currentTarget);
+    if (!plainText(payload.supplier_name)) {
+      alert("Оберіть постачальника.");
+      return;
+    }
+    if (!plainText(payload.item_name) && !plainText(payload.request_text)) {
+      alert("Вкажіть запчастину або опис запиту.");
+      return;
+    }
+    createSupplierRequestButton.disabled = true;
+    createSupplierRequestButton.textContent = "Створюю...";
+    try {
+      const result = await api(`/api/admin/orders/${encodeURIComponent(createSupplierRequestButton.dataset.createSupplierRequest)}/supplier-requests`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      state.selectedOrder = result.order || state.selectedOrder;
+      state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
+      state.orderEditorTab = "suppliers";
+      renderOrderEditor(state.selectedOrder);
+      await loadOrders();
+      const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
+      if (link) {
+        navigator.clipboard?.writeText(link).catch(() => null);
+        alert("Запит створено. Посилання для постачальника скопійовано.");
+      } else {
+        alert("Запит створено.");
+      }
+    } catch (error) {
+      alert(error.message);
+      createSupplierRequestButton.disabled = false;
+      createSupplierRequestButton.textContent = "Створити запит і посилання";
+    }
+    return;
+  }
+
+  const selectSupplierQuoteButton = event.target.closest("[data-select-supplier-quote]");
+  if (selectSupplierQuoteButton) {
+    const quoteId = selectSupplierQuoteButton.dataset.selectSupplierQuote || "";
+    const requestId = selectSupplierQuoteButton.dataset.supplierRequestId || "";
+    const supplierRequest = (state.selectedSupplierRequests || []).find((bundle) => bundle.request?.id === requestId) || {};
+    const quote = (supplierRequest.quotes || []).find((item) => item.id === quoteId) || {};
+    const request = supplierRequest.request || {};
+    const confirmText = [
+      "Клієнт погодив ціну?",
+      "",
+      `Постачальник: ${request.supplier_name || "-"}`,
+      `Сума: ${supplierAmount(quote.price_cny, "CNY")}`,
+      "Після підтвердження запит на оплату піде в Telegram.",
+    ].join("\n");
+    if (!confirm(confirmText)) return;
+    selectSupplierQuoteButton.disabled = true;
+    selectSupplierQuoteButton.textContent = "Відправляю...";
+    try {
+      const result = await api(`/api/admin/supplier-quotes/${encodeURIComponent(selectSupplierQuoteButton.dataset.selectSupplierQuote)}/select`, {
+        method: "POST",
+        body: JSON.stringify({ client_approved: true }),
+      });
+      state.selectedOrder = result.order || state.selectedOrder;
+      state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
+      state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+      state.orderEditorTab = "suppliers";
+      renderOrderEditor(state.selectedOrder);
+      await loadOrders();
+      alert("Запит на оплату відправлено в Telegram.");
+    } catch (error) {
+      alert(error.message);
+      selectSupplierQuoteButton.disabled = false;
+      selectSupplierQuoteButton.textContent = "Відправити на оплату";
     }
     return;
   }

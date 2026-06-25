@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260625-mobile-admin">
-    <script src="/admin/admin.js?v=20260625-mobile-admin" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260625-supplier-portal">
+    <script src="/admin/admin.js?v=20260625-supplier-portal" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -47,6 +47,7 @@
 
       <nav class="admin-tabs" aria-label="Розділи адмінки">
         <button class="admin-tab" type="button" data-admin-tab="orders" aria-selected="true">Замовлення</button>
+        <button class="admin-tab" type="button" data-admin-tab="china" aria-selected="false">Китай</button>
         <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
         <button class="admin-tab" type="button" data-admin-tab="delivery" aria-selected="false">Доставка</button>
       </nav>
@@ -207,6 +208,96 @@
             <p class="muted">Оберіть замовлення в таблиці.</p>
           </form>
         </aside>
+      </section>
+
+      <section class="admin-view" data-admin-view="china" hidden>
+        <section class="admin-panel china-workbench">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Предзаказы Китай</h2>
+              <p class="muted">Упрощенный рабочий экран для запросов поставщикам, цен, оплаты и китайского трека.</p>
+            </div>
+            <div class="filters">
+              <input type="search" data-china-search placeholder="№, VIN, авто, поставщик...">
+              <select data-china-status>
+                <option value="active">Активные</option>
+                <option value="sent">Ждём ответ</option>
+                <option value="quoted">Цена получена</option>
+                <option value="accepted">Согласовано</option>
+                <option value="purchased">Оплачено</option>
+                <option value="china_tracking">Трек получен</option>
+                <option value="all">Все</option>
+              </select>
+              <button class="admin-btn" type="button" data-refresh-china>Обновить</button>
+            </div>
+          </div>
+
+          <form class="china-preorder-form" data-china-preorder-form>
+            <div class="china-preorder-form__head">
+              <strong>Новый предзаказ</strong>
+              <span>Если заявка уже есть в CRM, укажите её внутренний order_id. Если нет — будет создана легкая заявка.</span>
+            </div>
+            <label>
+              Order ID из CRM
+              <input name="order_id" placeholder="если отправляем из существующей заявки">
+            </label>
+            <label>
+              Поставщик
+              <select name="supplier_name" data-china-supplier>
+                <option value="">Выберите</option>
+                <option value="Zeekr">Zeekr</option>
+                <option value="BYD">BYD</option>
+                <option value="Buble">Buble</option>
+                <option value="__custom__">Другой</option>
+              </select>
+            </label>
+            <label data-china-custom-supplier hidden>
+              Другой поставщик
+              <input name="supplier_name_custom" placeholder="название поставщика">
+            </label>
+            <label>
+              Клиент
+              <input name="customer_name" placeholder="для нашей CRM">
+            </label>
+            <label>
+              Телефон клиента
+              <input name="customer_phone" inputmode="tel" placeholder="+380...">
+            </label>
+            <label>
+              Авто
+              <input name="car" placeholder="Zeekr 001">
+            </label>
+            <label>
+              VIN
+              <input name="vin" placeholder="VIN">
+            </label>
+            <label>
+              Деталь
+              <input name="item_name" placeholder="что ищем">
+            </label>
+            <label>
+              Количество
+              <input name="quantity" type="number" min="1" step="1" value="1">
+            </label>
+            <label class="wide">
+              Фото, URL
+              <input name="image_url" type="url" placeholder="https://...">
+            </label>
+            <label class="wide">
+              Текст для поставщика
+              <textarea name="request_text" rows="3" placeholder="Пока пишем по-русски для согласования интерфейса. Без контактов клиента, цен клиента и внутренней маржи."></textarea>
+            </label>
+            <label class="wide">
+              Уточнение для поставщика
+              <textarea name="manager_comment" rows="2" placeholder="сторона, цвет, год, OEM, упаковка"></textarea>
+            </label>
+            <button class="admin-btn admin-btn--primary wide" type="submit">Создать предзаказ и ссылку</button>
+          </form>
+
+          <div class="china-preorders" data-china-preorders>
+            <p class="muted">Предзаказы загружаются...</p>
+          </div>
+        </section>
       </section>
 
       <section class="admin-view" data-admin-view="analytics" hidden>

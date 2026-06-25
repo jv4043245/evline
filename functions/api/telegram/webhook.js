@@ -54,7 +54,7 @@ async function sendTelegram(env, chatId, message) {
 export async function onRequestPost({ request, env }) {
   const expectedSecret = text(env.TELEGRAM_WEBHOOK_SECRET);
   const actualSecret = text(request.headers.get("x-telegram-bot-api-secret-token"));
-  if (expectedSecret && actualSecret !== expectedSecret) {
+  if (!expectedSecret || actualSecret !== expectedSecret) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 

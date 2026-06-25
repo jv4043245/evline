@@ -1,0 +1,1105 @@
+import { integer, number, text } from "./http.js";
+import { insertStatusEvent, loadOrder, managerChatIdForType, nextPublicNumber, tableHasColumn } from "./crm.js";
+import { createSupplierPaymentRequest } from "./supplier-payments.js";
+
+export const SUPPLIER_REQUEST_STATUS_LABELS = {
+  draft: "Чернетка",
+  sent: "Надіслано",
+  viewed: "Переглянуто",
+  quoted: "Є пропозиція",
+  needs_info: "Потрібно уточнення",
+  no_stock: "Немає в наявності",
+  accepted: "Варіант обрано",
+  purchased: "Викуплено",
+  china_tracking: "Доставка по Китаю",
+  china_warehouse: "На складі в Китаї",
+  problem: "Проблема",
+  closed: "Закрито",
+  canceled: "Скасовано",
+};
+
+const REQUEST_STATUSES = new Set(Object.keys(SUPPLIER_REQUEST_STATUS_LABELS));
+const QUOTE_TYPES = new Set(["original", "oem", "aftermarket", "used"]);
+const AVAILABILITY = new Set(["in_stock", "order_needed", "no_stock"]);
+const QUOTE_STATUSES = new Set(["new", "selected", "rejected", "expired"]);
+const SUPPLIER_EVENT_STATUSES = new Set([
+  "needs_info",
+  "no_stock",
+  "purchased",
+  "china_tracking",
+  "china_warehouse",
+  "problem",
+]);
+const TERMINAL_REQUEST_STATUSES = new Set(["closed", "canceled"]);
+const PRE_ACCEPTANCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock"]);
+const LOGISTICS_SOURCE_STATUSES = new Set(["accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
+const LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse", "problem"]);
+const PAID_LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse"]);
+const SUPPLIER_STATUS_PROGRESS = {
+  sent: 1,
+  viewed: 1,
+  quoted: 2,
+  needs_info: 2,
+  no_stock: 2,
+  accepted: 3,
+  purchased: 4,
+  china_tracking: 5,
+  china_warehouse: 6,
+  closed: 7,
+};
+const MAX_PUBLIC_QUOTES_PER_REQUEST = 5;
+const MAX_PUBLIC_EVENTS_PER_REQUEST = 30;
+const DIRECTORY_SUPPLIERS = new Map([
+  ["zeekr", { id: "supplier_zeekr", name: "Zeekr" }],
+  ["byd", { id: "supplier_byd", name: "BYD" }],
+  ["buble", { id: "supplier_buble", name: "Buble" }],
+]);
+
+function normalizeStatus(value, fallback = "") {
+  const status = text(value);
+  if (!status && fallback) return fallback;
+  if (REQUEST_STATUSES.has(status)) return status;
+  const error = new Error("Unsupported supplier status");
+  error.status = 400;
+  throw error;
+}
+
+function normalizeQuoteType(value) {
+  const quoteType = text(value).toLowerCase();
+  return QUOTE_TYPES.has(quoteType) ? quoteType : "original";
+}
+
+function normalizeAvailability(value) {
+  const availability = text(value).toLowerCase();
+  return AVAILABILITY.has(availability) ? availability : "in_stock";
+}
+
+function normalizeQuoteStatus(value, fallback = "new") {
+  const status = text(value).toLowerCase();
+  return QUOTE_STATUSES.has(status) ? status : fallback;
+}
+
+function normalizeSupplierName(value) {
+  return text(value).replace(/\s+/g, " ").slice(0, 80);
+}
+
+function supplierDirectoryEntry(value) {
+  return DIRECTORY_SUPPLIERS.get(normalizeSupplierName(value).toLowerCase()) || null;
+}
+
+async function tableExists(env, table) {
+  try {
+    await env.DB.prepare(`SELECT 1 FROM ${table} LIMIT 1`).first();
+    return true;
+  } catch (error) {
+    if (/no such table/i.test(error.message || String(error))) return false;
+    throw error;
+  }
+}
+
+async function ensureSupplier(env, supplierName) {
+  const directory = supplierDirectoryEntry(supplierName);
+  const now = new Date().toISOString();
+  if (!(await tableExists(env, "suppliers"))) {
+    return {
+      id: directory?.id || `supplier_custom_${crypto.randomUUID()}`,
+      display_name: directory?.name || supplierName,
+      dashboard_access_token: "",
+    };
+  }
+
+  if (directory) {
+    await env.DB.prepare(
+      `INSERT INTO suppliers (id, display_name, dashboard_access_token, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET display_name = excluded.display_name, updated_at = excluded.updated_at`
+    )
+      .bind(directory.id, directory.name, randomToken(), now, now)
+      .run();
+    return env.DB.prepare("SELECT * FROM suppliers WHERE id = ?").bind(directory.id).first();
+  }
+
+  const existing = await env.DB.prepare("SELECT * FROM suppliers WHERE display_name = ? COLLATE NOCASE LIMIT 1")
+    .bind(supplierName)
+    .first();
+  if (existing) return existing;
+
+  const id = `supplier_custom_${crypto.randomUUID()}`;
+  const supplier = {
+    id,
+    display_name: supplierName,
+    dashboard_access_token: randomToken(),
+  };
+  await env.DB.prepare(
+    `INSERT INTO suppliers (id, display_name, dashboard_access_token, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)`
+  )
+    .bind(supplier.id, supplier.display_name, supplier.dashboard_access_token, now, now)
+    .run();
+  return supplier;
+}
+
+function normalizeQuantity(value, fallback = 1) {
+  const parsed = integer(value);
+  return parsed > 0 ? parsed : fallback;
+}
+
+function publicOrigin(requestUrl) {
+  try {
+    return new URL(requestUrl).origin;
+  } catch {
+    return "https://evline.com.ua";
+  }
+}
+
+function randomToken(bytes = 32) {
+  const values = new Uint8Array(bytes);
+  crypto.getRandomValues(values);
+  return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function assertUrlLike(value) {
+  const url = text(value);
+  if (!url) return "";
+  if (!/^https:\/\//i.test(url)) {
+    const error = new Error("image_url must start with https://");
+    error.status = 400;
+    throw error;
+  }
+  return url.slice(0, 1000);
+}
+
+function assertSupplierTextSafe(...values) {
+  const content = values.map(text).filter(Boolean).join("\n");
+  if (!content) return;
+  const patterns = [
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+    /(?:^|\s)@\w{4,}/,
+    /\b(?:telegram|телеграм|tg|phone|телефон|номер клиента)\b/i,
+    /\+[\d\s().-]{8,}\d/,
+    /\b(?:uah|грн|гривн|марж|нацен|прибыл|profit|внутренн|себестоим)\w*\b/i,
+  ];
+  if (patterns.some((pattern) => pattern.test(content))) {
+    const error = new Error("Текст поставщику содержит контактные или внутренние данные");
+    error.status = 400;
+    throw error;
+  }
+}
+
+async function assertSupplierTables(env) {
+  try {
+    await env.DB.prepare("SELECT id FROM supplier_requests LIMIT 1").first();
+  } catch (error) {
+    if (/no such table/i.test(error.message || String(error))) {
+      const migrationError = new Error("D1 migration 0011_supplier_portal.sql is required");
+      migrationError.status = 409;
+      throw migrationError;
+    }
+    throw error;
+  }
+}
+
+async function safeSelect(env, sql, ...binds) {
+  try {
+    const rows = await env.DB.prepare(sql).bind(...binds).all();
+    return rows.results || [];
+  } catch (error) {
+    if (/no such table/i.test(error.message || String(error))) return [];
+    throw error;
+  }
+}
+
+async function insertSupplierEvent(env, supplierRequest, payload = {}) {
+  const status = normalizeStatus(payload.status, supplierRequest.status);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO supplier_tracking_events (
+      id, supplier_request_id, order_id, supplier_id, status, tracking_number,
+      comment_cn, comment_translated, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      crypto.randomUUID(),
+      supplierRequest.id,
+      supplierRequest.order_id,
+      supplierRequest.supplier_id,
+      status,
+      text(payload.tracking_number),
+      text(payload.comment_cn),
+      text(payload.comment_translated),
+      now
+    )
+    .run();
+}
+
+async function syncSupplierTrackingToOrder(env, supplierRequest, payload = {}) {
+  const trackingNumber = text(payload.tracking_number).toUpperCase();
+  if (!trackingNumber) return { updated: false };
+
+  const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
+  if (!order) return { updated: false };
+  const now = new Date().toISOString();
+  const nextOrderStatus = ["china_warehouse"].includes(text(payload.status)) ? "china_warehouse" : "sourcing_china";
+
+  await env.DB.prepare(
+    `UPDATE orders SET
+      updated_at = ?,
+      tracking_number = CASE
+        WHEN COALESCE(NULLIF(tracking_number, ''), '') = '' OR UPPER(tracking_number) = ? THEN ?
+        ELSE tracking_number
+      END,
+      tracking_carrier = COALESCE(NULLIF(tracking_carrier, ''), ?),
+      tracking_url = COALESCE(NULLIF(tracking_url, ''), ?),
+      status = CASE
+        WHEN status IN ('new', 'accepted', 'proposal_sent', 'awaiting_payment', 'paid') THEN ?
+        ELSE status
+      END
+    WHERE id = ?`
+  )
+    .bind(
+      now,
+      trackingNumber,
+      trackingNumber,
+      "China domestic",
+      "",
+      nextOrderStatus,
+      supplierRequest.order_id
+    )
+    .run();
+
+  await insertStatusEvent(env, {
+    order_id: supplierRequest.order_id,
+    previous_status: order.status,
+    status: nextOrderStatus,
+    actor: "supplier",
+    comment: `Поставщик добавил китайский трек ${trackingNumber} для ${supplierRequest.public_number || supplierRequest.id}`,
+    notify_customer: false,
+    notification_status: "not_queued",
+  }).catch(() => null);
+
+  return { updated: true, tracking_number: trackingNumber };
+}
+
+function attachImages(quotes, images) {
+  const quoteImages = new Map();
+  for (const image of images) {
+    if (!image.quote_id) continue;
+    const rows = quoteImages.get(image.quote_id) || [];
+    rows.push(image);
+    quoteImages.set(image.quote_id, rows);
+  }
+  return quotes.map((quote) => ({
+    ...quote,
+    images: quoteImages.get(quote.id) || [],
+  }));
+}
+
+async function loadSupplierBundle(env, supplierRequest) {
+  if (!supplierRequest) return null;
+  const [quotes, images, trackingEvents] = await Promise.all([
+    safeSelect(env, "SELECT * FROM supplier_quotes WHERE supplier_request_id = ? ORDER BY created_at DESC", supplierRequest.id),
+    safeSelect(env, "SELECT * FROM supplier_request_images WHERE supplier_request_id = ? ORDER BY created_at ASC", supplierRequest.id),
+    safeSelect(env, "SELECT * FROM supplier_tracking_events WHERE supplier_request_id = ? ORDER BY created_at DESC", supplierRequest.id),
+  ]);
+  const supplier = (await tableExists(env, "suppliers"))
+    ? await env.DB.prepare("SELECT dashboard_access_token FROM suppliers WHERE id = ?").bind(supplierRequest.supplier_id).first()
+    : null;
+  const payment = await loadSupplierPaymentForRequest(env, supplierRequest);
+
+  return {
+    request: supplierRequest,
+    request_images: images.filter((image) => !image.quote_id),
+    quotes: attachImages(quotes, images),
+    tracking_events: trackingEvents,
+    payment,
+    supplier_link: `/supplier/request/${supplierRequest.access_token}`,
+    dashboard_link: supplier?.dashboard_access_token ? `/supplier/dashboard/${supplier.dashboard_access_token}` : "",
+  };
+}
+
+async function loadSupplierPaymentForRequest(env, supplierRequest) {
+  if (!supplierRequest || !(await tableExists(env, "supplier_payments"))) return null;
+  const hasSupplierRequestId = await tableHasColumn(env, "supplier_payments", "supplier_request_id");
+  const hasPaymentId = await tableHasColumn(env, "supplier_requests", "payment_id");
+  if (hasPaymentId && supplierRequest.payment_id) {
+    return env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?")
+      .bind(supplierRequest.payment_id)
+      .first();
+  }
+  if (hasSupplierRequestId) {
+    return env.DB.prepare(
+      `SELECT * FROM supplier_payments
+      WHERE supplier_request_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1`
+    )
+      .bind(supplierRequest.id)
+      .first();
+  }
+  return null;
+}
+
+function publicImage(image) {
+  return {
+    image_url: image.image_url,
+    image_type: image.image_type,
+    created_at: image.created_at,
+  };
+}
+
+function publicQuote(quote) {
+  return {
+    quote_type: quote.quote_type,
+    availability: quote.availability,
+    price_cny: quote.price_cny,
+    purchase_days: quote.purchase_days,
+    china_delivery_days: quote.china_delivery_days,
+    quantity: quote.quantity,
+    part_number: quote.part_number,
+    comment_cn: quote.comment_cn,
+    comment_translated: quote.comment_ru || quote.comment_translated,
+    status: quote.status,
+    created_at: quote.created_at,
+    updated_at: quote.updated_at,
+    images: (quote.images || []).map(publicImage),
+  };
+}
+
+function publicPayment(payment) {
+  if (!payment) return null;
+  return {
+    status: payment.status,
+    requested_amount: payment.requested_amount,
+    requested_currency: payment.requested_currency,
+    paid_at: payment.paid_at,
+    receipt_present: Boolean(payment.receipt_telegram_file_id || payment.receipt_message_id),
+    receipt_url: payment.receipt_telegram_file_id ? "payment-receipt" : "",
+  };
+}
+
+function publicEvent(event) {
+  return {
+    status: event.status,
+    tracking_number: event.tracking_number,
+    comment_cn: event.comment_cn,
+    comment_translated: event.comment_translated,
+    created_at: event.created_at,
+  };
+}
+
+export function publicSupplierBundle(bundle) {
+  if (!bundle) return null;
+  const request = bundle.request || {};
+  return {
+    request: {
+      public_number: request.public_number,
+      status: request.status,
+      supplier_name: request.supplier_name,
+      car: request.car,
+      vin: request.vin,
+      item_name: request.item_name,
+      quantity: request.quantity,
+      request_text: request.request_text_ru || request.request_text,
+      supplier_note: request.manager_comment,
+      created_at: request.created_at,
+      updated_at: request.updated_at,
+      sent_at: request.sent_at,
+      closed_at: request.closed_at,
+    },
+    request_images: (bundle.request_images || []).map(publicImage),
+    quotes: (bundle.quotes || []).map(publicQuote),
+    tracking_events: (bundle.tracking_events || []).map(publicEvent),
+    payment: publicPayment(bundle.payment),
+  };
+}
+
+function publicDashboardRequest(row) {
+  return {
+    public_number: row.public_number,
+    status: row.status,
+    supplier_name: row.supplier_name,
+    car: row.car,
+    vin: row.vin,
+    item_name: row.item_name,
+    quantity: row.quantity,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    supplier_link: `/supplier/request/${row.access_token}`,
+  };
+}
+
+export async function listSupplierRequests(env, orderId) {
+  const requests = await safeSelect(
+    env,
+    "SELECT * FROM supplier_requests WHERE order_id = ? ORDER BY created_at DESC",
+    orderId
+  );
+  const bundles = [];
+  for (const supplierRequest of requests) {
+    bundles.push(await loadSupplierBundle(env, supplierRequest));
+  }
+  return bundles.filter(Boolean);
+}
+
+export async function createSupplierRequest(env, orderId, payload = {}, options = {}) {
+  await assertSupplierTables(env);
+
+  const order = await loadOrder(env, orderId);
+  if (!order) {
+    const error = new Error("Order not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierName = normalizeSupplierName(payload.supplier_name);
+  if (!supplierName) {
+    const error = new Error("supplier_name is required");
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const token = randomToken();
+  const imageUrl = assertUrlLike(payload.image_url);
+  const supplier = await ensureSupplier(env, supplierName);
+  const requestTextRu = text(payload.request_text_ru ?? payload.request_text) || text(order.request_text);
+  const requestTextCn = text(payload.request_text_cn) || requestTextRu;
+  const managerComment = text(payload.manager_comment);
+  assertSupplierTextSafe(requestTextRu, requestTextCn, managerComment);
+  const supplierRequest = {
+    id: crypto.randomUUID(),
+    public_number: await nextPublicNumber(env, "supplier_request", "SR"),
+    order_id: orderId,
+    supplier_id: supplier.id,
+    supplier_name: supplier.display_name || supplierName,
+    access_token: token,
+    status: normalizeStatus(payload.status, "sent"),
+    car: text(payload.car) || text(order.car),
+    vin: (text(payload.vin) || text(order.vin)).toUpperCase(),
+    item_name: text(payload.item_name) || text(order.item_name) || text(order.service_name),
+    quantity: normalizeQuantity(payload.quantity, 1),
+    request_text: requestTextCn,
+    request_text_ru: requestTextRu,
+    request_text_cn: requestTextCn,
+    manager_comment: managerComment,
+    created_at: now,
+    updated_at: now,
+    sent_at: now,
+    closed_at: "",
+  };
+
+  await env.DB.prepare(
+    `INSERT INTO supplier_requests (
+      id, public_number, order_id, supplier_id, supplier_name, access_token, status,
+      car, vin, item_name, quantity, request_text, manager_comment,
+      created_at, updated_at, sent_at, closed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      supplierRequest.id,
+      supplierRequest.public_number,
+      supplierRequest.order_id,
+      supplierRequest.supplier_id,
+      supplierRequest.supplier_name,
+      supplierRequest.access_token,
+      supplierRequest.status,
+      supplierRequest.car,
+      supplierRequest.vin,
+      supplierRequest.item_name,
+      supplierRequest.quantity,
+      supplierRequest.request_text,
+      supplierRequest.manager_comment,
+      supplierRequest.created_at,
+      supplierRequest.updated_at,
+      supplierRequest.sent_at,
+      supplierRequest.closed_at
+    )
+    .run();
+
+  if (await tableHasColumn(env, "supplier_requests", "request_text_ru")) {
+    await env.DB.prepare(
+      `UPDATE supplier_requests
+      SET request_text_ru = ?, request_text_cn = ?
+      WHERE id = ?`
+    )
+      .bind(supplierRequest.request_text_ru, supplierRequest.request_text_cn, supplierRequest.id)
+      .run();
+  }
+
+  if (imageUrl) {
+    await env.DB.prepare(
+      `INSERT INTO supplier_request_images (
+        id, supplier_request_id, quote_id, image_url, image_type, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?)`
+    )
+      .bind(crypto.randomUUID(), supplierRequest.id, null, imageUrl, "request", now)
+      .run();
+  }
+
+  await insertStatusEvent(env, {
+    order_id: orderId,
+    previous_status: order.status,
+    status: order.status,
+    actor: "manager",
+    comment: `Створено запит постачальнику ${supplierName}: ${supplierRequest.public_number}`,
+    notify_customer: false,
+    notification_status: "not_queued",
+  });
+
+  const bundle = await loadSupplierBundle(env, supplierRequest);
+  const origin = options.origin || "https://evline.com.ua";
+  return {
+    ...bundle,
+    supplier_url: `${origin}/supplier/request/${token}`,
+    dashboard_url: supplier.dashboard_access_token ? `${origin}/supplier/dashboard/${supplier.dashboard_access_token}` : "",
+  };
+}
+
+export async function loadSupplierRequestByToken(env, token, options = {}) {
+  await assertSupplierTables(env);
+  const accessToken = text(token);
+  if (!accessToken) return null;
+
+  let supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE access_token = ?")
+    .bind(accessToken)
+    .first();
+
+  if (!supplierRequest) return null;
+
+  if (options.markViewed && ["sent", "draft"].includes(supplierRequest.status)) {
+    const now = new Date().toISOString();
+    await env.DB.prepare("UPDATE supplier_requests SET status = ?, updated_at = ? WHERE id = ?")
+      .bind("viewed", now, supplierRequest.id)
+      .run();
+    supplierRequest = { ...supplierRequest, status: "viewed", updated_at: now };
+  }
+
+  return loadSupplierBundle(env, supplierRequest);
+}
+
+export async function listSupplierDashboardByToken(env, token) {
+  await assertSupplierTables(env);
+  if (!(await tableExists(env, "suppliers"))) return null;
+  const dashboardToken = text(token);
+  if (!dashboardToken) return null;
+
+  const supplier = await env.DB.prepare("SELECT * FROM suppliers WHERE dashboard_access_token = ?")
+    .bind(dashboardToken)
+    .first();
+  if (!supplier) return null;
+
+  const rows = await safeSelect(
+    env,
+    `SELECT * FROM supplier_requests
+    WHERE supplier_id = ?
+      AND status NOT IN ('closed', 'canceled')
+    ORDER BY created_at DESC
+    LIMIT 80`,
+    supplier.id
+  );
+
+  return {
+    supplier: {
+      name: supplier.display_name,
+    },
+    requests: rows.map(publicDashboardRequest),
+  };
+}
+
+async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua") {
+  const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
+  const chatId = order ? managerChatIdForType(env, order.type) : text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+  const botToken = text(env.TELEGRAM_BOT_TOKEN);
+  if (!chatId || !botToken) return { skipped: true };
+
+  const origin = publicOrigin(requestUrl);
+  const lines = [
+    `Постачальник ${supplierRequest.supplier_name} дав відповідь`,
+    `Запит: ${supplierRequest.public_number || supplierRequest.id}`,
+    order ? `Замовлення: ${order.order_number || order.id}` : "",
+    supplierRequest.item_name ? `Позиція: ${supplierRequest.item_name}` : "",
+    supplierRequest.vin ? `VIN: ${supplierRequest.vin}` : "",
+    quote ? `Ціна: ${quote.price_cny || 0} CNY` : "",
+    quote ? `Наявність: ${quote.availability}` : "",
+    `Адмінка: ${origin}/admin/`,
+  ];
+
+  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: lines.filter(Boolean).join("\n"),
+      disable_web_page_preview: true,
+    }),
+  }).catch(() => null);
+
+  return { skipped: false };
+}
+
+export async function createSupplierQuoteByToken(env, token, payload = {}, options = {}) {
+  const bundle = await loadSupplierRequestByToken(env, token, { markViewed: false });
+  if (!bundle) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierRequest = bundle.request;
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (!PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request already has an accepted quote");
+    error.status = 400;
+    throw error;
+  }
+  const existingSelected = await env.DB.prepare(
+    "SELECT id FROM supplier_quotes WHERE supplier_request_id = ? AND status = 'selected' LIMIT 1"
+  )
+    .bind(supplierRequest.id)
+    .first();
+  if (existingSelected) {
+    const error = new Error("Supplier request already has a selected quote");
+    error.status = 400;
+    throw error;
+  }
+  const quoteCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_quotes WHERE supplier_request_id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  if (number(quoteCount?.count) >= MAX_PUBLIC_QUOTES_PER_REQUEST) {
+    const error = new Error("Supplier quote limit reached");
+    error.status = 429;
+    throw error;
+  }
+
+  const availability = normalizeAvailability(payload.availability);
+  const price = number(payload.price_cny);
+  if (availability !== "no_stock" && price <= 0) {
+    const error = new Error("price_cny is required");
+    error.status = 400;
+    throw error;
+  }
+  const imageUrl = assertUrlLike(payload.image_url);
+
+  const now = new Date().toISOString();
+  const quote = {
+    id: crypto.randomUUID(),
+    supplier_request_id: supplierRequest.id,
+    order_id: supplierRequest.order_id,
+    supplier_id: supplierRequest.supplier_id,
+    quote_type: normalizeQuoteType(payload.quote_type),
+    availability,
+    price_cny: availability === "no_stock" ? 0 : price,
+    purchase_days: Math.max(integer(payload.purchase_days), 0),
+    china_delivery_days: Math.max(integer(payload.china_delivery_days), 0),
+    quantity: normalizeQuantity(payload.quantity, supplierRequest.quantity || 1),
+    part_number: text(payload.part_number),
+    comment_cn: text(payload.comment_cn),
+    comment_translated: text(payload.comment_cn),
+    comment_ru: text(payload.comment_cn),
+    status: "new",
+    created_at: now,
+    updated_at: now,
+  };
+
+  await env.DB.prepare(
+    `INSERT INTO supplier_quotes (
+      id, supplier_request_id, order_id, supplier_id, quote_type, availability,
+      price_cny, purchase_days, china_delivery_days, quantity, part_number,
+      comment_cn, comment_translated, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      quote.id,
+      quote.supplier_request_id,
+      quote.order_id,
+      quote.supplier_id,
+      quote.quote_type,
+      quote.availability,
+      quote.price_cny,
+      quote.purchase_days,
+      quote.china_delivery_days,
+      quote.quantity,
+      quote.part_number,
+      quote.comment_cn,
+      quote.comment_translated,
+      quote.status,
+      quote.created_at,
+      quote.updated_at
+    )
+    .run();
+
+  if (await tableHasColumn(env, "supplier_quotes", "comment_ru")) {
+    await env.DB.prepare("UPDATE supplier_quotes SET comment_ru = ? WHERE id = ?")
+      .bind(quote.comment_ru, quote.id)
+      .run();
+  }
+
+  if (imageUrl) {
+    await env.DB.prepare(
+      `INSERT INTO supplier_request_images (
+        id, supplier_request_id, quote_id, image_url, image_type, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?)`
+    )
+      .bind(crypto.randomUUID(), supplierRequest.id, quote.id, imageUrl, "quote", now)
+      .run();
+  }
+
+  const nextStatus = availability === "no_stock" ? "no_stock" : "quoted";
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET status = CASE
+        WHEN status IN ('sent', 'viewed', 'quoted', 'needs_info', 'no_stock') THEN ?
+        ELSE status
+      END,
+      updated_at = CASE
+        WHEN status IN ('sent', 'viewed', 'quoted', 'needs_info', 'no_stock') THEN ?
+        ELSE updated_at
+      END
+    WHERE id = ?`
+  )
+    .bind(nextStatus, now, supplierRequest.id)
+    .run();
+  await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
+    status: nextStatus,
+    comment_cn: quote.comment_cn,
+    comment_translated: quote.comment_ru || quote.comment_translated,
+  });
+
+  await notifyManagerSupplierQuote(env, supplierRequest, quote, options.requestUrl).catch(() => null);
+
+  return loadSupplierRequestByToken(env, token, { markViewed: false });
+}
+
+export async function updateSupplierRequestByToken(env, token, payload = {}, options = {}) {
+  const bundle = await loadSupplierRequestByToken(env, token, { markViewed: false });
+  if (!bundle) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierRequest = bundle.request;
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+
+  const nextStatus = normalizeStatus(payload.status);
+  if (!SUPPLIER_EVENT_STATUSES.has(nextStatus)) {
+    const error = new Error("Unsupported supplier status");
+    error.status = 400;
+    throw error;
+  }
+  if (["needs_info", "no_stock"].includes(nextStatus) && !PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("This supplier action is no longer available after acceptance");
+    error.status = 400;
+    throw error;
+  }
+  if (LOGISTICS_STATUSES.has(nextStatus) && !LOGISTICS_SOURCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Logistics status is available only after manager accepts a quote");
+    error.status = 400;
+    throw error;
+  }
+  if (PAID_LOGISTICS_STATUSES.has(nextStatus) && bundle.payment?.status !== "paid") {
+    const error = new Error("Payment receipt is required before supplier tracking");
+    error.status = 400;
+    throw error;
+  }
+  if (
+    PAID_LOGISTICS_STATUSES.has(nextStatus) &&
+    (SUPPLIER_STATUS_PROGRESS[nextStatus] || 0) < (SUPPLIER_STATUS_PROGRESS[supplierRequest.status] || 0)
+  ) {
+    const error = new Error("Supplier logistics status cannot move backwards");
+    error.status = 400;
+    throw error;
+  }
+  if (["china_tracking", "china_warehouse"].includes(nextStatus)) {
+    const trackingNumber = text(payload.tracking_number).toUpperCase();
+    if (!trackingNumber) {
+      const error = new Error("Tracking number is required");
+      error.status = 400;
+      throw error;
+    }
+    const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
+    const currentTracking = text(order?.tracking_number).toUpperCase();
+    if (currentTracking && currentTracking !== trackingNumber) {
+      const error = new Error("CRM already has another tracking number");
+      error.status = 409;
+      throw error;
+    }
+  }
+  const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  if (number(eventCount?.count) >= MAX_PUBLIC_EVENTS_PER_REQUEST) {
+    const error = new Error("Supplier event limit reached");
+    error.status = 429;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET status = ?, updated_at = ?, closed_at = CASE WHEN ? IN ('closed') THEN ? ELSE closed_at END
+    WHERE id = ?`
+  )
+    .bind(nextStatus, now, nextStatus, now, supplierRequest.id)
+    .run();
+
+  await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
+    status: nextStatus,
+    tracking_number: text(payload.tracking_number),
+    comment_cn: text(payload.comment_cn),
+    comment_translated: text(payload.comment_cn),
+  });
+
+  if (["china_tracking", "china_warehouse"].includes(nextStatus)) {
+    await syncSupplierTrackingToOrder(env, { ...supplierRequest, status: nextStatus }, {
+      status: nextStatus,
+      tracking_number: payload.tracking_number,
+    });
+  }
+
+  if (["no_stock", "needs_info", "problem", "china_tracking", "china_warehouse", "purchased"].includes(nextStatus)) {
+    await notifyManagerSupplierQuote(env, { ...supplierRequest, status: nextStatus }, null, options.requestUrl).catch(() => null);
+  }
+
+  return loadSupplierRequestByToken(env, token, { markViewed: false });
+}
+
+export async function selectSupplierQuote(env, quoteId) {
+  await assertSupplierTables(env);
+
+  const quote = await env.DB.prepare("SELECT * FROM supplier_quotes WHERE id = ?")
+    .bind(text(quoteId))
+    .first();
+  if (!quote) {
+    const error = new Error("Supplier quote not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(quote.supplier_request_id)
+    .first();
+  if (!supplierRequest) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (quote.availability === "no_stock" || number(quote.price_cny) <= 0) {
+    const error = new Error("Cannot select quote without stock or price");
+    error.status = 400;
+    throw error;
+  }
+  if (quote.status === "selected") {
+    return {
+      request: await loadSupplierBundle(env, supplierRequest),
+      quote,
+    };
+  }
+  if (quote.status !== "new") {
+    const error = new Error("Only new supplier quotes can be selected");
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE supplier_quotes
+    SET status = CASE WHEN id = ? THEN 'selected' ELSE 'rejected' END,
+      updated_at = ?
+    WHERE supplier_request_id = ?`
+  )
+    .bind(quote.id, now, quote.supplier_request_id)
+    .run();
+
+  await env.DB.prepare("UPDATE supplier_requests SET status = ?, updated_at = ? WHERE id = ?")
+    .bind("accepted", now, supplierRequest.id)
+    .run();
+
+  if (await tableHasColumn(env, "supplier_requests", "selected_quote_id")) {
+    await env.DB.prepare("UPDATE supplier_requests SET selected_quote_id = ? WHERE id = ?")
+      .bind(quote.id, supplierRequest.id)
+      .run();
+  }
+
+  await insertSupplierEvent(env, { ...supplierRequest, status: "accepted" }, {
+    status: "accepted",
+    comment_translated: `Менеджер обрав пропозицію ${quote.price_cny || 0} CNY`,
+  });
+
+  const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
+  await insertStatusEvent(env, {
+    order_id: supplierRequest.order_id,
+    previous_status: order?.status || "",
+    status: order?.status || "proposal_sent",
+    actor: "manager",
+    comment: `Обрано пропозицію постачальника ${supplierRequest.supplier_name}: ${quote.price_cny || 0} CNY`,
+    notify_customer: false,
+    notification_status: "not_queued",
+  }).catch(() => null);
+
+  return {
+    request: await loadSupplierBundle(env, { ...supplierRequest, status: "accepted", updated_at: now }),
+    quote: { ...quote, status: "selected", updated_at: now },
+  };
+}
+
+export async function listChinaPreorders(env, options = {}) {
+  await assertSupplierTables(env);
+  const status = text(options.status || "active");
+  const q = text(options.q);
+  const limit = Math.min(Math.max(integer(options.limit) || 120, 1), 300);
+  const hasPaymentRequestId = await tableHasColumn(env, "supplier_payments", "supplier_request_id");
+  const clauses = [];
+  const binds = [];
+
+  if (status === "active") {
+    clauses.push("supplier_requests.status NOT IN ('closed', 'canceled')");
+  } else if (status === "purchased" && hasPaymentRequestId) {
+    clauses.push(`(
+      supplier_requests.status = ?
+      OR EXISTS (
+        SELECT 1
+        FROM supplier_payments
+        WHERE supplier_payments.supplier_request_id = supplier_requests.id
+          AND supplier_payments.status = 'paid'
+      )
+    )`);
+    binds.push(status);
+  } else if (status && status !== "all") {
+    clauses.push("supplier_requests.status = ?");
+    binds.push(status);
+  }
+  if (q) {
+    clauses.push(`(
+      supplier_requests.public_number LIKE ?
+      OR supplier_requests.supplier_name LIKE ?
+      OR supplier_requests.car LIKE ?
+      OR supplier_requests.vin LIKE ?
+      OR supplier_requests.item_name LIKE ?
+      OR orders.order_number LIKE ?
+      OR orders.customer_name LIKE ?
+      OR orders.customer_phone LIKE ?
+    )`);
+    binds.push(...Array(8).fill(`%${q}%`));
+  }
+
+  const rows = await safeSelect(
+    env,
+    `SELECT supplier_requests.*
+    FROM supplier_requests
+    LEFT JOIN orders ON orders.id = supplier_requests.order_id
+    ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+    ORDER BY supplier_requests.updated_at DESC, supplier_requests.created_at DESC
+    LIMIT ?`,
+    ...binds,
+    limit
+  );
+
+  const bundles = [];
+  for (const row of rows) {
+    const bundle = await loadSupplierBundle(env, row);
+    const order = await loadOrder(env, row.order_id).catch(() => null);
+    if (bundle) bundles.push({ ...bundle, order });
+  }
+  return bundles;
+}
+
+export async function sendSupplierRequestToPayment(env, supplierRequestId, payload = {}) {
+  await assertSupplierTables(env);
+  const supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(text(supplierRequestId))
+    .first();
+  if (!supplierRequest) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (payload.client_approved !== true) {
+    const error = new Error("Client approval is required before payment");
+    error.status = 400;
+    throw error;
+  }
+  const existingPayment = await loadSupplierPaymentForRequest(env, supplierRequest);
+  if (existingPayment && existingPayment.status !== "canceled") {
+    return {
+      payment: existingPayment,
+      request: await loadSupplierBundle(env, supplierRequest),
+    };
+  }
+
+  let quoteId = text(payload.quote_id || supplierRequest.selected_quote_id);
+  let selected = quoteId
+    ? await env.DB.prepare("SELECT * FROM supplier_quotes WHERE id = ? AND supplier_request_id = ?")
+      .bind(quoteId, supplierRequest.id)
+      .first()
+    : null;
+  if (!selected) {
+    selected = await env.DB.prepare(
+      `SELECT * FROM supplier_quotes
+      WHERE supplier_request_id = ? AND status = 'selected'
+      ORDER BY updated_at DESC
+      LIMIT 1`
+    )
+      .bind(supplierRequest.id)
+      .first();
+  }
+  if (!selected) {
+    selected = await env.DB.prepare(
+      `SELECT * FROM supplier_quotes
+      WHERE supplier_request_id = ? AND status = 'new' AND availability != 'no_stock' AND price_cny > 0
+      ORDER BY created_at DESC
+      LIMIT 1`
+    )
+      .bind(supplierRequest.id)
+      .first();
+  }
+  if (!selected) {
+    const error = new Error("Supplier quote is required before payment");
+    error.status = 400;
+    throw error;
+  }
+  const payment = await createSupplierPaymentRequest(env, supplierRequest.order_id, {
+    supplier_name: supplierRequest.supplier_name,
+    requested_amount: number(payload.requested_amount || selected.price_cny),
+    requested_currency: text(payload.requested_currency || "CNY"),
+    supplier_request_id: supplierRequest.id,
+    supplier_quote_id: selected.id,
+    notes: text(payload.notes) || [
+      `Предзаказ: ${supplierRequest.public_number || supplierRequest.id}`,
+      supplierRequest.item_name ? `Позиция: ${supplierRequest.item_name}` : "",
+      selected.purchase_days ? `Срок: ${selected.purchase_days} дн.` : "",
+      selected.comment_ru || selected.comment_translated || selected.comment_cn ? `Комментарий: ${selected.comment_ru || selected.comment_translated || selected.comment_cn}` : "",
+    ].filter(Boolean).join("\n"),
+  });
+
+  if (selected.status !== "selected") {
+    const result = await selectSupplierQuote(env, selected.id);
+    selected = result.quote;
+  }
+
+  const updated = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  return {
+    payment,
+    request: await loadSupplierBundle(env, updated || supplierRequest),
+  };
+}

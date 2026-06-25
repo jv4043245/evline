@@ -23,6 +23,10 @@ function orderSelect(options = {}) {
       ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_requested_amount, 0)" : "0"} AS supplier_payment_requested_amount,
       ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_paid_amount, 0)" : "0"} AS supplier_payment_paid_amount,
       ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_currency, 'CNY')" : "'CNY'"} AS supplier_payment_currency,
+      ${options.hasSupplierRequests ? "COALESCE(supplier_request_summary.supplier_request_count, 0)" : "0"} AS supplier_request_count,
+      ${options.hasSupplierRequests ? "COALESCE(supplier_request_summary.supplier_request_quoted_count, 0)" : "0"} AS supplier_request_quoted_count,
+      ${options.hasSupplierRequests ? "COALESCE(supplier_request_summary.supplier_request_accepted_count, 0)" : "0"} AS supplier_request_accepted_count,
+      ${options.hasSupplierRequests ? "COALESCE(supplier_request_summary.supplier_request_problem_count, 0)" : "0"} AS supplier_request_problem_count,
       (
         COALESCE(orders.revenue_uah, 0)
         - COALESCE(orders.purchase_cost_uah, 0)
@@ -50,6 +54,19 @@ function orderSelect(options = {}) {
         WHERE status != 'canceled'
         GROUP BY order_id
       ) supplier_summary ON supplier_summary.order_id = orders.id
+    ` : ""}
+    ${options.hasSupplierRequests ? `
+      LEFT JOIN (
+        SELECT
+          order_id,
+          COUNT(*) AS supplier_request_count,
+          SUM(CASE WHEN status IN ('quoted', 'accepted', 'purchased', 'china_tracking', 'china_warehouse') THEN 1 ELSE 0 END) AS supplier_request_quoted_count,
+          SUM(CASE WHEN status IN ('accepted', 'purchased', 'china_tracking', 'china_warehouse') THEN 1 ELSE 0 END) AS supplier_request_accepted_count,
+          SUM(CASE WHEN status IN ('needs_info', 'no_stock', 'problem') THEN 1 ELSE 0 END) AS supplier_request_problem_count
+        FROM supplier_requests
+        WHERE status NOT IN ('closed', 'canceled')
+        GROUP BY order_id
+      ) supplier_request_summary ON supplier_request_summary.order_id = orders.id
     ` : ""}
   `;
 }
@@ -135,6 +152,7 @@ export async function onRequestGet({ request, env }) {
     hasCustomerNumber: await tableHasColumn(env, "customers", "customer_number"),
     hasLeadNumber: await tableHasColumn(env, "leads", "lead_number"),
     hasSupplierPayments: await tableHasColumn(env, "supplier_payments", "id"),
+    hasSupplierRequests: await tableHasColumn(env, "supplier_requests", "id"),
   };
   const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
@@ -205,6 +223,10 @@ export async function onRequestGet({ request, env }) {
       "supplier_payment_requested_amount",
       "supplier_payment_paid_amount",
       "supplier_payment_currency",
+      "supplier_request_count",
+      "supplier_request_quoted_count",
+      "supplier_request_accepted_count",
+      "supplier_request_problem_count",
       "manager_notes",
     ];
     const body = [

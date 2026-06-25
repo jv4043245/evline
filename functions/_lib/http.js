@@ -42,7 +42,13 @@ export function csv(body, filename = "evline-export.csv") {
 export async function readPayload(request) {
   const type = request.headers.get("content-type") || "";
   if (type.includes("application/json")) {
-    return request.json();
+    try {
+      return await request.json();
+    } catch {
+      const error = new Error("Invalid JSON");
+      error.status = 400;
+      throw error;
+    }
   }
   if (type.includes("application/x-www-form-urlencoded") || type.includes("multipart/form-data")) {
     return Object.fromEntries(await request.formData());

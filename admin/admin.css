@@ -3,6 +3,10 @@
   background: #eef3f0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .admin-header {
   position: sticky;
   top: 0;
@@ -1347,6 +1351,325 @@ body.order-detail-open .order-detail {
   color: #b91c1c;
 }
 
+.supplier-requests {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.supplier-requests__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.supplier-requests__head strong,
+.supplier-requests__head span {
+  display: block;
+}
+
+.supplier-requests__head span,
+.supplier-request-card span,
+.supplier-quote-card__meta,
+.supplier-link-field {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.supplier-requests__create {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.supplier-requests__list {
+  display: grid;
+  gap: 12px;
+}
+
+.supplier-request-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.supplier-request-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.supplier-request-card__head,
+.supplier-quote-card__head,
+.supplier-request-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.supplier-request-card__head > div,
+.supplier-quote-card__head > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.supplier-request-card__body,
+.supplier-request-card__quotes {
+  display: grid;
+  gap: 10px;
+}
+
+.supplier-request-card__info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.supplier-request-card__info span,
+.supplier-link-field input {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.supplier-link-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.supplier-request-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 8px;
+}
+
+.supplier-request-images a {
+  display: block;
+  min-width: 0;
+}
+
+.supplier-request-images img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.supplier-request-status {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.supplier-request-status--quoted,
+.supplier-request-status--accepted,
+.supplier-request-status--purchased,
+.supplier-request-status--china_tracking,
+.supplier-request-status--china_warehouse {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.supplier-request-status--needs_info {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.supplier-request-status--no_stock,
+.supplier-request-status--problem,
+.supplier-request-status--canceled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.supplier-quote-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.supplier-quote-card--selected {
+  border-color: rgba(0, 168, 107, 0.28);
+  background: #f0fdf4;
+}
+
+.supplier-quote-card--rejected {
+  opacity: 0.64;
+}
+
+.supplier-quote-card__head b {
+  color: #1d4ed8;
+  font-size: 18px;
+}
+
+.supplier-quote-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.supplier-quote-card__meta span {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.supplier-quote-card p,
+.supplier-request-card__events p {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.supplier-quote-card__selected {
+  color: var(--green-dark);
+}
+
+.china-workbench {
+  display: grid;
+  gap: 14px;
+}
+
+.china-preorder-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.china-preorder-form__head {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 3px;
+}
+
+.china-preorder-form__head span,
+.china-preorder-card span,
+.china-preorder-card p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.china-preorders {
+  display: grid;
+  gap: 12px;
+}
+
+.china-preorder-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.china-preorder-card__head,
+.china-preorder-card__quote-line,
+.china-preorder-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.china-preorder-card__head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.china-preorder-card__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.china-preorder-card__grid > div,
+.china-preorder-card__text,
+.china-preorder-card__quote,
+.china-preorder-card__payment,
+.china-preorder-card__tracking {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.china-preorder-card__text p,
+.china-preorder-card__quote p {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.china-preorder-card__quote-line {
+  justify-content: flex-start;
+}
+
+.china-preorder-card__quote-line b {
+  color: #1d4ed8;
+  font-size: 17px;
+}
+
+.admin-link-button {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+}
+
+.supplier-request-card__events {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.supplier-request-card__events summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .tracking-sync-card {
   grid-column: 1 / -1;
   display: flex;
@@ -1666,6 +1989,8 @@ body.order-detail-open .order-detail {
   .cost-form,
   .shipping-form,
   .shipping-rate-block,
+  .supplier-requests__create,
+  .supplier-request-card__info,
   .supplier-payments__create,
   .supplier-payment-card__edit {
     grid-template-columns: 1fr;

@@ -8,6 +8,7 @@ import {
   queueOrderNotification,
 } from "../../../_lib/crm.js";
 import { listSupplierPayments } from "../../../_lib/supplier-payments.js";
+import { listSupplierRequests } from "../../../_lib/supplier-portal.js";
 import { queueGoogleAdsConversionsForStatus } from "../../../_lib/google-ads.js";
 
 function statusDates(status) {
@@ -51,6 +52,7 @@ export async function onRequestGet({ params, env }) {
     .all();
 
   const supplierPayments = await listSupplierPayments(env, params.id);
+  const supplierRequests = await listSupplierRequests(env, params.id);
 
   return json({
     order,
@@ -58,6 +60,7 @@ export async function onRequestGet({ params, env }) {
     notifications: notifications.results,
     tracking_events: trackingEvents.results,
     supplier_payments: supplierPayments,
+    supplier_requests: supplierRequests,
   });
 }
 
@@ -218,6 +221,7 @@ export async function onRequestPatch({ request, params, env }) {
     .all();
 
   const supplierPayments = await listSupplierPayments(env, params.id);
+  const supplierRequests = await listSupplierRequests(env, params.id);
 
   return json({
     ok: true,
@@ -229,6 +233,7 @@ export async function onRequestPatch({ request, params, env }) {
     notifications: notifications.results,
     tracking_events: trackingEvents.results,
     supplier_payments: supplierPayments,
+    supplier_requests: supplierRequests,
   });
 }
 
@@ -249,6 +254,10 @@ export async function onRequestDelete({ params, env }) {
 
   await safeDelete(env, "DELETE FROM google_ads_conversion_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_tracking_events WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM supplier_tracking_events WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id IN (SELECT id FROM supplier_requests WHERE order_id = ?)", params.id);
+  await safeDelete(env, "DELETE FROM supplier_quotes WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM supplier_requests WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM notification_queue WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_status_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_items WHERE order_id = ?", params.id);

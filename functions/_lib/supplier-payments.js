@@ -6,6 +6,7 @@ import {
   nextPublicNumber,
   queueOrderNotification,
   sendTelegramMessageDetailed,
+  tableHasColumn,
 } from "./crm.js";
 import { queueGoogleAdsConversionsForStatus } from "./google-ads.js";
 
@@ -153,8 +154,71 @@ async function advanceOrderStatus(env, orderId, targetStatus, {
   return { advanced: true, order: updated, event_id: eventId };
 }
 
+async function insertSupplierPayment(env, payment) {
+  const fields = [
+    ["id", payment.id],
+    ["payment_number", payment.payment_number],
+    ["created_at", payment.created_at],
+    ["updated_at", payment.updated_at],
+    ["order_id", payment.order_id],
+    ["status", payment.status],
+    ["supplier_name", payment.supplier_name],
+    ["requested_amount", payment.requested_amount],
+    ["requested_currency", payment.requested_currency],
+    ["paid_currency", payment.paid_currency],
+    ["request_chat_id", payment.request_chat_id],
+    ["request_message_id", payment.request_message_id],
+    ["request_text", payment.request_text],
+    ["notes", payment.notes],
+    ["requested_at", payment.requested_at],
+  ];
+
+  if (await tableHasColumn(env, "supplier_payments", "supplier_request_id")) {
+    fields.push(["supplier_request_id", payment.supplier_request_id]);
+  }
+  if (await tableHasColumn(env, "supplier_payments", "supplier_quote_id")) {
+    fields.push(["supplier_quote_id", payment.supplier_quote_id]);
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO supplier_payments (${fields.map(([name]) => name).join(", ")})
+    VALUES (${fields.map(() => "?").join(", ")})`
+  )
+    .bind(...fields.map(([, value]) => value))
+    .run();
+}
+
 function paymentChatId(env) {
-  return text(env.TELEGRAM_PAYMENTS_CHAT_ID || env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+  return text(env.TELEGRAM_PAYMENTS_CHAT_ID);
+}
+
+async function validateSupplierPaymentLinks(env, orderId, payment) {
+  if (payment.supplier_request_id && await tableHasColumn(env, "supplier_requests", "id")) {
+    const supplierRequest = await env.DB.prepare("SELECT id, order_id FROM supplier_requests WHERE id = ?")
+      .bind(payment.supplier_request_id)
+      .first();
+    if (!supplierRequest || supplierRequest.order_id !== orderId) {
+      const error = new Error("Supplier request does not belong to this order");
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  if (payment.supplier_quote_id && await tableHasColumn(env, "supplier_quotes", "id")) {
+    const supplierQuote = await env.DB.prepare("SELECT id, supplier_request_id, order_id FROM supplier_quotes WHERE id = ?")
+      .bind(payment.supplier_quote_id)
+      .first();
+    if (!supplierQuote || supplierQuote.order_id !== orderId) {
+      const error = new Error("Supplier quote does not belong to this order");
+      error.status = 400;
+      throw error;
+    }
+    if (payment.supplier_request_id && supplierQuote.supplier_request_id !== payment.supplier_request_id) {
+      const error = new Error("Supplier quote does not belong to this supplier request");
+      error.status = 400;
+      throw error;
+    }
+  }
 }
 
 async function telegramSendPhoto(env, chatId, photo, { caption = "", replyToMessageId = "" } = {}) {
@@ -297,7 +361,10 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     paid_currency: normalizeCurrency(payload.requested_currency),
     notes: text(payload.notes),
     requested_at: now,
+    supplier_request_id: text(payload.supplier_request_id),
+    supplier_quote_id: text(payload.supplier_quote_id),
   };
+  await validateSupplierPaymentLinks(env, orderId, payment);
   payment.request_text = buildPaymentRequestMessage(order, payment);
 
   try {
@@ -322,31 +389,15 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     }))
     : null;
 
-  await env.DB.prepare(
-    `INSERT INTO supplier_payments (
-      id, payment_number, created_at, updated_at, order_id, status, supplier_name,
-      requested_amount, requested_currency, paid_currency, request_chat_id,
-      request_message_id, request_text, notes, requested_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(
-      payment.id,
-      payment.payment_number,
-      payment.created_at,
-      payment.updated_at,
-      payment.order_id,
-      payment.status,
-      payment.supplier_name,
-      payment.requested_amount,
-      payment.requested_currency,
-      payment.paid_currency,
-      telegramResult.chat_id,
-      telegramResult.message_id,
-      payment.request_text,
-      payment.notes,
-      payment.requested_at
-    )
-    .run();
+  payment.request_chat_id = telegramResult.chat_id;
+  payment.request_message_id = telegramResult.message_id;
+  await insertSupplierPayment(env, payment);
+
+  if (payment.supplier_request_id && await tableHasColumn(env, "supplier_requests", "payment_id")) {
+    await env.DB.prepare("UPDATE supplier_requests SET payment_id = ?, updated_at = ? WHERE id = ?")
+      .bind(payment.id, now, payment.supplier_request_id)
+      .run();
+  }
 
   const statusAdvance = await advanceOrderStatus(env, orderId, "awaiting_payment", {
     actor: "system",
@@ -623,7 +674,8 @@ async function attachPaymentReceipt(env, payment, {
     ? (commissionAmount / requestedAmount) * 100
     : 0;
   const amountBelowRequest = parsedPaid > 0 && requestedAmount > 0 && parsedPaid < requestedAmount * 0.95;
-  const nextStatus = parsedPaid > 0 && !amountBelowRequest ? "paid" : "needs_review";
+  const matchedByReply = ["telegram_reply", "telegram_nested_reply"].includes(text(matchedBy));
+  const nextStatus = parsedPaid > 0 && !amountBelowRequest && matchedByReply ? "paid" : "needs_review";
 
   await env.DB.prepare(
     `UPDATE supplier_payments SET
@@ -637,7 +689,7 @@ async function attachPaymentReceipt(env, payment, {
       receipt_message_id = ?,
       receipt_telegram_file_id = COALESCE(NULLIF(?, ''), receipt_telegram_file_id),
       receipt_caption = COALESCE(NULLIF(?, ''), receipt_caption),
-      paid_at = CASE WHEN ? > 0 THEN ? ELSE paid_at END,
+      paid_at = CASE WHEN ? = 'paid' THEN ? ELSE paid_at END,
       matched_by = ?,
       match_confidence = ?
     WHERE id = ?`
@@ -656,7 +708,7 @@ async function attachPaymentReceipt(env, payment, {
       String(messageId || ""),
       fileId,
       caption,
-      parsedPaid,
+      nextStatus,
       now,
       matchedBy,
       matchConfidence,
@@ -669,6 +721,16 @@ async function attachPaymentReceipt(env, payment, {
   let statusAdvance = { advanced: false, event_id: "" };
 
   if (nextStatus === "paid") {
+    if (payment.supplier_request_id && await tableHasColumn(env, "supplier_requests", "payment_id")) {
+      await env.DB.prepare(
+        `UPDATE supplier_requests
+        SET payment_id = ?, status = CASE WHEN status IN ('accepted', 'purchased') THEN 'purchased' ELSE status END, updated_at = ?
+        WHERE id = ?`
+      )
+        .bind(payment.id, now, payment.supplier_request_id)
+        .run();
+    }
+
     statusAdvance = await advanceOrderStatus(env, payment.order_id, "paid", {
       actor: "telegram",
       comment: `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано${parsedPaid > 0 ? `: ${formatAmount(parsedPaid, currency)}` : ""}`,
@@ -752,7 +814,7 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     parsed.amount > 0 && paymentStatus === "paid"
       ? "✅ Оплату постачальнику зафіксовано."
       : parsed.amount > 0
-        ? "✅ Суму знайдено, оплату зафіксовано."
+        ? "🧾 Суму знайдено, скрин прив'язано. Потрібна перевірка: надсилайте скрин відповіддю на повідомлення потрібної оплати."
         : "🧾 Скрин оплати прив'язано, суму треба внести вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
