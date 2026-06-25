@@ -278,7 +278,7 @@ function setText(selector, value) {
 
 function setAuthVisible(visible) {
   const panel = document.querySelector("[data-auth-panel]");
-  if (panel) panel.hidden = !visible && adminToken();
+  if (panel) panel.hidden = !visible;
 }
 
 function setActiveTab(tab) {
@@ -1790,6 +1790,7 @@ document.querySelector("[data-token-form]")?.addEventListener("submit", (event) 
   event.preventDefault();
   const token = new FormData(event.currentTarget).get("token");
   if (token) localStorage.setItem("evline_admin_token", token);
+  setAuthVisible(false);
   refresh();
 });
 
@@ -2203,6 +2204,7 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
 });
 
 setActiveTab(state.activeTab);
+setAuthVisible(!adminToken());
 refresh();
 
 document.addEventListener("click", (event) => {
