@@ -16,14 +16,15 @@ const ORDER_PROGRESS = {
   new: 0,
   accepted: 1,
   proposal_sent: 2,
-  paid: 3,
-  sourcing_china: 4,
-  china_warehouse: 5,
-  left_china: 6,
-  in_ukraine: 7,
-  ready_for_pickup: 8,
-  completed: 9,
-  canceled: 9,
+  awaiting_payment: 3,
+  paid: 4,
+  sourcing_china: 5,
+  china_warehouse: 6,
+  left_china: 7,
+  in_ukraine: 8,
+  ready_for_pickup: 9,
+  completed: 10,
+  canceled: 10,
 };
 
 let meestStatusMapPromise = null;
