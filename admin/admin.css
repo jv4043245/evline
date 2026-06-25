@@ -1,6 +1,16 @@
 .admin-shell {
+  --china-accent: #2563eb;
+  --china-accent-dark: #1d4ed8;
+  --china-accent-soft: #eff6ff;
+  --china-border: #cfe0ff;
+  --china-surface: #f8fbff;
+  --china-surface-strong: #eef6ff;
   min-height: 100vh;
   background: #eef3f0;
+}
+
+.admin-shell[data-admin-tab="china"] {
+  background: #eef5f8;
 }
 
 [hidden] {
@@ -34,6 +44,33 @@
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-header {
+  border-bottom-color: var(--china-border);
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-header .admin-btn:not(:disabled):not([aria-busy="true"]):hover,
+.admin-shell[data-admin-tab="china"] .admin-header .admin-btn:not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: var(--china-accent-soft);
+  color: var(--china-accent-dark);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-header .admin-btn--primary {
+  border-color: var(--china-accent);
+  background: var(--china-accent);
+  color: #fff;
+}
+
+.admin-shell[data-admin-tab="china"] .admin-header .admin-btn--primary:not(:disabled):not([aria-busy="true"]):hover,
+.admin-shell[data-admin-tab="china"] .admin-header .admin-btn--primary:not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: var(--china-accent-dark);
+  background: var(--china-accent-dark);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(37, 99, 235, 0.2);
 }
 
 .admin-header__brand {
@@ -110,6 +147,30 @@
 .admin-tab[aria-selected="true"]:focus-visible {
   background: var(--green-dark);
   box-shadow: 0 8px 18px rgba(4, 120, 87, 0.18);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-tabs {
+  border-color: var(--china-border);
+  background: var(--china-surface);
+  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.06);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-tab[aria-selected="true"] {
+  background: var(--china-accent);
+  color: #fff;
+}
+
+.admin-shell[data-admin-tab="china"] .admin-tab:not([aria-selected="true"]):hover,
+.admin-shell[data-admin-tab="china"] .admin-tab:not([aria-selected="true"]):focus-visible {
+  background: var(--china-accent-soft);
+  color: var(--china-accent-dark);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+.admin-shell[data-admin-tab="china"] .admin-tab[aria-selected="true"]:hover,
+.admin-shell[data-admin-tab="china"] .admin-tab[aria-selected="true"]:focus-visible {
+  background: var(--china-accent-dark);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
 }
 
 .admin-tab:focus-visible,
@@ -1683,6 +1744,50 @@ body.order-detail-open .order-detail {
 .china-workbench {
   display: grid;
   gap: 14px;
+  border-color: var(--china-border);
+  background: var(--china-surface);
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.07);
+}
+
+.china-workbench .admin-panel__head {
+  border-bottom-color: var(--china-border);
+  background: var(--china-surface-strong);
+}
+
+.china-workbench .admin-panel__head h2 {
+  color: #172554;
+}
+
+.admin-view[data-admin-view="china"] .admin-btn:not(.admin-btn--danger):not(.admin-btn--subtle-danger):not(:disabled):not([aria-busy="true"]):hover,
+.admin-view[data-admin-view="china"] .admin-btn:not(.admin-btn--danger):not(.admin-btn--subtle-danger):not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: var(--china-accent-soft);
+  color: var(--china-accent-dark);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
+}
+
+.admin-view[data-admin-view="china"] .admin-btn--primary {
+  border-color: var(--china-accent);
+  background: var(--china-accent);
+  color: #fff;
+}
+
+.admin-view[data-admin-view="china"] .admin-btn--primary:not(:disabled):not([aria-busy="true"]):hover,
+.admin-view[data-admin-view="china"] .admin-btn--primary:not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: var(--china-accent-dark);
+  background: var(--china-accent-dark);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(37, 99, 235, 0.2);
+}
+
+.admin-view[data-admin-view="china"] .admin-btn:focus-visible,
+.admin-view[data-admin-view="china"] .admin-link-button:focus-visible {
+  outline-color: rgba(37, 99, 235, 0.18);
+}
+
+.admin-view[data-admin-view="china"] .admin-link-button:hover,
+.admin-view[data-admin-view="china"] .admin-link-button:focus-visible {
+  color: var(--china-accent-dark);
 }
 
 .china-preorder-form {
@@ -1691,9 +1796,10 @@ body.order-detail-open .order-detail {
   gap: 12px;
   align-items: start;
   padding: 14px;
-  border: 1px solid #f2d5dc;
+  border: 1px solid var(--china-border);
+  border-left: 4px solid var(--china-accent);
   border-radius: 8px;
-  background: #fff7f8;
+  background: #fff;
 }
 
 .china-preorder-form__head {
@@ -1759,24 +1865,24 @@ body.order-detail-open .order-detail {
   justify-content: center;
   gap: 0;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--china-border);
   border-radius: 6px;
   background: #fff;
-  color: var(--green-dark);
+  color: var(--china-accent-dark);
   cursor: pointer;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .china-upload-button:hover,
 .china-upload-button:focus-within {
-  border-color: var(--green);
-  background: #f7fbf8;
-  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  border-color: var(--china-accent);
+  background: var(--china-accent-soft);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
   transform: translateY(-1px);
 }
 
 .china-upload-button:focus-within {
-  outline: 3px solid rgba(0, 168, 107, 0.18);
+  outline: 3px solid rgba(37, 99, 235, 0.18);
   outline-offset: 2px;
 }
 
@@ -1797,7 +1903,7 @@ body.order-detail-open .order-detail {
   align-items: center;
   max-width: 680px;
   padding: 8px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--china-border);
   border-radius: 6px;
   background: #fff;
 }
@@ -1858,7 +1964,7 @@ body.order-detail-open .order-detail {
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--china-border);
   border-radius: 8px;
   background: #fff;
 }
@@ -1894,7 +2000,7 @@ body.order-detail-open .order-detail {
   min-width: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--china-surface);
 }
 
 .china-preorder-card__text p,

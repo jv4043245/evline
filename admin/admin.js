@@ -316,6 +316,7 @@ function setActiveTab(tab) {
   const nextTab = adminTabs.has(tab) ? tab : "orders";
   state.activeTab = nextTab;
   localStorage.setItem("evline_admin_tab", nextTab);
+  document.body.dataset.adminTab = nextTab;
 
   document.querySelectorAll("[data-admin-tab]").forEach((button) => {
     const isActive = button.dataset.adminTab === nextTab;
