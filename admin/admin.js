@@ -2205,7 +2205,12 @@ function renderChinaPhotoPreview(form, dataUrl, fileName = "") {
   preview.innerHTML = `
     <img src="${escapeHtml(dataUrl)}" alt="Фото детали">
     <span>${escapeHtml(fileName || "Фото добавлено")}</span>
-    <button class="admin-btn admin-btn--small" type="button" data-china-photo-remove>Удалить фото</button>
+    <button class="admin-btn admin-btn--icon admin-btn--subtle-danger china-photo-remove" type="button" data-china-photo-remove aria-label="Удалить фото" title="Удалить фото">
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M18 6 6 18"></path>
+        <path d="m6 6 12 12"></path>
+      </svg>
+    </button>
   `;
 }
 

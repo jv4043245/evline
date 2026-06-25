@@ -90,11 +90,33 @@
   color: var(--muted);
   font-weight: 900;
   cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .admin-tab[aria-selected="true"] {
   background: var(--green);
   color: #fff;
+}
+
+.admin-tab:not([aria-selected="true"]):hover,
+.admin-tab:not([aria-selected="true"]):focus-visible {
+  background: #f7fbf8;
+  color: var(--green-dark);
+  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  transform: translateY(-1px);
+}
+
+.admin-tab[aria-selected="true"]:hover,
+.admin-tab[aria-selected="true"]:focus-visible {
+  background: var(--green-dark);
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.18);
+}
+
+.admin-tab:focus-visible,
+.admin-btn:focus-visible,
+.ghost:focus-visible {
+  outline: 3px solid rgba(0, 168, 107, 0.18);
+  outline-offset: 2px;
 }
 
 .admin-view[hidden] {
@@ -187,6 +209,7 @@
   text-decoration: none;
   font-weight: 800;
   cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
 }
 
 .admin-btn--primary {
@@ -195,15 +218,35 @@
   color: #fff;
 }
 
+.admin-btn:not(:disabled):not([aria-busy="true"]):hover,
+.admin-btn:not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: rgba(0, 168, 107, 0.45);
+  background: #f7fbf8;
+  color: var(--green-dark);
+  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  transform: translateY(-1px);
+}
+
+.admin-btn--primary:not(:disabled):not([aria-busy="true"]):hover,
+.admin-btn--primary:not(:disabled):not([aria-busy="true"]):focus-visible {
+  border-color: var(--green-dark);
+  background: var(--green-dark);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(4, 120, 87, 0.2);
+}
+
 .admin-btn--danger {
   border-color: #fecaca;
   background: #fff5f5;
   color: #b91c1c;
 }
 
-.admin-btn--danger:hover {
+.admin-btn--danger:not(:disabled):not([aria-busy="true"]):hover,
+.admin-btn--danger:not(:disabled):not([aria-busy="true"]):focus-visible {
   border-color: #ef4444;
   background: #fee2e2;
+  color: #991b1b;
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.12);
 }
 
 .admin-btn--icon {
@@ -211,6 +254,17 @@
   min-width: 38px;
   padding: 0;
   font-size: 16px;
+}
+
+.admin-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
 
 .admin-btn--subtle-danger {
@@ -224,6 +278,8 @@
 .admin-btn--subtle-danger:focus-visible {
   border-color: #ef4444;
   background: #fff5f5;
+  color: #991b1b;
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.12);
   opacity: 1;
 }
 
@@ -232,11 +288,41 @@
   cursor: wait;
 }
 
+.admin-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .admin-btn--small {
   min-height: 30px;
   margin-top: 8px;
   padding: 0 10px;
   font-size: 12px;
+}
+
+.ghost {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--green-dark);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.ghost:hover,
+.ghost:focus-visible {
+  border-color: rgba(0, 168, 107, 0.45);
+  background: #f7fbf8;
+  color: var(--green-dark);
+  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  transform: translateY(-1px);
 }
 
 .source-badge,
@@ -1077,12 +1163,33 @@ body.order-detail-open .order-detail {
   font-weight: 900;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .order-editor__tab.is-active {
   border-color: rgba(0, 168, 107, 0.3);
   background: #eaf8ef;
   color: var(--green-dark);
+}
+
+.order-editor__tab:not(.is-active):hover,
+.order-editor__tab:not(.is-active):focus-visible {
+  border-color: rgba(0, 168, 107, 0.35);
+  background: #f7fbf8;
+  color: var(--green-dark);
+  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  transform: translateY(-1px);
+}
+
+.order-editor__tab.is-active:hover,
+.order-editor__tab.is-active:focus-visible {
+  background: #dff4e8;
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.12);
+}
+
+.order-editor__tab:focus-visible {
+  outline: 3px solid rgba(0, 168, 107, 0.18);
+  outline-offset: 2px;
 }
 
 .order-editor__pane {
@@ -1657,12 +1764,20 @@ body.order-detail-open .order-detail {
   background: #fff;
   color: var(--green-dark);
   cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .china-upload-button:hover,
 .china-upload-button:focus-within {
   border-color: var(--green);
   background: #f7fbf8;
+  box-shadow: 0 8px 18px rgba(10, 31, 24, 0.08);
+  transform: translateY(-1px);
+}
+
+.china-upload-button:focus-within {
+  outline: 3px solid rgba(0, 168, 107, 0.18);
+  outline-offset: 2px;
 }
 
 .china-upload-button svg {
@@ -1705,6 +1820,20 @@ body.order-detail-open .order-detail {
   min-height: 32px;
   margin-top: 0;
   white-space: nowrap;
+}
+
+.china-photo-remove {
+  width: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  align-self: center;
+  border-radius: 6px;
+  opacity: 0.72;
+}
+
+.china-photo-remove:hover,
+.china-photo-remove:focus-visible {
+  opacity: 1;
 }
 
 .china-preorder-form__actions {
@@ -1794,6 +1923,20 @@ body.order-detail-open .order-detail {
   font: inherit;
   font-weight: 900;
   text-align: left;
+  text-underline-offset: 3px;
+  transition: color 0.16s ease, text-decoration-color 0.16s ease;
+}
+
+.admin-link-button:hover,
+.admin-link-button:focus-visible {
+  color: var(--green-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.admin-link-button:focus-visible {
+  outline: 3px solid rgba(0, 168, 107, 0.18);
+  outline-offset: 2px;
 }
 
 .supplier-request-card__events {
@@ -2160,6 +2303,11 @@ body.order-detail-open .order-detail {
 
   .china-photo-preview .admin-btn--small {
     grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .china-photo-remove {
+    grid-column: 2;
     justify-self: start;
   }
 
