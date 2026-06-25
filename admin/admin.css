@@ -7,6 +7,20 @@
   display: none !important;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .admin-header {
   position: sticky;
   top: 0;
@@ -1589,7 +1603,8 @@ body.order-detail-open .order-detail {
   font-size: 13px;
 }
 
-.china-preorder-form label {
+.china-preorder-form label,
+.china-photo-field {
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -1602,13 +1617,62 @@ body.order-detail-open .order-detail {
   grid-column: 1 / -1;
 }
 
+.china-photo-field.wide {
+  grid-column: 1 / -1;
+}
+
 .china-preorder-form textarea {
   resize: vertical;
 }
 
-.china-photo-field input[type="file"] {
-  min-height: auto;
-  padding: 8px;
+.china-field-label {
+  color: var(--muted);
+}
+
+.china-photo-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.china-photo-control .muted {
+  min-width: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.china-upload-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--green-dark);
+  cursor: pointer;
+}
+
+.china-upload-button:hover,
+.china-upload-button:focus-within {
+  border-color: var(--green);
+  background: #f7fbf8;
+}
+
+.china-upload-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .china-photo-preview {
@@ -2084,6 +2148,10 @@ body.order-detail-open .order-detail {
 
   .china-photo-preview {
     grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .china-photo-control {
+    align-items: flex-start;
   }
 
   .china-photo-preview img {

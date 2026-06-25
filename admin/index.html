@@ -279,13 +279,22 @@
               Количество
               <input name="quantity" type="number" min="1" step="1" value="1">
             </label>
-            <label class="wide china-photo-field">
-              Фото
-              <input name="image_file" type="file" accept="image/*" data-china-photo-input>
+            <div class="wide china-photo-field">
+              <span class="china-field-label">Фото</span>
+              <div class="china-photo-control">
+                <label class="china-upload-button" title="Загрузить фото" aria-label="Загрузить фото">
+                  <input class="visually-hidden" name="image_file" type="file" accept="image/*" data-china-photo-input>
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <path d="M17 8l-5-5-5 5"></path>
+                    <path d="M12 3v12"></path>
+                  </svg>
+                </label>
+                <span class="muted">Загрузите фото детали с компьютера. Позже подключим Google Drive как постоянное хранилище.</span>
+              </div>
               <input name="image_url" type="hidden" data-china-photo-data>
-              <span class="muted">Можно загрузить фото детали с компьютера. Позже подключим Google Drive как постоянное хранилище.</span>
               <div class="china-photo-preview" data-china-photo-preview hidden></div>
-            </label>
+            </div>
             <label class="wide">
               Текст для поставщика
               <textarea name="request_text" rows="4" placeholder="Пока пишем по-русски для согласования интерфейса. Без контактов клиента, цен клиента и внутренней маржи."></textarea>
