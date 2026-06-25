@@ -1,5 +1,13 @@
 import { number, text } from "./http.js";
-import { loadOrder, nextPublicNumber, sendTelegramMessageDetailed } from "./crm.js";
+import {
+  buildCustomerMessage,
+  insertStatusEvent,
+  loadOrder,
+  nextPublicNumber,
+  queueOrderNotification,
+  sendTelegramMessageDetailed,
+} from "./crm.js";
+import { queueGoogleAdsConversionsForStatus } from "./google-ads.js";
 
 const PAYMENT_OCR_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
@@ -23,6 +31,20 @@ const SUPPLIER_PAYMENT_QR_IMAGES = [
   },
 ];
 
+const ORDER_STATUS_RANK = {
+  new: 0,
+  accepted: 1,
+  proposal_sent: 2,
+  paid: 3,
+  sourcing_china: 4,
+  china_warehouse: 5,
+  left_china: 6,
+  in_ukraine: 7,
+  ready_for_pickup: 8,
+  completed: 9,
+  canceled: 9,
+};
+
 function normalizeCurrency(value, fallback = "CNY") {
   const currency = text(value).toUpperCase();
   return currency || fallback;
@@ -42,6 +64,92 @@ function supplierPaymentQrImage(supplierName) {
   return SUPPLIER_PAYMENT_QR_IMAGES.find((item) =>
     item.aliases.some((alias) => key.includes(alias))
   ) || null;
+}
+
+function canAdvanceOrderStatus(currentStatus, targetStatus) {
+  const current = text(currentStatus) || "new";
+  const target = text(targetStatus);
+  if (!target || current === "completed" || current === "canceled") return false;
+  return (ORDER_STATUS_RANK[target] ?? -1) > (ORDER_STATUS_RANK[current] ?? -1);
+}
+
+function autoStatusDates(status, now) {
+  return {
+    paid: { paid_at: now },
+    sourcing_china: { ordered_at: now },
+    ready_for_pickup: { delivered_at: now },
+    completed: { completed_at: now },
+    canceled: { canceled_at: now },
+  }[status] || {};
+}
+
+async function advanceOrderStatus(env, orderId, targetStatus, {
+  actor = "system",
+  comment = "",
+  notifyCustomer = false,
+  customerMessage = "",
+} = {}) {
+  const current = await loadOrder(env, orderId).catch(() => null);
+  if (!current || !canAdvanceOrderStatus(current.status, targetStatus)) {
+    return { advanced: false, order: current, event_id: "" };
+  }
+
+  const now = new Date().toISOString();
+  const dates = autoStatusDates(targetStatus, now);
+  await env.DB.prepare(
+    `UPDATE orders SET
+      updated_at = ?,
+      status = ?,
+      paid_at = COALESCE(NULLIF(?, ''), paid_at),
+      ordered_at = COALESCE(NULLIF(?, ''), ordered_at),
+      delivered_at = COALESCE(NULLIF(?, ''), delivered_at),
+      completed_at = COALESCE(NULLIF(?, ''), completed_at),
+      canceled_at = COALESCE(NULLIF(?, ''), canceled_at)
+    WHERE id = ?`
+  )
+    .bind(
+      now,
+      targetStatus,
+      text(dates.paid_at || ""),
+      text(dates.ordered_at || ""),
+      text(dates.delivered_at || ""),
+      text(dates.completed_at || ""),
+      text(dates.canceled_at || ""),
+      orderId
+    )
+    .run();
+
+  const updated = await loadOrder(env, orderId);
+  await queueGoogleAdsConversionsForStatus(env, updated, targetStatus).catch((error) => {
+    console.error("Failed to queue Google Ads conversion for auto status", error);
+  });
+
+  const shouldNotify = Boolean(notifyCustomer);
+  const eventId = await insertStatusEvent(env, {
+    order_id: orderId,
+    previous_status: current.status,
+    status: targetStatus,
+    actor,
+    comment,
+    notify_customer: shouldNotify,
+    notification_status: shouldNotify ? "queued" : "not_queued",
+  });
+
+  if (shouldNotify) {
+    try {
+      const message = customerMessage || await buildCustomerMessage(env, updated, targetStatus);
+      await queueOrderNotification(env, {
+        order: updated,
+        eventId,
+        status: targetStatus,
+        message,
+      });
+    } catch (error) {
+      console.error("Failed to queue customer notification for auto status", error);
+    }
+  }
+
+  return { advanced: true, order: updated, event_id: eventId };
 }
 
 function paymentChatId(env) {
@@ -239,6 +347,12 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     )
     .run();
 
+  const statusAdvance = await advanceOrderStatus(env, orderId, "accepted", {
+    actor: "system",
+    comment: `Сформовано запит на оплату постачальнику ${payment.supplier_name || "без назви"}: ${formatAmount(payment.requested_amount, payment.requested_currency)}`,
+    notifyCustomer: false,
+  });
+
   return {
     ...payment,
     request_chat_id: telegramResult.chat_id,
@@ -247,6 +361,8 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
     qr_photo_sent: Boolean(qrTelegramResult?.message_id),
     qr_photo_message_id: qrTelegramResult?.message_id || "",
     qr_photo_error: qrTelegramResult?.error || "",
+    order_status_advanced: statusAdvance.advanced,
+    order_status_event_id: statusAdvance.event_id,
   };
 }
 
@@ -302,7 +418,17 @@ export async function updateSupplierPayment(env, paymentId, payload = {}) {
     )
     .run();
 
-  return env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(paymentId).first();
+  const updated = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(paymentId).first();
+
+  if (updated?.status === "paid") {
+    await advanceOrderStatus(env, updated.order_id, "sourcing_china", {
+      actor: "manager",
+      comment: `Оплату постачальнику ${updated.supplier_name || "без назви"} позначено як оплачену в CRM${number(updated.paid_amount) > 0 ? `: ${formatAmount(updated.paid_amount, updated.paid_currency)}` : ""}`,
+      notifyCustomer: true,
+    });
+  }
+
+  return updated;
 }
 
 function telegramFileId(message = {}) {
@@ -538,8 +664,19 @@ async function attachPaymentReceipt(env, payment, {
     .run();
 
   const updated = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(payment.id).first();
-  const order = await loadOrder(env, payment.order_id).catch(() => null);
-  return { payment: updated, order };
+  let order = await loadOrder(env, payment.order_id).catch(() => null);
+  let statusAdvance = { advanced: false, event_id: "" };
+
+  if (nextStatus === "paid") {
+    statusAdvance = await advanceOrderStatus(env, payment.order_id, "sourcing_china", {
+      actor: "telegram",
+      comment: `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано${parsedPaid > 0 ? `: ${formatAmount(parsedPaid, currency)}` : ""}`,
+      notifyCustomer: true,
+    });
+    order = statusAdvance.order || order;
+  }
+
+  return { payment: updated, order, order_status_advanced: statusAdvance.advanced, order_status_event_id: statusAdvance.event_id };
 }
 
 export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
