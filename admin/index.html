@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260624-manual-order-create">
+    <link rel="stylesheet" href="/admin/admin.css?v=20260625-auth-compact">
     <script src="/admin/admin.js?v=20260624-manual-order-create" defer></script>
   </head>
   <body class="admin-shell">
@@ -35,15 +35,13 @@
     </header>
 
     <main class="admin-main">
-      <section class="auth-panel" data-auth-panel>
+      <section class="auth-panel auth-panel--compact" data-auth-panel>
         <div>
           <h1>Доступ до адмінки</h1>
-          <p>У продакшені `/admin` краще закрити Cloudflare Access. Для локальної розробки можна ввести `ADMIN_TOKEN`, якщо він налаштований.</p>
         </div>
         <form data-token-form>
           <input type="password" name="token" placeholder="Admin token">
           <button class="admin-btn admin-btn--primary" type="submit">Зберегти токен</button>
-          <button class="admin-btn" type="button" data-clear-token>Очистити</button>
         </form>
       </section>
 

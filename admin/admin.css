@@ -100,9 +100,21 @@
   padding: 18px;
 }
 
+.auth-panel--compact {
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  box-shadow: none;
+}
+
 .auth-panel h1 {
   margin: 0 0 6px;
   font-size: 22px;
+}
+
+.auth-panel--compact h1 {
+  margin: 0;
+  font-size: 18px;
 }
 
 .auth-panel p {
