@@ -1037,8 +1037,8 @@ function renderChinaPreorders() {
             <span>Заказ CRM</span>
             <button class="admin-link-button" type="button" data-open-order="${escapeHtml(request.order_id)}">${escapeHtml(order.order_number || request.order_id || "-")}</button>
           </div>
-          <div><span>Клиент</span><strong>${escapeHtml(order.customer_name || "-")}</strong></div>
           <div><span>Авто</span><strong>${escapeHtml(request.car || order.car || "-")}</strong></div>
+          <div><span>Год</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
           <div><span>VIN</span><strong class="orders-table__mono">${escapeHtml(request.vin || order.vin || "-")}</strong></div>
           <div class="wide"><span>Деталь</span><strong>${escapeHtml(request.item_name || order.item_name || "-")}</strong></div>
           <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
@@ -1165,6 +1165,10 @@ function renderSupplierRequests(order) {
           <input data-supplier-request-input="item_name" value="${escapeHtml(order.item_name || order.service_name || "")}" placeholder="що шукаємо">
         </label>
         <label>
+          Рік
+          <input data-supplier-request-input="car_year" inputmode="numeric" maxlength="4" placeholder="2023">
+        </label>
+        <label>
           Кількість
           <input data-supplier-request-input="quantity" type="number" min="1" step="1" value="1">
         </label>
@@ -1177,11 +1181,11 @@ function renderSupplierRequests(order) {
           <textarea data-supplier-request-input="request_text" rows="3" placeholder="Китайською або простим текстом без імені клієнта, телефону, адреси, маржі чи внутрішніх фінансів"></textarea>
         </label>
         <label class="wide">
-          Коментар EVLine
-          <textarea data-supplier-request-input="manager_comment" rows="2" placeholder="сторона, колір, рік, комплектація, OEM номер, нова/б/у, пакування"></textarea>
+          Уточнення для постачальника
+          <textarea data-supplier-request-input="manager_comment" rows="2" placeholder="сторона, колір, комплектація, OEM номер, нова/б/у, пакування"></textarea>
         </label>
         <p class="supplier-request-warning wide">
-          Перед копіюванням посилання перевірте: VIN підтверджено, фото/сторона/колір/рік вказані, у тексті немає контактів клієнта або внутрішніх сум EVLine.
+          Перед копіюванням посилання перевірте: VIN підтверджено, фото/сторона/колір вказані, у тексті немає контактів клієнта або внутрішніх сум EVLine.
         </p>
         <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-request="${escapeHtml(order.id)}">
           Створити запит і посилання
@@ -2240,9 +2244,8 @@ function chinaPreorderPayload(form) {
   return {
     order_id: plainText(payload.order_id),
     supplier_name: supplierName,
-    customer_name: plainText(payload.customer_name),
-    customer_phone: plainText(payload.customer_phone),
     car: plainText(payload.car),
+    car_year: plainText(payload.car_year).replace(/[^\d]/g, "").slice(0, 4),
     vin: plainText(payload.vin).toUpperCase(),
     item_name: plainText(payload.item_name),
     quantity: plainText(payload.quantity) || "1",
@@ -2262,8 +2265,6 @@ async function createChinaPreorder(payload) {
         source: "manual",
         medium: "china-preorder",
         campaign: "manual-china-preorder",
-        customer_name: payload.customer_name,
-        customer_phone: payload.customer_phone,
         car: payload.car,
         vin: payload.vin,
         item_name: payload.item_name,
@@ -2280,6 +2281,7 @@ async function createChinaPreorder(payload) {
     body: JSON.stringify({
       supplier_name: payload.supplier_name,
       car: payload.car,
+      car_year: payload.car_year,
       vin: payload.vin,
       item_name: payload.item_name,
       quantity: payload.quantity,
@@ -2295,6 +2297,7 @@ function collectSupplierRequestCreatePayload(form) {
   return {
     supplier_name: supplierChoice === "__custom__" ? value("supplier_name_custom") : supplierChoice,
     item_name: value("item_name"),
+    car_year: value("car_year").replace(/[^\d]/g, "").slice(0, 4),
     quantity: value("quantity") || "1",
     image_url: value("image_url"),
     request_text: value("request_text"),

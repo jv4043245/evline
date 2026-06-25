@@ -83,6 +83,11 @@ function normalizeSupplierName(value) {
   return text(value).replace(/\s+/g, " ").slice(0, 80);
 }
 
+function normalizeCarYear(value) {
+  const digits = text(value).replace(/\D/g, "").slice(0, 4);
+  return digits.length === 4 ? digits : "";
+}
+
 function supplierDirectoryEntry(value) {
   return DIRECTORY_SUPPLIERS.get(normalizeSupplierName(value).toLowerCase()) || null;
 }
@@ -404,6 +409,7 @@ export function publicSupplierBundle(bundle) {
       status: request.status,
       supplier_name: request.supplier_name,
       car: request.car,
+      car_year: request.car_year,
       vin: request.vin,
       item_name: request.item_name,
       quantity: request.quantity,
@@ -427,6 +433,7 @@ function publicDashboardRequest(row) {
     status: row.status,
     supplier_name: row.supplier_name,
     car: row.car,
+    car_year: row.car_year,
     vin: row.vin,
     item_name: row.item_name,
     quantity: row.quantity,
@@ -473,6 +480,7 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
   const requestTextRu = text(payload.request_text_ru ?? payload.request_text) || text(order.request_text);
   const requestTextCn = text(payload.request_text_cn) || requestTextRu;
   const managerComment = text(payload.manager_comment);
+  const carYear = normalizeCarYear(payload.car_year) || normalizeCarYear(order.car_year);
   assertSupplierTextSafe(requestTextRu, requestTextCn, managerComment);
   const supplierRequest = {
     id: crypto.randomUUID(),
@@ -483,6 +491,7 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     access_token: token,
     status: normalizeStatus(payload.status, "sent"),
     car: text(payload.car) || text(order.car),
+    car_year: carYear,
     vin: (text(payload.vin) || text(order.vin)).toUpperCase(),
     item_name: text(payload.item_name) || text(order.item_name) || text(order.service_name),
     quantity: normalizeQuantity(payload.quantity, 1),
@@ -496,32 +505,35 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     closed_at: "",
   };
 
+  const requestFields = [
+    ["id", supplierRequest.id],
+    ["public_number", supplierRequest.public_number],
+    ["order_id", supplierRequest.order_id],
+    ["supplier_id", supplierRequest.supplier_id],
+    ["supplier_name", supplierRequest.supplier_name],
+    ["access_token", supplierRequest.access_token],
+    ["status", supplierRequest.status],
+    ["car", supplierRequest.car],
+    ["vin", supplierRequest.vin],
+    ["item_name", supplierRequest.item_name],
+    ["quantity", supplierRequest.quantity],
+    ["request_text", supplierRequest.request_text],
+    ["manager_comment", supplierRequest.manager_comment],
+    ["created_at", supplierRequest.created_at],
+    ["updated_at", supplierRequest.updated_at],
+    ["sent_at", supplierRequest.sent_at],
+    ["closed_at", supplierRequest.closed_at],
+  ];
+  if (await tableHasColumn(env, "supplier_requests", "car_year")) {
+    requestFields.splice(8, 0, ["car_year", supplierRequest.car_year]);
+  }
+
   await env.DB.prepare(
     `INSERT INTO supplier_requests (
-      id, public_number, order_id, supplier_id, supplier_name, access_token, status,
-      car, vin, item_name, quantity, request_text, manager_comment,
-      created_at, updated_at, sent_at, closed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ${requestFields.map(([name]) => name).join(", ")}
+    ) VALUES (${requestFields.map(() => "?").join(", ")})`
   )
-    .bind(
-      supplierRequest.id,
-      supplierRequest.public_number,
-      supplierRequest.order_id,
-      supplierRequest.supplier_id,
-      supplierRequest.supplier_name,
-      supplierRequest.access_token,
-      supplierRequest.status,
-      supplierRequest.car,
-      supplierRequest.vin,
-      supplierRequest.item_name,
-      supplierRequest.quantity,
-      supplierRequest.request_text,
-      supplierRequest.manager_comment,
-      supplierRequest.created_at,
-      supplierRequest.updated_at,
-      supplierRequest.sent_at,
-      supplierRequest.closed_at
-    )
+    .bind(...requestFields.map(([, value]) => value))
     .run();
 
   if (await tableHasColumn(env, "supplier_requests", "request_text_ru")) {
@@ -970,6 +982,7 @@ export async function listChinaPreorders(env, options = {}) {
   const q = text(options.q);
   const limit = Math.min(Math.max(integer(options.limit) || 120, 1), 300);
   const hasPaymentRequestId = await tableHasColumn(env, "supplier_payments", "supplier_request_id");
+  const hasCarYear = await tableHasColumn(env, "supplier_requests", "car_year");
   const clauses = [];
   const binds = [];
 
@@ -995,13 +1008,14 @@ export async function listChinaPreorders(env, options = {}) {
       supplier_requests.public_number LIKE ?
       OR supplier_requests.supplier_name LIKE ?
       OR supplier_requests.car LIKE ?
+      ${hasCarYear ? "OR supplier_requests.car_year LIKE ?" : ""}
       OR supplier_requests.vin LIKE ?
       OR supplier_requests.item_name LIKE ?
       OR orders.order_number LIKE ?
       OR orders.customer_name LIKE ?
       OR orders.customer_phone LIKE ?
     )`);
-    binds.push(...Array(8).fill(`%${q}%`));
+    binds.push(...Array(hasCarYear ? 9 : 8).fill(`%${q}%`));
   }
 
   const rows = await safeSelect(

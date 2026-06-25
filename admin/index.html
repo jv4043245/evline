@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260626-upload-icon-button">
-    <script src="/admin/admin.js?v=20260626-upload-icon-button" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260626-safe-china-flow">
+    <script src="/admin/admin.js?v=20260626-safe-china-flow" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -235,7 +235,7 @@
           <form class="china-preorder-form" data-china-preorder-form>
             <div class="china-preorder-form__head">
               <strong>Новый предзаказ</strong>
-              <span>Если заявка уже есть в CRM, укажите её внутренний order_id. Если нет — будет создана легкая заявка.</span>
+              <span>Поставщику уйдут только данные для подбора детали. Клиентские данные остаются в CRM.</span>
             </div>
             <label>
               Order ID из CRM
@@ -256,16 +256,12 @@
               <input name="supplier_name_custom" placeholder="название поставщика">
             </label>
             <label>
-              Клиент
-              <input name="customer_name" placeholder="для нашей CRM">
-            </label>
-            <label>
-              Телефон клиента
-              <input name="customer_phone" inputmode="tel" placeholder="+380...">
-            </label>
-            <label>
               Авто
               <input name="car" placeholder="Zeekr 001">
+            </label>
+            <label>
+              Год
+              <input name="car_year" inputmode="numeric" maxlength="4" placeholder="2023">
             </label>
             <label>
               VIN

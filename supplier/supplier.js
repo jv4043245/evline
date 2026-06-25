@@ -97,6 +97,7 @@ function requestData(request = {}) {
     <div class="supplier-data">
       <div><span>VIN</span><strong>${escapeHtml(request.vin || "-")}</strong></div>
       <div><span>Авто</span><strong>${escapeHtml(request.car || "-")}</strong></div>
+      <div><span>Год</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
       <div><span>Деталь</span><strong>${escapeHtml(request.item_name || "-")}</strong></div>
       <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
       <div class="supplier-data--wide"><span>Описание</span><strong>${escapeHtml(request.request_text || "-")}</strong></div>
@@ -302,7 +303,7 @@ function renderDashboardPage(data) {
             ${statusBadge(request.status)}
           </div>
           <div>${escapeHtml(request.item_name || "Деталь")}</div>
-          <div class="supplier-muted">${escapeHtml(request.car || "-")} · VIN ${escapeHtml(request.vin || "-")}</div>
+          <div class="supplier-muted">${escapeHtml(request.car || "-")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""} · VIN ${escapeHtml(request.vin || "-")}</div>
         </a>
       `).join("") : `<div class="supplier-empty"><strong>Пока нет запросов</strong><span class="supplier-muted">Новые ссылки EVLine появятся здесь.</span></div>`}
     </section>
