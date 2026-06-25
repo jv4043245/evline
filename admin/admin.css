@@ -1570,41 +1570,16 @@ body.order-detail-open .order-detail {
   gap: 12px;
   align-items: start;
   padding: 14px;
-  border: 1px solid var(--line);
+  border: 1px solid #f2d5dc;
   border-radius: 8px;
-  background: #fff;
+  background: #fff7f8;
 }
 
 .china-preorder-form__head {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 3px 8px;
-  align-items: center;
+  gap: 3px;
   padding-bottom: 2px;
-}
-
-.china-preorder-form__head > span:not(.china-flag) {
-  grid-column: 2;
-}
-
-.china-flag {
-  grid-row: 1 / span 2;
-  width: 22px;
-  height: 15px;
-  display: inline-flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: 1px 0 0 3px;
-  border-radius: 2px;
-  background: #de2910;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
-}
-
-.china-flag span {
-  color: #ffde00;
-  font-size: 8px;
-  line-height: 1;
 }
 
 .china-preorder-form__head span,
