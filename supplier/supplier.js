@@ -385,7 +385,6 @@ function renderRequestPage(data) {
       <span class="supplier-kicker">${escapeHtml(request.supplier_name || "Поставщик")}</span>
       <h1>${escapeHtml(request.item_name || "Запрос по детали")}</h1>
       ${statusBadge(request.status)}
-      <p>Укажите цену, срок и комментарий. EVLine увидит ответ в CRM.</p>
     </section>
 
     <section class="supplier-card">

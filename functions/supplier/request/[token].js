@@ -7,8 +7,8 @@ function supplierPageHtml(token) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>EVLine · Запрос поставщику</title>
-    <link rel="stylesheet" href="/supplier/supplier.css?v=20260626-hide-request-bubble">
-    <script src="/supplier/supplier.js?v=20260626-hide-request-bubble" defer></script>
+    <link rel="stylesheet" href="/supplier/supplier.css?v=20260626-hide-supplier-hint">
+    <script src="/supplier/supplier.js?v=20260626-hide-supplier-hint" defer></script>
   </head>
   <body class="supplier-shell" data-supplier-page="request" data-token="${safeToken}">
     <main class="supplier-app" data-app>
