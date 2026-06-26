@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260626-china-context-clean">
-    <script src="/admin/admin.js?v=20260626-china-context-clean" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260626-china-list-panel">
+    <script src="/admin/admin.js?v=20260626-china-list-panel" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -220,8 +220,9 @@
       <section class="admin-view" data-admin-view="china" hidden>
         <section class="admin-panel china-workbench">
           <div class="admin-panel__head">
-            <div>
+            <div class="admin-panel__title-actions">
               <h2>Запросы в Китай</h2>
+              <button class="admin-btn admin-btn--primary" type="button" data-china-request-open>+ Добавить запрос</button>
             </div>
             <div class="filters">
               <select data-china-status>
@@ -246,10 +247,21 @@
             </div>
           </div>
 
-          <form class="china-preorder-form" data-china-preorder-form>
-            <div class="china-preorder-form__head">
-              <strong>Новый запрос в Китай</strong>
+          <div class="china-preorders" data-china-preorders>
+            <p class="muted">Запросы загружаются...</p>
+          </div>
+        </section>
+
+        <button class="china-request-backdrop" type="button" data-china-request-close aria-label="Закрыть запрос в Китай"></button>
+        <aside class="admin-panel china-request-detail" data-china-request-panel aria-hidden="true" aria-label="Новый запрос в Китай">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Новый запрос в Китай</h2>
+              <p class="muted" data-china-request-subtitle>Создание обращения поставщику.</p>
             </div>
+            <button class="admin-btn admin-btn--small china-request-detail__close" type="button" data-china-request-close>Закрыть</button>
+          </div>
+          <form class="china-preorder-form" data-china-preorder-form>
             <label>
               Order ID из CRM
               <input name="order_id" placeholder="если отправляем из существующей заявки">
@@ -306,18 +318,14 @@
             </div>
             <label class="wide">
               Текст для поставщика
-              <textarea name="request_text" rows="4" placeholder="Пока пишем по-русски для согласования интерфейса. Без контактов клиента, цен клиента и внутренней маржи."></textarea>
+              <textarea name="request_text" rows="4" placeholder="Без контактов клиента, цен клиента и внутренней маржи."></textarea>
             </label>
             <div class="china-preorder-form__actions">
-              <button class="admin-btn admin-btn--primary admin-btn--small" type="submit">Запрос в Китай</button>
+              <button class="admin-btn admin-btn--primary" type="submit">Запрос в Китай</button>
             </div>
             <div class="china-created-link" data-china-created-link hidden></div>
           </form>
-
-          <div class="china-preorders" data-china-preorders>
-            <p class="muted">Запросы загружаются...</p>
-          </div>
-        </section>
+        </aside>
       </section>
 
       <section class="admin-view" data-admin-view="analytics" hidden>

@@ -329,6 +329,7 @@ function setActiveTab(tab) {
   });
 
   if (nextTab !== "orders") setOrderDetailOpen(false);
+  if (nextTab !== "china") setChinaRequestPanelOpen(false);
   if (nextTab === "delivery") renderShippingDirectory();
 }
 
@@ -1217,11 +1218,13 @@ function renderChinaPreorders() {
   if (!root) return;
   const rows = state.chinaPreorders || [];
   if (!rows.length) {
-    root.innerHTML = state.chinaOrderContext ? "" : `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
+    root.innerHTML = `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
     return;
   }
 
-  root.innerHTML = rows.map((bundle) => {
+  root.innerHTML = `
+    <div class="china-request-list">
+      ${rows.map((bundle) => {
     const request = bundle.request || {};
     const order = bundle.order || {};
     const quote = selectedSupplierQuote(bundle);
@@ -1232,9 +1235,51 @@ function renderChinaPreorders() {
       : "";
     const trackingEvent = (bundle.tracking_events || []).find((event) => plainText(event.tracking_number));
     const canSendPayment = quote && !payment && !["closed", "canceled"].includes(request.status);
+    const orderNumber = order.order_number || request.order_id || "-";
+    const quoteLine = quote
+      ? `${supplierAmount(quote.price_cny, "CNY")}${quote.purchase_days ? ` · ${Number(quote.purchase_days)} дн.` : ""}${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? ` · доставка ${supplierAmount(request.delivery_cost_cny, "CNY")}` : ""}`
+      : "ответа нет";
+    const paymentLine = payment
+      ? `${supplierAmount(payment.requested_amount, payment.requested_currency)} · ${supplierPaymentStatusLabels[payment.status] || payment.status || "оплата"}`
+      : "не отправляли";
     return `
-      <article class="china-preorder-card" data-china-preorder="${escapeHtml(request.id)}">
-        <div class="china-preorder-card__head">
+      <details class="china-request-row" data-china-preorder="${escapeHtml(request.id)}">
+        <summary class="china-request-row__summary">
+          <span class="china-request-row__number">
+            <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
+            <small>${escapeHtml(shortDateTime(request.created_at))}</small>
+          </span>
+          <span>
+            <small>Поставщик</small>
+            <strong>${escapeHtml(request.supplier_name || "поставщик")}</strong>
+          </span>
+          <span>
+            <small>Заказ CRM</small>
+            <strong>${escapeHtml(orderNumber)}</strong>
+          </span>
+          <span>
+            <small>Авто / VIN</small>
+            <strong>${escapeHtml(request.car || order.car || "-")}</strong>
+            ${request.vin || order.vin ? `<em class="orders-table__mono">${escapeHtml(request.vin || order.vin)}</em>` : ""}
+          </span>
+          <span>
+            <small>Деталь</small>
+            <strong>${escapeHtml(request.item_name || order.item_name || "-")}</strong>
+          </span>
+          <span>
+            <small>Предложение</small>
+            <strong>${escapeHtml(quoteLine)}</strong>
+          </span>
+          <span>
+            <small>Оплата</small>
+            <strong>${escapeHtml(paymentLine)}</strong>
+          </span>
+          <span class="china-request-row__status">
+            ${supplierRequestBadge(request.status)}
+          </span>
+        </summary>
+        <div class="china-request-row__details">
+          <div class="china-preorder-card__head">
           <div>
             <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
             <span>${escapeHtml(chinaPreorderStage(bundle))} · ${escapeHtml(request.supplier_name || "поставщик")}</span>
@@ -1280,9 +1325,12 @@ function renderChinaPreorders() {
             </button>
           ` : ""}
         </div>
-      </article>
+        </div>
+      </details>
     `;
-  }).join("");
+  }).join("")}
+    </div>
+  `;
 }
 
 function renderSupplierTrackingEvents(events = []) {
@@ -1626,6 +1674,42 @@ function closeOrderDetail(options = {}) {
     renderOrderEditor(null);
     highlightSelectedOrder();
   }
+}
+
+function setChinaRequestPanelOpen(open) {
+  const panel = document.querySelector("[data-china-request-panel]");
+  document.body.classList.toggle("china-request-open", Boolean(open));
+  if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function updateChinaRequestSubtitle(order = null) {
+  const node = document.querySelector("[data-china-request-subtitle]");
+  if (!node) return;
+  node.textContent = order?.id
+    ? `${order.order_number || order.id}${order.item_name || order.service_name || order.car ? ` · ${order.item_name || order.service_name || order.car}` : ""}`
+    : "Создание обращения поставщику.";
+}
+
+function resetChinaPreorderForm(order = null) {
+  const form = document.querySelector("[data-china-preorder-form]");
+  if (!form) return;
+  form.reset();
+  clearChinaPhoto(form);
+  hideChinaCreatedLink(form);
+  const customSupplier = document.querySelector("[data-china-custom-supplier]");
+  if (customSupplier) customSupplier.hidden = true;
+  if (order) fillChinaPreorderFormFromOrder(form, order);
+  updateChinaRequestSubtitle(order);
+}
+
+function openChinaRequestPanel(order = null) {
+  state.chinaOrderContext = order?.id ? {
+    orderId: order.id,
+    orderNumber: order.order_number || order.id,
+  } : null;
+  resetChinaPreorderForm(order);
+  setChinaRequestPanelOpen(true);
+  document.querySelector("[data-china-preorder-form] [name='supplier_name']")?.focus();
 }
 
 function activeOrderEditorTab() {
@@ -2160,9 +2244,6 @@ async function loadChinaPreorders() {
     q: document.querySelector("[data-china-search]")?.value || "",
     limit: "120",
   });
-  if (state.chinaOrderContext?.orderId) {
-    params.set("order_id", state.chinaOrderContext.orderId);
-  }
   const data = await api(`/api/admin/supplier-requests?${params}`);
   state.chinaPreorders = data.preorders || [];
   renderChinaPreorders();
@@ -2554,19 +2635,9 @@ function startChinaPreorderFromOrder(orderId) {
   }
 
   setActiveTab("china");
-  setChinaOrderContext(order);
-  setChinaListFilters({ status: "all", q: "" });
-  const form = document.querySelector("[data-china-preorder-form]");
-  if (!form) return;
-  form.reset();
-  clearChinaPhoto(form);
-  hideChinaCreatedLink(form);
-  const customSupplier = document.querySelector("[data-china-custom-supplier]");
-  if (customSupplier) customSupplier.hidden = true;
-  fillChinaPreorderFormFromOrder(form, order);
+  setChinaListFilters({ status: "active", q: "" });
+  openChinaRequestPanel(order);
   loadChinaPreorders().catch((error) => alert(error.message));
-  form.scrollIntoView({ behavior: "smooth", block: "start" });
-  form.querySelector("[name='supplier_name']")?.focus();
 }
 
 function collectSupplierRequestCreatePayload(form) {
@@ -2639,18 +2710,9 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
 
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
 document.querySelector("[data-refresh-china]")?.addEventListener("click", loadChinaPreorders);
+document.querySelector("[data-china-request-open]")?.addEventListener("click", () => openChinaRequestPanel());
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const nextTab = button.dataset.adminTab;
-    if (nextTab === "china" && state.chinaOrderContext) {
-      setChinaOrderContext(null);
-      setChinaListFilters({ status: "active", q: "" });
-      setActiveTab(nextTab);
-      loadChinaPreorders().catch((error) => alert(error.message));
-      return;
-    }
-    setActiveTab(nextTab);
-  });
+  button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
 });
 
 document.addEventListener("click", (event) => {
@@ -2993,9 +3055,20 @@ document.addEventListener("click", (event) => {
   closeOrderDetail({ clearSelection: true });
 });
 
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-china-request-close]")) return;
+  setChinaRequestPanelOpen(false);
+});
+
 document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape" || !document.body.classList.contains("order-detail-open")) return;
-  closeOrderDetail({ clearSelection: true });
+  if (event.key !== "Escape") return;
+  if (document.body.classList.contains("china-request-open")) {
+    setChinaRequestPanelOpen(false);
+    return;
+  }
+  if (document.body.classList.contains("order-detail-open")) {
+    closeOrderDetail({ clearSelection: true });
+  }
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("submit", async (event) => {
