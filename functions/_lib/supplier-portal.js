@@ -432,7 +432,7 @@ export function publicSupplierBundle(bundle) {
   };
 }
 
-function publicDashboardRequest(row) {
+function publicDashboardRequest(row, payment = null) {
   return {
     public_number: row.public_number,
     status: row.status,
@@ -445,7 +445,109 @@ function publicDashboardRequest(row) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     supplier_link: `/supplier/request/${row.access_token}`,
+    payment: publicPayment(payment),
   };
+}
+
+function dashboardAmount(value) {
+  return Math.round(number(value) * 100) / 100;
+}
+
+function publicDashboardPayment(row = {}) {
+  const accessToken = text(row.request_access_token);
+  return {
+    payment_number: row.payment_number || row.id,
+    status: row.status,
+    amount: dashboardAmount(row.paid_amount || row.requested_amount),
+    currency: row.paid_currency || row.requested_currency || "CNY",
+    paid_at: row.paid_at,
+    updated_at: row.updated_at,
+    request_public_number: row.request_public_number,
+    item_name: row.request_item_name,
+    supplier_link: accessToken ? `/supplier/request/${accessToken}` : "",
+    receipt_present: Boolean(row.receipt_telegram_file_id || row.receipt_message_id),
+  };
+}
+
+function supplierDashboardWorkSummary(requests = []) {
+  const needAnswer = requests.filter((request) => ["sent", "viewed"].includes(request.status)).length;
+  const waitingPayment = requests.filter((request) => (
+    ["quoted", "accepted"].includes(request.status) && request.payment?.status !== "paid"
+  )).length;
+  const paidNeedsTracking = requests.filter((request) => (
+    request.payment?.status === "paid" && ["accepted", "purchased"].includes(request.status)
+  )).length;
+  const problem = requests.filter((request) => ["problem", "no_stock"].includes(request.status)).length;
+  return { need_answer: needAnswer, waiting_payment: waitingPayment, paid_needs_tracking: paidNeedsTracking, problem };
+}
+
+async function supplierDashboardPaymentSummary(env, supplierId) {
+  const empty = {
+    paid_30_amount: 0,
+    paid_30_count: 0,
+    paid_total_amount: 0,
+    paid_total_count: 0,
+    waiting_amount: 0,
+    waiting_count: 0,
+    currency: "CNY",
+  };
+  if (!(await tableExists(env, "supplier_payments"))) return empty;
+  if (!(await tableHasColumn(env, "supplier_payments", "supplier_request_id"))) return empty;
+
+  const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const row = await env.DB.prepare(
+    `SELECT
+      SUM(CASE WHEN supplier_payments.status = 'paid'
+        THEN COALESCE(NULLIF(supplier_payments.paid_amount, 0), supplier_payments.requested_amount, 0)
+        ELSE 0 END) AS paid_total_amount,
+      SUM(CASE WHEN supplier_payments.status = 'paid' THEN 1 ELSE 0 END) AS paid_total_count,
+      SUM(CASE WHEN supplier_payments.status = 'paid'
+          AND COALESCE(supplier_payments.paid_at, supplier_payments.updated_at, supplier_payments.created_at) >= ?
+        THEN COALESCE(NULLIF(supplier_payments.paid_amount, 0), supplier_payments.requested_amount, 0)
+        ELSE 0 END) AS paid_30_amount,
+      SUM(CASE WHEN supplier_payments.status = 'paid'
+          AND COALESCE(supplier_payments.paid_at, supplier_payments.updated_at, supplier_payments.created_at) >= ?
+        THEN 1 ELSE 0 END) AS paid_30_count,
+      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review')
+        THEN COALESCE(supplier_payments.requested_amount, 0)
+        ELSE 0 END) AS waiting_amount,
+      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review') THEN 1 ELSE 0 END) AS waiting_count,
+      COALESCE(MAX(NULLIF(supplier_payments.paid_currency, '')), MAX(NULLIF(supplier_payments.requested_currency, '')), 'CNY') AS currency
+    FROM supplier_payments
+    INNER JOIN supplier_requests ON supplier_requests.id = supplier_payments.supplier_request_id
+    WHERE supplier_requests.supplier_id = ?`
+  )
+    .bind(since30, since30, supplierId)
+    .first();
+
+  return {
+    paid_30_amount: dashboardAmount(row?.paid_30_amount),
+    paid_30_count: integer(row?.paid_30_count),
+    paid_total_amount: dashboardAmount(row?.paid_total_amount),
+    paid_total_count: integer(row?.paid_total_count),
+    waiting_amount: dashboardAmount(row?.waiting_amount),
+    waiting_count: integer(row?.waiting_count),
+    currency: text(row?.currency) || "CNY",
+  };
+}
+
+async function listSupplierDashboardPayments(env, supplierId) {
+  if (!(await tableExists(env, "supplier_payments"))) return [];
+  if (!(await tableHasColumn(env, "supplier_payments", "supplier_request_id"))) return [];
+  const rows = await safeSelect(
+    env,
+    `SELECT supplier_payments.*,
+      supplier_requests.public_number AS request_public_number,
+      supplier_requests.item_name AS request_item_name,
+      supplier_requests.access_token AS request_access_token
+    FROM supplier_payments
+    INNER JOIN supplier_requests ON supplier_requests.id = supplier_payments.supplier_request_id
+    WHERE supplier_requests.supplier_id = ?
+    ORDER BY COALESCE(supplier_payments.paid_at, supplier_payments.updated_at, supplier_payments.created_at) DESC
+    LIMIT 12`,
+    supplierId
+  );
+  return rows.map(publicDashboardPayment);
 }
 
 export async function listSupplierRequests(env, orderId) {
@@ -622,12 +724,27 @@ export async function listSupplierDashboardByToken(env, token) {
     LIMIT 80`,
     supplier.id
   );
+  const requests = [];
+  for (const row of rows) {
+    const payment = await loadSupplierPaymentForRequest(env, row);
+    requests.push(publicDashboardRequest(row, payment));
+  }
+  const [paymentSummary, payments] = await Promise.all([
+    supplierDashboardPaymentSummary(env, supplier.id),
+    listSupplierDashboardPayments(env, supplier.id),
+  ]);
 
   return {
     supplier: {
       name: supplier.display_name,
     },
-    requests: rows.map(publicDashboardRequest),
+    summary: {
+      ...supplierDashboardWorkSummary(requests),
+      ...paymentSummary,
+      active_count: requests.length,
+    },
+    requests,
+    payments,
   };
 }
 

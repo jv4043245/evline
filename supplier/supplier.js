@@ -5,6 +5,8 @@ const tokenFromPath = pathParts[0] === "supplier" && ["request", "dashboard"].in
 const token = document.body.dataset.token || query.get("token") || tokenFromPath || "";
 const page = document.body.dataset.supplierPage || query.get("page") || (pathParts[1] === "dashboard" ? "dashboard" : "request");
 let requestPollTimer = null;
+let dashboardData = null;
+let dashboardTab = "work";
 
 const requestStatusLabels = {
   draft: "Черновик",
@@ -425,31 +427,141 @@ function renderRequestPage(data) {
   `;
 }
 
+function supplierAmount(value, currency = "CNY") {
+  return `${Number(value || 0).toLocaleString("ru-RU")} ${escapeHtml(currency || "CNY")}`;
+}
+
+function paymentLabel(status) {
+  const labels = {
+    paid: "Оплачено",
+    requested: "Ждёт оплаты",
+    needs_review: "Скрин на проверке",
+    canceled: "Отменено",
+  };
+  return labels[status] || status || "Оплата";
+}
+
+function dashboardSummaryCard(label, value, hint = "") {
+  return `
+    <article class="supplier-dashboard-stat">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      ${hint ? `<small>${escapeHtml(hint)}</small>` : ""}
+    </article>
+  `;
+}
+
+function renderDashboardSummary(summary = {}) {
+  return `
+    <section class="supplier-dashboard-stats">
+      ${dashboardSummaryCard("Нужно ответить", Number(summary.need_answer || 0).toLocaleString("ru-RU"))}
+      ${dashboardSummaryCard("Ждёт оплату", Number(summary.waiting_payment || 0).toLocaleString("ru-RU"))}
+      ${dashboardSummaryCard("Нужен трек", Number(summary.paid_needs_tracking || 0).toLocaleString("ru-RU"))}
+      ${dashboardSummaryCard("Оплачено за 30 дней", supplierAmount(summary.paid_30_amount, summary.currency), `${Number(summary.paid_30_count || 0)} заказов`)}
+    </section>
+  `;
+}
+
+function dashboardRequestPriority(request = {}) {
+  if (["sent", "viewed"].includes(request.status)) return 0;
+  if (request.payment?.status === "paid" && ["accepted", "purchased"].includes(request.status)) return 1;
+  if (["quoted", "accepted"].includes(request.status) && request.payment?.status !== "paid") return 2;
+  if (["problem", "no_stock"].includes(request.status)) return 3;
+  return 4;
+}
+
+function renderDashboardRequestCard(request = {}) {
+  const payment = request.payment || null;
+  return `
+    <a class="supplier-dashboard-card" href="${escapeHtml(request.supplier_link || "#")}">
+      <div class="supplier-card__head">
+        <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
+        ${statusBadge(request.status)}
+      </div>
+      <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || "Деталь")}</div>
+      <div class="supplier-dashboard-card__meta">
+        <span>${escapeHtml(request.car || "Авто не указано")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
+        ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
+      </div>
+    </a>
+  `;
+}
+
+function renderDashboardWork(requests = []) {
+  const sorted = [...requests].sort((a, b) => dashboardRequestPriority(a) - dashboardRequestPriority(b) || dateMs(b.updated_at) - dateMs(a.updated_at));
+  return `
+    <section class="supplier-dashboard-panel">
+      <div class="supplier-dashboard-panel__head">
+        <h2>Работа</h2>
+        <span class="supplier-muted">${Number(requests.length || 0)} активных</span>
+      </div>
+      <div class="supplier-dashboard">
+        ${sorted.length ? sorted.map(renderDashboardRequestCard).join("") : `<div class="supplier-empty"><strong>Пока нет активных запросов</strong><span class="supplier-muted">Новые запросы EVLine появятся здесь.</span></div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderDashboardPaymentCard(payment = {}) {
+  return `
+    <a class="supplier-dashboard-payment" href="${escapeHtml(payment.supplier_link || "#")}">
+      <div>
+        <strong>${escapeHtml(payment.request_public_number || payment.payment_number || "Оплата")}</strong>
+        <span>${escapeHtml(payment.item_name || "Запрос EVLine")}</span>
+      </div>
+      <div>
+        <b>${supplierAmount(payment.amount, payment.currency)}</b>
+        <span>${escapeHtml(paymentLabel(payment.status))}${payment.receipt_present ? " · скрин есть" : ""}</span>
+      </div>
+    </a>
+  `;
+}
+
+function renderDashboardMoney(data = {}) {
+  const summary = data.summary || {};
+  const payments = data.payments || [];
+  return `
+    <section class="supplier-dashboard-panel">
+      <div class="supplier-dashboard-panel__head">
+        <h2>Деньги</h2>
+        <span class="supplier-muted">${Number(summary.paid_total_count || 0)} оплаченных заказов</span>
+      </div>
+      <div class="supplier-money-summary">
+        ${dashboardSummaryCard("Оплачено всего", supplierAmount(summary.paid_total_amount, summary.currency))}
+        ${dashboardSummaryCard("Ждёт оплаты", supplierAmount(summary.waiting_amount, summary.currency), `${Number(summary.waiting_count || 0)} заказов`)}
+      </div>
+      <div class="supplier-dashboard-payments">
+        ${payments.length ? payments.map(renderDashboardPaymentCard).join("") : `<div class="supplier-empty"><strong>Оплат пока нет</strong><span class="supplier-muted">Когда EVLine оплатит заказ, он появится здесь.</span></div>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderDashboardTabs() {
+  return `
+    <div class="supplier-dashboard-tabs" role="tablist" aria-label="Раздел кабинета">
+      <button type="button" class="${dashboardTab === "work" ? "is-active" : ""}" data-dashboard-tab="work">Работа</button>
+      <button type="button" class="${dashboardTab === "money" ? "is-active" : ""}" data-dashboard-tab="money">Деньги</button>
+    </div>
+  `;
+}
+
 function renderDashboardPage(data) {
+  dashboardData = data;
   const requests = data.requests || [];
   root.innerHTML = `
     <header class="supplier-topbar">
       <div class="supplier-brand">
-        <strong>EVLine · Список запросов</strong>
+        <strong>EVLine · Кабинет поставщика</strong>
         <span>${escapeHtml(data.supplier?.name || "Поставщик")}</span>
       </div>
     </header>
     <section class="supplier-hero">
-      <h1>Активные запросы EVLine</h1>
-      <p>Здесь видны только ваши запросы.</p>
+      <h1>${escapeHtml(data.supplier?.name || "Поставщик")}</h1>
+      ${renderDashboardSummary(data.summary || {})}
     </section>
-    <section class="supplier-dashboard">
-      ${requests.length ? requests.map((request) => `
-        <a class="supplier-dashboard-card" href="${escapeHtml(request.supplier_link || "#")}">
-          <div class="supplier-card__head">
-            <strong>${escapeHtml(request.public_number || request.id)}</strong>
-            ${statusBadge(request.status)}
-          </div>
-          <div>${escapeHtml(request.item_name || "Деталь")}</div>
-          <div class="supplier-muted">${escapeHtml(request.car || "-")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""} · VIN ${escapeHtml(request.vin || "-")}</div>
-        </a>
-      `).join("") : `<div class="supplier-empty"><strong>Пока нет запросов</strong><span class="supplier-muted">Новые ссылки EVLine появятся здесь.</span></div>`}
-    </section>
+    ${renderDashboardTabs()}
+    ${dashboardTab === "money" ? renderDashboardMoney(data) : renderDashboardWork(requests)}
   `;
 }
 
@@ -548,6 +660,13 @@ root?.addEventListener("submit", async (event) => {
 });
 
 root?.addEventListener("click", async (event) => {
+  const tabButton = event.target.closest("[data-dashboard-tab]");
+  if (tabButton) {
+    dashboardTab = tabButton.dataset.dashboardTab || "work";
+    renderDashboardPage(dashboardData || {});
+    return;
+  }
+
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const action = button.dataset.action;
