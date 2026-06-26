@@ -71,8 +71,16 @@ function sendButton(extraClass = "") {
   `;
 }
 
-function noSupplyButton() {
-  return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply" type="button" data-action="no_stock" title="无法供货">Нет поставки</button>`;
+function noSupplyButton(extraClass = "") {
+  return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply ${escapeHtml(extraClass)}" type="button" data-action="no_stock" aria-label="Отметить, что по позиции нет поставки" title="无法供货">Нет поставки</button>`;
+}
+
+function canMarkNoSupply(data = {}) {
+  const request = data.request || {};
+  const hasQuote = (data.quotes || []).length > 0;
+  const status = plainText(request.status || "sent");
+  if (["sent", "viewed", "needs_info"].includes(status)) return true;
+  return hasQuote && ["quoted", "accepted", "purchased", "problem"].includes(status);
 }
 
 function supplierErrorMessage(message) {
@@ -352,7 +360,6 @@ function renderQuoteForm(data = {}) {
         </label>
       </div>
       <div class="supplier-answer-form__actions">
-        ${noSupplyButton()}
         ${sendButton()}
       </div>
     </form>
@@ -363,7 +370,6 @@ function renderMessageForm(data = {}) {
   const request = data.request || {};
   const hasQuote = (data.quotes || []).length > 0;
   const canMessage = hasQuote && ["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"].includes(request.status);
-  const canMarkNoStock = hasQuote && ["quoted", "accepted", "purchased", "needs_info"].includes(request.status);
   if (!canMessage) return "";
   const showDeliveryField = !supplierHasDeliveryCost(request);
   return `
@@ -374,7 +380,6 @@ function renderMessageForm(data = {}) {
         <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0">
       </label>` : ""}
       <div class="supplier-message-form__actions">
-        ${canMarkNoStock ? noSupplyButton() : ""}
         ${sendButton("supplier-button--small")}
       </div>
     </form>
@@ -425,9 +430,12 @@ function renderRequestDetail(data = {}, tokenValue = token) {
   const request = data.request || {};
   return `
     <section class="supplier-card">
-      <div class="supplier-card__head">
-        <h2>Данные запроса</h2>
-        <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
+      <div class="supplier-card__head supplier-card__head--request">
+        <div class="supplier-card__title">
+          <h2>Данные запроса</h2>
+          <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
+        </div>
+        ${canMarkNoSupply(data) ? noSupplyButton("supplier-button--passport-action") : ""}
       </div>
       ${requestImages(data.request_images || [])}
       ${requestData(request)}

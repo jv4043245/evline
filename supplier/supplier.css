@@ -150,6 +150,12 @@ body.supplier-shell {
   align-items: flex-start;
 }
 
+.supplier-card__title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .supplier-card h2,
 .supplier-section h2,
 .supplier-form h2 {
@@ -314,6 +320,16 @@ body.supplier-shell {
   opacity: 1;
 }
 
+.supplier-button--passport-action {
+  align-self: flex-start;
+  min-height: 28px;
+  padding: 0 8px;
+  border-color: #f3dddd;
+  background: #fffafa;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .supplier-button[disabled] {
   opacity: 0.62;
   cursor: wait;
@@ -410,7 +426,7 @@ body.supplier-shell {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -789,7 +805,7 @@ body.supplier-shell {
   }
 
   .supplier-message-form__actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .supplier-form__inline-head {
