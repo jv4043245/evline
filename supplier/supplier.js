@@ -145,7 +145,7 @@ function requestImages(images = []) {
 
 function requestData(request = {}) {
   return `
-    <div class="supplier-data">
+    <div class="supplier-data supplier-data--request">
       <div><span>VIN</span><strong>${escapeHtml(request.vin || "-")}</strong></div>
       <div><span>Авто</span><strong>${escapeHtml(request.car || "-")}</strong></div>
       <div><span>Год</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
@@ -429,7 +429,7 @@ function renderTrackingForm(request = {}, payment = null) {
 function renderRequestDetail(data = {}, tokenValue = token) {
   const request = data.request || {};
   return `
-    <section class="supplier-card">
+    <section class="supplier-card supplier-card--request-passport">
       <div class="supplier-card__head supplier-card__head--request">
         <div class="supplier-card__title">
           <h2>Данные запроса</h2>
@@ -458,17 +458,19 @@ function renderRequestDetail(data = {}, tokenValue = token) {
 function renderRequestPage(data) {
   const request = data.request || {};
   root.innerHTML = `
-    <header class="supplier-topbar">
+    <header class="supplier-topbar supplier-topbar--request">
       <div class="supplier-brand">
         <strong>EVLine · Запрос</strong>
         <span>${escapeHtml(request.public_number || "")}</span>
       </div>
+      <div class="supplier-topbar__aside">
+        <span class="supplier-kicker">${escapeHtml(request.supplier_name || "Поставщик")}</span>
+        ${statusBadge(request.status)}
+      </div>
     </header>
 
-    <section class="supplier-hero">
-      <span class="supplier-kicker">${escapeHtml(request.supplier_name || "Поставщик")}</span>
+    <section class="supplier-hero supplier-hero--compact">
       <h1>${escapeHtml(request.item_name || "Запрос по детали")}</h1>
-      ${statusBadge(request.status)}
     </section>
 
     ${renderRequestDetail(data, token)}

@@ -50,6 +50,28 @@ body.supplier-shell {
   backdrop-filter: blur(12px);
 }
 
+.supplier-topbar--request {
+  margin-bottom: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.supplier-topbar__aside {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  text-align: right;
+}
+
+.supplier-topbar__aside .supplier-status {
+  min-height: 24px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
 .supplier-brand {
   display: grid;
   gap: 2px;
@@ -98,12 +120,22 @@ body.supplier-shell {
   margin-top: 18px;
 }
 
+.supplier-hero--compact {
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
 .supplier-hero h1,
 .supplier-panel h1 {
   margin: 0;
   font-size: 28px;
   line-height: 1.12;
   letter-spacing: 0;
+}
+
+.supplier-hero--compact h1 {
+  font-size: 22px;
+  line-height: 1.16;
 }
 
 .supplier-hero p,
@@ -145,6 +177,24 @@ body.supplier-shell {
   display: grid;
   gap: 12px;
   padding: 14px;
+}
+
+.supplier-card--request-passport {
+  gap: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(23, 33, 29, 0.045);
+}
+
+.supplier-card--request-passport .supplier-card__head {
+  align-items: center;
+}
+
+.supplier-card--request-passport h2 {
+  font-size: 16px;
+}
+
+.supplier-card--request-passport .supplier-muted {
+  font-size: 12px;
 }
 
 .supplier-card__head {
@@ -195,6 +245,30 @@ body.supplier-shell {
 
 .supplier-data .supplier-data--wide {
   grid-column: 1 / -1;
+}
+
+.supplier-card--request-passport .supplier-data {
+  grid-template-columns: minmax(150px, 1.25fr) minmax(108px, 1fr) minmax(54px, 0.45fr) minmax(112px, 1fr) minmax(68px, 0.55fr);
+  gap: 6px;
+}
+
+.supplier-card--request-passport .supplier-data div {
+  padding: 7px 8px;
+}
+
+.supplier-card--request-passport .supplier-data span {
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.supplier-card--request-passport .supplier-data strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.supplier-card--request-passport .supplier-images {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 78px));
+  gap: 6px;
 }
 
 .supplier-images {
@@ -790,8 +864,24 @@ body.supplier-shell {
     font-size: 24px;
   }
 
+  .supplier-topbar--request {
+    align-items: flex-start;
+  }
+
+  .supplier-topbar__aside {
+    max-width: 48%;
+  }
+
+  .supplier-hero--compact h1 {
+    font-size: 22px;
+  }
+
   .supplier-data,
   .supplier-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .supplier-card--request-passport .supplier-data {
     grid-template-columns: 1fr;
   }
 
