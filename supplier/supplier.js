@@ -63,6 +63,8 @@ function supplierErrorMessage(message) {
     "Supplier event limit reached": "Достигнут лимит обновлений по этому запросу.",
     "Tracking number is required": "Укажите трек-номер.",
     "Clarification text is required": "Напишите, что нужно уточнить.",
+    "Message text is required": "Напишите сообщение.",
+    "Supplier message is available only after quote": "Сообщение доступно после первого предложения.",
     "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
     "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
     "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
@@ -146,9 +148,20 @@ function quoteChatText(quote = {}) {
   ].filter(Boolean).join("\n");
 }
 
+function isDuplicateQuoteEvent(event = {}, quotes = []) {
+  const eventComment = plainText(event.comment_cn || event.comment_translated);
+  return quotes.some((quote) => {
+    const quoteComment = plainText(quote.comment_cn || quote.comment_translated || quote.comment_ru);
+    const commentsMatch = eventComment === quoteComment;
+    const timeGap = Math.abs(dateMs(event.created_at) - dateMs(quote.created_at));
+    return commentsMatch && timeGap <= 2000;
+  });
+}
+
 function supplierChatMessages(data = {}) {
   const request = data.request || {};
   const events = data.tracking_events || [];
+  const quotes = data.quotes || [];
   const messages = [];
   const initialText = plainText(request.request_text);
   if (initialText) {
@@ -174,7 +187,7 @@ function supplierChatMessages(data = {}) {
     });
   }
 
-  for (const quote of data.quotes || []) {
+  for (const quote of quotes) {
     const textValue = quoteChatText(quote);
     if (!textValue) continue;
     messages.push({
@@ -190,7 +203,19 @@ function supplierChatMessages(data = {}) {
   for (const event of events) {
     const status = plainText(event.status);
     const comment = plainText(event.comment_cn || event.comment_translated);
-    if (status === "quoted") continue;
+    if (status === "quoted") {
+      if (comment && !isDuplicateQuoteEvent(event, quotes)) {
+        messages.push({
+          actor: "supplier",
+          title: "Поставщик",
+          meta: "Сообщение",
+          text: comment,
+          created_at: event.created_at,
+          order: 3,
+        });
+      }
+      continue;
+    }
     if (status === "needs_info" && comment) {
       messages.push({
         actor: "supplier",
@@ -262,9 +287,11 @@ function renderSupplierChat(data = {}) {
   `;
 }
 
-function renderQuoteForm(request = {}) {
-  const quotable = ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
-  const disabled = !quotable;
+function renderQuoteForm(data = {}) {
+  const request = data.request || {};
+  const hasQuote = (data.quotes || []).length > 0;
+  const quotable = !hasQuote && ["sent", "viewed", "needs_info"].includes(request.status);
+  if (!quotable) return "";
   return `
     <form class="supplier-form supplier-form--compact" data-quote-form>
       <h2>Ответ по цене</h2>
@@ -274,18 +301,31 @@ function renderQuoteForm(request = {}) {
         <input name="quantity" type="hidden" value="${Number(request.quantity || 1)}">
         <label>
           Цена, CNY
-          <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200" required ${disabled ? "disabled" : ""}>
+          <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200" required>
         </label>
         <label>
           Срок поставки, дней
-          <input name="purchase_days" type="number" min="0" step="1" placeholder="0" required ${disabled ? "disabled" : ""}>
+          <input name="purchase_days" type="number" min="0" step="1" placeholder="0" required>
         </label>
         <label class="supplier-wide">
           Комментарий
-          <textarea name="comment_cn" rows="3" placeholder="наличие, нюансы, упаковка, условия" ${disabled ? "disabled" : ""}></textarea>
+          <textarea name="comment_cn" rows="3" placeholder="наличие, нюансы, упаковка, условия"></textarea>
         </label>
       </div>
-      <button class="supplier-button supplier-button--primary" type="submit" ${disabled ? "disabled" : ""}>Отправить предложение</button>
+      <button class="supplier-button supplier-button--primary" type="submit">Отправить предложение</button>
+    </form>
+  `;
+}
+
+function renderMessageForm(data = {}) {
+  const request = data.request || {};
+  const hasQuote = (data.quotes || []).length > 0;
+  const canMessage = hasQuote && request.status === "quoted";
+  if (!canMessage) return "";
+  return `
+    <form class="supplier-message-form" data-message-form aria-label="Сообщение по запросу">
+      <textarea name="comment_cn" rows="2" placeholder="Написать сообщение по этому запросу" required></textarea>
+      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Отправить</button>
     </form>
   `;
 }
@@ -318,8 +358,10 @@ function renderTrackingForm(request = {}, payment = null) {
   `;
 }
 
-function renderClarificationForm(request = {}) {
-  const allowed = ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
+function renderClarificationForm(data = {}) {
+  const request = data.request || {};
+  const hasQuote = (data.quotes || []).length > 0;
+  const allowed = !hasQuote && ["sent", "viewed", "needs_info"].includes(request.status);
   if (!allowed) return "";
   return `
     <form class="supplier-clarification" data-clarification-form>
@@ -365,8 +407,9 @@ function renderRequestPage(data) {
     <section class="supplier-section">
       <h2>Чат по запчасти</h2>
       ${renderSupplierChat(data)}
-      ${renderQuoteForm(request)}
-      ${renderClarificationForm(request)}
+      ${renderQuoteForm(data)}
+      ${renderMessageForm(data)}
+      ${renderClarificationForm(data)}
     </section>
 
     ${renderPayment(data.payment, token)}
@@ -455,6 +498,16 @@ root?.addEventListener("submit", async (event) => {
     if (form.matches("[data-clarification-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "needs_info";
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      renderRequestPage(data);
+      return;
+    }
+    if (form.matches("[data-message-form]")) {
+      const payload = Object.fromEntries(new FormData(form));
+      payload.action = "message";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
         method: "POST",
         body: JSON.stringify(payload),

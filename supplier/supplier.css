@@ -331,6 +331,30 @@ body.supplier-shell {
   gap: 8px;
 }
 
+.supplier-message-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.supplier-message-form textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 160px;
+  padding: 10px 11px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--supplier-ink);
+  font: inherit;
+  resize: vertical;
+}
+
 .supplier-form {
   display: grid;
   gap: 12px;
@@ -508,5 +532,9 @@ body.supplier-shell {
 
   .supplier-clarification__actions {
     justify-content: flex-start;
+  }
+
+  .supplier-message-form {
+    grid-template-columns: 1fr;
   }
 }

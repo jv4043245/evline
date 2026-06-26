@@ -1,5 +1,6 @@
 import { json, readPayload } from "../../../_lib/http.js";
 import {
+  createSupplierMessageByToken,
   createSupplierQuoteByToken,
   loadSupplierRequestByToken,
   publicSupplierBundle,
@@ -26,6 +27,8 @@ export async function onRequestPost({ request, params, env }) {
     let bundle = null;
     if (action === "quote") {
       bundle = await createSupplierQuoteByToken(env, params.token, payload, { requestUrl: request.url });
+    } else if (action === "message") {
+      bundle = await createSupplierMessageByToken(env, params.token, payload, { requestUrl: request.url });
     } else if (action === "no_stock" || action === "needs_info") {
       bundle = await updateSupplierRequestByToken(env, params.token, {
           status: action,

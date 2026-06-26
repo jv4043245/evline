@@ -1038,9 +1038,24 @@ function chinaQuoteChatText(quote = {}) {
   ].filter(Boolean).join("\n");
 }
 
+function isDuplicateChinaQuoteEvent(event = {}, quotes = []) {
+  const eventComment = plainText(event.comment_translated || event.comment_cn);
+  return quotes.some((quote) => {
+    const comments = [
+      plainText(quote.comment_ru),
+      plainText(quote.comment_translated),
+      plainText(quote.comment_cn),
+    ].filter(Boolean);
+    const commentsMatch = eventComment && comments.includes(eventComment);
+    const timeGap = Math.abs(dateMs(event.created_at) - dateMs(quote.created_at));
+    return commentsMatch && timeGap <= 2000;
+  });
+}
+
 function chinaChatMessages(bundle = {}) {
   const request = bundle.request || {};
   const events = bundle.tracking_events || [];
+  const quotes = bundle.quotes || [];
   const messages = [];
   const initialText = plainText(request.request_text_ru || request.request_text);
   if (initialText) {
@@ -1068,7 +1083,7 @@ function chinaChatMessages(bundle = {}) {
     });
   }
 
-  for (const quote of bundle.quotes || []) {
+  for (const quote of quotes) {
     const textValue = chinaQuoteChatText(quote);
     if (!textValue) continue;
     messages.push({
@@ -1085,7 +1100,20 @@ function chinaChatMessages(bundle = {}) {
   for (const event of events) {
     const status = plainText(event.status);
     const comment = plainText(event.comment_translated || event.comment_cn);
-    if (status === "quoted") continue;
+    if (status === "quoted") {
+      if (comment && !isDuplicateChinaQuoteEvent(event, quotes)) {
+        messages.push({
+          actor: "supplier",
+          title: request.supplier_name || "Поставщик",
+          meta: "Сообщение",
+          text: comment,
+          created_at: event.created_at,
+          order: 3,
+          status,
+        });
+      }
+      continue;
+    }
     if (status === "needs_info" && comment) {
       messages.push({
         actor: "supplier",

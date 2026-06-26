@@ -794,6 +794,59 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
   return loadSupplierRequestByToken(env, token, { markViewed: false });
 }
 
+export async function createSupplierMessageByToken(env, token, payload = {}, options = {}) {
+  const bundle = await loadSupplierRequestByToken(env, token, { markViewed: false });
+  if (!bundle) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierRequest = bundle.request;
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (supplierRequest.status !== "quoted" || !(bundle.quotes || []).length) {
+    const error = new Error("Supplier message is available only after quote");
+    error.status = 400;
+    throw error;
+  }
+
+  const comment = text(payload.comment_cn || payload.comment_translated).slice(0, 2000);
+  if (!comment) {
+    const error = new Error("Message text is required");
+    error.status = 400;
+    throw error;
+  }
+  assertSupplierTextSafe(comment);
+
+  const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  if (number(eventCount?.count) >= MAX_PUBLIC_EVENTS_PER_REQUEST) {
+    const error = new Error("Supplier event limit reached");
+    error.status = 429;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  await env.DB.prepare("UPDATE supplier_requests SET updated_at = ? WHERE id = ?")
+    .bind(now, supplierRequest.id)
+    .run();
+
+  await insertSupplierEvent(env, supplierRequest, {
+    status: "quoted",
+    comment_cn: comment,
+    comment_translated: comment,
+  });
+
+  await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl).catch(() => null);
+
+  return loadSupplierRequestByToken(env, token, { markViewed: false });
+}
+
 export async function updateSupplierRequestByToken(env, token, payload = {}, options = {}) {
   const bundle = await loadSupplierRequestByToken(env, token, { markViewed: false });
   if (!bundle) {
