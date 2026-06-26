@@ -167,17 +167,6 @@ function supplierChatMessages(data = {}) {
   const events = data.tracking_events || [];
   const quotes = data.quotes || [];
   const messages = [];
-  const initialText = plainText(request.request_text);
-  if (initialText) {
-    messages.push({
-      actor: "evline",
-      title: "EVLine",
-      meta: "Запрос",
-      text: initialText,
-      created_at: request.created_at,
-      order: 0,
-    });
-  }
 
   const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_cn) === plainText(request.supplier_note));
   if (plainText(request.supplier_note) && !hasNoteEvent) {
