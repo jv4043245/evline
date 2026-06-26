@@ -4,6 +4,7 @@ const pathParts = location.pathname.split("/").filter(Boolean);
 const tokenFromPath = pathParts[0] === "supplier" && ["request", "dashboard"].includes(pathParts[1]) ? pathParts[2] || "" : "";
 const token = document.body.dataset.token || query.get("token") || tokenFromPath || "";
 const page = document.body.dataset.supplierPage || query.get("page") || (pathParts[1] === "dashboard" ? "dashboard" : "request");
+let requestPollTimer = null;
 
 const requestStatusLabels = {
   draft: "Черновик",
@@ -120,24 +121,32 @@ function requestData(request = {}) {
   `;
 }
 
+function paymentStatusText(payment = {}) {
+  if (payment.status === "paid") return "оплачено EVLine";
+  if (payment.receipt_present) return "скрин оплаты прикреплён";
+  return "ожидает оплаты EVLine";
+}
+
 function renderPayment(payment = {}, tokenValue = token) {
   if (!payment) return "";
   const paid = payment.status === "paid";
+  const receiptAttached = Boolean(payment.receipt_present);
+  const receiptVersion = encodeURIComponent(payment.updated_at || payment.paid_at || "");
   return `
     <section class="supplier-card supplier-payment">
       <div class="supplier-card__head">
         <h2>Оплата</h2>
-        <span class="supplier-muted">${paid ? "оплачено" : "ожидает оплаты EVLine"}</span>
+        <span class="supplier-muted">${escapeHtml(paymentStatusText(payment))}</span>
       </div>
       <div class="supplier-data">
         <div><span>Сумма</span><strong>${Number(payment.requested_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
         ${payment.paid_amount ? `<div><span>Оплачено</span><strong>${Number(payment.paid_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.paid_currency || payment.requested_currency || "CNY")}</strong></div>` : ""}
         ${payment.paid_at ? `<div><span>Дата</span><strong>${escapeHtml(shortDateTime(payment.paid_at))}</strong></div>` : ""}
       </div>
-      ${paid && payment.receipt_present ? `
+      ${receiptAttached ? `
         <div class="supplier-receipt">
-          <strong>Скрин оплаты прикреплён</strong>
-          <img src="/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt" alt="Скрин оплаты" loading="lazy">
+          <strong>${paid ? "Оплата подтверждена" : "Скрин оплаты прикреплён"}</strong>
+          <img src="/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt${receiptVersion ? `?v=${receiptVersion}` : ""}" alt="Скрин оплаты" loading="lazy">
         </div>
       ` : `<p class="supplier-muted">${paid ? "Оплата отмечена, скрин пока не прикреплён." : "После оплаты здесь появится подтверждение."}</p>`}
     </section>
@@ -456,15 +465,37 @@ function setButtonBusy(button, busy, text) {
   }
 }
 
+function supplierHasActiveEditor() {
+  const element = document.activeElement;
+  if (!element || !root?.contains(element)) return false;
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
+}
+
 async function loadRequest() {
   const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`);
+  if (supplierHasActiveEditor()) return;
   renderRequestPage(data);
+  startRequestPolling();
 }
 
 async function loadDashboard() {
   const data = await supplierApi(`/api/supplier/dashboard/${encodeURIComponent(token)}`);
   renderDashboardPage(data);
 }
+
+function startRequestPolling() {
+  if (requestPollTimer || page !== "request") return;
+  requestPollTimer = setInterval(() => {
+    if (document.hidden || supplierHasActiveEditor()) return;
+    loadRequest().catch(() => null);
+  }, 15000);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && page === "request" && token) {
+    loadRequest().catch(() => null);
+  }
+});
 
 root?.addEventListener("submit", async (event) => {
   event.preventDefault();

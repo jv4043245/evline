@@ -386,9 +386,12 @@ function publicPayment(payment) {
     status: payment.status,
     requested_amount: payment.requested_amount,
     requested_currency: payment.requested_currency,
+    paid_amount: payment.paid_amount,
+    paid_currency: payment.paid_currency,
     paid_at: payment.paid_at,
     receipt_present: Boolean(payment.receipt_telegram_file_id || payment.receipt_message_id),
     receipt_url: payment.receipt_telegram_file_id ? "payment-receipt" : "",
+    updated_at: payment.updated_at,
   };
 }
 
