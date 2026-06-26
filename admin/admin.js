@@ -2157,6 +2157,27 @@ async function loadChinaPreorders() {
   renderChinaPreorders();
 }
 
+function syncFilterMenuButtons() {
+  document.querySelectorAll("[data-filter-menu]").forEach((menu) => {
+    const button = menu.querySelector("[data-filter-menu-button]");
+    const panel = menu.querySelector("[data-filter-menu-panel]");
+    const hasValue = Array.from(menu.querySelectorAll("input, select"))
+      .some((field) => plainText(field.value) && field.value !== "all" && field.value !== "active");
+    const isOpen = panel ? !panel.hidden : false;
+    button?.classList.toggle("is-active", hasValue || isOpen);
+    button?.setAttribute("aria-expanded", String(isOpen));
+  });
+}
+
+function closeFilterMenus(except = null) {
+  document.querySelectorAll("[data-filter-menu]").forEach((menu) => {
+    if (except && menu === except) return;
+    const panel = menu.querySelector("[data-filter-menu-panel]");
+    if (panel) panel.hidden = true;
+  });
+  syncFilterMenuButtons();
+}
+
 async function openOrder(id, options = {}) {
   if (state.selectedOrder?.id !== id) state.orderEditorTab = "main";
   await loadOrder(id);
@@ -2588,6 +2609,29 @@ document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
 });
 
+document.addEventListener("click", (event) => {
+  const menuButton = event.target.closest("[data-filter-menu-button]");
+  if (menuButton) {
+    const menu = menuButton.closest("[data-filter-menu]");
+    const panel = menu?.querySelector("[data-filter-menu-panel]");
+    if (!menu || !panel) return;
+    const shouldOpen = panel.hidden;
+    closeFilterMenus(menu);
+    panel.hidden = !shouldOpen;
+    syncFilterMenuButtons();
+    if (shouldOpen) panel.querySelector("input, select, button")?.focus();
+    return;
+  }
+  if (!event.target.closest("[data-filter-menu]")) {
+    closeFilterMenus();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  closeFilterMenus();
+});
+
 document.querySelector("[data-china-supplier]")?.addEventListener("change", (event) => {
   const custom = document.querySelector("[data-china-custom-supplier]");
   if (!custom) return;
@@ -2597,6 +2641,7 @@ document.querySelector("[data-china-supplier]")?.addEventListener("change", (eve
 
 document.querySelector("[data-china-status]")?.addEventListener("change", loadChinaPreorders);
 document.querySelector("[data-china-search]")?.addEventListener("input", () => {
+  syncFilterMenuButtons();
   clearTimeout(window.__chinaSearchTimer);
   window.__chinaSearchTimer = setTimeout(loadChinaPreorders, 250);
 });
@@ -2788,6 +2833,7 @@ document.querySelector("#range")?.addEventListener("change", refresh);
 document.querySelector("#status-filter")?.addEventListener("change", loadOrders);
 document.querySelector("#type-filter")?.addEventListener("change", loadOrders);
 document.querySelector("#search")?.addEventListener("input", () => {
+  syncFilterMenuButtons();
   clearTimeout(window.__searchTimer);
   window.__searchTimer = setTimeout(loadOrders, 250);
 });
@@ -3216,6 +3262,7 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
 
 setActiveTab(state.activeTab);
 setAuthVisible(!adminToken());
+syncFilterMenuButtons();
 refresh();
 
 document.addEventListener("click", (event) => {

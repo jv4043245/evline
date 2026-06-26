@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260626-manager-chat-composer">
-    <script src="/admin/admin.js?v=20260626-manager-chat-composer" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260626-hidden-search-menu">
+    <script src="/admin/admin.js?v=20260626-hidden-search-menu" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -77,7 +77,6 @@
               <button class="admin-btn admin-btn--primary" type="button" data-manual-order-toggle>+ Додати заявку</button>
             </div>
             <div class="filters">
-              <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек...">
               <select id="status-filter">
                 <option value="all">Усі статуси</option>
                 <option value="new">Нова заявка</option>
@@ -99,6 +98,15 @@
                 <option value="byd">BYD</option>
                 <option value="other">Інше</option>
               </select>
+              <div class="filters-more" data-filter-menu>
+                <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові фільтри" aria-expanded="false">...</button>
+                <div class="filters-more__panel" data-filter-menu-panel hidden>
+                  <label>
+                    <span>Пошук</span>
+                    <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек...">
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           <form class="manual-order-form" data-manual-order-form hidden>
@@ -216,7 +224,6 @@
               <h2>Запросы в Китай</h2>
             </div>
             <div class="filters">
-              <input type="search" data-china-search placeholder="№, VIN, авто, поставщик...">
               <select data-china-status>
                 <option value="active">Активные</option>
                 <option value="sent">Ждём ответ</option>
@@ -227,6 +234,15 @@
                 <option value="all">Все</option>
               </select>
               <button class="admin-btn" type="button" data-refresh-china>Обновить</button>
+              <div class="filters-more" data-filter-menu>
+                <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Дополнительные фильтры" aria-expanded="false">...</button>
+                <div class="filters-more__panel" data-filter-menu-panel hidden>
+                  <label>
+                    <span>Поиск</span>
+                    <input type="search" data-china-search placeholder="№, VIN, авто, поставщик...">
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 

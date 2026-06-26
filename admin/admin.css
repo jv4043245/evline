@@ -338,10 +338,46 @@
 }
 
 .admin-btn--icon {
-  width: 38px;
-  min-width: 38px;
+  width: 40px;
+  min-width: 40px;
   padding: 0;
-  font-size: 16px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.admin-btn--icon.is-active {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.filters-more {
+  position: relative;
+}
+
+.filters-more__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(10, 31, 24, 0.14);
+}
+
+.filters-more__panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filters-more__panel input {
+  width: 100%;
 }
 
 .admin-btn svg {
@@ -2532,6 +2568,21 @@ body.order-detail-open .order-detail {
   .admin-btn,
   .admin-header select {
     width: 100%;
+  }
+
+  .filters-more {
+    align-self: flex-start;
+  }
+
+  .filters-more .admin-btn--icon {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  .filters-more__panel {
+    left: 0;
+    right: auto;
+    width: min(320px, calc(100vw - 32px));
   }
 
   .summary-grid,
