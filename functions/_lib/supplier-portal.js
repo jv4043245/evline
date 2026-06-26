@@ -1285,6 +1285,7 @@ export async function listChinaPreorders(env, options = {}) {
   await assertSupplierTables(env);
   const status = text(options.status || "active");
   const q = text(options.q);
+  const orderId = text(options.order_id || options.orderId);
   const limit = Math.min(Math.max(integer(options.limit) || 120, 1), 300);
   const hasPaymentRequestId = await tableHasColumn(env, "supplier_payments", "supplier_request_id");
   const hasCarYear = await tableHasColumn(env, "supplier_requests", "car_year");
@@ -1321,6 +1322,10 @@ export async function listChinaPreorders(env, options = {}) {
       OR orders.customer_phone LIKE ?
     )`);
     binds.push(...Array(hasCarYear ? 9 : 8).fill(`%${q}%`));
+  }
+  if (orderId) {
+    clauses.push("supplier_requests.order_id = ?");
+    binds.push(orderId);
   }
 
   const rows = await safeSelect(

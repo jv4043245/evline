@@ -7,6 +7,7 @@ export async function onRequestGet({ request, env }) {
     const preorders = await listChinaPreorders(env, {
       status: text(url.searchParams.get("status") || "active"),
       q: text(url.searchParams.get("q")),
+      order_id: text(url.searchParams.get("order_id")),
       limit: integer(url.searchParams.get("limit")) || 120,
     });
     return json({ ok: true, preorders });

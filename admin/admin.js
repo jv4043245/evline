@@ -10,6 +10,7 @@ const state = {
   selectedSupplierPayments: [],
   selectedSupplierRequests: [],
   chinaPreorders: [],
+  chinaOrderContext: null,
   shipping: {
     carriers: [],
     rates: [],
@@ -1215,12 +1216,22 @@ function renderChinaPreorders() {
   const root = document.querySelector("[data-china-preorders]");
   if (!root) return;
   const rows = state.chinaPreorders || [];
+  const orderContext = state.chinaOrderContext;
+  const contextHtml = orderContext ? `
+    <div class="china-context-filter">
+      <div>
+        <strong>Запросы по заказу ${escapeHtml(orderContext.orderNumber || orderContext.orderId)}</strong>
+        <span>Показаны только обращения, связанные с этой заявкой.</span>
+      </div>
+      <button class="admin-btn admin-btn--small" type="button" data-china-clear-order-context>Показать все</button>
+    </div>
+  ` : "";
   if (!rows.length) {
-    root.innerHTML = `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
+    root.innerHTML = `${contextHtml}<p class="muted china-preorders__empty">${orderContext ? "По этому заказу активных запросов пока нет." : "Активных запросов пока нет."}</p>`;
     return;
   }
 
-  root.innerHTML = rows.map((bundle) => {
+  root.innerHTML = contextHtml + rows.map((bundle) => {
     const request = bundle.request || {};
     const order = bundle.order || {};
     const quote = selectedSupplierQuote(bundle);
@@ -2159,6 +2170,9 @@ async function loadChinaPreorders() {
     q: document.querySelector("[data-china-search]")?.value || "",
     limit: "120",
   });
+  if (state.chinaOrderContext?.orderId) {
+    params.set("order_id", state.chinaOrderContext.orderId);
+  }
   const data = await api(`/api/admin/supplier-requests?${params}`);
   state.chinaPreorders = data.preorders || [];
   renderChinaPreorders();
@@ -2510,21 +2524,23 @@ async function createChinaPreorder(payload) {
   });
 }
 
-function startChinaPreorderFromOrder(orderId) {
-  const order = (state.orders || []).find((item) => item.id === orderId);
-  if (!order) {
-    alert("Заказ не найден в текущем списке.");
-    return;
-  }
+function setChinaOrderContext(order = null) {
+  state.chinaOrderContext = order?.id ? {
+    orderId: order.id,
+    orderNumber: order.order_number || order.id,
+  } : null;
+}
 
-  setActiveTab("china");
-  const form = document.querySelector("[data-china-preorder-form]");
-  if (!form) return;
-  form.reset();
-  clearChinaPhoto(form);
-  hideChinaCreatedLink(form);
-  const customSupplier = document.querySelector("[data-china-custom-supplier]");
-  if (customSupplier) customSupplier.hidden = true;
+function setChinaListFilters({ status, q } = {}) {
+  const statusSelect = document.querySelector("[data-china-status]");
+  const searchInput = document.querySelector("[data-china-search]");
+  if (statusSelect && status !== undefined) statusSelect.value = status;
+  if (searchInput && q !== undefined) searchInput.value = q;
+  syncFilterMenuButtons();
+}
+
+function fillChinaPreorderFormFromOrder(form, order) {
+  if (!form || !order) return;
   const setValue = (name, value) => {
     const input = form.querySelector(`[name="${name}"]`);
     if (input) input.value = value || "";
@@ -2538,6 +2554,27 @@ function startChinaPreorderFromOrder(orderId) {
 
   const quantity = form.querySelector("[name='quantity']");
   if (quantity && !quantity.value) quantity.value = "1";
+}
+
+function startChinaPreorderFromOrder(orderId) {
+  const order = (state.orders || []).find((item) => item.id === orderId);
+  if (!order) {
+    alert("Заказ не найден в текущем списке.");
+    return;
+  }
+
+  setActiveTab("china");
+  setChinaOrderContext(order);
+  setChinaListFilters({ status: "all", q: "" });
+  const form = document.querySelector("[data-china-preorder-form]");
+  if (!form) return;
+  form.reset();
+  clearChinaPhoto(form);
+  hideChinaCreatedLink(form);
+  const customSupplier = document.querySelector("[data-china-custom-supplier]");
+  if (customSupplier) customSupplier.hidden = true;
+  fillChinaPreorderFormFromOrder(form, order);
+  loadChinaPreorders().catch((error) => alert(error.message));
   form.scrollIntoView({ behavior: "smooth", block: "start" });
   form.querySelector("[name='supplier_name']")?.focus();
 }
@@ -2711,10 +2748,15 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
   button.textContent = "Создаю...";
   try {
     const result = await createChinaPreorder(payload);
+    const contextOrder = state.chinaOrderContext?.orderId
+      ? (result.order || (state.orders || []).find((item) => item.id === state.chinaOrderContext.orderId))
+      : null;
+    if (contextOrder) setChinaOrderContext(contextOrder);
     form.reset();
     clearChinaPhoto(form);
     const custom = document.querySelector("[data-china-custom-supplier]");
     if (custom) custom.hidden = true;
+    if (contextOrder) fillChinaPreorderFormFromOrder(form, contextOrder);
     await Promise.all([loadChinaPreorders(), loadOrders()]);
     const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
     if (link) {
@@ -2866,6 +2908,14 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
 });
 
 document.querySelector("[data-china-preorders]")?.addEventListener("click", async (event) => {
+  const clearContextButton = event.target.closest("[data-china-clear-order-context]");
+  if (clearContextButton) {
+    setChinaOrderContext(null);
+    setChinaListFilters({ status: "active", q: "" });
+    loadChinaPreorders().catch((error) => alert(error.message));
+    return;
+  }
+
   const openButton = event.target.closest("[data-open-order]");
   if (openButton) {
     state.orderEditorTab = "suppliers";
