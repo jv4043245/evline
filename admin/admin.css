@@ -2140,6 +2140,9 @@ body.china-preorder-open .china-preorder-detail {
 }
 
 .china-request-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   border: 1px solid var(--china-border);
   border-radius: 8px;
   background: #fff;
@@ -2215,6 +2218,11 @@ body.china-preorder-open .china-preorder-detail {
 
 .china-request-row__status {
   align-items: end;
+}
+
+.china-request-row__delete {
+  align-self: center;
+  margin: 0 10px 0 0;
 }
 
 .china-preorders__empty {
@@ -2939,6 +2947,11 @@ body.china-preorder-open .china-preorder-detail {
     grid-template-columns: 1fr;
     gap: 8px;
     min-height: 0;
+  }
+
+  .china-request-row__delete {
+    align-self: start;
+    margin: 10px 10px 0 0;
   }
 
   .china-request-row__summary strong {

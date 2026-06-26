@@ -260,6 +260,14 @@ async function safeSelect(env, sql, ...binds) {
   }
 }
 
+async function safeDelete(env, sql, ...binds) {
+  try {
+    await env.DB.prepare(sql).bind(...binds).run();
+  } catch (error) {
+    if (!/no such table|no such column/i.test(error.message || String(error))) throw error;
+  }
+}
+
 async function insertSupplierEvent(env, supplierRequest, payload = {}) {
   const status = normalizeStatus(payload.status, supplierRequest.status);
   const now = new Date().toISOString();
@@ -1227,6 +1235,32 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     .bind(supplierRequest.id)
     .first();
   return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: comment, updated_at: now });
+}
+
+export async function deleteSupplierRequest(env, supplierRequestId) {
+  await assertSupplierTables(env);
+  const id = text(supplierRequestId);
+  const supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(id)
+    .first();
+  if (!supplierRequest) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+
+  await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_tracking_events WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_payments WHERE supplier_request_id = ?", id);
+  await safeDelete(
+    env,
+    "DELETE FROM supplier_payments WHERE supplier_quote_id IN (SELECT id FROM supplier_quotes WHERE supplier_request_id = ?)",
+    id
+  );
+  await safeDelete(env, "DELETE FROM supplier_quotes WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_requests WHERE id = ?", id);
+
+  return supplierRequest;
 }
 
 export async function selectSupplierQuote(env, quoteId) {

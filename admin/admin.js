@@ -1273,6 +1273,9 @@ function renderChinaPreorderDetail(bundle = {}) {
             Отправить на оплату
           </button>
         ` : ""}
+        <button class="admin-btn admin-btn--icon admin-btn--subtle-danger" type="button" data-delete-china-preorder="${escapeHtml(request.id)}" data-delete-china-preorder-number="${escapeHtml(request.public_number || request.id || "запрос")}" aria-label="Удалить запрос ${escapeHtml(request.public_number || request.id || "")}" title="Удалить запрос">
+          <span aria-hidden="true">🗑</span>
+        </button>
       </div>
     </div>
   `;
@@ -1336,6 +1339,9 @@ function renderChinaPreorders() {
           <span class="china-request-row__status">
             ${supplierRequestBadge(request.status)}
           </span>
+        </button>
+        <button class="admin-btn admin-btn--icon admin-btn--subtle-danger china-request-row__delete" type="button" data-delete-china-preorder="${escapeHtml(request.id)}" data-delete-china-preorder-number="${escapeHtml(request.public_number || request.id || "запрос")}" aria-label="Удалить запрос ${escapeHtml(request.public_number || request.id || "")}" title="Удалить запрос">
+          <span aria-hidden="true">🗑</span>
         </button>
       </article>
     `;
@@ -2352,6 +2358,25 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
   return true;
 }
 
+async function deleteChinaPreorder(id, requestNumber = "запрос") {
+  if (!confirm(`Удалить ${requestNumber}?\n\nБудет удалён запрос в Китай, предложения поставщика, чат, фото и связанные платежные записи по этому запросу. Заказ CRM останется на месте. Действие нельзя отменить.`)) return false;
+  const result = await api(`/api/admin/supplier-requests/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (state.selectedChinaPreorderId === id) {
+    setChinaPreorderPanelOpen(false);
+  }
+  state.chinaPreorders = (state.chinaPreorders || []).filter((bundle) => bundle.request?.id !== id);
+  renderChinaPreorders();
+  await loadChinaPreorders();
+  await loadOrders();
+  if (state.selectedOrder?.id && result.order_id === state.selectedOrder.id) {
+    await loadOrder(state.selectedOrder.id);
+  }
+  alert("Запрос в Китай удалён.");
+  return true;
+}
+
 function collectSupplierPaymentCreatePayload(form) {
   const value = (name) => form.querySelector(`[data-supplier-payment-input="${name}"]`)?.value || "";
   const supplierChoice = value("supplier_name");
@@ -3022,6 +3047,27 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
 });
 
 async function handleChinaPreorderClick(event) {
+  const deleteButton = event.target.closest("[data-delete-china-preorder]");
+  if (deleteButton) {
+    deleteButton.disabled = true;
+    deleteButton.setAttribute("aria-busy", "true");
+    try {
+      const deleted = await deleteChinaPreorder(
+        deleteButton.dataset.deleteChinaPreorder || "",
+        deleteButton.dataset.deleteChinaPreorderNumber || "запрос"
+      );
+      if (!deleted) {
+        deleteButton.disabled = false;
+        deleteButton.removeAttribute("aria-busy");
+      }
+    } catch (error) {
+      alert(error.message);
+      deleteButton.disabled = false;
+      deleteButton.removeAttribute("aria-busy");
+    }
+    return;
+  }
+
   const openPreorderButton = event.target.closest("[data-china-open-preorder]");
   if (openPreorderButton) {
     setChinaPreorderPanelOpen(true, openPreorderButton.dataset.chinaOpenPreorder || "");
