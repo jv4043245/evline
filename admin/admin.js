@@ -88,7 +88,7 @@ const supplierRequestStatusLabels = {
   viewed: "Переглянуто",
   quoted: "Є пропозиція",
   needs_info: "Потрібно уточнення",
-  no_stock: "Немає в наявності",
+  no_stock: "Нет поставки",
   accepted: "Варіант обрано",
   purchased: "Викуплено",
   china_tracking: "Доставка по Китаю",
@@ -1144,7 +1144,7 @@ function chinaPreorderStage(bundle = {}) {
   if (payment.status === "requested" || payment.status === "needs_review") return "Ждём оплату";
   if (request.status === "accepted") return "Согласовано";
   if (quote) return "Цена получена";
-  if (request.status === "no_stock") return "Нет в наличии";
+  if (request.status === "no_stock") return "Нет поставки";
   if (request.status === "needs_info") return "Нужно уточнение";
   return "Ждём ответ";
 }
@@ -1262,8 +1262,8 @@ function chinaChatMessages(bundle = {}) {
       messages.push({
         actor: "supplier",
         title: supplierChatTitle(request),
-        meta: "Не можем привезти",
-        text: comment || "Поставщик отметил, что не может привезти позицию.",
+        meta: "Нет поставки",
+        text: comment || "Поставщик отметил, что по позиции нет поставки.",
         created_at: event.created_at,
         order: 5,
         status,

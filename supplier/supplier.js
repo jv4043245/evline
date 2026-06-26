@@ -15,7 +15,7 @@ const requestStatusLabels = {
   viewed: "Просмотрено",
   quoted: "Предложение отправлено",
   needs_info: "Нужно уточнение",
-  no_stock: "Нет в наличии",
+  no_stock: "Нет поставки",
   accepted: "Согласовано EVLine",
   purchased: "Оплачено",
   china_tracking: "Отправлено по Китаю",
@@ -51,6 +51,28 @@ function shortDateTime(value) {
 function dateMs(value) {
   const parsed = new Date(value || "").getTime();
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sendIcon() {
+  return `
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m22 2-7 20-4-9-9-4 20-7Z"></path>
+      <path d="M22 2 11 13"></path>
+    </svg>
+  `;
+}
+
+function sendButton(extraClass = "") {
+  return `
+    <button class="supplier-button supplier-button--primary supplier-button--send ${escapeHtml(extraClass)}" type="submit" aria-label="Отправить" title="Отправить">
+      ${sendIcon()}
+      <span>Отправить</span>
+    </button>
+  `;
+}
+
+function noSupplyButton() {
+  return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply" type="button" data-action="no_stock" title="无法供货">Нет поставки</button>`;
 }
 
 function supplierErrorMessage(message) {
@@ -249,8 +271,8 @@ function supplierChatMessages(data = {}) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
-        meta: "Не можем привезти",
-        text: comment || "Вы отметили, что не можете привезти позицию.",
+        meta: "Нет поставки",
+        text: comment || "Вы отметили, что по позиции нет поставки.",
         created_at: event.created_at,
         order: 5,
       });
@@ -330,8 +352,8 @@ function renderQuoteForm(data = {}) {
         </label>
       </div>
       <div class="supplier-answer-form__actions">
-        <button class="supplier-button supplier-button--primary" type="submit">Отправить ответ</button>
-        <button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>
+        ${noSupplyButton()}
+        ${sendButton()}
       </div>
     </form>
   `;
@@ -352,8 +374,8 @@ function renderMessageForm(data = {}) {
         <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0">
       </label>` : ""}
       <div class="supplier-message-form__actions">
-        <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Отправить</button>
-        ${canMarkNoStock ? `<button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>` : ""}
+        ${canMarkNoStock ? noSupplyButton() : ""}
+        ${sendButton("supplier-button--small")}
       </div>
     </form>
   `;
@@ -769,7 +791,7 @@ root?.addEventListener("click", async (event) => {
   if (!button) return;
   const action = button.dataset.action;
   if (action !== "no_stock") return;
-  if (!confirm("Отметить, что эту позицию невозможно привезти?")) return;
+  if (!confirm("Отметить, что по этой позиции нет поставки?")) return;
   setButtonBusy(button, true);
   try {
     const requestToken = supplierTokenForElement(button);

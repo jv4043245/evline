@@ -251,6 +251,17 @@ body.supplier-shell {
   transform: translateY(-1px);
 }
 
+.supplier-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
 .supplier-button--primary {
   border-color: var(--supplier-green);
   background: var(--supplier-green);
@@ -276,22 +287,30 @@ body.supplier-shell {
   font-size: 12px;
 }
 
+.supplier-button--send {
+  min-width: 118px;
+}
+
+.supplier-button--send.supplier-button--small {
+  min-width: 96px;
+}
+
 .supplier-button--quiet-danger {
-  min-height: 32px;
-  padding: 0 10px;
-  border-color: #f1d5d5;
-  background: #fff;
-  color: #a13a3a;
+  min-height: 30px;
+  padding: 0 9px;
+  border-color: transparent;
+  background: transparent;
+  color: #9f4b4b;
   font-size: 12px;
-  opacity: 0.62;
+  opacity: 0.58;
 }
 
 .supplier-button--quiet-danger:not(:disabled):hover,
 .supplier-button--quiet-danger:not(:disabled):focus-visible {
-  border-color: #ef4444;
-  background: #fff5f5;
+  border-color: #f1d5d5;
+  background: #fff7f7;
   color: #991b1b;
-  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.12);
+  box-shadow: 0 6px 14px rgba(185, 28, 28, 0.08);
   opacity: 1;
 }
 
@@ -351,6 +370,7 @@ body.supplier-shell {
 .supplier-message-form__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
 }
@@ -389,6 +409,7 @@ body.supplier-shell {
 .supplier-answer-form__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
