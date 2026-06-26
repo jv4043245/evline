@@ -1160,7 +1160,7 @@ function renderChinaPreorders() {
   if (!root) return;
   const rows = state.chinaPreorders || [];
   if (!rows.length) {
-    root.innerHTML = `<p class="muted">Активных предзаказов пока нет.</p>`;
+    root.innerHTML = `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
     return;
   }
 
@@ -1179,7 +1179,7 @@ function renderChinaPreorders() {
       <article class="china-preorder-card" data-china-preorder="${escapeHtml(request.id)}">
         <div class="china-preorder-card__head">
           <div>
-            <strong>${escapeHtml(request.public_number || request.id || "Предзаказ")}</strong>
+            <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
             <span>${escapeHtml(chinaPreorderStage(bundle))} · ${escapeHtml(request.supplier_name || "поставщик")}</span>
           </div>
           ${supplierRequestBadge(request.status)}
@@ -2420,12 +2420,12 @@ async function createChinaPreorder(payload) {
         vin: payload.vin,
         item_name: payload.item_name,
         request_text: payload.request_text,
-        manager_notes: "Создано из мини-CRM Предзаказы Китай",
+        manager_notes: "Создано из мини-CRM Запросы в Китай",
       }),
     });
     orderId = orderResult.order?.id || "";
   }
-  if (!orderId) throw new Error("Не удалось определить заказ CRM для предзаказа.");
+  if (!orderId) throw new Error("Не удалось определить заказ CRM для запроса.");
 
   return api(`/api/admin/orders/${encodeURIComponent(orderId)}/supplier-requests`, {
     method: "POST",
@@ -2614,15 +2614,15 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
     const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
     if (link) {
       navigator.clipboard?.writeText(link).catch(() => null);
-      alert("Предзаказ создан. Ссылка поставщика скопирована.");
+      alert("Запрос в Китай создан. Ссылка поставщика скопирована.");
     } else {
-      alert("Предзаказ создан.");
+      alert("Запрос в Китай создан.");
     }
   } catch (error) {
     alert(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Предзаказ в Китай";
+    button.textContent = "Запрос в Китай";
   }
 });
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {

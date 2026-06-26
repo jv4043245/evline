@@ -6,14 +6,14 @@ function supplierPageHtml(token) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>EVLine · Предзаказ поставщику</title>
+    <title>EVLine · Запрос поставщику</title>
     <link rel="stylesheet" href="/supplier/supplier.css">
     <script src="/supplier/supplier.js" defer></script>
   </head>
   <body class="supplier-shell" data-supplier-page="request" data-token="${safeToken}">
     <main class="supplier-app" data-app>
       <section class="supplier-loading">
-        <span>EVLine · Предзаказ поставщику</span>
+        <span>EVLine · Запрос поставщику</span>
         <strong>Загрузка...</strong>
       </section>
     </main>

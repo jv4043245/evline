@@ -7,7 +7,7 @@ const page = document.body.dataset.supplierPage || query.get("page") || (pathPar
 
 const requestStatusLabels = {
   draft: "Черновик",
-  sent: "Новый предзаказ",
+  sent: "Новый запрос",
   viewed: "Просмотрено",
   quoted: "Предложение отправлено",
   needs_info: "Нужно уточнение",
@@ -57,16 +57,16 @@ function supplierErrorMessage(message) {
     "Client approval is required before payment": "Перед оплатой менеджер должен подтвердить согласование с клиентом.",
     "Payment receipt is required before supplier tracking": "Трек можно внести только после подтверждения оплаты.",
     "Logistics status is available only after manager accepts a quote": "Трек можно внести только после того, как EVLine выберет предложение.",
-    "Supplier request is closed": "Этот предзаказ уже закрыт.",
-    "Supplier request not found": "Предзаказ не найден или ссылка устарела.",
+    "Supplier request is closed": "Этот запрос уже закрыт.",
+    "Supplier request not found": "Запрос не найден или ссылка устарела.",
     "Unsupported supplier status": "Этот статус сейчас недоступен.",
-    "Supplier event limit reached": "Достигнут лимит обновлений по этому предзаказу.",
+    "Supplier event limit reached": "Достигнут лимит обновлений по этому запросу.",
     "Tracking number is required": "Укажите трек-номер.",
     "Clarification text is required": "Напишите, что нужно уточнить.",
     "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
     "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
     "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
-    "Supplier quote does not belong to this supplier request": "Предложение не относится к этому предзаказу.",
+    "Supplier quote does not belong to this supplier request": "Предложение не относится к этому запросу.",
   };
   return dictionary[value] || value || "Ошибка запроса";
 }
@@ -89,7 +89,7 @@ async function supplierApi(path, options = {}) {
 
 function statusBadge(status) {
   const safe = String(status || "sent").replace(/[^a-z0-9_-]/gi, "");
-  return `<span class="supplier-status supplier-status--${safe}">${escapeHtml(requestStatusLabels[status] || status || "Новый предзаказ")}</span>`;
+  return `<span class="supplier-status supplier-status--${safe}">${escapeHtml(requestStatusLabels[status] || status || "Новый запрос")}</span>`;
 }
 
 function requestImages(images = []) {
@@ -341,7 +341,7 @@ function renderRequestPage(data) {
   root.innerHTML = `
     <header class="supplier-topbar">
       <div class="supplier-brand">
-        <strong>EVLine · Предзаказ</strong>
+        <strong>EVLine · Запрос</strong>
         <span>${escapeHtml(request.public_number || "")}</span>
       </div>
     </header>
@@ -388,7 +388,7 @@ function renderDashboardPage(data) {
     </header>
     <section class="supplier-hero">
       <h1>Активные запросы EVLine</h1>
-      <p>Здесь видны только ваши предзаказы.</p>
+      <p>Здесь видны только ваши запросы.</p>
     </section>
     <section class="supplier-dashboard">
       ${requests.length ? requests.map((request) => `
@@ -490,7 +490,7 @@ if (!token && root) {
   root.innerHTML = `
     <section class="supplier-empty">
       <strong>Кабинет поставщика</strong>
-      <span class="supplier-muted">Откройте ссылку на предзаказ, которую отправил менеджер EVLine.</span>
+      <span class="supplier-muted">Откройте ссылку на запрос, которую отправил менеджер EVLine.</span>
     </section>
   `;
 } else {

@@ -258,6 +258,21 @@
   color: var(--ink);
 }
 
+.admin-header select,
+.filters select,
+.manual-order-form select,
+.china-preorder-form select,
+.order-editor select,
+.cost-form select,
+.shipping-form select {
+  padding-right: 40px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2366756f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 17px 17px;
+}
+
 .admin-btn {
   min-height: 40px;
   display: inline-flex;
@@ -1973,6 +1988,14 @@ body.order-detail-open .order-detail {
 .china-preorders {
   display: grid;
   gap: 12px;
+}
+
+.china-preorders__empty {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--china-border);
+  border-radius: 8px;
+  background: #fff;
 }
 
 .china-preorder-card {

@@ -1170,7 +1170,7 @@ export async function sendSupplierRequestToPayment(env, supplierRequestId, paylo
     supplier_request_id: supplierRequest.id,
     supplier_quote_id: selected.id,
     notes: text(payload.notes) || [
-      `Предзаказ: ${supplierRequest.public_number || supplierRequest.id}`,
+      `Запрос: ${supplierRequest.public_number || supplierRequest.id}`,
       supplierRequest.item_name ? `Позиция: ${supplierRequest.item_name}` : "",
       selected.purchase_days ? `Срок: ${selected.purchase_days} дн.` : "",
       selected.comment_ru || selected.comment_translated || selected.comment_cn ? `Комментарий: ${selected.comment_ru || selected.comment_translated || selected.comment_cn}` : "",
