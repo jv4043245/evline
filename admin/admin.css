@@ -885,7 +885,7 @@ body.china-preorder-open .china-preorder-detail {
 .orders-table--manager {
   min-width: 1240px;
   border-collapse: separate;
-  border-spacing: 0;
+  border-spacing: 0 8px;
   table-layout: fixed;
 }
 
@@ -914,7 +914,7 @@ body.china-preorder-open .china-preorder-detail {
 }
 
 .orders-table--manager .orders-table__col-actions {
-  width: 92px;
+  width: 160px;
 }
 
 .orders-table th,
@@ -934,24 +934,36 @@ body.china-preorder-open .china-preorder-detail {
 
 .orders-table--manager th,
 .orders-table--manager td {
-  padding: 12px 14px;
+  padding: 11px 13px;
 }
 
 .orders-table--manager tbody td {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fff;
   line-height: 1.35;
-  transition: background 0.16s ease, box-shadow 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.orders-table--manager tbody tr:nth-child(even):not(.orders-table__row--selected) td {
-  background: #f8fbf9;
+.orders-table--manager tbody td:first-child {
+  border-left: 1px solid var(--line);
+  border-radius: 8px 0 0 8px;
+}
+
+.orders-table--manager tbody td:last-child {
+  border-right: 1px solid var(--line);
+  border-radius: 0 8px 8px 0;
 }
 
 .orders-table--manager tbody tr:hover td {
-  background: #eef8f2;
+  border-color: #cde5d7;
+  background: #f6fbf8;
 }
 
 .orders-table--manager tbody tr.orders-table__row--selected td {
-  background: #e9f8ef;
+  border-color: rgba(0, 168, 107, 0.42);
+  background: #f1fbf5;
+  box-shadow: 0 10px 24px rgba(10, 31, 24, 0.06);
 }
 
 .orders-table--manager tbody tr.orders-table__row--selected td:first-child {
@@ -1186,9 +1198,10 @@ body.china-preorder-open .china-preorder-detail {
 
 .orders-table__actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .orders-table__open {
@@ -1205,7 +1218,7 @@ body.china-preorder-open .china-preorder-detail {
 }
 
 .orders-table__china {
-  min-height: 30px;
+  min-height: 34px;
   margin-top: 0;
   padding: 0 9px;
   border-color: var(--china-border);
@@ -1213,6 +1226,12 @@ body.china-preorder-open .china-preorder-detail {
   color: var(--china-accent-dark);
   font-size: 12px;
   white-space: nowrap;
+}
+
+.orders-table__delete {
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
 }
 
 .orders-table__china:hover,
@@ -2924,17 +2943,25 @@ body.china-preorder-open .china-preorder-detail {
   }
 
   .orders-table__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px 42px;
     align-items: stretch;
   }
 
   .orders-table__open {
-    width: 100%;
-    min-width: 0;
+    width: 42px;
+    min-width: 42px;
     min-height: 40px;
   }
 
   .orders-table__china {
     width: 100%;
+    min-height: 40px;
+  }
+
+  .orders-table__delete {
+    width: 42px;
+    min-width: 42px;
     min-height: 40px;
   }
 

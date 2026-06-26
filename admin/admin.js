@@ -1644,6 +1644,9 @@ function renderOrders() {
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
                   </button>
+                  <button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}" aria-label="Видалити заявку ${escapeHtml(publicNumber)}" title="Видалити заявку">
+                    <span aria-hidden="true">🗑</span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -3038,6 +3041,8 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
     openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
     return;
   }
+
+  if (event.target.closest("[data-delete-order]")) return;
 
   if (event.target.closest("a")) return;
 
