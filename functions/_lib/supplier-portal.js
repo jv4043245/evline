@@ -408,6 +408,8 @@ function publicImage(image) {
 
 function publicQuote(quote) {
   return {
+    id: quote.id,
+    supplier_request_id: quote.supplier_request_id,
     quote_type: quote.quote_type,
     availability: quote.availability,
     price_cny: quote.price_cny,

@@ -31,6 +31,10 @@ const state = {
   },
 };
 
+const CHINA_SEEN_SUPPLIER_ACTIVITY_KEY = "evline_china_seen_supplier_activity_v1";
+let chinaAutoRefreshTimer = null;
+let chinaPreordersLoading = false;
+
 const statusLabels = {
   new: "Нова заявка",
   accepted: "Прийнято в роботу",
@@ -359,6 +363,12 @@ function setActiveTab(tab) {
   if (nextTab !== "orders") setOrderDetailOpen(false);
   if (nextTab !== "china") setChinaRequestPanelOpen(false);
   if (nextTab !== "china") setChinaPreorderPanelOpen(false);
+  if (nextTab === "china") {
+    startChinaAutoRefresh();
+    if (adminToken()) loadChinaPreorders({ silent: true }).catch((error) => console.warn(error));
+  } else {
+    stopChinaAutoRefresh();
+  }
   if (nextTab === "delivery") renderShippingDirectory();
 }
 
@@ -1176,6 +1186,71 @@ function supplierChatTitle(request = {}) {
   return name ? `Поставщик ${name}` : "Поставщик";
 }
 
+function chinaSupplierActivityMs(bundle = {}) {
+  const request = bundle.request || {};
+  const supplierEventStatuses = new Set(["quoted", "needs_info", "no_stock", "problem", "china_tracking", "china_warehouse"]);
+  const quoteTimes = (bundle.quotes || []).map((quote) => dateMs(quote.created_at));
+  const eventTimes = (bundle.tracking_events || [])
+    .filter((event) => supplierEventStatuses.has(plainText(event.status)))
+    .map((event) => dateMs(event.created_at));
+  return Math.max(0, dateMs(request.delivery_cost_updated_at), ...quoteTimes, ...eventTimes);
+}
+
+function chinaManagerActivityMs(bundle = {}) {
+  const request = bundle.request || {};
+  const payment = bundle.payment || {};
+  const managerEventStatuses = new Set(["sent", "accepted", "purchased"]);
+  const eventTimes = (bundle.tracking_events || [])
+    .filter((event) => managerEventStatuses.has(plainText(event.status)))
+    .map((event) => dateMs(event.created_at));
+  const selectedQuoteTimes = (bundle.quotes || [])
+    .filter((quote) => quote.status === "selected")
+    .map((quote) => dateMs(quote.updated_at || quote.created_at));
+  return Math.max(0, dateMs(request.created_at), dateMs(payment.updated_at), ...eventTimes, ...selectedQuoteTimes);
+}
+
+function chinaSeenSupplierActivityMap() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CHINA_SEEN_SUPPLIER_ACTIVITY_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveChinaSeenSupplierActivityMap(map = {}) {
+  try {
+    localStorage.setItem(CHINA_SEEN_SUPPLIER_ACTIVITY_KEY, JSON.stringify(map));
+  } catch {
+    // localStorage can be unavailable in private/blocked contexts; visual state will still work for this page load.
+  }
+}
+
+function chinaSupplierNeedsAttention(bundle = {}) {
+  const request = bundle.request || {};
+  if (["closed", "canceled"].includes(request.status)) return false;
+  return chinaSupplierActivityMs(bundle) > chinaManagerActivityMs(bundle);
+}
+
+function chinaSupplierHasUnread(bundle = {}) {
+  const request = bundle.request || {};
+  const id = request.id || "";
+  const latestSupplier = chinaSupplierActivityMs(bundle);
+  if (!id || !latestSupplier) return false;
+  const seen = Number(chinaSeenSupplierActivityMap()[id] || 0);
+  return latestSupplier > seen;
+}
+
+function markChinaSupplierActivitySeen(requestId = "") {
+  const bundle = (state.chinaPreorders || []).find((item) => item.request?.id === requestId);
+  const latestSupplier = chinaSupplierActivityMs(bundle);
+  if (!requestId || !latestSupplier) return;
+  const seen = chinaSeenSupplierActivityMap();
+  if (Number(seen[requestId] || 0) >= latestSupplier) return;
+  seen[requestId] = latestSupplier;
+  saveChinaSeenSupplierActivityMap(seen);
+}
+
 function chinaChatMessages(bundle = {}) {
   const request = bundle.request || {};
   const events = bundle.tracking_events || [];
@@ -1412,6 +1487,8 @@ function renderChinaPreorders() {
     const order = bundle.order || {};
     const quote = selectedSupplierQuote(bundle);
     const payment = bundle.payment || null;
+    const hasUnreadSupplier = chinaSupplierHasUnread(bundle);
+    const needsSupplierAttention = chinaSupplierNeedsAttention(bundle);
     const orderNumber = order.order_number || request.order_id || "-";
     const quoteLine = quote
       ? `${supplierAmount(quote.price_cny, "CNY")}${quote.purchase_days ? ` · ${Number(quote.purchase_days)} дн.` : ""}${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? ` · доставка ${supplierAmount(request.delivery_cost_cny, "CNY")}` : ""}`
@@ -1420,11 +1497,12 @@ function renderChinaPreorders() {
       ? `${supplierAmount(payment.requested_amount, payment.requested_currency)} · ${supplierPaymentStatusLabels[payment.status] || payment.status || "оплата"}`
       : "не отправляли";
     return `
-      <article class="china-request-row ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
+      <article class="china-request-row ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
         <button class="china-request-row__summary" type="button" data-china-open-preorder="${escapeHtml(request.id)}" aria-label="Открыть ${escapeHtml(request.public_number || request.id || "запрос")}">
           <span class="china-request-row__number">
             <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
             <small>${escapeHtml(shortDateTime(request.created_at))}</small>
+            ${hasUnreadSupplier ? `<b class="china-request-row__attention" data-china-unread-badge>Новый ответ</b>` : needsSupplierAttention ? `<b class="china-request-row__attention china-request-row__attention--soft">Ждёт действия</b>` : ""}
           </span>
           <span>
             <small>Поставщик</small>
@@ -2414,15 +2492,38 @@ async function loadOrder(id) {
   renderOrderEditor(state.selectedOrder);
 }
 
-async function loadChinaPreorders() {
+async function loadChinaPreorders(options = {}) {
+  if (chinaPreordersLoading) return;
+  chinaPreordersLoading = true;
   const params = new URLSearchParams({
     status: document.querySelector("[data-china-status]")?.value || "active",
     q: document.querySelector("[data-china-search]")?.value || "",
     limit: "120",
   });
-  const data = await api(`/api/admin/supplier-requests?${params}`);
-  state.chinaPreorders = data.preorders || [];
-  renderChinaPreorders();
+  try {
+    const data = await api(`/api/admin/supplier-requests?${params}`);
+    state.chinaPreorders = data.preorders || [];
+    renderChinaPreorders();
+  } catch (error) {
+    if (!options.silent) throw error;
+    console.warn(error);
+  } finally {
+    chinaPreordersLoading = false;
+  }
+}
+
+function stopChinaAutoRefresh() {
+  if (!chinaAutoRefreshTimer) return;
+  clearInterval(chinaAutoRefreshTimer);
+  chinaAutoRefreshTimer = null;
+}
+
+function startChinaAutoRefresh() {
+  if (chinaAutoRefreshTimer) return;
+  chinaAutoRefreshTimer = setInterval(() => {
+    if (state.activeTab !== "china" || document.hidden) return;
+    loadChinaPreorders({ silent: true });
+  }, 20000);
 }
 
 function syncFilterMenuButtons() {
@@ -2927,6 +3028,12 @@ document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
 });
 
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && state.activeTab === "china") {
+    loadChinaPreorders({ silent: true });
+  }
+});
+
 document.addEventListener("click", (event) => {
   const menuButton = event.target.closest("[data-filter-menu-button]");
   if (menuButton) {
@@ -3223,7 +3330,18 @@ async function handleChinaPreorderClick(event) {
 
   const openPreorderButton = event.target.closest("[data-china-open-preorder]");
   if (openPreorderButton) {
-    setChinaPreorderPanelOpen(true, openPreorderButton.dataset.chinaOpenPreorder || "");
+    const requestId = openPreorderButton.dataset.chinaOpenPreorder || "";
+    openPreorderButton.disabled = true;
+    try {
+      await loadChinaPreorders();
+      markChinaSupplierActivitySeen(requestId);
+      setChinaPreorderPanelOpen(true, requestId);
+      renderChinaPreorders();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      openPreorderButton.disabled = false;
+    }
     return;
   }
 
