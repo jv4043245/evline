@@ -831,7 +831,7 @@ body.order-detail-open .order-detail {
 }
 
 .orders-table--manager .orders-table__col-actions {
-  width: 84px;
+  width: 92px;
 }
 
 .orders-table th,
@@ -1119,6 +1119,25 @@ body.order-detail-open .order-detail {
   color: var(--green-dark);
   font-size: 16px;
   line-height: 1;
+}
+
+.orders-table__china {
+  min-height: 30px;
+  margin-top: 0;
+  padding: 0 9px;
+  border-color: var(--china-border);
+  background: #fff;
+  color: var(--china-accent-dark);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.orders-table__china:hover,
+.orders-table__china:focus-visible {
+  border-color: var(--china-accent);
+  background: var(--china-accent-soft);
+  color: var(--china-accent-dark);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
 }
 
 .badge {
@@ -2557,6 +2576,11 @@ body.order-detail-open .order-detail {
   .orders-table__open {
     width: 100%;
     min-width: 0;
+    min-height: 40px;
+  }
+
+  .orders-table__china {
+    width: 100%;
     min-height: 40px;
   }
 

@@ -1376,6 +1376,9 @@ function renderOrders() {
               <td class="orders-table__track-cell" data-label="Трек">${trackCell}</td>
               <td data-label="Дії">
                 <div class="orders-table__actions">
+                  <button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запрос в Китай для ${escapeHtml(publicNumber)}" title="Запрос в Китай">
+                    В Китай
+                  </button>
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
                   </button>
@@ -2291,6 +2294,37 @@ async function createChinaPreorder(payload) {
   });
 }
 
+function startChinaPreorderFromOrder(orderId) {
+  const order = (state.orders || []).find((item) => item.id === orderId);
+  if (!order) {
+    alert("Заказ не найден в текущем списке.");
+    return;
+  }
+
+  setActiveTab("china");
+  const form = document.querySelector("[data-china-preorder-form]");
+  if (!form) return;
+  form.reset();
+  clearChinaPhoto(form);
+  const customSupplier = document.querySelector("[data-china-custom-supplier]");
+  if (customSupplier) customSupplier.hidden = true;
+  const setValue = (name, value) => {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (input) input.value = value || "";
+  };
+
+  setValue("order_id", order.id);
+  setValue("car", order.car || "");
+  setValue("car_year", order.car_year || "");
+  setValue("vin", order.vin || "");
+  setValue("item_name", order.item_name || order.service_name || "");
+
+  const quantity = form.querySelector("[name='quantity']");
+  if (quantity && !quantity.value) quantity.value = "1";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  form.querySelector("[name='supplier_name']")?.focus();
+}
+
 function collectSupplierRequestCreatePayload(form) {
   const value = (name) => form.querySelector(`[data-supplier-request-input="${name}"]`)?.value || "";
   const supplierChoice = value("supplier_name");
@@ -2558,6 +2592,12 @@ document.querySelector("#search")?.addEventListener("input", () => {
 });
 
 document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
+  const chinaButton = event.target.closest("[data-order-to-china]");
+  if (chinaButton) {
+    startChinaPreorderFromOrder(chinaButton.dataset.orderToChina);
+    return;
+  }
+
   const openButton = event.target.closest("[data-open-order]");
   if (openButton) {
     openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
