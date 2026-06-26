@@ -1171,6 +1171,11 @@ function isDuplicateChinaQuoteEvent(event = {}, quotes = []) {
   });
 }
 
+function supplierChatTitle(request = {}) {
+  const name = plainText(request.supplier_name);
+  return name ? `Поставщик ${name}` : "Поставщик";
+}
+
 function chinaChatMessages(bundle = {}) {
   const request = bundle.request || {};
   const events = bundle.tracking_events || [];
@@ -1207,7 +1212,7 @@ function chinaChatMessages(bundle = {}) {
     if (!textValue) continue;
     messages.push({
       actor: "supplier",
-      title: request.supplier_name || "Поставщик",
+      title: supplierChatTitle(request),
       meta: "Предложение",
       text: textValue,
       created_at: quote.created_at,
@@ -1223,7 +1228,7 @@ function chinaChatMessages(bundle = {}) {
       if (comment && !isDuplicateChinaQuoteEvent(event, quotes)) {
         messages.push({
           actor: "supplier",
-          title: request.supplier_name || "Поставщик",
+          title: supplierChatTitle(request),
           meta: "Сообщение",
           text: comment,
           created_at: event.created_at,
@@ -1236,7 +1241,7 @@ function chinaChatMessages(bundle = {}) {
     if (status === "needs_info" && comment) {
       messages.push({
         actor: "supplier",
-        title: request.supplier_name || "Поставщик",
+        title: supplierChatTitle(request),
         meta: "Нужно уточнение",
         text: comment,
         created_at: event.created_at,
@@ -1256,7 +1261,7 @@ function chinaChatMessages(bundle = {}) {
     } else if (status === "no_stock") {
       messages.push({
         actor: "supplier",
-        title: request.supplier_name || "Поставщик",
+        title: supplierChatTitle(request),
         meta: "Не можем привезти",
         text: comment || "Поставщик отметил, что не может привезти позицию.",
         created_at: event.created_at,
@@ -1266,7 +1271,7 @@ function chinaChatMessages(bundle = {}) {
     } else if (status === "problem" && comment) {
       messages.push({
         actor: "supplier",
-        title: request.supplier_name || "Поставщик",
+        title: supplierChatTitle(request),
         meta: "Проблема",
         text: comment,
         created_at: event.created_at,
@@ -1276,7 +1281,7 @@ function chinaChatMessages(bundle = {}) {
     } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
       messages.push({
         actor: "supplier",
-        title: request.supplier_name || "Поставщик",
+        title: supplierChatTitle(request),
         meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
         text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
         created_at: event.created_at,

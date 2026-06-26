@@ -176,6 +176,10 @@ function isDuplicateQuoteEvent(event = {}, quotes = []) {
   });
 }
 
+function supplierSelfTitle() {
+  return "Я";
+}
+
 function supplierChatMessages(data = {}) {
   const request = data.request || {};
   const events = data.tracking_events || [];
@@ -199,7 +203,7 @@ function supplierChatMessages(data = {}) {
     if (!textValue) continue;
     messages.push({
       actor: "supplier",
-      title: "Поставщик",
+      title: supplierSelfTitle(),
       meta: "Предложение",
       text: textValue,
       created_at: quote.created_at,
@@ -214,7 +218,7 @@ function supplierChatMessages(data = {}) {
       if (comment && !isDuplicateQuoteEvent(event, quotes)) {
         messages.push({
           actor: "supplier",
-          title: "Поставщик",
+          title: supplierSelfTitle(),
           meta: "Сообщение",
           text: comment,
           created_at: event.created_at,
@@ -226,7 +230,7 @@ function supplierChatMessages(data = {}) {
     if (status === "needs_info" && comment) {
       messages.push({
         actor: "supplier",
-        title: "Поставщик",
+        title: supplierSelfTitle(),
         meta: "Нужно уточнение",
         text: comment,
         created_at: event.created_at,
@@ -244,16 +248,16 @@ function supplierChatMessages(data = {}) {
     } else if (status === "no_stock") {
       messages.push({
         actor: "supplier",
-        title: "Поставщик",
+        title: supplierSelfTitle(),
         meta: "Не можем привезти",
-        text: comment || "Поставщик отметил, что не может привезти позицию.",
+        text: comment || "Вы отметили, что не можете привезти позицию.",
         created_at: event.created_at,
         order: 5,
       });
     } else if (status === "problem" && comment) {
       messages.push({
         actor: "supplier",
-        title: "Поставщик",
+        title: supplierSelfTitle(),
         meta: "Проблема",
         text: comment,
         created_at: event.created_at,
@@ -262,7 +266,7 @@ function supplierChatMessages(data = {}) {
     } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
       messages.push({
         actor: "supplier",
-        title: "Поставщик",
+        title: supplierSelfTitle(),
         meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
         text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
         created_at: event.created_at,
