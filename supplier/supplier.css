@@ -300,46 +300,9 @@ body.supplier-shell {
   cursor: wait;
 }
 
-.supplier-clarification {
-  display: grid;
-  gap: 9px;
-  padding: 11px;
-  border: 1px solid var(--supplier-line);
-  border-radius: 8px;
-  background: #fbfcfb;
-}
-
-.supplier-clarification__head {
-  display: grid;
-  gap: 2px;
-}
-
-.supplier-clarification__head strong {
-  font-size: 14px;
-}
-
-.supplier-clarification textarea {
-  width: 100%;
-  min-height: 78px;
-  padding: 9px 10px;
-  border: 1px solid var(--supplier-line);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--supplier-ink);
-  font: inherit;
-  resize: vertical;
-}
-
-.supplier-clarification__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .supplier-message-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 132px) auto;
   gap: 8px;
   align-items: end;
   padding: 10px;
@@ -359,6 +322,26 @@ body.supplier-shell {
   color: var(--supplier-ink);
   font: inherit;
   resize: vertical;
+}
+
+.supplier-message-form__delivery {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--supplier-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.supplier-message-form__delivery input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--supplier-ink);
+  font: inherit;
 }
 
 .supplier-message-form__actions {
@@ -395,6 +378,17 @@ body.supplier-shell {
   gap: 10px;
 }
 
+.supplier-answer-form .supplier-form__grid {
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 128px) minmax(118px, 150px);
+}
+
+.supplier-answer-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .supplier-form label {
   display: grid;
   gap: 6px;
@@ -423,19 +417,6 @@ body.supplier-shell {
 
 .supplier-form textarea {
   resize: vertical;
-}
-
-.supplier-delivery-cost-form {
-  padding: 12px;
-  border: 1px solid var(--supplier-line);
-  background: #fbfcfb;
-}
-
-.supplier-delivery-cost-form__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: end;
 }
 
 .supplier-quotes {
@@ -769,13 +750,13 @@ body.supplier-shell {
     grid-template-columns: 1fr;
   }
 
+  .supplier-answer-form .supplier-form__grid {
+    grid-template-columns: 1fr;
+  }
+
   .supplier-dashboard-stats,
   .supplier-money-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .supplier-clarification__actions {
-    justify-content: flex-start;
   }
 
   .supplier-message-form {
@@ -786,8 +767,7 @@ body.supplier-shell {
     justify-content: flex-start;
   }
 
-  .supplier-form__inline-head,
-  .supplier-delivery-cost-form__row {
+  .supplier-form__inline-head {
     display: grid;
     grid-template-columns: 1fr;
     align-items: stretch;

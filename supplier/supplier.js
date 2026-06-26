@@ -300,27 +300,37 @@ function renderQuoteForm(data = {}) {
   const hasQuote = (data.quotes || []).length > 0;
   const quotable = !hasQuote && ["sent", "viewed", "needs_info"].includes(request.status);
   if (!quotable) return "";
+  const currentDelivery = request.delivery_cost_cny === null || request.delivery_cost_cny === undefined
+    ? ""
+    : Number(request.delivery_cost_cny || 0);
   return `
-    <form class="supplier-form supplier-form--compact" data-quote-form>
-      <h2>Ответ по цене</h2>
+    <form class="supplier-form supplier-form--compact supplier-answer-form" data-answer-form>
+      <h2>Ответ по запросу</h2>
       <div class="supplier-form__grid">
         <input name="quote_type" type="hidden" value="original">
         <input name="availability" type="hidden" value="in_stock">
         <input name="quantity" type="hidden" value="${Number(request.quantity || 1)}">
         <label>
           Цена, CNY
-          <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200" required>
+          <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200">
+        </label>
+        <label>
+          Доставка, CNY
+          <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0" value="${escapeHtml(currentDelivery)}">
         </label>
         <label>
           Срок поставки, дней
-          <input name="purchase_days" type="number" min="0" step="1" placeholder="0" required>
+          <input name="purchase_days" type="number" min="0" step="1" placeholder="0">
         </label>
         <label class="supplier-wide">
-          Комментарий
-          <textarea name="comment_cn" rows="3" placeholder="наличие, нюансы, упаковка, условия"></textarea>
+          Комментарий / уточнение
+          <textarea name="comment_cn" rows="3" placeholder="цена, нюансы, условия или что нужно уточнить"></textarea>
         </label>
       </div>
-      <button class="supplier-button supplier-button--primary" type="submit">Отправить предложение</button>
+      <div class="supplier-answer-form__actions">
+        <button class="supplier-button supplier-button--primary" type="submit">Отправить ответ</button>
+        <button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>
+      </div>
     </form>
   `;
 }
@@ -331,9 +341,16 @@ function renderMessageForm(data = {}) {
   const canMessage = hasQuote && ["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"].includes(request.status);
   const canMarkNoStock = hasQuote && ["quoted", "accepted", "purchased", "needs_info"].includes(request.status);
   if (!canMessage) return "";
+  const currentDelivery = request.delivery_cost_cny === null || request.delivery_cost_cny === undefined
+    ? ""
+    : Number(request.delivery_cost_cny || 0);
   return `
     <form class="supplier-message-form" data-message-form aria-label="Сообщение по запросу">
-      <textarea name="comment_cn" rows="2" placeholder="Написать сообщение по этому запросу" required></textarea>
+      <textarea name="comment_cn" rows="2" placeholder="Написать сообщение по этому запросу"></textarea>
+      <label class="supplier-message-form__delivery">
+        Доставка, CNY
+        <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0" value="${escapeHtml(currentDelivery)}">
+      </label>
       <div class="supplier-message-form__actions">
         <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Отправить</button>
         ${canMarkNoStock ? `<button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>` : ""}
@@ -342,33 +359,12 @@ function renderMessageForm(data = {}) {
   `;
 }
 
-function deliveryCostText(value) {
-  if (value === null || value === undefined || value === "") return "не указана";
-  return `${Number(value || 0).toLocaleString("ru-RU")} CNY`;
+function formHasDeliveryCost(payload = {}) {
+  return Object.prototype.hasOwnProperty.call(payload, "delivery_cost_cny") && plainText(payload.delivery_cost_cny);
 }
 
-function renderDeliveryCostForm(data = {}) {
-  const request = data.request || {};
-  const allowed = !["closed", "canceled"].includes(request.status);
-  if (!allowed) return "";
-  const currentValue = request.delivery_cost_cny === null || request.delivery_cost_cny === undefined
-    ? ""
-    : Number(request.delivery_cost_cny || 0);
-  return `
-    <form class="supplier-form supplier-form--compact supplier-delivery-cost-form" data-delivery-cost-form>
-      <div class="supplier-form__inline-head">
-        <h2>Доставка</h2>
-        <span class="supplier-muted">${escapeHtml(deliveryCostText(request.delivery_cost_cny))}</span>
-      </div>
-      <div class="supplier-delivery-cost-form__row">
-        <label>
-          Стоимость доставки, CNY
-          <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="пусто или 0" value="${escapeHtml(currentValue)}">
-        </label>
-        <button class="supplier-button supplier-button--small" type="submit">Сохранить</button>
-      </div>
-    </form>
-  `;
+function formPositiveNumber(value) {
+  return Number(String(value || "").replace(",", ".")) > 0;
 }
 
 function renderTrackingForm(request = {}, payment = null) {
@@ -415,8 +411,6 @@ function renderRequestDetail(data = {}, tokenValue = token) {
       ${renderSupplierChat(data)}
       ${renderQuoteForm(data)}
       ${renderMessageForm(data)}
-      ${renderDeliveryCostForm(data)}
-      ${renderClarificationForm(data)}
     </section>
 
     ${renderPayment(data.payment, tokenValue)}
@@ -424,26 +418,6 @@ function renderRequestDetail(data = {}, tokenValue = token) {
     <section class="supplier-section">
       ${renderTrackingForm(request, data.payment)}
     </section>
-  `;
-}
-
-function renderClarificationForm(data = {}) {
-  const request = data.request || {};
-  const hasQuote = (data.quotes || []).length > 0;
-  const allowed = !hasQuote && ["sent", "viewed", "needs_info"].includes(request.status);
-  if (!allowed) return "";
-  return `
-    <form class="supplier-clarification" data-clarification-form>
-      <div class="supplier-clarification__head">
-        <strong>Нужно уточнение?</strong>
-        <span class="supplier-muted">Напишите, какой информации не хватает по этой детали.</span>
-      </div>
-      <textarea name="comment_cn" rows="3" placeholder="Например: нужен размер, цвет, сторона или фото крепления" required></textarea>
-      <div class="supplier-clarification__actions">
-        <button class="supplier-button supplier-button--small" type="submit">Отправить уточнение</button>
-        <button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>
-      </div>
-    </form>
   `;
 }
 
@@ -720,9 +694,15 @@ root?.addEventListener("submit", async (event) => {
   const requestToken = supplierTokenForElement(form);
   setButtonBusy(button, true);
   try {
-    if (form.matches("[data-quote-form]")) {
+    if (form.matches("[data-answer-form]")) {
       const payload = Object.fromEntries(new FormData(form));
-      payload.action = "quote";
+      const hasPrice = formPositiveNumber(payload.price_cny);
+      const hasComment = Boolean(plainText(payload.comment_cn));
+      const hasDelivery = Boolean(formHasDeliveryCost(payload));
+      if (!hasPrice && !hasComment && !hasDelivery) {
+        throw new Error("Укажите цену, доставку или комментарий.");
+      }
+      payload.action = hasPrice ? "quote" : hasComment ? "needs_info" : "delivery_cost";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
@@ -739,34 +719,20 @@ root?.addEventListener("submit", async (event) => {
       await renderAfterSupplierMutation(data);
       return;
     }
-    if (form.matches("[data-clarification-form]")) {
-      const payload = Object.fromEntries(new FormData(form));
-      payload.action = "needs_info";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      await renderAfterSupplierMutation(data);
-      return;
-    }
     if (form.matches("[data-message-form]")) {
       const payload = Object.fromEntries(new FormData(form));
-      payload.action = "message";
+      const hasComment = Boolean(plainText(payload.comment_cn));
+      const hasDelivery = Boolean(formHasDeliveryCost(payload));
+      if (!hasComment && !hasDelivery) {
+        throw new Error("Напишите сообщение или укажите доставку.");
+      }
+      payload.action = hasComment ? "message" : "delivery_cost";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
       await renderAfterSupplierMutation(data);
       return;
-    }
-    if (form.matches("[data-delivery-cost-form]")) {
-      const payload = Object.fromEntries(new FormData(form));
-      payload.action = "delivery_cost";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      await renderAfterSupplierMutation(data);
     }
   } catch (error) {
     alert(error.message);

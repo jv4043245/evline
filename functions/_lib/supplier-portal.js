@@ -99,6 +99,33 @@ function normalizeOptionalAmount(value) {
   return Math.max(0, Math.round(parsed * 100) / 100);
 }
 
+function hasDeliveryCostPayload(payload = {}) {
+  return Object.prototype.hasOwnProperty.call(payload, "delivery_cost_cny") && text(payload.delivery_cost_cny);
+}
+
+async function saveSupplierDeliveryCostPayload(env, supplierRequest, payload = {}, now = new Date().toISOString()) {
+  if (!hasDeliveryCostPayload(payload)) return false;
+  if (!DELIVERY_COST_SOURCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Delivery cost is not available for this supplier request");
+    error.status = 400;
+    throw error;
+  }
+  if (!(await tableHasColumn(env, "supplier_requests", "delivery_cost_cny"))) {
+    const error = new Error("D1 migration 0015_supplier_delivery_cost.sql is required");
+    error.status = 409;
+    throw error;
+  }
+
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET delivery_cost_cny = ?, delivery_cost_updated_at = ?, updated_at = ?
+    WHERE id = ?`
+  )
+    .bind(normalizeOptionalAmount(payload.delivery_cost_cny), now, now, supplierRequest.id)
+    .run();
+  return true;
+}
+
 function supplierDirectoryEntry(value) {
   return DIRECTORY_SUPPLIERS.get(normalizeSupplierName(value).toLowerCase()) || null;
 }
@@ -931,19 +958,7 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
     comment_translated: quote.comment_ru || quote.comment_translated,
   });
 
-  if (
-    Object.prototype.hasOwnProperty.call(payload, "delivery_cost_cny") &&
-    text(payload.delivery_cost_cny) &&
-    await tableHasColumn(env, "supplier_requests", "delivery_cost_cny")
-  ) {
-    await env.DB.prepare(
-      `UPDATE supplier_requests
-      SET delivery_cost_cny = ?, delivery_cost_updated_at = ?, updated_at = ?
-      WHERE id = ?`
-    )
-      .bind(normalizeOptionalAmount(payload.delivery_cost_cny), now, now, supplierRequest.id)
-      .run();
-  }
+  await saveSupplierDeliveryCostPayload(env, supplierRequest, payload, now);
 
   await notifyManagerSupplierQuote(env, supplierRequest, quote, options.requestUrl).catch(() => null);
 
@@ -971,34 +986,43 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
   }
 
   const comment = text(payload.comment_cn || payload.comment_translated).slice(0, 2000);
-  if (!comment) {
+  const hasDeliveryUpdate = hasDeliveryCostPayload(payload);
+  if (!comment && !hasDeliveryUpdate) {
     const error = new Error("Message text is required");
     error.status = 400;
     throw error;
   }
-  assertSupplierTextSafe(comment);
+  if (comment) assertSupplierTextSafe(comment);
 
-  const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
-    .bind(supplierRequest.id)
-    .first();
-  if (number(eventCount?.count) >= MAX_PUBLIC_EVENTS_PER_REQUEST) {
-    const error = new Error("Supplier event limit reached");
-    error.status = 429;
-    throw error;
+  if (comment) {
+    const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
+      .bind(supplierRequest.id)
+      .first();
+    if (number(eventCount?.count) >= MAX_PUBLIC_EVENTS_PER_REQUEST) {
+      const error = new Error("Supplier event limit reached");
+      error.status = 429;
+      throw error;
+    }
   }
 
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE supplier_requests SET updated_at = ? WHERE id = ?")
-    .bind(now, supplierRequest.id)
-    .run();
+  if (hasDeliveryUpdate) {
+    await saveSupplierDeliveryCostPayload(env, supplierRequest, payload, now);
+  } else {
+    await env.DB.prepare("UPDATE supplier_requests SET updated_at = ? WHERE id = ?")
+      .bind(now, supplierRequest.id)
+      .run();
+  }
 
-  await insertSupplierEvent(env, supplierRequest, {
-    status: "quoted",
-    comment_cn: comment,
-    comment_translated: comment,
-  });
+  if (comment) {
+    await insertSupplierEvent(env, supplierRequest, {
+      status: "quoted",
+      comment_cn: comment,
+      comment_translated: comment,
+    });
 
-  await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl).catch(() => null);
+    await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl).catch(() => null);
+  }
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
 }
@@ -1120,6 +1144,7 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
   }
 
   const now = new Date().toISOString();
+  await saveSupplierDeliveryCostPayload(env, supplierRequest, payload, now);
   await env.DB.prepare(
     `UPDATE supplier_requests
     SET status = ?, updated_at = ?, closed_at = CASE WHEN ? IN ('closed') THEN ? ELSE closed_at END

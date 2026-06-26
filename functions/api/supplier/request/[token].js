@@ -38,6 +38,7 @@ export async function onRequestPost({ request, params, env }) {
           tracking_number: payload.tracking_number,
           comment_cn: payload.comment_cn,
           comment_translated: payload.comment_translated,
+          delivery_cost_cny: payload.delivery_cost_cny,
         }, { requestUrl: request.url });
     } else {
       return json({ error: "Unsupported supplier action" }, { status: 400 });
