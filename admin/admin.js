@@ -12,6 +12,8 @@ const state = {
   chinaPreorders: [],
   chinaOrderContext: null,
   selectedChinaPreorderId: null,
+  auditEvents: [],
+  auditLoaded: false,
   shipping: {
     carriers: [],
     rates: [],
@@ -107,6 +109,31 @@ const supplierAvailabilityLabels = {
   in_stock: "є в наявності",
   order_needed: "під замовлення",
   no_stock: "немає",
+};
+
+const auditActionLabels = {
+  "order.create": "Создан заказ",
+  "order.create_from_lead": "Создан заказ из заявки",
+  "order.update": "Изменён заказ",
+  "order.status_update": "Изменён статус заказа",
+  "order.delete": "Удалён заказ",
+  "order.notify_manager": "Заявка отправлена менеджеру",
+  "supplier_request.create": "Создан запрос в Китай",
+  "supplier_request.message": "Сообщение поставщику",
+  "supplier_request.delete": "Удалён запрос в Китай",
+  "supplier_request.send_payment": "Запрос отправлен на оплату",
+  "supplier_quote.select": "Выбрано предложение поставщика",
+  "supplier_payment.create": "Создана оплата поставщику",
+  "supplier_payment.update": "Обновлена оплата поставщику",
+  "tracking.sync": "Обновлён трекинг",
+  "shipping_carrier.create": "Добавлен перевозчик",
+  "shipping_carrier.update": "Изменён перевозчик",
+  "ad_cost.create": "Добавлен расход рекламы",
+  "supplier.quote": "Поставщик дал предложение",
+  "supplier.message": "Поставщик написал сообщение",
+  "supplier.delivery_cost": "Поставщик обновил доставку",
+  "supplier.status_update": "Поставщик изменил статус",
+  "supplier.tracking_update": "Поставщик добавил трек",
 };
 
 const supplierDirectory = ["Zeekr", "BYD", "Buble"];
@@ -795,6 +822,89 @@ function shortDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function uniqueParts(parts) {
+  const seen = new Set();
+  return parts
+    .map((part) => plainText(part))
+    .filter((part) => {
+      if (!part || seen.has(part)) return false;
+      seen.add(part);
+      return true;
+    });
+}
+
+function auditDetailText(event) {
+  const details = event.details || {};
+  const statusChange = details.status_from || details.status_to
+    ? `${details.status_from || "-"} -> ${details.status_to || "-"}`
+    : "";
+  const amount = details.requested_amount || details.paid_amount || details.price_cny || details.spend_uah
+    ? `${details.requested_amount || details.paid_amount || details.price_cny || details.spend_uah} ${details.requested_currency || details.paid_currency || (details.price_cny ? "CNY" : details.spend_uah ? "UAH" : "")}`.trim()
+    : "";
+  const changed = Array.isArray(details.changed_fields) && details.changed_fields.length
+    ? `поля: ${details.changed_fields.join(", ")}`
+    : "";
+  return uniqueParts([
+    event.entity_label,
+    details.order_number,
+    details.public_number,
+    details.supplier_name,
+    details.customer_name,
+    details.customer_phone,
+    details.car,
+    details.vin,
+    details.item_name || details.service_name,
+    amount,
+    statusChange,
+    changed,
+  ]).join(" · ");
+}
+
+function renderAuditLog() {
+  const root = document.querySelector("[data-audit-log]");
+  if (!root) return;
+  const events = state.auditEvents || [];
+  if (!events.length) {
+    root.innerHTML = `<p class="muted">В журнале пока нет действий.</p>`;
+    return;
+  }
+  root.innerHTML = `
+    <ol class="audit-log-list">
+      ${events.map((event) => {
+        const title = auditActionLabels[event.action] || event.action || "Действие";
+        const details = auditDetailText(event);
+        return `
+          <li class="audit-log-item">
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml(shortDateTime(event.created_at))} · ${textOrDash(event.actor)}${event.order_id ? ` · order ${textOrDash(event.order_id)}` : ""}</span>
+            ${details ? `<p>${escapeHtml(details)}</p>` : ""}
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
+}
+
+function setAuditLogOpen(open) {
+  const panel = document.querySelector("[data-audit-panel]");
+  document.body.classList.toggle("audit-log-open", Boolean(open));
+  if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+async function loadAuditLog() {
+  const root = document.querySelector("[data-audit-log]");
+  if (root) root.innerHTML = `<p class="muted">Загружаю журнал...</p>`;
+  const data = await api("/api/admin/audit-log?limit=80");
+  state.auditEvents = data.events || [];
+  state.auditLoaded = true;
+  renderAuditLog();
+}
+
+async function refreshAuditLogIfOpen() {
+  if (!document.body.classList.contains("audit-log-open")) return;
+  await loadAuditLog();
 }
 
 function dateMs(value) {
@@ -2357,6 +2467,7 @@ async function deleteOrder(id, orderNumber = "це замовлення") {
     closeOrderDetail();
   }
   await refresh();
+  await refreshAuditLogIfOpen();
   alert("Заявку видалено.");
   return true;
 }
@@ -2376,6 +2487,7 @@ async function deleteChinaPreorder(id, requestNumber = "запрос") {
   if (state.selectedOrder?.id && result.order_id === state.selectedOrder.id) {
     await loadOrder(state.selectedOrder.id);
   }
+  await refreshAuditLogIfOpen();
   alert("Запрос в Китай удалён.");
   return true;
 }
@@ -2449,6 +2561,9 @@ async function refresh() {
     if (googleAdsExport) googleAdsExport.href = `/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`;
     await Promise.all([loadSummary(), loadOrders(), loadChinaPreorders(), loadShipping(), loadGoogleAds()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
+    if (document.body.classList.contains("audit-log-open")) {
+      await loadAuditLog();
+    }
     setAuthVisible(false);
   } catch (error) {
     setAuthVisible(true);
@@ -2791,6 +2906,18 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
 document.querySelector("[data-refresh-china]")?.addEventListener("click", loadChinaPreorders);
 document.querySelector("[data-china-request-open]")?.addEventListener("click", () => openChinaRequestPanel());
+document.querySelector("[data-audit-open]")?.addEventListener("click", async () => {
+  closeFilterMenus();
+  setAuditLogOpen(true);
+  try {
+    await loadAuditLog();
+  } catch (error) {
+    alert(error.message);
+  }
+});
+document.querySelector("[data-audit-refresh]")?.addEventListener("click", () => {
+  loadAuditLog().catch((error) => alert(error.message));
+});
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
 });
@@ -3137,6 +3264,7 @@ async function handleChinaPreorderClick(event) {
       renderChinaPreorders();
       renderChinaPreorderPanel();
       await loadOrders();
+      await refreshAuditLogIfOpen();
     } catch (error) {
       alert(error.message);
       replyButton.disabled = false;
@@ -3170,6 +3298,7 @@ async function handleChinaPreorderClick(event) {
     renderChinaPreorders();
     renderChinaPreorderPanel();
     await loadOrders();
+    await refreshAuditLogIfOpen();
     alert("Запрос на оплату отправлен в Telegram.");
   } catch (error) {
     alert(error.message);
@@ -3196,8 +3325,17 @@ document.addEventListener("click", (event) => {
   setChinaPreorderPanelOpen(false);
 });
 
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-audit-close]")) return;
+  setAuditLogOpen(false);
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  if (document.body.classList.contains("audit-log-open")) {
+    setAuditLogOpen(false);
+    return;
+  }
   if (document.body.classList.contains("china-preorder-open")) {
     setChinaPreorderPanelOpen(false);
     return;
@@ -3288,6 +3426,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedEvents = result.events || state.selectedEvents;
       if (state.selectedOrder?.id) await loadOrder(state.selectedOrder.id);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       alert("Заявку надіслано менеджеру в Telegram.");
     } catch (error) {
       alert(error.message);
@@ -3332,6 +3471,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.orderEditorTab = "suppliers";
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
       if (link) {
         navigator.clipboard?.writeText(link).catch(() => null);
@@ -3375,6 +3515,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.orderEditorTab = "suppliers";
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       alert("Запит на оплату відправлено в Telegram.");
     } catch (error) {
       alert(error.message);
@@ -3402,6 +3543,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       if (result.supplier_payment?.migrated_from_chat_id && result.supplier_payment?.request_chat_id) {
         alert(`Запит на оплату надіслано в Telegram.\n\nTelegram змінив ID групи оплат. Оновіть TELEGRAM_PAYMENTS_CHAT_ID у Cloudflare на:\n${result.supplier_payment.request_chat_id}`);
       } else {
@@ -3430,6 +3572,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       alert("Оплату оновлено.");
     } catch (error) {
       alert(error.message);
@@ -3451,6 +3594,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       if (!result.ok) throw new Error(result.error || "Не вдалося оновити трекінг");
       if (state.selectedOrder?.id) await loadOrder(state.selectedOrder.id);
       await loadOrders();
+      await refreshAuditLogIfOpen();
       alert(result.status === "updated" ? "Трекінг оновлено." : "Нових статусів у перевізника немає.");
     } catch (error) {
       alert(error.message);
@@ -3509,6 +3653,7 @@ document.querySelector("[data-shipping-form]")?.addEventListener("submit", async
   renderShippingDirectory();
   fillShippingForm(payload.id || data.carriers?.[0]?.id || "");
   if (state.selectedOrder) renderOrderEditor(state.selectedOrder);
+  await refreshAuditLogIfOpen();
 });
 
 document.querySelector("[data-cost-form]")?.addEventListener("submit", async (event) => {

@@ -10,6 +10,7 @@ import {
 import { listSupplierPayments } from "../../../_lib/supplier-payments.js";
 import { listSupplierRequests } from "../../../_lib/supplier-portal.js";
 import { queueGoogleAdsConversionsForStatus } from "../../../_lib/google-ads.js";
+import { auditActor, recordAuditEvent } from "../../../_lib/audit-log.js";
 
 function statusDates(status) {
   const now = new Date().toISOString();
@@ -26,6 +27,31 @@ function boolFromPayload(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
   if (typeof value === "boolean") return value;
   return !["0", "false", "no", "off"].includes(String(value).toLowerCase());
+}
+
+const AUDITED_ORDER_FIELDS = [
+  "status",
+  "type",
+  "customer_name",
+  "customer_phone",
+  "car",
+  "vin",
+  "item_name",
+  "service_name",
+  "tracking_carrier",
+  "tracking_number",
+  "china_warehouse",
+  "revenue_uah",
+  "purchase_cost_uah",
+  "delivery_cost_uah",
+  "payment_status",
+  "manager_notes",
+  "client_notes",
+  "next_action_at",
+];
+
+function changedOrderFields(current, updated) {
+  return AUDITED_ORDER_FIELDS.filter((field) => String(current?.[field] ?? "") !== String(updated?.[field] ?? ""));
 }
 
 export async function onRequestGet({ params, env }) {
@@ -223,6 +249,27 @@ export async function onRequestPatch({ request, params, env }) {
   const supplierPayments = await listSupplierPayments(env, params.id);
   const supplierRequests = await listSupplierRequests(env, params.id);
 
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: statusChanged ? "order.status_update" : "order.update",
+    entity_type: "order",
+    entity_id: updated.id,
+    entity_label: updated.order_number || updated.id,
+    order_id: updated.id,
+    details: {
+      order_number: updated.order_number,
+      status_from: current.status,
+      status_to: updated.status,
+      changed_fields: changedOrderFields(current, updated),
+      customer_name: updated.customer_name,
+      customer_phone: updated.customer_phone,
+      car: updated.car,
+      vin: updated.vin,
+      item_name: updated.item_name,
+      service_name: updated.service_name,
+    },
+  });
+
   return json({
     ok: true,
     order: updated,
@@ -245,12 +292,37 @@ async function safeDelete(env, sql, ...binds) {
   }
 }
 
-export async function onRequestDelete({ params, env }) {
+export async function onRequestDelete({ request, params, env }) {
   const current = await loadOrder(env, params.id);
   if (!current) return json({ error: "Order not found" }, { status: 404 });
 
   const leadId = current.lead_id || "";
   const customerId = current.customer_id || "";
+
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "order.delete",
+    entity_type: "order",
+    entity_id: current.id,
+    entity_label: current.order_number || current.id,
+    order_id: current.id,
+    details: {
+      order_number: current.order_number,
+      lead_id: leadId,
+      customer_id: customerId,
+      status: current.status,
+      payment_status: current.payment_status,
+      customer_name: current.customer_name,
+      customer_phone: current.customer_phone,
+      customer_email: current.customer_email,
+      car: current.car,
+      vin: current.vin,
+      item_name: current.item_name,
+      service_name: current.service_name,
+      request_text: current.request_text,
+      revenue_uah: current.revenue_uah,
+    },
+  });
 
   await safeDelete(env, "DELETE FROM google_ads_conversion_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_tracking_events WHERE order_id = ?", params.id);

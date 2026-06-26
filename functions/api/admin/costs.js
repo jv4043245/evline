@@ -1,4 +1,5 @@
 import { integer, json, number, readPayload, rangeStart, text } from "../../_lib/http.js";
+import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -48,6 +49,23 @@ export async function onRequestPost({ request, env }) {
       cost.notes
     )
     .run();
+
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "ad_cost.create",
+    entity_type: "ad_cost",
+    entity_id: cost.id,
+    entity_label: `${cost.platform} ${cost.cost_date}`,
+    details: {
+      cost_date: cost.cost_date,
+      platform: cost.platform,
+      source: cost.source,
+      campaign: cost.campaign,
+      spend_uah: cost.spend_uah,
+      clicks: cost.clicks,
+      impressions: cost.impressions,
+    },
+  });
 
   return json({ ok: true, cost });
 }

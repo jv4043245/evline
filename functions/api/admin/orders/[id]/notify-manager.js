@@ -1,5 +1,6 @@
 import { json } from "../../../../_lib/http.js";
 import { insertStatusEvent, loadOrder, sendManagerOrderNotification } from "../../../../_lib/crm.js";
+import { auditActor, recordAuditEvent } from "../../../../_lib/audit-log.js";
 
 export async function onRequestPost({ request, params, env }) {
   const order = await loadOrder(env, params.id);
@@ -26,6 +27,23 @@ export async function onRequestPost({ request, params, env }) {
   )
     .bind(order.id)
     .all();
+
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "order.notify_manager",
+    entity_type: "order",
+    entity_id: order.id,
+    entity_label: order.order_number || order.id,
+    order_id: order.id,
+    details: {
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      car: order.car,
+      vin: order.vin,
+      item_name: order.item_name,
+    },
+  });
 
   return json({ ok: true, order, events: events.results || [], ...result });
 }

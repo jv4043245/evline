@@ -5,6 +5,7 @@ import {
   sendSupplierRequestToPayment,
 } from "../../../../_lib/supplier-portal.js";
 import { listSupplierPayments } from "../../../../_lib/supplier-payments.js";
+import { auditActor, recordAuditEvent } from "../../../../_lib/audit-log.js";
 
 export async function onRequestPost({ request, params, env }) {
   try {
@@ -14,6 +15,25 @@ export async function onRequestPost({ request, params, env }) {
     const order = orderId ? await loadOrder(env, orderId) : null;
     const supplierPayments = orderId ? await listSupplierPayments(env, orderId) : [];
     const preorders = await listChinaPreorders(env, { status: "active" });
+    const requestRow = result.request?.request || {};
+    const payment = result.payment || {};
+
+    await recordAuditEvent(env, {
+      actor: auditActor(request),
+      action: "supplier_request.send_payment",
+      entity_type: "supplier_request",
+      entity_id: requestRow.id || params.id,
+      entity_label: requestRow.public_number || params.id,
+      order_id: orderId,
+      details: {
+        order_number: order?.order_number,
+        public_number: requestRow.public_number,
+        supplier_name: requestRow.supplier_name,
+        requested_amount: payment.requested_amount,
+        requested_currency: payment.requested_currency,
+        payment_id: payment.id,
+      },
+    });
 
     return json({
       ok: true,

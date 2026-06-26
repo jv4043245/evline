@@ -9,6 +9,7 @@ import {
   upsertCustomer,
 } from "../../_lib/crm.js";
 import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
+import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
 
 function orderSelect(options = {}) {
   return `
@@ -371,6 +372,24 @@ export async function onRequestPost({ request, env }) {
     order,
     googleAdsEventTypesForStatus(order.status)
   );
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "order.create",
+    entity_type: "order",
+    entity_id: order.id,
+    entity_label: order.order_number || order.id,
+    order_id: order.id,
+    details: {
+      order_number: order.order_number,
+      status: order.status,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      car: order.car,
+      vin: order.vin,
+      item_name: order.item_name,
+      source: order.source || "manual",
+    },
+  });
   return json({ ok: true, order, google_ads_conversions });
 }
 
@@ -383,5 +402,23 @@ export async function onRequestPut({ request, env }) {
   if (existing) return json({ ok: true, order: existing });
   const orderId = await createOrderFromLead(env, lead);
   const order = await loadOrder(env, orderId);
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "order.create_from_lead",
+    entity_type: "order",
+    entity_id: order.id,
+    entity_label: order.order_number || order.id,
+    order_id: order.id,
+    details: {
+      order_number: order.order_number,
+      lead_id: lead.id,
+      lead_number: lead.lead_number,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      car: order.car,
+      vin: order.vin,
+      item_name: order.item_name,
+    },
+  });
   return json({ ok: true, order });
 }

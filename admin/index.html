@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260626-orders-delete-row-fix">
-    <script src="/admin/admin.js?v=20260626-orders-delete-row-fix" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260626-admin-audit-log">
+    <script src="/admin/admin.js?v=20260626-admin-audit-log" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -30,6 +30,12 @@
         </select>
         <button class="admin-btn" type="button" data-refresh>Оновити</button>
         <a class="admin-btn admin-btn--primary" href="/api/admin/orders?format=csv&range=30d" data-export>CSV</a>
+        <div class="filters-more admin-header-more" data-filter-menu>
+          <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові дії" aria-expanded="false">...</button>
+          <div class="filters-more__panel admin-header-more__panel" data-filter-menu-panel hidden>
+            <button class="admin-link-button admin-header-more__item" type="button" data-audit-open>Журнал действий</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -618,6 +624,23 @@
           </article>
         </section>
       </section>
+
+      <button class="audit-log-backdrop" type="button" data-audit-close aria-label="Закрыть журнал действий"></button>
+      <aside class="admin-panel audit-log-panel" data-audit-panel aria-hidden="true" aria-label="Журнал действий">
+        <div class="admin-panel__head">
+          <div>
+            <h2>Журнал действий</h2>
+            <p class="muted">Последние изменения в админке.</p>
+          </div>
+          <div class="audit-log-panel__actions">
+            <button class="admin-btn admin-btn--small" type="button" data-audit-refresh>Обновить</button>
+            <button class="admin-btn admin-btn--small audit-log-panel__close" type="button" data-audit-close>Закрыть</button>
+          </div>
+        </div>
+        <div class="audit-log-panel__body" data-audit-log>
+          <p class="muted">Откройте журнал, чтобы загрузить события.</p>
+        </div>
+      </aside>
     </main>
   </body>
 </html>

@@ -1,4 +1,5 @@
 import { integer, json, number, readPayload, text } from "../../_lib/http.js";
+import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
 
 const SHIPPING_MODES = new Set(["air", "sea"]);
 const RATE_UNITS = new Set(["kg", "m3", "item"]);
@@ -142,6 +143,20 @@ export async function onRequestPost({ request, env }) {
 
   await insertRates(env, rates);
 
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "shipping_carrier.create",
+    entity_type: "shipping_carrier",
+    entity_id: carrier.id,
+    entity_label: carrier.name,
+    details: {
+      name: carrier.name,
+      code: carrier.code,
+      active: carrier.active,
+      rate_count: rates.length,
+    },
+  });
+
   return json({ ok: true, ...(await loadShipping(env)) });
 }
 
@@ -175,6 +190,20 @@ export async function onRequestPatch({ request, env }) {
 
   await env.DB.prepare("DELETE FROM shipping_rates WHERE carrier_id = ?").bind(text(payload.id)).run();
   await insertRates(env, rates.map((rate) => ({ ...rate, carrier_id: text(payload.id) })));
+
+  await recordAuditEvent(env, {
+    actor: auditActor(request),
+    action: "shipping_carrier.update",
+    entity_type: "shipping_carrier",
+    entity_id: text(payload.id),
+    entity_label: carrier.name,
+    details: {
+      name: carrier.name,
+      code: carrier.code,
+      active: carrier.active,
+      rate_count: rates.length,
+    },
+  });
 
   return json({ ok: true, ...(await loadShipping(env)) });
 }
