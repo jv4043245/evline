@@ -2086,7 +2086,6 @@ body.order-detail-open .order-detail {
 }
 
 .china-preorder-card__grid > div,
-.china-preorder-card__quote,
 .china-preorder-card__payment,
 .china-preorder-card__tracking,
 .china-preorder-card__thread {
@@ -2098,7 +2097,6 @@ body.order-detail-open .order-detail {
   background: var(--china-surface);
 }
 
-.china-preorder-card__quote p,
 .china-preorder-card__thread p {
   margin: 0;
   color: var(--ink);

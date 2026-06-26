@@ -1247,17 +1247,6 @@ function renderChinaPreorders() {
         </div>
         ${supplierImageList(bundle.request_images || [])}
         ${renderChinaThread(bundle)}
-        <div class="china-preorder-card__quote">
-          <strong>Итоговое предложение</strong>
-          ${quote ? `
-            <div class="china-preorder-card__quote-line">
-              <b>${supplierAmount(quote.price_cny, "CNY")}</b>
-              <span>${quote.purchase_days ? `${Number(quote.purchase_days)} дн.` : "срок не указан"}</span>
-              <span>${escapeHtml(quote.status || "new")}</span>
-            </div>
-            ${quote.comment_cn ? `<p>${escapeHtml(quote.comment_ru || quote.comment_translated || quote.comment_cn)}</p>` : ""}
-          ` : `<p class="muted">Предложения по цене пока нет.</p>`}
-        </div>
         <div class="china-preorder-card__payment">
           <strong>Оплата</strong>
           ${payment ? `
