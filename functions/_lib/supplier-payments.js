@@ -229,16 +229,11 @@ function buildPaymentRequestMessage(order, payment) {
     `Оплата: ${publicPaymentNumber(payment.payment_number)}`,
     `Замовлення: ${order.order_number || order.id || "-"}`,
     payment.supplier_name ? `Постачальник: ${payment.supplier_name}` : "",
-    `Сума до оплати: ${formatAmount(payment.requested_amount, payment.requested_currency)}`,
+    `Сума: ${formatAmount(payment.requested_amount, payment.requested_currency)}`,
     "",
-    `Клієнт: ${order.customer_name || "-"} · ${order.customer_phone || order.customer_telegram || "-"}`,
     order.car ? `Авто: ${order.car}` : "",
     order.vin ? `VIN: ${order.vin}` : "",
-    order.item_name ? `Запчастина: ${order.item_name}` : order.service_name ? `Послуга: ${order.service_name}` : "",
-    payment.notes ? `Коментар: ${payment.notes}` : "",
     "",
-    "Після оплати надішліть скрин відповіддю на це повідомлення.",
-    "CRM прив'яже скрин до цієї оплати та внесе підсумкову суму, якщо її вдасться розпізнати.",
     "Адмінка: https://evline.com.ua/admin/",
   ];
   return lines.filter(Boolean).join("\n");
