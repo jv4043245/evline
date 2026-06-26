@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260626-admin-audit-log">
-    <script src="/admin/admin.js?v=20260626-admin-audit-log" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260626-hide-csv-menu">
+    <script src="/admin/admin.js?v=20260626-hide-csv-menu" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -29,10 +29,10 @@
           <option value="all">Весь час</option>
         </select>
         <button class="admin-btn" type="button" data-refresh>Оновити</button>
-        <a class="admin-btn admin-btn--primary" href="/api/admin/orders?format=csv&range=30d" data-export>CSV</a>
         <div class="filters-more admin-header-more" data-filter-menu>
           <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові дії" aria-expanded="false">...</button>
           <div class="filters-more__panel admin-header-more__panel" data-filter-menu-panel hidden>
+            <a class="admin-link-button admin-header-more__item" href="/api/admin/orders?format=csv&range=30d" data-export>CSV</a>
             <button class="admin-link-button admin-header-more__item" type="button" data-audit-open>Журнал действий</button>
           </div>
         </div>

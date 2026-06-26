@@ -381,12 +381,16 @@
 }
 
 .admin-header-more__panel {
+  display: grid;
+  gap: 8px;
   width: 210px;
 }
 
 .admin-header-more__item {
   width: 100%;
   min-height: 34px;
+  display: inline-flex;
+  align-items: center;
   text-align: left;
 }
 
