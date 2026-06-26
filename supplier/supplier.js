@@ -1,6 +1,9 @@
 const root = document.querySelector("[data-app]");
-const token = document.body.dataset.token || location.pathname.split("/").filter(Boolean).pop() || "";
-const page = document.body.dataset.supplierPage || "request";
+const query = new URLSearchParams(location.search);
+const pathParts = location.pathname.split("/").filter(Boolean);
+const tokenFromPath = pathParts[0] === "supplier" && ["request", "dashboard"].includes(pathParts[1]) ? pathParts[2] || "" : "";
+const token = document.body.dataset.token || query.get("token") || tokenFromPath || "";
+const page = document.body.dataset.supplierPage || query.get("page") || (pathParts[1] === "dashboard" ? "dashboard" : "request");
 
 const requestStatusLabels = {
   draft: "Черновик",
@@ -380,7 +383,15 @@ root?.addEventListener("click", async (event) => {
   }
 });
 
-(page === "dashboard" ? loadDashboard() : loadRequest()).catch((error) => {
+if (!token && root) {
+  root.innerHTML = `
+    <section class="supplier-empty">
+      <strong>Кабинет поставщика</strong>
+      <span class="supplier-muted">Откройте ссылку на предзаказ, которую отправил менеджер EVLine.</span>
+    </section>
+  `;
+} else {
+  (page === "dashboard" ? loadDashboard() : loadRequest()).catch((error) => {
   if (!root) return;
   root.innerHTML = `
     <section class="supplier-empty">
@@ -388,4 +399,5 @@ root?.addEventListener("click", async (event) => {
       <span class="supplier-muted">${escapeHtml(error.message)}</span>
     </section>
   `;
-});
+  });
+}
