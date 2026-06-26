@@ -68,6 +68,8 @@ function supplierErrorMessage(message) {
     "Clarification text is required": "Напишите, что нужно уточнить.",
     "Message text is required": "Напишите сообщение.",
     "Supplier message is available only after quote": "Сообщение доступно после первого предложения.",
+    "Delivery cost is not available for this supplier request": "Стоимость доставки сейчас недоступна.",
+    "D1 migration 0015_supplier_delivery_cost.sql is required": "На сервере ещё не применена миграция доставки.",
     "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
     "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
     "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
@@ -338,6 +340,35 @@ function renderMessageForm(data = {}) {
   `;
 }
 
+function deliveryCostText(value) {
+  if (value === null || value === undefined || value === "") return "не указана";
+  return `${Number(value || 0).toLocaleString("ru-RU")} CNY`;
+}
+
+function renderDeliveryCostForm(data = {}) {
+  const request = data.request || {};
+  const allowed = !["closed", "canceled"].includes(request.status);
+  if (!allowed) return "";
+  const currentValue = request.delivery_cost_cny === null || request.delivery_cost_cny === undefined
+    ? ""
+    : Number(request.delivery_cost_cny || 0);
+  return `
+    <form class="supplier-form supplier-form--compact supplier-delivery-cost-form" data-delivery-cost-form>
+      <div class="supplier-form__inline-head">
+        <h2>Доставка</h2>
+        <span class="supplier-muted">${escapeHtml(deliveryCostText(request.delivery_cost_cny))}</span>
+      </div>
+      <div class="supplier-delivery-cost-form__row">
+        <label>
+          Стоимость доставки, CNY
+          <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="пусто или 0" value="${escapeHtml(currentValue)}">
+        </label>
+        <button class="supplier-button supplier-button--small" type="submit">Сохранить</button>
+      </div>
+    </form>
+  `;
+}
+
 function renderTrackingForm(request = {}, payment = null) {
   const paid = payment?.status === "paid";
   const allowed = paid && ["accepted", "purchased", "china_tracking", "china_warehouse", "problem"].includes(request.status);
@@ -416,6 +447,7 @@ function renderRequestPage(data) {
       ${renderSupplierChat(data)}
       ${renderQuoteForm(data)}
       ${renderMessageForm(data)}
+      ${renderDeliveryCostForm(data)}
       ${renderClarificationForm(data)}
     </section>
 
@@ -647,6 +679,16 @@ root?.addEventListener("submit", async (event) => {
     if (form.matches("[data-message-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "message";
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      renderRequestPage(data);
+      return;
+    }
+    if (form.matches("[data-delivery-cost-form]")) {
+      const payload = Object.fromEntries(new FormData(form));
+      payload.action = "delivery_cost";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
         method: "POST",
         body: JSON.stringify(payload),

@@ -858,6 +858,11 @@ function supplierAmount(amount, currency = "CNY") {
   return `${formatted} ${escapeHtml(currency || "CNY")}`;
 }
 
+function supplierDeliveryCostLine(value) {
+  if (value === null || value === undefined || value === "") return "";
+  return `<span>Доставка: ${supplierAmount(value, "CNY")}</span>`;
+}
+
 function supplierPaymentChip(order) {
   const count = Number(order.supplier_payment_count || 0);
   if (!count) return "";
@@ -1245,6 +1250,7 @@ function renderChinaPreorders() {
           <div><span>VIN</span><strong class="orders-table__mono">${escapeHtml(request.vin || order.vin || "-")}</strong></div>
           <div class="wide"><span>Деталь</span><strong>${escapeHtml(request.item_name || order.item_name || "-")}</strong></div>
           <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
+          ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<div><span>Доставка</span><strong>${supplierAmount(request.delivery_cost_cny, "CNY")}</strong></div>` : ""}
         </div>
         ${supplierImageList(bundle.request_images || [])}
         ${renderChinaThread(bundle)}
@@ -1312,6 +1318,7 @@ function renderSupplierQuoteCard(quote, request) {
         ${quote.quantity ? `<span>К-сть: ${Number(quote.quantity)}</span>` : ""}
         ${quote.purchase_days ? `<span>Викуп: ${Number(quote.purchase_days)} дн.</span>` : ""}
         ${quote.china_delivery_days ? `<span>Китай: ${Number(quote.china_delivery_days)} дн.</span>` : ""}
+        ${supplierDeliveryCostLine(request.delivery_cost_cny)}
         <span>${escapeHtml(quote.status || "new")}</span>
       </div>
       ${quote.comment_cn ? `<p lang="zh-CN">${escapeHtml(quote.comment_cn)}</p>` : ""}

@@ -34,6 +34,7 @@ const TERMINAL_REQUEST_STATUSES = new Set(["closed", "canceled"]);
 const PRE_ACCEPTANCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock"]);
 const POST_QUOTE_MESSAGE_STATUSES = new Set(["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"]);
 const NO_STOCK_SOURCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock", "accepted", "purchased"]);
+const DELIVERY_COST_SOURCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock", "accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
 const LOGISTICS_SOURCE_STATUSES = new Set(["accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
 const LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse", "problem"]);
 const PAID_LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse"]);
@@ -88,6 +89,14 @@ function normalizeSupplierName(value) {
 function normalizeCarYear(value) {
   const digits = text(value).replace(/\D/g, "").slice(0, 4);
   return digits.length === 4 ? digits : "";
+}
+
+function normalizeOptionalAmount(value) {
+  if (value === null || value === undefined) return null;
+  const raw = text(value);
+  if (!raw) return null;
+  const parsed = number(raw.replace(",", "."));
+  return Math.max(0, Math.round(parsed * 100) / 100);
 }
 
 function supplierDirectoryEntry(value) {
@@ -420,6 +429,8 @@ export function publicSupplierBundle(bundle) {
       quantity: request.quantity,
       request_text: request.request_text_ru || request.request_text,
       supplier_note: request.manager_comment,
+      delivery_cost_cny: request.delivery_cost_cny,
+      delivery_cost_updated_at: request.delivery_cost_updated_at,
       created_at: request.created_at,
       updated_at: request.updated_at,
       sent_at: request.sent_at,
@@ -442,6 +453,8 @@ function publicDashboardRequest(row, payment = null) {
     vin: row.vin,
     item_name: row.item_name,
     quantity: row.quantity,
+    delivery_cost_cny: row.delivery_cost_cny,
+    delivery_cost_updated_at: row.delivery_cost_updated_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
     supplier_link: `/supplier/request/${row.access_token}`,
@@ -911,6 +924,20 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
     comment_translated: quote.comment_ru || quote.comment_translated,
   });
 
+  if (
+    Object.prototype.hasOwnProperty.call(payload, "delivery_cost_cny") &&
+    text(payload.delivery_cost_cny) &&
+    await tableHasColumn(env, "supplier_requests", "delivery_cost_cny")
+  ) {
+    await env.DB.prepare(
+      `UPDATE supplier_requests
+      SET delivery_cost_cny = ?, delivery_cost_updated_at = ?, updated_at = ?
+      WHERE id = ?`
+    )
+      .bind(normalizeOptionalAmount(payload.delivery_cost_cny), now, now, supplierRequest.id)
+      .run();
+  }
+
   await notifyManagerSupplierQuote(env, supplierRequest, quote, options.requestUrl).catch(() => null);
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
@@ -965,6 +992,44 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
   });
 
   await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl).catch(() => null);
+
+  return loadSupplierRequestByToken(env, token, { markViewed: false });
+}
+
+export async function updateSupplierDeliveryCostByToken(env, token, payload = {}) {
+  const bundle = await loadSupplierRequestByToken(env, token, { markViewed: false });
+  if (!bundle) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplierRequest = bundle.request;
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (!DELIVERY_COST_SOURCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Delivery cost is not available for this supplier request");
+    error.status = 400;
+    throw error;
+  }
+  if (!(await tableHasColumn(env, "supplier_requests", "delivery_cost_cny"))) {
+    const error = new Error("D1 migration 0015_supplier_delivery_cost.sql is required");
+    error.status = 409;
+    throw error;
+  }
+
+  const deliveryCost = normalizeOptionalAmount(payload.delivery_cost_cny);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET delivery_cost_cny = ?, delivery_cost_updated_at = ?, updated_at = ?
+    WHERE id = ?`
+  )
+    .bind(deliveryCost, now, now, supplierRequest.id)
+    .run();
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
 }

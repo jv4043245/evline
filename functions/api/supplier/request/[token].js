@@ -4,6 +4,7 @@ import {
   createSupplierQuoteByToken,
   loadSupplierRequestByToken,
   publicSupplierBundle,
+  updateSupplierDeliveryCostByToken,
   updateSupplierRequestByToken,
 } from "../../../_lib/supplier-portal.js";
 
@@ -29,6 +30,8 @@ export async function onRequestPost({ request, params, env }) {
       bundle = await createSupplierQuoteByToken(env, params.token, payload, { requestUrl: request.url });
     } else if (action === "message") {
       bundle = await createSupplierMessageByToken(env, params.token, payload, { requestUrl: request.url });
+    } else if (action === "delivery_cost") {
+      bundle = await updateSupplierDeliveryCostByToken(env, params.token, payload);
     } else if (action === "no_stock" || action === "needs_info") {
       bundle = await updateSupplierRequestByToken(env, params.token, {
           status: action,
