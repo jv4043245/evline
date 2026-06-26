@@ -1796,12 +1796,25 @@ body.order-detail-open .order-detail {
 }
 
 .china-workbench .admin-panel__head {
+  gap: 12px;
+  padding: 10px 12px;
   border-bottom-color: var(--china-border);
   background: var(--china-surface-strong);
 }
 
 .china-workbench .admin-panel__head h2 {
   color: #172554;
+  font-size: 18px;
+}
+
+.china-workbench .filters {
+  gap: 8px;
+}
+
+.china-workbench .filters input,
+.china-workbench .filters select,
+.china-workbench .filters .admin-btn {
+  min-height: 34px;
 }
 
 .admin-view[data-admin-view="china"] .admin-btn:not(.admin-btn--danger):not(.admin-btn--subtle-danger):not(:disabled):not([aria-busy="true"]):hover,
