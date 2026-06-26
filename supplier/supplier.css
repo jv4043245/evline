@@ -311,6 +311,10 @@ body.supplier-shell {
   background: #fbfcfb;
 }
 
+.supplier-message-form--no-delivery {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .supplier-message-form textarea {
   width: 100%;
   min-height: 44px;
