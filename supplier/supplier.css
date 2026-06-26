@@ -361,6 +361,13 @@ body.supplier-shell {
   resize: vertical;
 }
 
+.supplier-message-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .supplier-form {
   display: grid;
   gap: 12px;
@@ -542,5 +549,9 @@ body.supplier-shell {
 
   .supplier-message-form {
     grid-template-columns: 1fr;
+  }
+
+  .supplier-message-form__actions {
+    justify-content: flex-start;
   }
 }

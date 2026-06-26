@@ -32,6 +32,8 @@ const SUPPLIER_EVENT_STATUSES = new Set([
 ]);
 const TERMINAL_REQUEST_STATUSES = new Set(["closed", "canceled"]);
 const PRE_ACCEPTANCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock"]);
+const POST_QUOTE_MESSAGE_STATUSES = new Set(["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"]);
+const NO_STOCK_SOURCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock", "accepted", "purchased"]);
 const LOGISTICS_SOURCE_STATUSES = new Set(["accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
 const LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse", "problem"]);
 const PAID_LOGISTICS_STATUSES = new Set(["purchased", "china_tracking", "china_warehouse"]);
@@ -808,7 +810,7 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
     error.status = 400;
     throw error;
   }
-  if (supplierRequest.status !== "quoted" || !(bundle.quotes || []).length) {
+  if (!POST_QUOTE_MESSAGE_STATUSES.has(supplierRequest.status) || !(bundle.quotes || []).length) {
     const error = new Error("Supplier message is available only after quote");
     error.status = 400;
     throw error;
@@ -868,7 +870,12 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
     error.status = 400;
     throw error;
   }
-  if (["needs_info", "no_stock"].includes(nextStatus) && !PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
+  if (nextStatus === "needs_info" && !PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("This supplier action is no longer available after acceptance");
+    error.status = 400;
+    throw error;
+  }
+  if (nextStatus === "no_stock" && !NO_STOCK_SOURCE_STATUSES.has(supplierRequest.status)) {
     const error = new Error("This supplier action is no longer available after acceptance");
     error.status = 400;
     throw error;

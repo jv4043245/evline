@@ -313,12 +313,16 @@ function renderQuoteForm(data = {}) {
 function renderMessageForm(data = {}) {
   const request = data.request || {};
   const hasQuote = (data.quotes || []).length > 0;
-  const canMessage = hasQuote && request.status === "quoted";
+  const canMessage = hasQuote && ["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"].includes(request.status);
+  const canMarkNoStock = hasQuote && ["quoted", "accepted", "purchased", "needs_info"].includes(request.status);
   if (!canMessage) return "";
   return `
     <form class="supplier-message-form" data-message-form aria-label="Сообщение по запросу">
       <textarea name="comment_cn" rows="2" placeholder="Написать сообщение по этому запросу" required></textarea>
-      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Отправить</button>
+      <div class="supplier-message-form__actions">
+        <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Отправить</button>
+        ${canMarkNoStock ? `<button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>` : ""}
+      </div>
     </form>
   `;
 }
