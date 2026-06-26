@@ -1173,14 +1173,14 @@ function chinaChatMessages(bundle = {}) {
 function renderChinaThread(bundle = {}) {
   const request = bundle.request || {};
   const messages = chinaChatMessages(bundle);
-  if (!messages.length) return "";
-  const lastMessage = messages[messages.length - 1] || {};
-  const canReply = lastMessage.status === "needs_info" && ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
+  const canReply = !["closed", "canceled"].includes(request.status);
+  if (!messages.length && !canReply) return "";
   return `
     <div class="china-preorder-card__thread">
       <strong>Чат по запчасти</strong>
-      <div class="china-chat">
-        ${messages.map((message) => `
+      ${messages.length ? `
+        <div class="china-chat">
+          ${messages.map((message) => `
           <article class="china-chat__message china-chat__message--${escapeHtml(message.actor)}">
             <div class="china-chat__bubble">
               <div class="china-chat__meta">
@@ -1190,15 +1190,16 @@ function renderChinaThread(bundle = {}) {
               <p>${escapeHtml(message.text)}</p>
             </div>
           </article>
-        `).join("")}
-      </div>
+          `).join("")}
+        </div>
+      ` : `<p class="muted">Сообщений пока нет.</p>`}
       ${canReply ? `
         <label>
-          <span>Ответ поставщику</span>
-          <textarea rows="2" placeholder="Добавьте недостающую информацию: размер, цвет, сторону, фото..." data-china-reply-text></textarea>
+          <span>Сообщение поставщику</span>
+          <textarea rows="2" placeholder="Написать сообщение по этому запросу" data-china-reply-text></textarea>
         </label>
         <div class="china-preorder-card__thread-actions">
-          <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Отправить ответ</button>
+          <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Отправить</button>
         </div>
       ` : ""}
     </div>
@@ -2838,7 +2839,7 @@ document.querySelector("[data-china-preorders]")?.addEventListener("click", asyn
     const textarea = card?.querySelector("[data-china-reply-text]");
     const managerComment = plainText(textarea?.value);
     if (!managerComment) {
-      alert("Добавьте ответ поставщику.");
+      alert("Добавьте сообщение поставщику.");
       textarea?.focus();
       return;
     }
@@ -2855,7 +2856,7 @@ document.querySelector("[data-china-preorders]")?.addEventListener("click", asyn
     } catch (error) {
       alert(error.message);
       replyButton.disabled = false;
-      replyButton.textContent = "Отправить ответ";
+      replyButton.textContent = "Отправить";
     }
     return;
   }

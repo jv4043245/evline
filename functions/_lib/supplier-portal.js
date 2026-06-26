@@ -972,11 +972,6 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     error.status = 400;
     throw error;
   }
-  if (!PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
-    const error = new Error("This supplier action is no longer available after acceptance");
-    error.status = 400;
-    throw error;
-  }
 
   const comment = text(payload.manager_comment || payload.comment || payload.comment_cn).slice(0, 2000);
   if (!comment) {
