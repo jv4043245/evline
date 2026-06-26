@@ -44,6 +44,11 @@ function shortDateTime(value) {
   });
 }
 
+function dateMs(value) {
+  const parsed = new Date(value || "").getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function supplierErrorMessage(message) {
   const value = plainText(message);
   const dictionary = {
@@ -57,6 +62,7 @@ function supplierErrorMessage(message) {
     "Unsupported supplier status": "Этот статус сейчас недоступен.",
     "Supplier event limit reached": "Достигнут лимит обновлений по этому предзаказу.",
     "Tracking number is required": "Укажите трек-номер.",
+    "Clarification text is required": "Напишите, что нужно уточнить.",
     "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
     "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
     "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
@@ -104,7 +110,6 @@ function requestData(request = {}) {
       <div><span>Деталь</span><strong>${escapeHtml(request.item_name || "-")}</strong></div>
       <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
       <div class="supplier-data--wide"><span>Описание</span><strong>${escapeHtml(request.request_text || "-")}</strong></div>
-      ${request.supplier_note ? `<div class="supplier-data--wide"><span>Уточнение</span><strong>${escapeHtml(request.supplier_note)}</strong></div>` : ""}
     </div>
   `;
 }
@@ -133,39 +138,127 @@ function renderPayment(payment = {}, tokenValue = token) {
   `;
 }
 
-function renderQuotes(quotes = []) {
-  if (!quotes.length) return `<p class="supplier-muted">Предложений пока нет.</p>`;
+function quoteChatText(quote = {}) {
+  return [
+    quote.price_cny ? `${Number(quote.price_cny || 0).toLocaleString("ru-RU")} CNY` : "",
+    quote.purchase_days ? `Срок поставки: ${Number(quote.purchase_days)} дн.` : "",
+    plainText(quote.comment_cn),
+  ].filter(Boolean).join("\n");
+}
+
+function supplierChatMessages(data = {}) {
+  const request = data.request || {};
+  const events = data.tracking_events || [];
+  const messages = [];
+  const initialText = plainText(request.request_text);
+  if (initialText) {
+    messages.push({
+      actor: "evline",
+      title: "EVLine",
+      meta: "Запрос",
+      text: initialText,
+      created_at: request.created_at,
+      order: 0,
+    });
+  }
+
+  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_cn) === plainText(request.supplier_note));
+  if (plainText(request.supplier_note) && !hasNoteEvent) {
+    messages.push({
+      actor: "evline",
+      title: "EVLine",
+      meta: "Уточнение",
+      text: plainText(request.supplier_note),
+      created_at: request.updated_at || request.created_at,
+      order: 1,
+    });
+  }
+
+  for (const quote of data.quotes || []) {
+    const textValue = quoteChatText(quote);
+    if (!textValue) continue;
+    messages.push({
+      actor: "supplier",
+      title: "Поставщик",
+      meta: "Предложение",
+      text: textValue,
+      created_at: quote.created_at,
+      order: 2,
+    });
+  }
+
+  for (const event of events) {
+    const status = plainText(event.status);
+    const comment = plainText(event.comment_cn || event.comment_translated);
+    if (status === "quoted") continue;
+    if (status === "needs_info" && comment) {
+      messages.push({
+        actor: "supplier",
+        title: "Поставщик",
+        meta: "Нужно уточнение",
+        text: comment,
+        created_at: event.created_at,
+        order: 3,
+      });
+    } else if (status === "sent" && comment) {
+      messages.push({
+        actor: "evline",
+        title: "EVLine",
+        meta: "Ответ",
+        text: comment,
+        created_at: event.created_at,
+        order: 4,
+      });
+    } else if (status === "no_stock") {
+      messages.push({
+        actor: "supplier",
+        title: "Поставщик",
+        meta: "Не можем привезти",
+        text: comment || "Поставщик отметил, что не может привезти позицию.",
+        created_at: event.created_at,
+        order: 5,
+      });
+    } else if (status === "problem" && comment) {
+      messages.push({
+        actor: "supplier",
+        title: "Поставщик",
+        meta: "Проблема",
+        text: comment,
+        created_at: event.created_at,
+        order: 6,
+      });
+    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
+      messages.push({
+        actor: "supplier",
+        title: "Поставщик",
+        meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
+        text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
+        created_at: event.created_at,
+        order: 7,
+      });
+    }
+  }
+
+  return messages.sort((a, b) => (dateMs(a.created_at) - dateMs(b.created_at)) || (a.order - b.order));
+}
+
+function renderSupplierChat(data = {}) {
+  const messages = supplierChatMessages(data);
+  if (!messages.length) return `<p class="supplier-muted">Сообщений пока нет.</p>`;
   return `
-    <div class="supplier-quotes">
-      ${quotes.map((quote) => `
-        <article class="supplier-quote ${quote.status === "selected" ? "supplier-quote--selected" : ""}">
-          <div class="supplier-quote__price">${Number(quote.price_cny || 0).toLocaleString("ru-RU")} CNY</div>
-          <div class="supplier-muted">
-            ${quote.purchase_days ? `Срок ${Number(quote.purchase_days)} дн.` : ""}
+    <div class="supplier-chat">
+      ${messages.map((message) => `
+        <article class="supplier-chat__message supplier-chat__message--${escapeHtml(message.actor)}">
+          <div class="supplier-chat__bubble">
+            <div class="supplier-chat__meta">
+              <strong>${escapeHtml(message.title)}</strong>
+              <span>${escapeHtml(message.meta)} · ${escapeHtml(shortDateTime(message.created_at))}</span>
+            </div>
+            <p>${escapeHtml(message.text)}</p>
           </div>
-          ${quote.part_number ? `<div><strong>Номер:</strong> ${escapeHtml(quote.part_number)}</div>` : ""}
-          ${quote.comment_cn ? `<p>${escapeHtml(quote.comment_cn)}</p>` : ""}
-          ${quote.comment_translated && quote.comment_translated !== quote.comment_cn ? `<p>${escapeHtml(quote.comment_translated)}</p>` : ""}
-          ${requestImages(quote.images || [])}
-          ${quote.status === "selected" ? `<strong>EVLine выбрал это предложение.</strong>` : ""}
         </article>
       `).join("")}
     </div>
-  `;
-}
-
-function renderEvents(events = []) {
-  if (!events.length) return `<p class="supplier-muted">Истории пока нет.</p>`;
-  return `
-    <ul class="supplier-events">
-      ${events.map((event) => `
-        <li>
-          <strong>${escapeHtml(requestStatusLabels[event.status] || event.status)}</strong>
-          <div class="supplier-muted">${escapeHtml(shortDateTime(event.created_at))}${event.tracking_number ? ` · ${escapeHtml(event.tracking_number)}` : ""}</div>
-          ${event.comment_cn ? `<p>${escapeHtml(event.comment_cn)}</p>` : ""}
-        </li>
-      `).join("")}
-    </ul>
   `;
 }
 
@@ -173,8 +266,8 @@ function renderQuoteForm(request = {}) {
   const quotable = ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
   const disabled = !quotable;
   return `
-    <form class="supplier-form" data-quote-form>
-      <h2>Ответ поставщика</h2>
+    <form class="supplier-form supplier-form--compact" data-quote-form>
+      <h2>Ответ по цене</h2>
       <div class="supplier-form__grid">
         <input name="quote_type" type="hidden" value="original">
         <input name="availability" type="hidden" value="in_stock">
@@ -184,7 +277,7 @@ function renderQuoteForm(request = {}) {
           <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200" required ${disabled ? "disabled" : ""}>
         </label>
         <label>
-          Срок, дней
+          Срок поставки, дней
           <input name="purchase_days" type="number" min="0" step="1" placeholder="0" required ${disabled ? "disabled" : ""}>
         </label>
         <label class="supplier-wide">
@@ -225,14 +318,21 @@ function renderTrackingForm(request = {}, payment = null) {
   `;
 }
 
-function renderQuickActions(request = {}) {
+function renderClarificationForm(request = {}) {
   const allowed = ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
   if (!allowed) return "";
   return `
-    <div class="supplier-actions">
-      <button class="supplier-button supplier-button--danger" type="button" data-action="no_stock">Нет в наличии</button>
-      <button class="supplier-button" type="button" data-action="needs_info">Нужно уточнение</button>
-    </div>
+    <form class="supplier-clarification" data-clarification-form>
+      <div class="supplier-clarification__head">
+        <strong>Нужно уточнение?</strong>
+        <span class="supplier-muted">Напишите, какой информации не хватает по этой детали.</span>
+      </div>
+      <textarea name="comment_cn" rows="3" placeholder="Например: нужен размер, цвет, сторона или фото крепления" required></textarea>
+      <div class="supplier-clarification__actions">
+        <button class="supplier-button supplier-button--small" type="submit">Отправить уточнение</button>
+        <button class="supplier-button supplier-button--quiet-danger" type="button" data-action="no_stock">Не можем привезти</button>
+      </div>
+    </form>
   `;
 }
 
@@ -260,27 +360,19 @@ function renderRequestPage(data) {
       </div>
       ${requestImages(data.request_images || [])}
       ${requestData(request)}
-      ${renderQuickActions(request)}
     </section>
 
-      ${renderPayment(data.payment, token)}
-
     <section class="supplier-section">
+      <h2>Чат по запчасти</h2>
+      ${renderSupplierChat(data)}
       ${renderQuoteForm(request)}
+      ${renderClarificationForm(request)}
     </section>
 
-    <section class="supplier-section">
-      <h2>Предложения</h2>
-      ${renderQuotes(data.quotes || [])}
-    </section>
+    ${renderPayment(data.payment, token)}
 
     <section class="supplier-section">
       ${renderTrackingForm(request, data.payment)}
-    </section>
-
-    <section class="supplier-section">
-      <h2>История</h2>
-      ${renderEvents(data.tracking_events || [])}
     </section>
   `;
 }
@@ -349,11 +441,22 @@ root?.addEventListener("submit", async (event) => {
         body: JSON.stringify(payload),
       });
       renderRequestPage(data);
+      return;
     }
     if (form.matches("[data-tracking-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
         method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      renderRequestPage(data);
+      return;
+    }
+    if (form.matches("[data-clarification-form]")) {
+      const payload = Object.fromEntries(new FormData(form));
+      payload.action = "needs_info";
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+        method: "POST",
         body: JSON.stringify(payload),
       });
       renderRequestPage(data);
@@ -368,13 +471,13 @@ root?.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const action = button.dataset.action;
-  const comment = action === "needs_info" ? prompt("Что нужно уточнить?") : "";
-  if (action === "needs_info" && comment === null) return;
+  if (action !== "no_stock") return;
+  if (!confirm("Отметить, что эту позицию невозможно привезти?")) return;
   setButtonBusy(button, true);
   try {
     const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
       method: "POST",
-      body: JSON.stringify({ action, comment_cn: comment || "" }),
+      body: JSON.stringify({ action, comment_cn: "" }),
     });
     renderRequestPage(data);
   } catch (error) {

@@ -820,6 +820,11 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
     error.status = 400;
     throw error;
   }
+  if (nextStatus === "needs_info" && !text(payload.comment_cn || payload.comment_translated)) {
+    const error = new Error("Clarification text is required");
+    error.status = 400;
+    throw error;
+  }
   if (LOGISTICS_STATUSES.has(nextStatus) && !LOGISTICS_SOURCE_STATUSES.has(supplierRequest.status)) {
     const error = new Error("Logistics status is available only after manager accepts a quote");
     error.status = 400;
@@ -890,6 +895,66 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
   }
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
+}
+
+export async function replySupplierRequestClarification(env, supplierRequestId, payload = {}) {
+  await assertSupplierTables(env);
+  const supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(text(supplierRequestId))
+    .first();
+  if (!supplierRequest) {
+    const error = new Error("Supplier request not found");
+    error.status = 404;
+    throw error;
+  }
+  if (TERMINAL_REQUEST_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("Supplier request is closed");
+    error.status = 400;
+    throw error;
+  }
+  if (!PRE_ACCEPTANCE_STATUSES.has(supplierRequest.status)) {
+    const error = new Error("This supplier action is no longer available after acceptance");
+    error.status = 400;
+    throw error;
+  }
+
+  const comment = text(payload.manager_comment || payload.comment || payload.comment_cn).slice(0, 2000);
+  if (!comment) {
+    const error = new Error("Clarification text is required");
+    error.status = 400;
+    throw error;
+  }
+  assertSupplierTextSafe(comment);
+
+  const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  if (number(eventCount?.count) >= MAX_PUBLIC_EVENTS_PER_REQUEST) {
+    const error = new Error("Supplier event limit reached");
+    error.status = 429;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const nextStatus = supplierRequest.status === "needs_info" ? "sent" : supplierRequest.status;
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET manager_comment = ?, status = ?, updated_at = ?
+    WHERE id = ?`
+  )
+    .bind(comment, nextStatus, now, supplierRequest.id)
+    .run();
+
+  await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
+    status: "sent",
+    comment_cn: comment,
+    comment_translated: comment,
+  });
+
+  const updated = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
+    .bind(supplierRequest.id)
+    .first();
+  return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: comment, updated_at: now });
 }
 
 export async function selectSupplierQuote(env, quoteId) {

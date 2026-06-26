@@ -240,6 +240,7 @@
 .china-preorder-form input,
 .china-preorder-form select,
 .china-preorder-form textarea,
+.china-preorder-card__thread textarea,
 .order-editor input,
 .order-editor select,
 .order-editor textarea,
@@ -2005,10 +2006,10 @@ body.order-detail-open .order-detail {
 }
 
 .china-preorder-card__grid > div,
-.china-preorder-card__text,
 .china-preorder-card__quote,
 .china-preorder-card__payment,
-.china-preorder-card__tracking {
+.china-preorder-card__tracking,
+.china-preorder-card__thread {
   display: grid;
   gap: 5px;
   min-width: 0;
@@ -2017,8 +2018,8 @@ body.order-detail-open .order-detail {
   background: var(--china-surface);
 }
 
-.china-preorder-card__text p,
-.china-preorder-card__quote p {
+.china-preorder-card__quote p,
+.china-preorder-card__thread p {
   margin: 0;
   color: var(--ink);
   overflow-wrap: anywhere;
@@ -2031,6 +2032,80 @@ body.order-detail-open .order-detail {
 .china-preorder-card__quote-line b {
   color: #1d4ed8;
   font-size: 17px;
+}
+
+.china-preorder-card__thread {
+  gap: 8px;
+}
+
+.china-chat {
+  display: grid;
+  gap: 9px;
+}
+
+.china-chat__message {
+  display: flex;
+}
+
+.china-chat__message--supplier {
+  justify-content: flex-start;
+}
+
+.china-chat__message--evline {
+  justify-content: flex-end;
+}
+
+.china-chat__bubble {
+  width: min(100%, 620px);
+  display: grid;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--china-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.china-chat__message--evline .china-chat__bubble {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: #edf4ff;
+}
+
+.china-chat__meta,
+.china-preorder-card__thread-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.china-chat__meta b {
+  font-size: 13px;
+}
+
+.china-chat__meta span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.china-chat__bubble p {
+  white-space: pre-wrap;
+}
+
+.china-preorder-card__thread label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.china-preorder-card__thread textarea {
+  resize: vertical;
+}
+
+.china-preorder-card__thread-actions {
+  justify-content: flex-end;
 }
 
 .admin-link-button {

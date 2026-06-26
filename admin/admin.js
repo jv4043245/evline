@@ -793,6 +793,11 @@ function shortDateTime(value) {
   });
 }
 
+function dateMs(value) {
+  const parsed = new Date(value || "").getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function mutedLine(value, className = "") {
   const text = plainText(value);
   if (!text) return "";
@@ -1003,6 +1008,153 @@ function chinaPreorderStage(bundle = {}) {
   return "Ждём ответ";
 }
 
+function chinaQuoteChatText(quote = {}) {
+  return [
+    quote.price_cny ? `${supplierAmount(quote.price_cny, "CNY")}` : "",
+    quote.purchase_days ? `Срок поставки: ${Number(quote.purchase_days)} дн.` : "",
+    plainText(quote.comment_ru || quote.comment_translated || quote.comment_cn),
+  ].filter(Boolean).join("\n");
+}
+
+function chinaChatMessages(bundle = {}) {
+  const request = bundle.request || {};
+  const events = bundle.tracking_events || [];
+  const messages = [];
+  const initialText = plainText(request.request_text_ru || request.request_text);
+  if (initialText) {
+    messages.push({
+      actor: "evline",
+      title: "EVLine",
+      meta: "Запрос",
+      text: initialText,
+      created_at: request.created_at,
+      order: 0,
+      status: "request",
+    });
+  }
+
+  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_translated || event.comment_cn) === plainText(request.manager_comment));
+  if (plainText(request.manager_comment) && !hasNoteEvent) {
+    messages.push({
+      actor: "evline",
+      title: "EVLine",
+      meta: "Уточнение",
+      text: plainText(request.manager_comment),
+      created_at: request.updated_at || request.created_at,
+      order: 1,
+      status: "sent",
+    });
+  }
+
+  for (const quote of bundle.quotes || []) {
+    const textValue = chinaQuoteChatText(quote);
+    if (!textValue) continue;
+    messages.push({
+      actor: "supplier",
+      title: request.supplier_name || "Поставщик",
+      meta: "Предложение",
+      text: textValue,
+      created_at: quote.created_at,
+      order: 2,
+      status: "quoted",
+    });
+  }
+
+  for (const event of events) {
+    const status = plainText(event.status);
+    const comment = plainText(event.comment_translated || event.comment_cn);
+    if (status === "quoted") continue;
+    if (status === "needs_info" && comment) {
+      messages.push({
+        actor: "supplier",
+        title: request.supplier_name || "Поставщик",
+        meta: "Нужно уточнение",
+        text: comment,
+        created_at: event.created_at,
+        order: 3,
+        status,
+      });
+    } else if (status === "sent" && comment) {
+      messages.push({
+        actor: "evline",
+        title: "EVLine",
+        meta: "Ответ",
+        text: comment,
+        created_at: event.created_at,
+        order: 4,
+        status,
+      });
+    } else if (status === "no_stock") {
+      messages.push({
+        actor: "supplier",
+        title: request.supplier_name || "Поставщик",
+        meta: "Не можем привезти",
+        text: comment || "Поставщик отметил, что не может привезти позицию.",
+        created_at: event.created_at,
+        order: 5,
+        status,
+      });
+    } else if (status === "problem" && comment) {
+      messages.push({
+        actor: "supplier",
+        title: request.supplier_name || "Поставщик",
+        meta: "Проблема",
+        text: comment,
+        created_at: event.created_at,
+        order: 6,
+        status,
+      });
+    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
+      messages.push({
+        actor: "supplier",
+        title: request.supplier_name || "Поставщик",
+        meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
+        text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
+        created_at: event.created_at,
+        order: 7,
+        status,
+      });
+    }
+  }
+
+  return messages.sort((a, b) => (dateMs(a.created_at) - dateMs(b.created_at)) || (a.order - b.order));
+}
+
+function renderChinaThread(bundle = {}) {
+  const request = bundle.request || {};
+  const messages = chinaChatMessages(bundle);
+  if (!messages.length) return "";
+  const lastMessage = messages[messages.length - 1] || {};
+  const canReply = lastMessage.status === "needs_info" && ["sent", "viewed", "quoted", "needs_info", "no_stock"].includes(request.status);
+  return `
+    <div class="china-preorder-card__thread">
+      <strong>Чат по запчасти</strong>
+      <div class="china-chat">
+        ${messages.map((message) => `
+          <article class="china-chat__message china-chat__message--${escapeHtml(message.actor)}">
+            <div class="china-chat__bubble">
+              <div class="china-chat__meta">
+                <b>${escapeHtml(message.title)}</b>
+                <span>${escapeHtml(message.meta)} · ${escapeHtml(shortDateTime(message.created_at))}</span>
+              </div>
+              <p>${escapeHtml(message.text)}</p>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+      ${canReply ? `
+        <label>
+          <span>Ответ поставщику</span>
+          <textarea rows="2" placeholder="Добавьте недостающую информацию: размер, цвет, сторону, фото..." data-china-reply-text></textarea>
+        </label>
+        <div class="china-preorder-card__thread-actions">
+          <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Отправить ответ</button>
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
 function renderChinaPreorders() {
   const root = document.querySelector("[data-china-preorders]");
   if (!root) return;
@@ -1044,13 +1196,9 @@ function renderChinaPreorders() {
           <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
         </div>
         ${supplierImageList(bundle.request_images || [])}
-        <div class="china-preorder-card__text">
-          <span>Текст поставщику</span>
-          <p>${escapeHtml(request.request_text_ru || request.request_text || "-")}</p>
-          ${request.manager_comment ? `<p><b>Уточнение:</b> ${escapeHtml(request.manager_comment)}</p>` : ""}
-        </div>
+        ${renderChinaThread(bundle)}
         <div class="china-preorder-card__quote">
-          <strong>Ответ поставщика</strong>
+          <strong>Итоговое предложение</strong>
           ${quote ? `
             <div class="china-preorder-card__quote-line">
               <b>${supplierAmount(quote.price_cny, "CNY")}</b>
@@ -1058,7 +1206,7 @@ function renderChinaPreorders() {
               <span>${escapeHtml(quote.status || "new")}</span>
             </div>
             ${quote.comment_cn ? `<p>${escapeHtml(quote.comment_ru || quote.comment_translated || quote.comment_cn)}</p>` : ""}
-          ` : `<p class="muted">Поставщик ещё не ответил.</p>`}
+          ` : `<p class="muted">Предложения по цене пока нет.</p>`}
         </div>
         <div class="china-preorder-card__payment">
           <strong>Оплата</strong>
@@ -2628,6 +2776,35 @@ document.querySelector("[data-china-preorders]")?.addEventListener("click", asyn
       copyButton.textContent = "Скопировано";
       setTimeout(() => { copyButton.textContent = original; }, 1500);
     });
+    return;
+  }
+
+  const replyButton = event.target.closest("[data-china-reply]");
+  if (replyButton) {
+    const requestId = replyButton.dataset.chinaReply || "";
+    const card = replyButton.closest("[data-china-preorder]");
+    const textarea = card?.querySelector("[data-china-reply-text]");
+    const managerComment = plainText(textarea?.value);
+    if (!managerComment) {
+      alert("Добавьте ответ поставщику.");
+      textarea?.focus();
+      return;
+    }
+    replyButton.disabled = true;
+    replyButton.textContent = "Отправляю...";
+    try {
+      const result = await api(`/api/admin/supplier-requests/${encodeURIComponent(requestId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ manager_comment: managerComment }),
+      });
+      state.chinaPreorders = result.preorders || state.chinaPreorders;
+      renderChinaPreorders();
+      await loadOrders();
+    } catch (error) {
+      alert(error.message);
+      replyButton.disabled = false;
+      replyButton.textContent = "Отправить ответ";
+    }
     return;
   }
 
