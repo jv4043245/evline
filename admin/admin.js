@@ -1301,7 +1301,7 @@ function renderChinaThread(bundle = {}) {
   if (!messages.length && !canReply) return "";
   return `
     <div class="china-preorder-card__thread">
-      <strong>Чат по запчасти</strong>
+      <strong>Диалог по заказу</strong>
       ${messages.length ? `
         <div class="china-chat">
           ${messages.map((message) => `

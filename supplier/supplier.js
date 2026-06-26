@@ -312,7 +312,7 @@ function renderSupplierChat(data = {}) {
   const messages = supplierChatMessages(data);
   if (!messages.length) return "";
   return `
-    <h2>Чат по запчасти</h2>
+    <h2>Диалог по заказу</h2>
     <div class="supplier-chat">
       ${messages.map((message) => `
         <article class="supplier-chat__message supplier-chat__message--${escapeHtml(message.actor)}">
@@ -441,7 +441,7 @@ function renderRequestDetail(data = {}, tokenValue = token) {
       ${requestData(request)}
     </section>
 
-    <section class="supplier-section">
+    <section class="supplier-section supplier-section--dialog">
       ${renderSupplierChat(data)}
       ${renderQuoteForm(data)}
       ${renderMessageForm(data)}

@@ -94,6 +94,10 @@ body.supplier-shell {
   margin-bottom: 16px;
 }
 
+.supplier-section--dialog {
+  margin-top: 18px;
+}
+
 .supplier-hero h1,
 .supplier-panel h1 {
   margin: 0;
