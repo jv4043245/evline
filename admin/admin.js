@@ -3029,7 +3029,25 @@ document.querySelector("#search")?.addEventListener("input", () => {
   window.__searchTimer = setTimeout(loadOrders, 250);
 });
 
-document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
+document.querySelector("[data-orders]")?.addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("[data-delete-order]");
+  if (deleteButton) {
+    deleteButton.disabled = true;
+    deleteButton.setAttribute("aria-busy", "true");
+    try {
+      const deleted = await deleteOrder(deleteButton.dataset.deleteOrder, deleteButton.dataset.deleteOrderNumber || "це замовлення");
+      if (!deleted) {
+        deleteButton.disabled = false;
+        deleteButton.removeAttribute("aria-busy");
+      }
+    } catch (error) {
+      alert(error.message);
+      deleteButton.disabled = false;
+      deleteButton.removeAttribute("aria-busy");
+    }
+    return;
+  }
+
   const chinaButton = event.target.closest("[data-order-to-china]");
   if (chinaButton) {
     startChinaPreorderFromOrder(chinaButton.dataset.orderToChina);
@@ -3041,8 +3059,6 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
     openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
     return;
   }
-
-  if (event.target.closest("[data-delete-order]")) return;
 
   if (event.target.closest("a")) return;
 
