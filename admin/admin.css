@@ -2009,6 +2009,39 @@ body.order-detail-open .order-detail {
   font-size: 13px;
 }
 
+.china-created-link {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 8px;
+  background: #edf4ff;
+}
+
+.china-created-link[hidden] {
+  display: none;
+}
+
+.china-created-link strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+}
+
+.china-created-link__url {
+  display: block;
+  min-width: 0;
+  color: var(--china-accent-dark);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .china-preorders {
   display: grid;
   gap: 12px;
@@ -2533,6 +2566,10 @@ body.order-detail-open .order-detail {
 
   .china-photo-preview {
     grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .china-created-link {
+    grid-template-columns: 1fr;
   }
 
   .china-photo-control {

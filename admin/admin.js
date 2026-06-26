@@ -987,6 +987,28 @@ function supplierImageList(images = []) {
   `;
 }
 
+function hideChinaCreatedLink(form = document) {
+  const root = form.querySelector?.("[data-china-created-link]") || document.querySelector("[data-china-created-link]");
+  if (!root) return;
+  root.hidden = true;
+  root.innerHTML = "";
+}
+
+function showChinaCreatedLink(form, rawLink) {
+  const root = form.querySelector("[data-china-created-link]");
+  const link = supplierUrl(rawLink);
+  if (!root || !link) return;
+  root.hidden = false;
+  root.innerHTML = `
+    <div>
+      <strong>Ссылка для поставщика</strong>
+      <a class="china-created-link__url" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>
+    </div>
+    <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Открыть</a>
+    <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопировать</button>
+  `;
+}
+
 function selectedSupplierQuote(bundle = {}) {
   const quotes = bundle.quotes || [];
   return quotes.find((quote) => quote.status === "selected")
@@ -2454,6 +2476,7 @@ function startChinaPreorderFromOrder(orderId) {
   if (!form) return;
   form.reset();
   clearChinaPhoto(form);
+  hideChinaCreatedLink(form);
   const customSupplier = document.querySelector("[data-china-custom-supplier]");
   if (customSupplier) customSupplier.hidden = true;
   const setValue = (name, value) => {
@@ -2578,6 +2601,17 @@ document.querySelector("[data-china-photo-input]")?.addEventListener("change", a
 });
 
 document.querySelector("[data-china-preorder-form]")?.addEventListener("click", (event) => {
+  const copyButton = event.target.closest("[data-copy-supplier-link]");
+  if (copyButton) {
+    const value = copyButton.dataset.copySupplierLink || "";
+    navigator.clipboard?.writeText(value).then(() => {
+      const original = copyButton.textContent;
+      copyButton.textContent = "Скопировано";
+      setTimeout(() => { copyButton.textContent = original; }, 1500);
+    });
+    return;
+  }
+
   const removeButton = event.target.closest("[data-china-photo-remove]");
   if (!removeButton) return;
   clearChinaPhoto(removeButton.closest("form"));
@@ -2602,6 +2636,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
     alert("Укажите деталь или текст запроса.");
     return;
   }
+  hideChinaCreatedLink(form);
   button.disabled = true;
   button.textContent = "Создаю...";
   try {
@@ -2614,7 +2649,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
     const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
     if (link) {
       navigator.clipboard?.writeText(link).catch(() => null);
-      alert("Запрос в Китай создан. Ссылка поставщика скопирована.");
+      showChinaCreatedLink(form, link);
     } else {
       alert("Запрос в Китай создан.");
     }
