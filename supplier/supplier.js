@@ -7,6 +7,7 @@ const page = document.body.dataset.supplierPage || query.get("page") || (pathPar
 let requestPollTimer = null;
 let dashboardData = null;
 let dashboardTab = "work";
+let dashboardSelectedRequestId = "";
 
 const requestStatusLabels = {
   draft: "Черновик",
@@ -397,6 +398,35 @@ function renderTrackingForm(request = {}, payment = null) {
   `;
 }
 
+function renderRequestDetail(data = {}, tokenValue = token) {
+  const request = data.request || {};
+  return `
+    <section class="supplier-card">
+      <div class="supplier-card__head">
+        <h2>Данные запроса</h2>
+        <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
+      </div>
+      ${requestImages(data.request_images || [])}
+      ${requestData(request)}
+    </section>
+
+    <section class="supplier-section">
+      <h2>Чат по запчасти</h2>
+      ${renderSupplierChat(data)}
+      ${renderQuoteForm(data)}
+      ${renderMessageForm(data)}
+      ${renderDeliveryCostForm(data)}
+      ${renderClarificationForm(data)}
+    </section>
+
+    ${renderPayment(data.payment, tokenValue)}
+
+    <section class="supplier-section">
+      ${renderTrackingForm(request, data.payment)}
+    </section>
+  `;
+}
+
 function renderClarificationForm(data = {}) {
   const request = data.request || {};
   const hasQuote = (data.quotes || []).length > 0;
@@ -433,29 +463,7 @@ function renderRequestPage(data) {
       ${statusBadge(request.status)}
     </section>
 
-    <section class="supplier-card">
-      <div class="supplier-card__head">
-        <h2>Данные запроса</h2>
-        <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
-      </div>
-      ${requestImages(data.request_images || [])}
-      ${requestData(request)}
-    </section>
-
-    <section class="supplier-section">
-      <h2>Чат по запчасти</h2>
-      ${renderSupplierChat(data)}
-      ${renderQuoteForm(data)}
-      ${renderMessageForm(data)}
-      ${renderDeliveryCostForm(data)}
-      ${renderClarificationForm(data)}
-    </section>
-
-    ${renderPayment(data.payment, token)}
-
-    <section class="supplier-section">
-      ${renderTrackingForm(request, data.payment)}
-    </section>
+    ${renderRequestDetail(data, token)}
   `;
 }
 
@@ -502,10 +510,36 @@ function dashboardRequestPriority(request = {}) {
   return 4;
 }
 
+function dashboardRequestKey(request = {}) {
+  return request.supplier_link || request.public_number || `${request.item_name || ""}-${request.created_at || ""}`;
+}
+
+function requestTokenFromLink(link = "") {
+  const match = String(link || "").match(/\/supplier\/request\/([^/?#]+)/);
+  return match ? match[1] : "";
+}
+
+function dashboardRequestAsData(request = {}) {
+  return {
+    request,
+    request_images: request.request_images || [],
+    quotes: request.quotes || [],
+    tracking_events: request.tracking_events || [],
+    payment: request.payment || null,
+  };
+}
+
+function selectedDashboardRequest() {
+  if (!dashboardSelectedRequestId) return null;
+  return (dashboardData?.requests || []).find((request) => dashboardRequestKey(request) === dashboardSelectedRequestId) || null;
+}
+
 function renderDashboardRequestCard(request = {}) {
   const payment = request.payment || null;
+  const key = dashboardRequestKey(request);
+  const selected = dashboardSelectedRequestId === key;
   return `
-    <a class="supplier-dashboard-card" href="${escapeHtml(request.supplier_link || "#")}">
+    <button class="supplier-dashboard-card ${selected ? "is-selected" : ""}" type="button" data-dashboard-open-request="${escapeHtml(key)}">
       <div class="supplier-card__head">
         <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
         ${statusBadge(request.status)}
@@ -514,8 +548,9 @@ function renderDashboardRequestCard(request = {}) {
       <div class="supplier-dashboard-card__meta">
         <span>${escapeHtml(request.car || "Авто не указано")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
         ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
+        ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<span>Доставка: ${supplierAmount(request.delivery_cost_cny, "CNY")}</span>` : ""}
       </div>
-    </a>
+    </button>
   `;
 }
 
@@ -578,9 +613,33 @@ function renderDashboardTabs() {
   `;
 }
 
+function renderDashboardRequestPanel() {
+  const request = selectedDashboardRequest();
+  if (!request) return "";
+  const requestToken = requestTokenFromLink(request.supplier_link);
+  return `
+    <div class="supplier-request-panel-backdrop" data-dashboard-close-request></div>
+    <aside class="supplier-request-panel" data-request-token="${escapeHtml(requestToken)}" aria-label="Карточка запроса">
+      <div class="supplier-request-panel__head">
+        <div>
+          <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
+          <span>${escapeHtml(request.item_name || "Деталь")}${request.car ? ` · ${escapeHtml(request.car)}` : ""}</span>
+        </div>
+        <button class="supplier-button supplier-button--small" type="button" data-dashboard-close-request>Назад</button>
+      </div>
+      <div class="supplier-request-panel__body">
+        ${renderRequestDetail(dashboardRequestAsData(request), requestToken)}
+      </div>
+    </aside>
+  `;
+}
+
 function renderDashboardPage(data) {
   dashboardData = data;
   const requests = data.requests || [];
+  if (dashboardSelectedRequestId && !requests.some((request) => dashboardRequestKey(request) === dashboardSelectedRequestId)) {
+    dashboardSelectedRequestId = "";
+  }
   root.innerHTML = `
     <header class="supplier-topbar">
       <div class="supplier-brand">
@@ -594,6 +653,7 @@ function renderDashboardPage(data) {
     </section>
     ${renderDashboardTabs()}
     ${dashboardTab === "money" ? renderDashboardMoney(data) : renderDashboardWork(requests)}
+    ${renderDashboardRequestPanel()}
   `;
 }
 
@@ -607,6 +667,18 @@ function setButtonBusy(button, busy, text) {
     button.disabled = false;
     button.textContent = button.dataset.originalText || button.textContent;
   }
+}
+
+function supplierTokenForElement(element) {
+  return element?.closest?.("[data-request-token]")?.dataset.requestToken || token;
+}
+
+async function renderAfterSupplierMutation(data) {
+  if (page === "dashboard") {
+    await loadDashboard();
+    return;
+  }
+  renderRequestPage(data);
 }
 
 function supplierHasActiveEditor() {
@@ -645,55 +717,56 @@ root?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
   const button = form.querySelector("button[type='submit']");
+  const requestToken = supplierTokenForElement(form);
   setButtonBusy(button, true);
   try {
     if (form.matches("[data-quote-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "quote";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      renderRequestPage(data);
+      await renderAfterSupplierMutation(data);
       return;
     }
     if (form.matches("[data-tracking-form]")) {
       const payload = Object.fromEntries(new FormData(form));
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
-      renderRequestPage(data);
+      await renderAfterSupplierMutation(data);
       return;
     }
     if (form.matches("[data-clarification-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "needs_info";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      renderRequestPage(data);
+      await renderAfterSupplierMutation(data);
       return;
     }
     if (form.matches("[data-message-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "message";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      renderRequestPage(data);
+      await renderAfterSupplierMutation(data);
       return;
     }
     if (form.matches("[data-delivery-cost-form]")) {
       const payload = Object.fromEntries(new FormData(form));
       payload.action = "delivery_cost";
-      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+      const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      renderRequestPage(data);
+      await renderAfterSupplierMutation(data);
     }
   } catch (error) {
     alert(error.message);
@@ -702,6 +775,19 @@ root?.addEventListener("submit", async (event) => {
 });
 
 root?.addEventListener("click", async (event) => {
+  const openRequestButton = event.target.closest("[data-dashboard-open-request]");
+  if (openRequestButton) {
+    dashboardSelectedRequestId = openRequestButton.dataset.dashboardOpenRequest || "";
+    renderDashboardPage(dashboardData || {});
+    return;
+  }
+
+  if (event.target.closest("[data-dashboard-close-request]")) {
+    dashboardSelectedRequestId = "";
+    renderDashboardPage(dashboardData || {});
+    return;
+  }
+
   const tabButton = event.target.closest("[data-dashboard-tab]");
   if (tabButton) {
     dashboardTab = tabButton.dataset.dashboardTab || "work";
@@ -716,15 +802,22 @@ root?.addEventListener("click", async (event) => {
   if (!confirm("Отметить, что эту позицию невозможно привезти?")) return;
   setButtonBusy(button, true);
   try {
-    const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(token)}`, {
+    const requestToken = supplierTokenForElement(button);
+    const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
       method: "POST",
       body: JSON.stringify({ action, comment_cn: "" }),
     });
-    renderRequestPage(data);
+    await renderAfterSupplierMutation(data);
   } catch (error) {
     alert(error.message);
     setButtonBusy(button, false);
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || page !== "dashboard" || !dashboardSelectedRequestId) return;
+  dashboardSelectedRequestId = "";
+  renderDashboardPage(dashboardData || {});
 });
 
 if (!token && root) {

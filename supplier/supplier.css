@@ -627,13 +627,27 @@ body.supplier-shell {
 
 .supplier-dashboard-card {
   display: grid;
+  width: 100%;
   gap: 8px;
   padding: 14px;
   border: 1px solid var(--supplier-line);
   border-radius: 8px;
   background: #fff;
-  text-decoration: none;
   color: inherit;
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+
+.supplier-dashboard-card:hover,
+.supplier-dashboard-card:focus-visible,
+.supplier-dashboard-card.is-selected {
+  border-color: #a8d9b9;
+  background: #fbfffc;
+  box-shadow: 0 10px 24px rgba(23, 33, 29, 0.08);
+  transform: translateY(-1px);
 }
 
 .supplier-dashboard-card__title {
@@ -677,6 +691,66 @@ body.supplier-shell {
 .supplier-dashboard-payment strong,
 .supplier-dashboard-payment b {
   overflow-wrap: anywhere;
+}
+
+.supplier-request-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(23, 33, 29, 0.28);
+  backdrop-filter: blur(4px);
+}
+
+.supplier-request-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--supplier-soft);
+  color: var(--supplier-ink);
+}
+
+.supplier-request-panel__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border-bottom: 1px solid var(--supplier-line);
+  background: rgba(244, 247, 245, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.supplier-request-panel__head div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.supplier-request-panel__head strong,
+.supplier-request-panel__head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.supplier-request-panel__head span {
+  color: var(--supplier-muted);
+  font-size: 13px;
+}
+
+.supplier-request-panel__body {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 560px) {
@@ -725,5 +799,22 @@ body.supplier-shell {
 
   .supplier-dashboard-payment div:last-child {
     text-align: left;
+  }
+}
+
+@media (min-width: 760px) {
+  .supplier-request-panel {
+    inset: 14px 14px 14px auto;
+    width: min(720px, calc(100vw - 28px));
+    border: 1px solid var(--supplier-line);
+    border-radius: 12px;
+    box-shadow: 0 28px 70px rgba(23, 33, 29, 0.22);
+    overflow: hidden;
+  }
+
+  .supplier-request-panel__head,
+  .supplier-request-panel__body {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }

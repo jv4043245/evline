@@ -443,7 +443,8 @@ export function publicSupplierBundle(bundle) {
   };
 }
 
-function publicDashboardRequest(row, payment = null) {
+function publicDashboardRequest(row, payment = null, bundle = null) {
+  const detail = bundle ? publicSupplierBundle(bundle) : null;
   return {
     public_number: row.public_number,
     status: row.status,
@@ -453,11 +454,16 @@ function publicDashboardRequest(row, payment = null) {
     vin: row.vin,
     item_name: row.item_name,
     quantity: row.quantity,
+    request_text: row.request_text_ru || row.request_text,
+    supplier_note: row.manager_comment,
     delivery_cost_cny: row.delivery_cost_cny,
     delivery_cost_updated_at: row.delivery_cost_updated_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
     supplier_link: `/supplier/request/${row.access_token}`,
+    request_images: detail?.request_images || [],
+    quotes: detail?.quotes || [],
+    tracking_events: detail?.tracking_events || [],
     payment: publicPayment(payment),
   };
 }
@@ -739,8 +745,9 @@ export async function listSupplierDashboardByToken(env, token) {
   );
   const requests = [];
   for (const row of rows) {
-    const payment = await loadSupplierPaymentForRequest(env, row);
-    requests.push(publicDashboardRequest(row, payment));
+    const bundle = await loadSupplierBundle(env, row);
+    if (!bundle) continue;
+    requests.push(publicDashboardRequest(row, bundle.payment, bundle));
   }
   const [paymentSummary, payments] = await Promise.all([
     supplierDashboardPaymentSummary(env, supplier.id),
