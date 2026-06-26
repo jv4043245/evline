@@ -1216,22 +1216,12 @@ function renderChinaPreorders() {
   const root = document.querySelector("[data-china-preorders]");
   if (!root) return;
   const rows = state.chinaPreorders || [];
-  const orderContext = state.chinaOrderContext;
-  const contextHtml = orderContext ? `
-    <div class="china-context-filter">
-      <div>
-        <strong>Запросы по заказу ${escapeHtml(orderContext.orderNumber || orderContext.orderId)}</strong>
-        <span>Показаны только обращения, связанные с этой заявкой.</span>
-      </div>
-      <button class="admin-btn admin-btn--small" type="button" data-china-clear-order-context>Показать все</button>
-    </div>
-  ` : "";
   if (!rows.length) {
-    root.innerHTML = `${contextHtml}<p class="muted china-preorders__empty">${orderContext ? "По этому заказу активных запросов пока нет." : "Активных запросов пока нет."}</p>`;
+    root.innerHTML = state.chinaOrderContext ? "" : `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
     return;
   }
 
-  root.innerHTML = contextHtml + rows.map((bundle) => {
+  root.innerHTML = rows.map((bundle) => {
     const request = bundle.request || {};
     const order = bundle.order || {};
     const quote = selectedSupplierQuote(bundle);
@@ -2650,7 +2640,17 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
 document.querySelector("[data-refresh-china]")?.addEventListener("click", loadChinaPreorders);
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
-  button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
+  button.addEventListener("click", () => {
+    const nextTab = button.dataset.adminTab;
+    if (nextTab === "china" && state.chinaOrderContext) {
+      setChinaOrderContext(null);
+      setChinaListFilters({ status: "active", q: "" });
+      setActiveTab(nextTab);
+      loadChinaPreorders().catch((error) => alert(error.message));
+      return;
+    }
+    setActiveTab(nextTab);
+  });
 });
 
 document.addEventListener("click", (event) => {
@@ -2908,14 +2908,6 @@ document.querySelector("[data-orders]")?.addEventListener("click", (event) => {
 });
 
 document.querySelector("[data-china-preorders]")?.addEventListener("click", async (event) => {
-  const clearContextButton = event.target.closest("[data-china-clear-order-context]");
-  if (clearContextButton) {
-    setChinaOrderContext(null);
-    setChinaListFilters({ status: "active", q: "" });
-    loadChinaPreorders().catch((error) => alert(error.message));
-    return;
-  }
-
   const openButton = event.target.closest("[data-open-order]");
   if (openButton) {
     state.orderEditorTab = "suppliers";
