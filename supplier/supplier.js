@@ -98,7 +98,11 @@ function requestImages(images = []) {
   if (!images.length) return "";
   return `
     <div class="supplier-images">
-      ${images.map((image) => `<img src="${escapeHtml(image.image_url)}" alt="Фото детали" loading="lazy">`).join("")}
+      ${images.map((image) => `
+        <a href="${escapeHtml(image.image_url)}" target="_blank" rel="noopener">
+          <img src="${escapeHtml(image.image_url)}" alt="Фото детали" loading="lazy">
+        </a>
+      `).join("")}
     </div>
   `;
 }
