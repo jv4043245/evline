@@ -1,7 +1,7 @@
 import { integer, number, text } from "./http.js";
 import { insertStatusEvent, loadOrder, managerChatIdForType, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
 import { createSupplierPaymentRequest } from "./supplier-payments.js";
-import { supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
+import { DEFAULT_TRANSLATION_MODEL, supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
 
 export const SUPPLIER_REQUEST_STATUS_LABELS = {
   draft: "Чернетка",
@@ -350,11 +350,96 @@ function supplierManagerChatIds(env) {
   ].filter(Boolean).map(String));
 }
 
+function supplierChatRoute(env, supplierRequest = {}, order = null) {
+  const supplierChatId = supplierSpecificChatId(env, supplierRequest);
+  if (supplierChatId) return { chat_id: supplierChatId, source: "supplier_chat" };
+  const chinaChatId = text(env.TELEGRAM_CHINA_CHAT_ID);
+  if (chinaChatId) return { chat_id: chinaChatId, source: "china_fallback" };
+  const orderChatId = order ? managerChatIdForType(env, order.type) : "";
+  if (orderChatId) return { chat_id: orderChatId, source: "order_type_fallback" };
+  const globalChatId = text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+  if (globalChatId) return { chat_id: globalChatId, source: "global_fallback" };
+  return { chat_id: "", source: "missing" };
+}
+
 function chinaManagerChatId(env, supplierRequest = {}, order = null) {
-  return supplierSpecificChatId(env, supplierRequest)
-    || text(env.TELEGRAM_CHINA_CHAT_ID)
-    || (order ? managerChatIdForType(env, order.type) : "")
-    || text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+  return supplierChatRoute(env, supplierRequest, order).chat_id;
+}
+
+function maskedChatId(value) {
+  const chatId = text(value);
+  if (!chatId) return "";
+  if (chatId.length <= 6) return "***";
+  return `${chatId.slice(0, 4)}...${chatId.slice(-4)}`;
+}
+
+export async function supplierTelegramSettingsStatus(env) {
+  const supplierMap = parseSupplierChatMap(env);
+  const supplierRows = await safeSelect(
+    env,
+    `SELECT supplier_id, supplier_name, COUNT(*) AS request_count, MAX(updated_at) AS last_request_at
+    FROM supplier_requests
+    GROUP BY supplier_id, supplier_name
+    ORDER BY MAX(updated_at) DESC
+    LIMIT 50`
+  );
+  const suppliers = new Map();
+  for (const entry of DIRECTORY_SUPPLIERS.values()) {
+    suppliers.set(entry.id, {
+      supplier_id: entry.id,
+      supplier_name: entry.name,
+      request_count: 0,
+      last_request_at: "",
+    });
+  }
+  for (const row of supplierRows) {
+    const key = text(row.supplier_id || row.supplier_name);
+    if (!key) continue;
+    suppliers.set(key, {
+      supplier_id: row.supplier_id,
+      supplier_name: row.supplier_name,
+      request_count: integer(row.request_count),
+      last_request_at: row.last_request_at,
+    });
+  }
+
+  return {
+    fallback_chat: {
+      configured: Boolean(text(env.TELEGRAM_CHINA_CHAT_ID)),
+      chat_id: maskedChatId(env.TELEGRAM_CHINA_CHAT_ID),
+    },
+    supplier_chat_map: {
+      configured: supplierMap.size > 0,
+      count: supplierMap.size,
+      keys: Array.from(supplierMap.keys()).sort(),
+      entries: Array.from(supplierMap.entries())
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, chatId]) => ({
+          key,
+          chat_id: maskedChatId(chatId),
+        })),
+    },
+    reply_bridge: {
+      configured: await tableExists(env, "supplier_telegram_messages"),
+    },
+    translation: {
+      ai_binding: Boolean(env?.AI?.run),
+      model: text(env.SUPPLIER_TRANSLATION_MODEL || env.TRANSLATION_MODEL) || DEFAULT_TRANSLATION_MODEL,
+    },
+    suppliers: Array.from(suppliers.values()).map((supplier) => {
+      const route = supplierChatRoute(env, supplier);
+      return {
+        supplier_id: supplier.supplier_id,
+        supplier_name: supplier.supplier_name,
+        request_count: supplier.request_count,
+        last_request_at: supplier.last_request_at,
+        chat_configured: Boolean(route.chat_id),
+        route_source: route.source,
+        chat_id: maskedChatId(route.chat_id),
+        match_keys: supplierChatKeys(supplier),
+      };
+    }),
+  };
 }
 
 async function saveSupplierTelegramMessage(env, supplierRequest, telegram = {}, options = {}) {

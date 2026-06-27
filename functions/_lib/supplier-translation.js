@@ -1,6 +1,6 @@
 import { text } from "./http.js";
 
-const DEFAULT_TRANSLATION_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+export const DEFAULT_TRANSLATION_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 const LANGUAGE_LABELS = {
   ru: "Russian",
