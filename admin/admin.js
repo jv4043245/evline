@@ -1251,6 +1251,56 @@ function markChinaSupplierActivitySeen(requestId = "") {
   saveChinaSeenSupplierActivityMap(seen);
 }
 
+function chinaTelegramSettingsMessage(settings = {}) {
+  const routeLabels = {
+    supplier_chat: "отдельный чат",
+    china_fallback: "общий чат Китай",
+    order_type_fallback: "fallback направления",
+    global_fallback: "общий fallback",
+    missing: "не настроено",
+  };
+  const lines = [
+    "Telegram для Китая",
+    "",
+    `Общий чат: ${settings.fallback_chat?.configured ? `настроен (${settings.fallback_chat.chat_id})` : "не настроен"}`,
+    `Карта поставщиков: ${settings.supplier_chat_map?.count || 0}`,
+    `Reply-мост: ${settings.reply_bridge?.configured ? "готов" : "нет таблицы"}`,
+    `AI-перевод: ${settings.translation?.ai_binding ? "готов" : "нет AI binding"}`,
+    "",
+    "Поставщики:",
+  ];
+  const suppliers = settings.suppliers || [];
+  if (!suppliers.length) {
+    lines.push("пока нет данных");
+  } else {
+    suppliers.forEach((supplier) => {
+      const route = routeLabels[supplier.route_source] || supplier.route_source || "неизвестно";
+      const chat = supplier.chat_id ? ` (${supplier.chat_id})` : "";
+      lines.push(`${supplier.supplier_name || supplier.supplier_id || "поставщик"}: ${route}${chat}`);
+    });
+  }
+  return lines.join("\n");
+}
+
+async function showChinaTelegramSettings(button) {
+  const defaultText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Проверяю...";
+  }
+  try {
+    const data = await api("/api/admin/supplier-telegram-settings");
+    alert(chinaTelegramSettingsMessage(data.settings || {}));
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = defaultText || "Проверка Telegram";
+    }
+  }
+}
+
 function chinaChatMessages(bundle = {}) {
   const request = bundle.request || {};
   const events = bundle.tracking_events || [];
@@ -3013,6 +3063,10 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
 document.querySelector("[data-refresh]")?.addEventListener("click", refresh);
 document.querySelector("[data-refresh-china]")?.addEventListener("click", loadChinaPreorders);
 document.querySelector("[data-china-request-open]")?.addEventListener("click", () => openChinaRequestPanel());
+document.querySelector("[data-china-telegram-settings]")?.addEventListener("click", (event) => {
+  closeFilterMenus();
+  showChinaTelegramSettings(event.currentTarget);
+});
 document.querySelector("[data-audit-open]")?.addEventListener("click", async () => {
   closeFilterMenus();
   setAuditLogOpen(true);
