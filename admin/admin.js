@@ -1068,6 +1068,60 @@ function supplierPaymentBadge(status) {
   return `<span class="supplier-payment-status supplier-payment-status--${safeClass(value)}">${escapeHtml(supplierPaymentStatusLabels[value] || value)}</span>`;
 }
 
+function supplierPaymentDelta(payment = {}) {
+  const requested = Number(payment.requested_amount || 0);
+  const paid = Number(payment.paid_amount || 0);
+  const requestedCurrency = payment.requested_currency || "CNY";
+  const paidCurrency = payment.paid_currency || requestedCurrency;
+  if (!requested || !paid || requestedCurrency !== paidCurrency) {
+    return { amount: 0, currency: paidCurrency, significant: false, state: "none" };
+  }
+  const amount = Math.round((paid - requested) * 100) / 100;
+  const significant = Math.abs(amount) > Math.max(5, requested * 0.05);
+  return {
+    amount,
+    currency: paidCurrency,
+    significant,
+    state: amount > 0 ? "overpaid" : amount < 0 ? "underpaid" : "exact",
+  };
+}
+
+function signedSupplierAmount(value, currency = "CNY") {
+  const amount = Number(value || 0);
+  return `${amount > 0 ? "+" : ""}${supplierAmount(amount, currency)}`;
+}
+
+function supplierPaymentAmountLines(payment = {}) {
+  const paid = Number(payment.paid_amount || 0);
+  return `
+    <span>Счёт: <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b></span>
+    ${paid > 0 ? `<span>Оплачено: <b>${supplierAmount(payment.paid_amount, payment.paid_currency || payment.requested_currency)}</b></span>` : ""}
+  `;
+}
+
+function supplierPaymentAmountNotice(payment = {}) {
+  const delta = supplierPaymentDelta(payment);
+  if (!delta.amount) return "";
+  if (delta.state === "overpaid") {
+    return {
+      text: delta.significant
+        ? `Внимание: оплачено больше счёта на ${signedSupplierAmount(delta.amount, delta.currency)}. Проверьте, это отдельная оплата или объединённый платёж.`
+        : `Разница/комиссия: ${signedSupplierAmount(delta.amount, delta.currency)}.`,
+      state: delta.significant ? "warning" : "neutral",
+    };
+  }
+  return {
+    text: `Внимание: оплачено меньше счёта на ${supplierAmount(Math.abs(delta.amount), delta.currency)}.`,
+    state: "warning",
+  };
+}
+
+function renderSupplierPaymentNotice(payment = {}) {
+  const notice = supplierPaymentAmountNotice(payment);
+  if (!notice) return "";
+  return `<p class="supplier-payment-card__summary supplier-payment-card__summary--${escapeHtml(notice.state)}">${escapeHtml(notice.text)}</p>`;
+}
+
 function supplierRequestBadge(status) {
   const value = status || "sent";
   return `<span class="supplier-request-status supplier-request-status--${safeClass(value)}">${escapeHtml(supplierRequestStatusLabels[value] || value)}</span>`;
@@ -1491,9 +1545,10 @@ function renderChinaPreorderDetail(bundle = {}) {
         ${payment ? `
           <div class="china-preorder-card__quote-line">
             ${supplierPaymentBadge(payment.status)}
-            <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b>
+            <span class="supplier-payment-amounts">${supplierPaymentAmountLines(payment)}</span>
             ${receiptLink ? `<a href="${escapeHtml(receiptLink)}" target="_blank" rel="noopener">открыть скрин оплаты</a>` : `<span>скрина ещё нет</span>`}
           </div>
+          ${renderSupplierPaymentNotice(payment)}
         ` : `<p class="muted">Запрос на оплату ещё не отправляли.</p>`}
       </div>
       ${trackingEvent ? `
@@ -1801,7 +1856,7 @@ function renderSupplierPayments(order) {
                   <span>${escapeHtml(shortDateTime(payment.created_at))}</span>
                 </div>
                 <div>
-                  <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b>
+                  <span class="supplier-payment-amounts">${supplierPaymentAmountLines(payment)}</span>
                   <span>${payment.supplier_name ? escapeHtml(payment.supplier_name) : "постачальник не вказаний"}</span>
                 </div>
               </div>
@@ -1836,9 +1891,7 @@ function renderSupplierPayments(order) {
                 </button>
               </div>
               ${Number(payment.paid_amount || 0) > 0 ? `
-                <p class="supplier-payment-card__summary">
-                  Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}
-                </p>
+                ${renderSupplierPaymentNotice(payment) || `<p class="supplier-payment-card__summary">Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}</p>`}
               ` : `<p class="muted">Після оплати надішліть скрин відповіддю на повідомлення бота. Якщо суму не буде розпізнано, її можна внести тут вручну.</p>`}
             </article>
           `).join("")}

@@ -162,11 +162,26 @@ function paymentStatusText(payment = {}) {
   return "ожидает оплаты EVLine";
 }
 
+function paymentDelta(payment = {}) {
+  const requested = Number(payment.requested_amount || 0);
+  const paid = Number(payment.paid_amount || 0);
+  const requestedCurrency = payment.requested_currency || "CNY";
+  const paidCurrency = payment.paid_currency || requestedCurrency;
+  if (!requested || !paid || requestedCurrency !== paidCurrency) return { amount: 0, significant: false, currency: paidCurrency };
+  const amount = Math.round((paid - requested) * 100) / 100;
+  return {
+    amount,
+    currency: paidCurrency,
+    significant: Math.abs(amount) > Math.max(5, requested * 0.05),
+  };
+}
+
 function renderPayment(payment = {}, tokenValue = token) {
   if (!payment) return "";
   const paid = payment.status === "paid";
   const receiptAttached = Boolean(payment.receipt_present);
   const receiptVersion = encodeURIComponent(payment.updated_at || payment.paid_at || "");
+  const delta = paymentDelta(payment);
   return `
     <section class="supplier-card supplier-payment">
       <div class="supplier-card__head">
@@ -174,10 +189,17 @@ function renderPayment(payment = {}, tokenValue = token) {
         <span class="supplier-muted">${escapeHtml(paymentStatusText(payment))}</span>
       </div>
       <div class="supplier-data">
-        <div><span>Сумма</span><strong>${Number(payment.requested_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
+        <div><span>Счёт</span><strong>${Number(payment.requested_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
         ${payment.paid_amount ? `<div><span>Оплачено</span><strong>${Number(payment.paid_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.paid_currency || payment.requested_currency || "CNY")}</strong></div>` : ""}
         ${payment.paid_at ? `<div><span>Дата</span><strong>${escapeHtml(shortDateTime(payment.paid_at))}</strong></div>` : ""}
       </div>
+      ${delta.amount ? `
+        <p class="supplier-payment-note ${delta.significant ? "supplier-payment-note--warning" : ""}">
+          ${delta.amount > 0
+            ? `Оплачено больше счёта на +${Number(delta.amount).toLocaleString("ru-RU")} ${escapeHtml(delta.currency)}.`
+            : `Оплачено меньше счёта на ${Number(Math.abs(delta.amount)).toLocaleString("ru-RU")} ${escapeHtml(delta.currency)}.`}
+        </p>
+      ` : ""}
       ${receiptAttached ? `
         <div class="supplier-receipt">
           <strong>${paid ? "Оплата подтверждена" : "Скрин оплаты прикреплён"}</strong>

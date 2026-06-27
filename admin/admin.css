@@ -1754,6 +1754,32 @@ body.audit-log-open .audit-log-panel {
   background: #f8fafc;
 }
 
+.supplier-payment-card__summary--warning {
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 800;
+}
+
+.supplier-payment-card__summary--neutral {
+  background: #f8fafc;
+}
+
+.supplier-payment-amounts {
+  display: inline-grid;
+  gap: 2px;
+}
+
+.supplier-payment-amounts span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.supplier-payment-amounts b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
 .supplier-payment-status {
   display: inline-flex;
   width: fit-content;

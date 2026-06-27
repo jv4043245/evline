@@ -297,6 +297,21 @@ body.supplier-shell {
   margin-top: 12px;
 }
 
+.supplier-payment-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--supplier-muted);
+  font-weight: 800;
+}
+
+.supplier-payment-note--warning {
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .supplier-receipt img {
   width: min(100%, 420px);
   max-height: 520px;

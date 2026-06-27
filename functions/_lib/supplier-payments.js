@@ -287,6 +287,34 @@ function formatAmount(amount, currency = "CNY") {
   return `${formatted} ${normalizeCurrency(currency)}`;
 }
 
+function paymentAmountDelta(payment = {}, paidAmount = 0, paidCurrency = "CNY") {
+  const requested = number(payment.requested_amount);
+  const paid = number(paidAmount);
+  const requestedCurrency = normalizeCurrency(payment.requested_currency);
+  const currency = normalizeCurrency(paidCurrency || requestedCurrency);
+  if (!requested || !paid || requestedCurrency !== currency) {
+    return { amount: 0, currency, significant: false, state: "none" };
+  }
+  const amount = Math.round((paid - requested) * 100) / 100;
+  return {
+    amount,
+    currency,
+    significant: Math.abs(amount) > Math.max(5, requested * 0.05),
+    state: amount > 0 ? "overpaid" : amount < 0 ? "underpaid" : "exact",
+  };
+}
+
+function paymentAmountDeltaText(payment = {}, paidAmount = 0, paidCurrency = "CNY") {
+  const delta = paymentAmountDelta(payment, paidAmount, paidCurrency);
+  if (!delta.amount) return "";
+  if (delta.state === "overpaid") {
+    return delta.significant
+      ? `Увага: оплачено більше рахунку на +${formatAmount(delta.amount, delta.currency)}`
+      : `Різниця/комісія: +${formatAmount(delta.amount, delta.currency)}`;
+  }
+  return `Увага: оплачено менше рахунку на ${formatAmount(Math.abs(delta.amount), delta.currency)}`;
+}
+
 function buildPaymentRequestMessage(order, payment) {
   const lines = [
     "💳 Оплата постачальнику EVLine",
@@ -726,9 +754,15 @@ async function attachPaymentReceipt(env, payment, {
         .run();
     }
 
+    const deltaText = paymentAmountDeltaText(payment, parsedPaid, currency);
     statusAdvance = await advanceOrderStatus(env, payment.order_id, "paid", {
       actor: "telegram",
-      comment: `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано${parsedPaid > 0 ? `: ${formatAmount(parsedPaid, currency)}` : ""}`,
+      comment: [
+        `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано`,
+        parsedPaid > 0 ? `оплачено ${formatAmount(parsedPaid, currency)}` : "",
+        parsedPaid > 0 ? `рахунок ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
+        deltaText,
+      ].filter(Boolean).join("; "),
       notifyCustomer: false,
     });
     order = statusAdvance.order || order;
@@ -805,6 +839,7 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
 
   const orderNumber = result.order?.order_number || result.order?.id || payment.order_id;
   const paymentStatus = text(result.payment?.status);
+  const deltaText = parsed.amount > 0 ? paymentAmountDeltaText(payment, parsed.amount, parsed.currency) : "";
   const lines = [
     parsed.amount > 0 && paymentStatus === "paid"
       ? "✅ Оплату постачальнику зафіксовано."
@@ -813,7 +848,9 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
         : "🧾 Скрин оплати прив'язано, суму треба внести вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
-    parsed.amount > 0 ? `Підсумкова сума: ${formatAmount(parsed.amount, parsed.currency)}` : "",
+    parsed.amount > 0 ? `Рахунок: ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
+    parsed.amount > 0 ? `Оплачено: ${formatAmount(parsed.amount, parsed.currency)}` : "",
+    deltaText,
     ocrResult.source
       ? `Розпізнавання: ${ocrResult.source}${ocrResult.error ? ` (${shortOcrError(ocrResult.error)})` : ""}`
       : "",
