@@ -1,6 +1,7 @@
 import { integer, number, text } from "./http.js";
-import { insertStatusEvent, loadOrder, managerChatIdForType, nextPublicNumber, tableHasColumn } from "./crm.js";
+import { insertStatusEvent, loadOrder, managerChatIdForType, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
 import { createSupplierPaymentRequest } from "./supplier-payments.js";
+import { supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
 
 export const SUPPLIER_REQUEST_STATUS_LABELS = {
   draft: "Чернетка",
@@ -291,6 +292,63 @@ async function insertSupplierEvent(env, supplierRequest, payload = {}) {
     .run();
 }
 
+function chinaManagerChatId(env, order = null) {
+  return text(env.TELEGRAM_CHINA_CHAT_ID)
+    || (order ? managerChatIdForType(env, order.type) : "")
+    || text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
+}
+
+async function saveSupplierTelegramMessage(env, supplierRequest, telegram = {}, options = {}) {
+  if (!telegram?.chat_id || !telegram?.message_id) return { saved: false };
+  if (!(await tableExists(env, "supplier_telegram_messages"))) return { saved: false, skipped: "migration_required" };
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO supplier_telegram_messages (
+      id, created_at, updated_at, supplier_request_id, order_id, supplier_id,
+      chat_id, message_id, direction, source, text_ru, text_cn
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(chat_id, message_id) DO UPDATE SET
+      updated_at = excluded.updated_at,
+      supplier_request_id = excluded.supplier_request_id,
+      order_id = excluded.order_id,
+      supplier_id = excluded.supplier_id,
+      direction = excluded.direction,
+      source = excluded.source,
+      text_ru = excluded.text_ru,
+      text_cn = excluded.text_cn`
+  )
+    .bind(
+      crypto.randomUUID(),
+      now,
+      now,
+      supplierRequest.id,
+      supplierRequest.order_id,
+      supplierRequest.supplier_id,
+      String(telegram.chat_id),
+      String(telegram.message_id),
+      text(options.direction),
+      text(options.source),
+      text(options.text_ru),
+      text(options.text_cn)
+    )
+    .run();
+  return { saved: true };
+}
+
+async function supplierTelegramMessageByReply(env, chatId, messageIds = []) {
+  if (!(await tableExists(env, "supplier_telegram_messages"))) return null;
+  const ids = messageIds.map(text).filter(Boolean);
+  for (const messageId of ids) {
+    const row = await env.DB.prepare(
+      "SELECT * FROM supplier_telegram_messages WHERE chat_id = ? AND message_id = ? LIMIT 1"
+    )
+      .bind(String(chatId), String(messageId))
+      .first();
+    if (row) return row;
+  }
+  return null;
+}
+
 async function syncSupplierTrackingToOrder(env, supplierRequest, payload = {}) {
   const trackingNumber = text(payload.tracking_number).toUpperCase();
   if (!trackingNumber) return { updated: false };
@@ -464,8 +522,8 @@ export function publicSupplierBundle(bundle) {
       vin: request.vin,
       item_name: request.item_name,
       quantity: request.quantity,
-      request_text: request.request_text_ru || request.request_text,
-      supplier_note: request.manager_comment,
+      request_text: request.request_text_cn || request.request_text || request.request_text_ru,
+      supplier_note: request.manager_comment_cn || request.manager_comment,
       delivery_cost_cny: request.delivery_cost_cny,
       delivery_cost_updated_at: request.delivery_cost_updated_at,
       created_at: request.created_at,
@@ -491,8 +549,8 @@ function publicDashboardRequest(row, payment = null, bundle = null) {
     vin: row.vin,
     item_name: row.item_name,
     quantity: row.quantity,
-    request_text: row.request_text_ru || row.request_text,
-    supplier_note: row.manager_comment,
+    request_text: row.request_text_cn || row.request_text || row.request_text_ru,
+    supplier_note: row.manager_comment_cn || row.manager_comment,
     delivery_cost_cny: row.delivery_cost_cny,
     delivery_cost_updated_at: row.delivery_cost_updated_at,
     created_at: row.created_at,
@@ -641,10 +699,14 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
   const imageUrl = assertUrlLike(payload.image_url);
   const supplier = await ensureSupplier(env, supplierName);
   const requestTextRu = text(payload.request_text_ru ?? payload.request_text) || text(order.request_text);
-  const requestTextCn = text(payload.request_text_cn) || requestTextRu;
-  const managerComment = text(payload.manager_comment);
+  const requestTextCn = text(payload.request_text_cn)
+    || await translateSupplierText(env, requestTextRu, supplierTranslationDirections().managerToSupplier);
+  const managerCommentRu = text(payload.manager_comment);
+  const managerCommentCn = managerCommentRu
+    ? await translateSupplierText(env, managerCommentRu, supplierTranslationDirections().managerToSupplier)
+    : "";
   const carYear = normalizeCarYear(payload.car_year) || normalizeCarYear(order.car_year);
-  assertSupplierTextSafe(requestTextRu, requestTextCn, managerComment);
+  assertSupplierTextSafe(requestTextRu, managerCommentRu);
   const supplierRequest = {
     id: crypto.randomUUID(),
     public_number: await nextPublicNumber(env, "supplier_request", "SR"),
@@ -661,7 +723,9 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     request_text: requestTextCn,
     request_text_ru: requestTextRu,
     request_text_cn: requestTextCn,
-    manager_comment: managerComment,
+    manager_comment: managerCommentRu,
+    manager_comment_ru: managerCommentRu,
+    manager_comment_cn: managerCommentCn,
     created_at: now,
     updated_at: now,
     sent_at: now,
@@ -706,6 +770,15 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
       WHERE id = ?`
     )
       .bind(supplierRequest.request_text_ru, supplierRequest.request_text_cn, supplierRequest.id)
+      .run();
+  }
+  if (await tableHasColumn(env, "supplier_requests", "manager_comment_ru")) {
+    await env.DB.prepare(
+      `UPDATE supplier_requests
+      SET manager_comment_ru = ?, manager_comment_cn = ?
+      WHERE id = ?`
+    )
+      .bind(supplierRequest.manager_comment_ru, supplierRequest.manager_comment_cn, supplierRequest.id)
       .run();
   }
 
@@ -805,35 +878,41 @@ export async function listSupplierDashboardByToken(env, token) {
   };
 }
 
-async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua") {
+async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua", options = {}) {
   const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
-  const chatId = order ? managerChatIdForType(env, order.type) : text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
-  const botToken = text(env.TELEGRAM_BOT_TOKEN);
-  if (!chatId || !botToken) return { skipped: true };
+  const chatId = chinaManagerChatId(env, order);
+  if (!chatId || !env.TELEGRAM_BOT_TOKEN) return { skipped: true };
 
   const origin = publicOrigin(requestUrl);
+  const messageRu = text(options.messageRu || quote?.comment_ru || quote?.comment_translated || "");
+  const deliveryCost = Object.prototype.hasOwnProperty.call(options, "deliveryCostCny")
+    ? normalizeOptionalAmount(options.deliveryCostCny)
+    : normalizeOptionalAmount(supplierRequest.delivery_cost_cny);
   const lines = [
-    `Постачальник ${supplierRequest.supplier_name} дав відповідь`,
-    `Запит: ${supplierRequest.public_number || supplierRequest.id}`,
-    order ? `Замовлення: ${order.order_number || order.id}` : "",
-    supplierRequest.item_name ? `Позиція: ${supplierRequest.item_name}` : "",
+    `🇨🇳 Поставщик ${supplierRequest.supplier_name} ответил`,
+    `Запрос: ${supplierRequest.public_number || supplierRequest.id}`,
+    order ? `Заказ CRM: ${order.order_number || order.id}` : "",
+    supplierRequest.item_name ? `Позиция: ${supplierRequest.item_name}` : "",
     supplierRequest.vin ? `VIN: ${supplierRequest.vin}` : "",
-    quote ? `Ціна: ${quote.price_cny || 0} CNY` : "",
-    quote ? `Наявність: ${quote.availability}` : "",
-    `Адмінка: ${origin}/admin/`,
+    quote && Number(quote.price_cny || 0) > 0 ? `Цена: ${quote.price_cny || 0} CNY` : "",
+    quote?.purchase_days ? `Срок поставки: ${quote.purchase_days} дн.` : "",
+    deliveryCost !== null ? `Доставка: ${deliveryCost} CNY` : "",
+    "",
+    messageRu ? `Сообщение: ${messageRu}` : "",
+    "",
+    "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
+    `CRM: ${origin}/admin/`,
   ];
 
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: lines.filter(Boolean).join("\n"),
-      disable_web_page_preview: true,
-    }),
+  const telegram = await sendTelegramMessageDetailed(env, chatId, lines.filter(Boolean).join("\n"));
+  await saveSupplierTelegramMessage(env, supplierRequest, telegram, {
+    direction: "supplier_to_manager",
+    source: options.source || (quote ? "supplier_quote" : "supplier_message"),
+    text_ru: messageRu,
+    text_cn: options.messageCn || quote?.comment_cn || "",
   }).catch(() => null);
 
-  return { skipped: false };
+  return { skipped: false, telegram };
 }
 
 export async function createSupplierQuoteByToken(env, token, payload = {}, options = {}) {
@@ -882,6 +961,10 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
     throw error;
   }
   const imageUrl = assertUrlLike(payload.image_url);
+  const commentCn = text(payload.comment_cn);
+  const commentRu = commentCn
+    ? await translateSupplierText(env, commentCn, supplierTranslationDirections().supplierToManager)
+    : "";
 
   const now = new Date().toISOString();
   const quote = {
@@ -896,9 +979,9 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
     china_delivery_days: Math.max(integer(payload.china_delivery_days), 0),
     quantity: normalizeQuantity(payload.quantity, supplierRequest.quantity || 1),
     part_number: text(payload.part_number),
-    comment_cn: text(payload.comment_cn),
-    comment_translated: text(payload.comment_cn),
-    comment_ru: text(payload.comment_cn),
+    comment_cn: commentCn,
+    comment_translated: commentRu,
+    comment_ru: commentRu,
     status: "new",
     created_at: now,
     updated_at: now,
@@ -970,7 +1053,12 @@ export async function createSupplierQuoteByToken(env, token, payload = {}, optio
 
   await saveSupplierDeliveryCostPayload(env, supplierRequest, payload, now);
 
-  await notifyManagerSupplierQuote(env, supplierRequest, quote, options.requestUrl).catch(() => null);
+  await notifyManagerSupplierQuote(env, supplierRequest, quote, options.requestUrl, {
+    messageRu: quote.comment_ru || quote.comment_translated,
+    messageCn: quote.comment_cn,
+    deliveryCostCny: payload.delivery_cost_cny,
+    source: "supplier_quote",
+  }).catch(() => null);
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
 }
@@ -996,6 +1084,9 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
   }
 
   const comment = text(payload.comment_cn || payload.comment_translated).slice(0, 2000);
+  const commentRu = comment
+    ? await translateSupplierText(env, comment, supplierTranslationDirections().supplierToManager)
+    : "";
   const hasDeliveryUpdate = hasDeliveryCostPayload(payload);
   if (!comment && !hasDeliveryUpdate) {
     const error = new Error("Message text is required");
@@ -1028,10 +1119,15 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
     await insertSupplierEvent(env, supplierRequest, {
       status: "quoted",
       comment_cn: comment,
-      comment_translated: comment,
+      comment_translated: commentRu,
     });
 
-    await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl).catch(() => null);
+    await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl, {
+      messageRu: commentRu,
+      messageCn: comment,
+      deliveryCostCny: payload.delivery_cost_cny,
+      source: "supplier_message",
+    }).catch(() => null);
   }
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
@@ -1153,6 +1249,10 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
     throw error;
   }
 
+  const eventCommentCn = text(payload.comment_cn);
+  const eventCommentRu = eventCommentCn
+    ? await translateSupplierText(env, eventCommentCn, supplierTranslationDirections().supplierToManager)
+    : "";
   const now = new Date().toISOString();
   await saveSupplierDeliveryCostPayload(env, supplierRequest, payload, now);
   await env.DB.prepare(
@@ -1166,8 +1266,8 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
   await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
     status: nextStatus,
     tracking_number: text(payload.tracking_number),
-    comment_cn: text(payload.comment_cn),
-    comment_translated: text(payload.comment_cn),
+    comment_cn: eventCommentCn,
+    comment_translated: eventCommentRu,
   });
 
   if (["china_tracking", "china_warehouse"].includes(nextStatus)) {
@@ -1178,7 +1278,12 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
   }
 
   if (["no_stock", "needs_info", "problem", "china_tracking", "china_warehouse", "purchased"].includes(nextStatus)) {
-    await notifyManagerSupplierQuote(env, { ...supplierRequest, status: nextStatus }, null, options.requestUrl).catch(() => null);
+    await notifyManagerSupplierQuote(env, { ...supplierRequest, status: nextStatus }, null, options.requestUrl, {
+      messageRu: eventCommentRu,
+      messageCn: eventCommentCn,
+      deliveryCostCny: payload.delivery_cost_cny,
+      source: `supplier_${nextStatus}`,
+    }).catch(() => null);
   }
 
   return loadSupplierRequestByToken(env, token, { markViewed: false });
@@ -1200,13 +1305,16 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     throw error;
   }
 
-  const comment = text(payload.manager_comment || payload.comment || payload.comment_cn).slice(0, 2000);
-  if (!comment) {
+  const commentRu = text(payload.manager_comment || payload.comment || payload.comment_ru || payload.comment_cn).slice(0, 2000);
+  if (!commentRu) {
     const error = new Error("Clarification text is required");
     error.status = 400;
     throw error;
   }
-  assertSupplierTextSafe(comment);
+  assertSupplierTextSafe(commentRu);
+  const commentCn = text(payload.comment_cn) && !text(payload.manager_comment || payload.comment || payload.comment_ru)
+    ? text(payload.comment_cn).slice(0, 2000)
+    : await translateSupplierText(env, commentRu, supplierTranslationDirections().managerToSupplier);
 
   const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
     .bind(supplierRequest.id)
@@ -1219,24 +1327,77 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
 
   const now = new Date().toISOString();
   const nextStatus = supplierRequest.status === "needs_info" ? "sent" : supplierRequest.status;
+  const fields = [
+    ["manager_comment", commentRu],
+    ["status", nextStatus],
+    ["updated_at", now],
+  ];
+  if (await tableHasColumn(env, "supplier_requests", "manager_comment_ru")) {
+    fields.push(["manager_comment_ru", commentRu], ["manager_comment_cn", commentCn]);
+  }
+
   await env.DB.prepare(
     `UPDATE supplier_requests
-    SET manager_comment = ?, status = ?, updated_at = ?
+    SET ${fields.map(([name]) => `${name} = ?`).join(", ")}
     WHERE id = ?`
   )
-    .bind(comment, nextStatus, now, supplierRequest.id)
+    .bind(...fields.map(([, value]) => value), supplierRequest.id)
     .run();
 
   await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
     status: "sent",
-    comment_cn: comment,
-    comment_translated: comment,
+    comment_cn: commentCn,
+    comment_translated: commentRu,
   });
 
   const updated = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
     .bind(supplierRequest.id)
     .first();
-  return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: comment, updated_at: now });
+  return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: commentRu, updated_at: now });
+}
+
+export async function handleSupplierTelegramUpdate(env, message = {}) {
+  const chatId = text(message.chat?.id);
+  const chinaChatId = text(env.TELEGRAM_CHINA_CHAT_ID);
+  const incoming = text(message.text || message.caption).slice(0, 2000);
+  const messageId = text(message.message_id);
+  const replyMessageId = text(message.reply_to_message?.message_id);
+  const parentReplyMessageId = text(message.reply_to_message?.reply_to_message?.message_id);
+  if (!chatId || !incoming) return { handled: false };
+  const inChinaChat = chinaChatId && chatId === chinaChatId;
+  if (!replyMessageId && !parentReplyMessageId) {
+    return inChinaChat
+      ? { handled: true, message: "Чтобы отправить ответ китайцу, нажмите reply на сообщение по нужному запросу." }
+      : { handled: false };
+  }
+
+  const linked = await supplierTelegramMessageByReply(env, chatId, [replyMessageId, parentReplyMessageId]);
+  if (!linked) {
+    return inChinaChat
+      ? { handled: true, message: "Не нашёл запрос для этого reply. Ответьте на сообщение бота с конкретным запросом поставщика." }
+      : { handled: false };
+  }
+
+  const bundle = await replySupplierRequestClarification(env, linked.supplier_request_id, {
+    manager_comment: incoming,
+  });
+  const request = bundle.request || {};
+  const latestSent = (bundle.tracking_events || [])
+    .filter((event) => event.status === "sent")
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || {};
+
+  await saveSupplierTelegramMessage(env, request, { chat_id: chatId, message_id: messageId }, {
+    direction: "manager_to_supplier",
+    source: "telegram_reply",
+    text_ru: incoming,
+    text_cn: latestSent.comment_cn || "",
+  }).catch(() => null);
+
+  return {
+    handled: true,
+    supplier_request: request,
+    message: `Отправил китайцу по запросу ${request.public_number || request.id}: ${incoming}`,
+  };
 }
 
 export async function deleteSupplierRequest(env, supplierRequestId) {

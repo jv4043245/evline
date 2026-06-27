@@ -1,6 +1,7 @@
 import { json, readPayload, text } from "../../_lib/http.js";
 import { loadOrder, retryLatestOrderNotification } from "../../_lib/crm.js";
 import { handleSupplierPaymentTelegramUpdate } from "../../_lib/supplier-payments.js";
+import { handleSupplierTelegramUpdate } from "../../_lib/supplier-portal.js";
 
 function extractOrderId(value) {
   const input = text(value);
@@ -30,6 +31,7 @@ function buildSetupMessage(message, chatId) {
     "• запчастини: TELEGRAM_PARTS_CHAT_ID",
     "• програмування BYD: TELEGRAM_TECH_CHAT_ID",
     "• оплати постачальникам: TELEGRAM_PAYMENTS_CHAT_ID",
+    "• Китай / постачальники: TELEGRAM_CHINA_CHAT_ID",
     "",
     "Для клієнта використовуйте команду з картки замовлення:",
     "/start order_<id>"
@@ -67,6 +69,18 @@ export async function onRequestPost({ request, env }) {
   if (!chatId) return json({ ok: true, skipped: "no_chat_id" });
 
   if (update.message) {
+    const supplierResult = await handleSupplierTelegramUpdate(env, update.message).catch((error) => ({
+      handled: true,
+      error: error.message || String(error),
+      message: `Не удалось отправить ответ китайцу: ${error.message || String(error)}`,
+    }));
+    if (supplierResult.handled) {
+      if (supplierResult.message) {
+        await sendTelegram(env, chatId, supplierResult.message).catch(() => {});
+      }
+      return json({ ok: true, handled: "supplier_china_chat", supplier_request: supplierResult.supplier_request || null });
+    }
+
     const paymentResult = await handleSupplierPaymentTelegramUpdate(env, update.message).catch((error) => ({
       handled: false,
       error: error.message || String(error),

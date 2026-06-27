@@ -1269,13 +1269,14 @@ function chinaChatMessages(bundle = {}) {
     });
   }
 
-  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_translated || event.comment_cn) === plainText(request.manager_comment));
-  if (plainText(request.manager_comment) && !hasNoteEvent) {
+  const managerComment = plainText(request.manager_comment_ru || request.manager_comment);
+  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_translated || event.comment_cn) === managerComment);
+  if (managerComment && !hasNoteEvent) {
     messages.push({
       actor: "evline",
       title: "EVLine",
       meta: "Уточнение",
-      text: plainText(request.manager_comment),
+      text: managerComment,
       created_at: request.updated_at || request.created_at,
       order: 1,
       status: "sent",
