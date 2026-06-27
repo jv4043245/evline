@@ -181,9 +181,10 @@ function renderPayment(payment = {}, tokenValue = token) {
   const paid = payment.status === "paid";
   const receiptAttached = Boolean(payment.receipt_present);
   const receiptVersion = encodeURIComponent(payment.updated_at || payment.paid_at || "");
+  const receiptUrl = `/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt${receiptVersion ? `?v=${receiptVersion}` : ""}`;
   const delta = paymentDelta(payment);
   return `
-    <section class="supplier-card supplier-payment">
+    <section class="supplier-card supplier-payment supplier-payment--compact">
       <div class="supplier-card__head">
         <h2>Оплата</h2>
         <span class="supplier-muted">${escapeHtml(paymentStatusText(payment))}</span>
@@ -203,7 +204,7 @@ function renderPayment(payment = {}, tokenValue = token) {
       ${receiptAttached ? `
         <div class="supplier-receipt">
           <strong>${paid ? "Оплата подтверждена" : "Скрин оплаты прикреплён"}</strong>
-          <img src="/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt${receiptVersion ? `?v=${receiptVersion}` : ""}" alt="Скрин оплаты" loading="lazy">
+          <a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener">посмотреть скрин</a>
         </div>
       ` : `<p class="supplier-muted">${paid ? "Оплата отмечена, скрин пока не прикреплён." : "После оплаты здесь появится подтверждение."}</p>`}
     </section>

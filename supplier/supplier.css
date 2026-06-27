@@ -292,17 +292,57 @@ body.supplier-shell {
 }
 
 .supplier-receipt {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(22, 101, 52, 0.14);
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13px;
+}
+
+.supplier-receipt a {
+  color: #14532d;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.supplier-payment--compact {
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.supplier-payment--compact .supplier-data {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.supplier-payment--compact .supplier-data div {
+  padding: 7px 8px;
+}
+
+.supplier-payment--compact .supplier-data span {
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.supplier-payment--compact .supplier-data strong {
+  font-size: 14px;
+  line-height: 1.2;
 }
 
 .supplier-payment-note {
   margin: 0;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 6px;
   background: #f8fafc;
   color: var(--supplier-muted);
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -310,15 +350,6 @@ body.supplier-shell {
   border: 1px solid rgba(217, 119, 6, 0.28);
   background: #fff7ed;
   color: #9a3412;
-}
-
-.supplier-receipt img {
-  width: min(100%, 420px);
-  max-height: 520px;
-  object-fit: contain;
-  border: 1px solid var(--supplier-line);
-  border-radius: 8px;
-  background: #fff;
 }
 
 .supplier-button,
@@ -488,6 +519,11 @@ body.supplier-shell {
   display: grid;
   gap: 12px;
   padding: 14px;
+}
+
+.supplier-form[data-tracking-form] {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
 }
 
 .supplier-form--compact {
