@@ -2333,6 +2333,11 @@ body.audit-log-open .audit-log-panel {
   box-shadow: 0 10px 24px rgba(220, 38, 38, 0.08);
 }
 
+.china-request-row.has-logistics-status {
+  border-color: rgba(20, 184, 166, 0.35);
+  background: #f0fdfa;
+}
+
 .china-request-row__summary {
   position: relative;
   width: 100%;
@@ -2411,6 +2416,10 @@ body.audit-log-open .audit-log-panel {
   background: #f59e0b;
 }
 
+.china-request-row__attention--logistics {
+  background: #0f766e;
+}
+
 .china-request-row__status {
   align-items: end;
 }
@@ -2470,6 +2479,17 @@ body.audit-log-open .audit-log-panel {
   background: var(--china-surface);
 }
 
+.china-preorder-card__tracking {
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  background: #f0fdfa;
+}
+
+.china-preorder-card__tracking small {
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .china-preorder-card__thread p {
   margin: 0;
   color: var(--ink);
@@ -2506,6 +2526,10 @@ body.audit-log-open .audit-log-panel {
   justify-content: flex-end;
 }
 
+.china-chat__message--system {
+  justify-content: center;
+}
+
 .china-chat__bubble {
   width: min(100%, 620px);
   display: grid;
@@ -2519,6 +2543,12 @@ body.audit-log-open .audit-log-panel {
 .china-chat__message--evline .china-chat__bubble {
   border-color: rgba(37, 99, 235, 0.22);
   background: #edf4ff;
+}
+
+.china-chat__message--system .china-chat__bubble {
+  width: min(100%, 520px);
+  border-color: rgba(20, 184, 166, 0.28);
+  background: #f0fdfa;
 }
 
 .china-chat__meta,

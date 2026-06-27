@@ -601,6 +601,10 @@ body.supplier-shell {
   justify-content: flex-end;
 }
 
+.supplier-chat__message--system {
+  justify-content: center;
+}
+
 .supplier-chat__bubble {
   width: min(100%, 560px);
   display: grid;
@@ -614,6 +618,12 @@ body.supplier-shell {
 .supplier-chat__message--supplier .supplier-chat__bubble {
   border-color: #bbdec8;
   background: #effaf3;
+}
+
+.supplier-chat__message--system .supplier-chat__bubble {
+  width: min(100%, 500px);
+  border-color: rgba(20, 184, 166, 0.28);
+  background: #f0fdfa;
 }
 
 .supplier-chat__meta {

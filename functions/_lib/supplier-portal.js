@@ -1015,30 +1015,37 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
   if (!chatId || !env.TELEGRAM_BOT_TOKEN) return { skipped: true };
 
   const origin = publicOrigin(requestUrl);
+  const source = text(options.source || (quote ? "supplier_quote" : "supplier_message"));
   const messageRu = text(options.messageRu || quote?.comment_ru || quote?.comment_translated || "");
   const deliveryCost = Object.prototype.hasOwnProperty.call(options, "deliveryCostCny")
     ? normalizeOptionalAmount(options.deliveryCostCny)
     : normalizeOptionalAmount(supplierRequest.delivery_cost_cny);
+  const trackingNumber = text(options.trackingNumber).toUpperCase();
+  const isTrackingUpdate = source === "supplier_china_tracking" || source === "supplier_china_warehouse";
   const lines = [
-    `🇨🇳 Поставщик ${supplierRequest.supplier_name} ответил`,
+    isTrackingUpdate
+      ? `📦 Поставщик ${supplierRequest.supplier_name} добавил трек`
+      : `🇨🇳 Поставщик ${supplierRequest.supplier_name} ответил`,
     `Запрос: ${supplierRequest.public_number || supplierRequest.id}`,
     order ? `Заказ CRM: ${order.order_number || order.id}` : "",
     supplierRequest.item_name ? `Позиция: ${supplierRequest.item_name}` : "",
     supplierRequest.vin ? `VIN: ${supplierRequest.vin}` : "",
+    isTrackingUpdate ? `Статус: ${source === "supplier_china_warehouse" ? "на складе в Китае" : "отправлено, ждём доставку"}` : "",
+    trackingNumber ? `Трек: ${trackingNumber}` : "",
     quote && Number(quote.price_cny || 0) > 0 ? `Цена: ${quote.price_cny || 0} CNY` : "",
     quote?.purchase_days ? `Срок поставки: ${quote.purchase_days} дн.` : "",
     deliveryCost !== null ? `Доставка: ${deliveryCost} CNY` : "",
     "",
     messageRu ? `Сообщение: ${messageRu}` : "",
     "",
-    "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
+    isTrackingUpdate ? "Действий от менеджера сейчас не требуется." : "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
     `CRM: ${origin}/admin/`,
   ];
 
   const telegram = await sendTelegramMessageDetailed(env, chatId, lines.filter(Boolean).join("\n"));
   await saveSupplierTelegramMessage(env, supplierRequest, telegram, {
     direction: "supplier_to_manager",
-    source: options.source || (quote ? "supplier_quote" : "supplier_message"),
+    source,
     text_ru: messageRu,
     text_cn: options.messageCn || quote?.comment_cn || "",
   }).catch(() => null);
@@ -1413,6 +1420,7 @@ export async function updateSupplierRequestByToken(env, token, payload = {}, opt
       messageRu: eventCommentRu,
       messageCn: eventCommentCn,
       deliveryCostCny: payload.delivery_cost_cny,
+      trackingNumber: payload.tracking_number,
       source: `supplier_${nextStatus}`,
     }).catch(() => null);
   }

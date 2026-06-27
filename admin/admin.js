@@ -95,7 +95,7 @@ const supplierRequestStatusLabels = {
   no_stock: "Нет поставки",
   accepted: "Варіант обрано",
   purchased: "Викуплено",
-  china_tracking: "Доставка по Китаю",
+  china_tracking: "Отправлено по Китаю",
   china_warehouse: "На складі в Китаї",
   problem: "Проблема",
   closed: "Закрито",
@@ -1203,7 +1203,8 @@ function chinaPreorderStage(bundle = {}) {
   const request = bundle.request || {};
   const quote = selectedSupplierQuote(bundle);
   const payment = bundle.payment || {};
-  if (request.status === "china_tracking" || request.status === "china_warehouse") return "Трек получен";
+  if (request.status === "china_tracking") return "Отправлено, ждём доставку";
+  if (request.status === "china_warehouse") return "На складе в Китае";
   if (payment.status === "paid") return "Оплачено";
   if (payment.status === "requested" || payment.status === "needs_review") return "Ждём оплату";
   if (request.status === "accepted") return "Согласовано";
@@ -1240,9 +1241,19 @@ function supplierChatTitle(request = {}) {
   return name ? `Поставщик ${name}` : "Поставщик";
 }
 
+function chinaIsLogisticsStatus(status = "") {
+  return ["china_tracking", "china_warehouse"].includes(plainText(status));
+}
+
+function latestChinaLogisticsEvent(bundle = {}) {
+  return (bundle.tracking_events || [])
+    .filter((event) => chinaIsLogisticsStatus(event.status) && (plainText(event.tracking_number) || plainText(event.comment_translated || event.comment_cn)))
+    .sort((a, b) => dateMs(b.created_at) - dateMs(a.created_at))[0] || null;
+}
+
 function chinaSupplierActivityMs(bundle = {}) {
   const request = bundle.request || {};
-  const supplierEventStatuses = new Set(["quoted", "needs_info", "no_stock", "problem", "china_tracking", "china_warehouse"]);
+  const supplierEventStatuses = new Set(["quoted", "needs_info", "no_stock", "problem"]);
   const quoteTimes = (bundle.quotes || []).map((quote) => dateMs(quote.created_at));
   const eventTimes = (bundle.tracking_events || [])
     .filter((event) => supplierEventStatuses.has(plainText(event.status)))
@@ -1283,11 +1294,13 @@ function saveChinaSeenSupplierActivityMap(map = {}) {
 function chinaSupplierNeedsAttention(bundle = {}) {
   const request = bundle.request || {};
   if (["closed", "canceled"].includes(request.status)) return false;
+  if (chinaIsLogisticsStatus(request.status)) return false;
   return chinaSupplierActivityMs(bundle) > chinaManagerActivityMs(bundle);
 }
 
 function chinaSupplierHasUnread(bundle = {}) {
   const request = bundle.request || {};
+  if (chinaIsLogisticsStatus(request.status)) return false;
   const id = request.id || "";
   const latestSupplier = chinaSupplierActivityMs(bundle);
   if (!id || !latestSupplier) return false;
@@ -1456,10 +1469,10 @@ function chinaChatMessages(bundle = {}) {
       });
     } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
       messages.push({
-        actor: "supplier",
-        title: supplierChatTitle(request),
-        meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
-        text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
+        actor: "system",
+        title: "Логистика",
+        meta: status === "china_tracking" ? "Отправлено, ждём доставку" : "На складе в Китае",
+        text: [plainText(event.tracking_number) ? `Трек: ${plainText(event.tracking_number)}` : "", comment].filter(Boolean).join("\n"),
         created_at: event.created_at,
         order: 7,
         status,
@@ -1515,7 +1528,7 @@ function renderChinaPreorderDetail(bundle = {}) {
   const receiptLink = payment?.receipt_telegram_file_id && request.access_token
     ? `/api/supplier/request/${encodeURIComponent(request.access_token)}/payment-receipt`
     : "";
-  const trackingEvent = (bundle.tracking_events || []).find((event) => plainText(event.tracking_number));
+  const trackingEvent = latestChinaLogisticsEvent(bundle);
   const canSendPayment = quote && !payment && !["closed", "canceled"].includes(request.status);
   return `
     <div class="china-preorder-card" data-china-preorder="${escapeHtml(request.id)}">
@@ -1553,8 +1566,9 @@ function renderChinaPreorderDetail(bundle = {}) {
       </div>
       ${trackingEvent ? `
         <div class="china-preorder-card__tracking">
-          <strong>Трек</strong>
-          <span class="orders-table__mono">${escapeHtml(trackingEvent.tracking_number)}</span>
+          <strong>${escapeHtml(chinaPreorderStage(bundle))}</strong>
+          ${trackingEvent.tracking_number ? `<span class="orders-table__mono">${escapeHtml(trackingEvent.tracking_number)}</span>` : ""}
+          <small>Действий от менеджера сейчас не требуется. Просто ожидаем движение доставки.</small>
         </div>
       ` : ""}
       <div class="china-preorder-card__actions">
@@ -1591,6 +1605,7 @@ function renderChinaPreorders() {
     const payment = bundle.payment || null;
     const hasUnreadSupplier = chinaSupplierHasUnread(bundle);
     const needsSupplierAttention = chinaSupplierNeedsAttention(bundle);
+    const logisticsEvent = latestChinaLogisticsEvent(bundle);
     const orderNumber = order.order_number || request.order_id || "-";
     const quoteLine = quote
       ? `${supplierAmount(quote.price_cny, "CNY")}${quote.purchase_days ? ` · ${Number(quote.purchase_days)} дн.` : ""}${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? ` · доставка ${supplierAmount(request.delivery_cost_cny, "CNY")}` : ""}`
@@ -1599,12 +1614,12 @@ function renderChinaPreorders() {
       ? `${supplierAmount(payment.requested_amount, payment.requested_currency)} · ${supplierPaymentStatusLabels[payment.status] || payment.status || "оплата"}`
       : "не отправляли";
     return `
-      <article class="china-request-row ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
+      <article class="china-request-row ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""} ${logisticsEvent ? "has-logistics-status" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
         <button class="china-request-row__summary" type="button" data-china-open-preorder="${escapeHtml(request.id)}" aria-label="Открыть ${escapeHtml(request.public_number || request.id || "запрос")}">
           <span class="china-request-row__number">
             <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
             <small>${escapeHtml(shortDateTime(request.created_at))}</small>
-            ${hasUnreadSupplier ? `<b class="china-request-row__attention" data-china-unread-badge>Новый ответ</b>` : needsSupplierAttention ? `<b class="china-request-row__attention china-request-row__attention--soft">Ждёт действия</b>` : ""}
+            ${hasUnreadSupplier ? `<b class="china-request-row__attention" data-china-unread-badge>Новый ответ</b>` : needsSupplierAttention ? `<b class="china-request-row__attention china-request-row__attention--soft">Ждёт действия</b>` : logisticsEvent ? `<b class="china-request-row__attention china-request-row__attention--logistics">Ждём доставку</b>` : ""}
           </span>
           <span>
             <small>Поставщик</small>

@@ -317,10 +317,10 @@ function supplierChatMessages(data = {}) {
       });
     } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
       messages.push({
-        actor: "supplier",
-        title: supplierSelfTitle(),
-        meta: status === "china_tracking" ? "Трек" : "Склад в Китае",
-        text: [plainText(event.tracking_number), comment].filter(Boolean).join("\n"),
+        actor: "system",
+        title: "Логистика",
+        meta: status === "china_tracking" ? "Отправлено, ждём доставку" : "На складе в Китае",
+        text: [plainText(event.tracking_number) ? `Трек: ${plainText(event.tracking_number)}` : "", comment].filter(Boolean).join("\n"),
         created_at: event.created_at,
         order: 7,
       });
