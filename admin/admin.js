@@ -1254,15 +1254,11 @@ function markChinaSupplierActivitySeen(requestId = "") {
 function chinaTelegramSettingsMessage(settings = {}) {
   const routeLabels = {
     supplier_chat: "отдельный чат",
-    china_fallback: "общий чат Китай",
-    order_type_fallback: "fallback направления",
-    global_fallback: "общий fallback",
     missing: "не настроено",
   };
   const lines = [
     "Telegram для Китая",
     "",
-    `Общий чат: ${settings.fallback_chat?.configured ? `настроен (${settings.fallback_chat.chat_id})` : "не настроен"}`,
     `Карта поставщиков: ${settings.supplier_chat_map?.count || 0}`,
     `Reply-мост: ${settings.reply_bridge?.configured ? "готов" : "нет таблицы"}`,
     `AI-перевод: ${settings.translation?.ai_binding ? "готов" : "нет AI binding"}`,

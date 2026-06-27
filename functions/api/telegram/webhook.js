@@ -31,7 +31,6 @@ function buildSetupMessage(message, chatId) {
     "• запчастини: TELEGRAM_PARTS_CHAT_ID",
     "• програмування BYD: TELEGRAM_TECH_CHAT_ID",
     "• оплати постачальникам: TELEGRAM_PAYMENTS_CHAT_ID",
-    "• Китай / постачальники: TELEGRAM_CHINA_CHAT_ID",
     "• окремі чати постачальників: TELEGRAM_SUPPLIER_CHAT_IDS",
     "",
     "Для клієнта використовуйте команду з картки замовлення:",

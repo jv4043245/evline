@@ -1,5 +1,5 @@
 import { integer, number, text } from "./http.js";
-import { insertStatusEvent, loadOrder, managerChatIdForType, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
+import { insertStatusEvent, loadOrder, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
 import { createSupplierPaymentRequest } from "./supplier-payments.js";
 import { DEFAULT_TRANSLATION_MODEL, supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
 
@@ -344,26 +344,17 @@ function supplierSpecificChatId(env, supplierRequest = {}) {
 }
 
 function supplierManagerChatIds(env) {
-  return new Set([
-    text(env.TELEGRAM_CHINA_CHAT_ID),
-    ...parseSupplierChatMap(env).values(),
-  ].filter(Boolean).map(String));
+  return new Set(Array.from(parseSupplierChatMap(env).values()).filter(Boolean).map(String));
 }
 
-function supplierChatRoute(env, supplierRequest = {}, order = null) {
+function supplierChatRoute(env, supplierRequest = {}) {
   const supplierChatId = supplierSpecificChatId(env, supplierRequest);
   if (supplierChatId) return { chat_id: supplierChatId, source: "supplier_chat" };
-  const chinaChatId = text(env.TELEGRAM_CHINA_CHAT_ID);
-  if (chinaChatId) return { chat_id: chinaChatId, source: "china_fallback" };
-  const orderChatId = order ? managerChatIdForType(env, order.type) : "";
-  if (orderChatId) return { chat_id: orderChatId, source: "order_type_fallback" };
-  const globalChatId = text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
-  if (globalChatId) return { chat_id: globalChatId, source: "global_fallback" };
   return { chat_id: "", source: "missing" };
 }
 
-function chinaManagerChatId(env, supplierRequest = {}, order = null) {
-  return supplierChatRoute(env, supplierRequest, order).chat_id;
+function chinaManagerChatId(env, supplierRequest = {}) {
+  return supplierChatRoute(env, supplierRequest).chat_id;
 }
 
 function maskedChatId(value) {
@@ -404,10 +395,6 @@ export async function supplierTelegramSettingsStatus(env) {
   }
 
   return {
-    fallback_chat: {
-      configured: Boolean(text(env.TELEGRAM_CHINA_CHAT_ID)),
-      chat_id: maskedChatId(env.TELEGRAM_CHINA_CHAT_ID),
-    },
     supplier_chat_map: {
       configured: supplierMap.size > 0,
       count: supplierMap.size,
@@ -1024,7 +1011,7 @@ export async function listSupplierDashboardByToken(env, token) {
 
 async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua", options = {}) {
   const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
-  const chatId = chinaManagerChatId(env, supplierRequest, order);
+  const chatId = chinaManagerChatId(env, supplierRequest);
   if (!chatId || !env.TELEGRAM_BOT_TOKEN) return { skipped: true };
 
   const origin = publicOrigin(requestUrl);
