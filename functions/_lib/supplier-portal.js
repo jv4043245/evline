@@ -292,8 +292,67 @@ async function insertSupplierEvent(env, supplierRequest, payload = {}) {
     .run();
 }
 
-function chinaManagerChatId(env, order = null) {
-  return text(env.TELEGRAM_CHINA_CHAT_ID)
+function normalizeSupplierChatKey(value) {
+  return text(value).toLowerCase().replace(/[^a-z0-9а-яёіїєґ]+/gi, "");
+}
+
+function parseSupplierChatMap(env) {
+  const raw = text(env.TELEGRAM_SUPPLIER_CHAT_IDS);
+  if (!raw) return new Map();
+  const map = new Map();
+  const add = (key, value) => {
+    const normalizedKey = normalizeSupplierChatKey(key);
+    const chatId = text(value);
+    if (normalizedKey && chatId) map.set(normalizedKey, chatId);
+  };
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      Object.entries(parsed).forEach(([key, value]) => add(key, value));
+      return map;
+    }
+  } catch {
+    // Allow a compact env value like "Zeekr=-100...,BYD=-100..." for quick setup.
+  }
+
+  raw.split(/[\n,;]+/).forEach((entry) => {
+    const separator = entry.includes("=") ? "=" : ":";
+    const [key, ...valueParts] = entry.split(separator);
+    add(key, valueParts.join(separator));
+  });
+  return map;
+}
+
+function supplierChatKeys(supplierRequest = {}) {
+  const supplierId = text(supplierRequest.supplier_id);
+  const supplierName = text(supplierRequest.supplier_name);
+  return [
+    supplierId,
+    supplierId.replace(/^supplier[_-]/i, ""),
+    supplierName,
+  ].map(normalizeSupplierChatKey).filter(Boolean);
+}
+
+function supplierSpecificChatId(env, supplierRequest = {}) {
+  const map = parseSupplierChatMap(env);
+  for (const key of supplierChatKeys(supplierRequest)) {
+    const chatId = map.get(key);
+    if (chatId) return chatId;
+  }
+  return "";
+}
+
+function supplierManagerChatIds(env) {
+  return new Set([
+    text(env.TELEGRAM_CHINA_CHAT_ID),
+    ...parseSupplierChatMap(env).values(),
+  ].filter(Boolean).map(String));
+}
+
+function chinaManagerChatId(env, supplierRequest = {}, order = null) {
+  return supplierSpecificChatId(env, supplierRequest)
+    || text(env.TELEGRAM_CHINA_CHAT_ID)
     || (order ? managerChatIdForType(env, order.type) : "")
     || text(env.TELEGRAM_PARTS_CHAT_ID || env.TELEGRAM_CHAT_ID);
 }
@@ -880,7 +939,7 @@ export async function listSupplierDashboardByToken(env, token) {
 
 async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua", options = {}) {
   const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
-  const chatId = chinaManagerChatId(env, order);
+  const chatId = chinaManagerChatId(env, supplierRequest, order);
   if (!chatId || !env.TELEGRAM_BOT_TOKEN) return { skipped: true };
 
   const origin = publicOrigin(requestUrl);
@@ -1358,13 +1417,12 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
 
 export async function handleSupplierTelegramUpdate(env, message = {}) {
   const chatId = text(message.chat?.id);
-  const chinaChatId = text(env.TELEGRAM_CHINA_CHAT_ID);
   const incoming = text(message.text || message.caption).slice(0, 2000);
   const messageId = text(message.message_id);
   const replyMessageId = text(message.reply_to_message?.message_id);
   const parentReplyMessageId = text(message.reply_to_message?.reply_to_message?.message_id);
   if (!chatId || !incoming) return { handled: false };
-  const inChinaChat = chinaChatId && chatId === chinaChatId;
+  const inChinaChat = supplierManagerChatIds(env).has(String(chatId));
   if (!replyMessageId && !parentReplyMessageId) {
     return inChinaChat
       ? { handled: true, message: "Чтобы отправить ответ китайцу, нажмите reply на сообщение по нужному запросу." }
