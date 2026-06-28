@@ -14,6 +14,7 @@ const PAYMENT_OCR_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
 export const SUPPLIER_PAYMENT_STATUS_LABELS = {
   requested: "Очікує оплати",
+  partial: "Частково оплачено",
   needs_review: "Потрібна перевірка",
   paid: "Оплачено",
   canceled: "Скасовано",
@@ -328,6 +329,96 @@ async function markSupplierRequestPaymentPaid(env, payment, now = new Date().toI
     .run();
 }
 
+async function supplierPaymentReceiptsReady(env) {
+  try {
+    await env.DB.prepare("SELECT id FROM supplier_payment_receipts LIMIT 1").first();
+    return true;
+  } catch (error) {
+    if (/no such table/i.test(error.message || String(error))) return false;
+    throw error;
+  }
+}
+
+export async function listSupplierPaymentReceipts(env, paymentId) {
+  if (!paymentId || !(await supplierPaymentReceiptsReady(env))) return [];
+  const rows = await env.DB.prepare(
+    `SELECT *
+    FROM supplier_payment_receipts
+    WHERE supplier_payment_id = ?
+    ORDER BY created_at DESC`
+  )
+    .bind(paymentId)
+    .all();
+  return rows.results || [];
+}
+
+export async function hydrateSupplierPayment(env, payment) {
+  if (!payment) return null;
+  const receipts = await listSupplierPaymentReceipts(env, payment.id);
+  const total = receipts.reduce((sum, receipt) => {
+    const sameCurrency = normalizeCurrency(receipt.currency || payment.paid_currency || payment.requested_currency)
+      === normalizeCurrency(payment.paid_currency || payment.requested_currency);
+    return sameCurrency ? sum + number(receipt.amount) : sum;
+  }, 0);
+  return {
+    ...payment,
+    receipts,
+    receipt_count: receipts.length,
+    paid_amount: total > 0 ? Math.round(total * 100) / 100 : payment.paid_amount,
+  };
+}
+
+async function insertSupplierPaymentReceipt(env, payment, payload = {}) {
+  if (!(await supplierPaymentReceiptsReady(env))) return { inserted: false, available: false };
+  const now = payload.created_at || new Date().toISOString();
+  const result = await env.DB.prepare(
+    `INSERT OR IGNORE INTO supplier_payment_receipts (
+      id, created_at, supplier_payment_id, order_id, supplier_request_id, supplier_quote_id,
+      amount, currency, chat_id, message_id, telegram_file_id, caption, matched_by,
+      match_confidence, ocr_source, source
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      crypto.randomUUID(),
+      now,
+      payment.id,
+      payment.order_id,
+      payment.supplier_request_id || "",
+      payment.supplier_quote_id || "",
+      number(payload.amount),
+      normalizeCurrency(payload.currency || payment.requested_currency),
+      text(payload.chat_id),
+      text(payload.message_id),
+      text(payload.telegram_file_id),
+      text(payload.caption),
+      text(payload.matched_by),
+      text(payload.match_confidence),
+      text(payload.ocr_source),
+      text(payload.source || "telegram")
+    )
+    .run();
+  return {
+    inserted: Number(result?.meta?.changes || 0) > 0,
+    available: true,
+  };
+}
+
+async function supplierPaymentReceiptSummary(env, payment) {
+  const receipts = await listSupplierPaymentReceipts(env, payment.id);
+  const currency = normalizeCurrency(payment.paid_currency || payment.requested_currency);
+  const paidAmount = receipts.reduce((sum, receipt) => (
+    normalizeCurrency(receipt.currency) === currency ? sum + number(receipt.amount) : sum
+  ), 0);
+  const latestWithFile = receipts.find((receipt) => text(receipt.telegram_file_id));
+  return {
+    receipts,
+    receipt_count: receipts.length,
+    paid_amount: Math.round(paidAmount * 100) / 100,
+    currency,
+    latest_file_id: latestWithFile?.telegram_file_id || "",
+  };
+}
+
 function buildPaymentRequestMessage(order, payment) {
   const lines = [
     "💳 Оплата постачальнику EVLine",
@@ -354,7 +445,11 @@ export async function listSupplierPayments(env, orderId) {
     )
       .bind(orderId)
       .all();
-    return rows.results || [];
+    const payments = [];
+    for (const payment of rows.results || []) {
+      payments.push(await hydrateSupplierPayment(env, payment));
+    }
+    return payments;
   } catch (error) {
     if (/no such table/i.test(error.message || String(error))) return [];
     throw error;
@@ -709,6 +804,20 @@ async function paymentByReply(env, chatId, replyMessageId) {
     .first();
 }
 
+async function paymentByReceiptReply(env, chatId, replyMessageId) {
+  if (!chatId || !replyMessageId || !(await supplierPaymentReceiptsReady(env))) return null;
+  return env.DB.prepare(
+    `SELECT supplier_payments.*
+    FROM supplier_payment_receipts
+    INNER JOIN supplier_payments ON supplier_payments.id = supplier_payment_receipts.supplier_payment_id
+    WHERE supplier_payment_receipts.chat_id = ? AND supplier_payment_receipts.message_id = ?
+    ORDER BY supplier_payment_receipts.created_at DESC
+    LIMIT 1`
+  )
+    .bind(chatId, String(replyMessageId))
+    .first();
+}
+
 async function paymentByAmount(env, chatId, paidAmount) {
   if (!chatId || paidAmount <= 0) return { payment: null, ambiguous: false };
   const minRequested = paidAmount * 0.9;
@@ -716,15 +825,41 @@ async function paymentByAmount(env, chatId, paidAmount) {
     `SELECT *
     FROM supplier_payments
     WHERE request_chat_id = ?
-      AND status IN ('requested', 'needs_review')
+      AND status IN ('requested', 'needs_review', 'partial')
       AND requested_amount > 0
-      AND requested_amount <= ?
-      AND requested_amount >= ?
+      AND (
+        (
+          status = 'partial'
+          AND CASE
+            WHEN requested_amount - COALESCE(paid_amount, 0) > 0
+            THEN requested_amount - COALESCE(paid_amount, 0)
+            ELSE requested_amount
+          END <= ?
+          AND CASE
+            WHEN requested_amount - COALESCE(paid_amount, 0) > 0
+            THEN requested_amount - COALESCE(paid_amount, 0)
+            ELSE requested_amount
+          END >= ?
+        )
+        OR (
+          status <> 'partial'
+          AND requested_amount <= ?
+          AND requested_amount >= ?
+        )
+      )
       AND datetime(COALESCE(requested_at, created_at)) >= datetime('now', '-7 days')
-    ORDER BY ABS(requested_amount - ?) ASC
+    ORDER BY CASE
+      WHEN status = 'partial'
+      THEN ABS((CASE
+        WHEN requested_amount - COALESCE(paid_amount, 0) > 0
+        THEN requested_amount - COALESCE(paid_amount, 0)
+        ELSE requested_amount
+      END) - ?)
+      ELSE ABS(requested_amount - ?)
+    END ASC
     LIMIT 2`
   )
-    .bind(chatId, paidAmount, minRequested, paidAmount)
+    .bind(chatId, paidAmount, minRequested, paidAmount, minRequested, paidAmount, paidAmount)
     .all();
   const matches = rows.results || [];
   return { payment: matches[0] || null, ambiguous: matches.length > 1 };
@@ -739,20 +874,45 @@ async function attachPaymentReceipt(env, payment, {
   paidCurrency,
   matchedBy,
   matchConfidence,
+  ocrSource,
 }) {
   const now = new Date().toISOString();
   const requestedAmount = number(payment.requested_amount);
   const currency = normalizeCurrency(paidCurrency || payment.requested_currency);
   const parsedPaid = number(paidAmount);
-  const commissionAmount = parsedPaid > 0 && currency === normalizeCurrency(payment.requested_currency)
-    ? Math.max(0, parsedPaid - requestedAmount)
+  await insertSupplierPaymentReceipt(env, payment, {
+    created_at: now,
+    amount: parsedPaid,
+    currency,
+    chat_id: chatId,
+    message_id: messageId,
+    telegram_file_id: fileId,
+    caption,
+    matched_by: matchedBy,
+    match_confidence: matchConfidence,
+    ocr_source: ocrSource,
+  });
+
+  const receiptSummary = await supplierPaymentReceiptSummary(env, payment);
+  const totalPaid = receiptSummary.receipt_count ? receiptSummary.paid_amount : parsedPaid;
+  const totalCurrency = receiptSummary.currency || currency;
+  const commissionAmount = totalPaid > 0 && totalCurrency === normalizeCurrency(payment.requested_currency)
+    ? Math.max(0, totalPaid - requestedAmount)
     : 0;
   const commissionPercent = requestedAmount > 0 && commissionAmount > 0
     ? (commissionAmount / requestedAmount) * 100
     : 0;
-  const amountBelowRequest = parsedPaid > 0 && requestedAmount > 0 && parsedPaid < requestedAmount * 0.95;
-  const matchedByReply = ["telegram_reply", "telegram_nested_reply"].includes(text(matchedBy));
-  const nextStatus = parsedPaid > 0 && !amountBelowRequest && matchedByReply ? "paid" : "needs_review";
+  const trustedPaymentMatch = [
+    "telegram_reply",
+    "telegram_nested_reply",
+    "telegram_receipt_reply",
+    "telegram_receipt_nested_reply",
+  ].includes(text(matchedBy));
+  const amountCoversRequest = totalPaid > 0 && requestedAmount > 0 && totalPaid >= requestedAmount * 0.95;
+  const nextStatus = totalPaid > 0 && trustedPaymentMatch
+    ? (amountCoversRequest ? "paid" : "partial")
+    : "needs_review";
+  const latestFileId = fileId || receiptSummary.latest_file_id || "";
 
   await env.DB.prepare(
     `UPDATE supplier_payments SET
@@ -774,16 +934,16 @@ async function attachPaymentReceipt(env, payment, {
     .bind(
       now,
       nextStatus,
-      parsedPaid,
-      parsedPaid,
-      currency,
-      parsedPaid,
+      totalPaid,
+      totalPaid,
+      totalCurrency,
+      totalPaid,
       commissionAmount,
-      parsedPaid,
+      totalPaid,
       commissionPercent,
       chatId,
       String(messageId || ""),
-      fileId,
+      latestFileId,
       caption,
       nextStatus,
       now,
@@ -794,19 +954,21 @@ async function attachPaymentReceipt(env, payment, {
     .run();
 
   const updated = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(payment.id).first();
+  const hydrated = await hydrateSupplierPayment(env, updated);
   let order = await loadOrder(env, payment.order_id).catch(() => null);
   let statusAdvance = { advanced: false, event_id: "" };
 
   if (nextStatus === "paid") {
-    await markSupplierRequestPaymentPaid(env, payment, now);
+    await markSupplierRequestPaymentPaid(env, { ...payment, id: updated.id }, now);
 
-    const deltaText = paymentAmountDeltaText(payment, parsedPaid, currency);
+    const deltaText = paymentAmountDeltaText(payment, totalPaid, totalCurrency);
     statusAdvance = await advanceOrderStatus(env, payment.order_id, "paid", {
       actor: "telegram",
       comment: [
         `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано`,
-        parsedPaid > 0 ? `оплачено ${formatAmount(parsedPaid, currency)}` : "",
-        parsedPaid > 0 ? `рахунок ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
+        parsedPaid > 0 ? `новий скрин ${formatAmount(parsedPaid, currency)}` : "",
+        totalPaid > 0 ? `разом оплачено ${formatAmount(totalPaid, totalCurrency)}` : "",
+        totalPaid > 0 ? `рахунок ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
         deltaText,
       ].filter(Boolean).join("; "),
       notifyCustomer: false,
@@ -814,7 +976,15 @@ async function attachPaymentReceipt(env, payment, {
     order = statusAdvance.order || order;
   }
 
-  return { payment: updated, order, order_status_advanced: statusAdvance.advanced, order_status_event_id: statusAdvance.event_id };
+  return {
+    payment: hydrated || updated,
+    order,
+    paid_amount_delta: parsedPaid,
+    paid_total_amount: totalPaid,
+    paid_currency: totalCurrency,
+    order_status_advanced: statusAdvance.advanced,
+    order_status_event_id: statusAdvance.event_id,
+  };
 }
 
 export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
@@ -840,6 +1010,24 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
       throw error;
     });
     matchedBy = payment ? "telegram_nested_reply" : "";
+    matchConfidence = payment ? "high" : "";
+  }
+
+  if (!payment && replyMessageId) {
+    payment = await paymentByReceiptReply(env, chatId, replyMessageId).catch((error) => {
+      if (/no such table/i.test(error.message || String(error))) return null;
+      throw error;
+    });
+    matchedBy = payment ? "telegram_receipt_reply" : "";
+    matchConfidence = payment ? "high" : "";
+  }
+
+  if (!payment && parentReplyMessageId) {
+    payment = await paymentByReceiptReply(env, chatId, parentReplyMessageId).catch((error) => {
+      if (/no such table/i.test(error.message || String(error))) return null;
+      throw error;
+    });
+    matchedBy = payment ? "telegram_receipt_nested_reply" : "";
     matchConfidence = payment ? "high" : "";
   }
 
@@ -881,21 +1069,30 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     paidCurrency: parsed.currency,
     matchedBy,
     matchConfidence,
+    ocrSource: ocrResult.source,
   });
 
   const orderNumber = result.order?.order_number || result.order?.id || payment.order_id;
   const paymentStatus = text(result.payment?.status);
-  const deltaText = parsed.amount > 0 ? paymentAmountDeltaText(payment, parsed.amount, parsed.currency) : "";
+  const totalPaid = number(result.paid_total_amount || result.payment?.paid_amount);
+  const deltaText = totalPaid > 0 ? paymentAmountDeltaText(payment, totalPaid, result.paid_currency || parsed.currency) : "";
+  const remainingAmount = paymentStatus === "partial"
+    ? Math.max(0, number(payment.requested_amount) - totalPaid)
+    : 0;
   const lines = [
     parsed.amount > 0 && paymentStatus === "paid"
       ? "✅ Оплату постачальнику зафіксовано."
-      : parsed.amount > 0
-        ? "🧾 Суму знайдено, скрин прив'язано. Потрібна перевірка: надсилайте скрин відповіддю на повідомлення потрібної оплати."
+      : paymentStatus === "partial"
+        ? "🧾 Часткову оплату постачальнику зафіксовано. Очікуємо доплату."
+        : parsed.amount > 0
+          ? "🧾 Суму знайдено, скрин прив'язано. Потрібна перевірка: надсилайте скрин відповіддю на повідомлення потрібної оплати."
         : "🧾 Скрин оплати прив'язано, суму треба внести вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
     parsed.amount > 0 ? `Рахунок: ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
-    parsed.amount > 0 ? `Оплачено: ${formatAmount(parsed.amount, parsed.currency)}` : "",
+    parsed.amount > 0 ? `Новий скрин: ${formatAmount(parsed.amount, parsed.currency)}` : "",
+    totalPaid > 0 ? `Разом оплачено: ${formatAmount(totalPaid, result.paid_currency || parsed.currency)}` : "",
+    remainingAmount > 0 ? `Залишок до оплати: ${formatAmount(remainingAmount, payment.requested_currency)}` : "",
     deltaText,
     ocrResult.source
       ? `Розпізнавання: ${ocrResult.source}${ocrResult.error ? ` (${shortOcrError(ocrResult.error)})` : ""}`

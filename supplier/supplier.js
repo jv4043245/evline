@@ -301,6 +301,7 @@ function requestData(request = {}) {
 
 function paymentStatusText(payment = {}) {
   if (payment.status === "paid") return "оплачено EVLine";
+  if (payment.status === "partial") return "частично оплачено EVLine";
   if (payment.receipt_present) return "скрин оплаты прикреплён";
   return "ожидает оплаты EVLine";
 }
@@ -326,6 +327,7 @@ function renderPayment(payment = {}, tokenValue = token) {
   const receiptVersion = encodeURIComponent(payment.updated_at || payment.paid_at || "");
   const receiptUrl = `/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt${receiptVersion ? `?v=${receiptVersion}` : ""}`;
   const delta = paymentDelta(payment);
+  const receiptCount = Number(payment.receipt_count || 0);
   return `
     <section class="supplier-card supplier-payment supplier-payment--compact">
       <div class="supplier-card__head">
@@ -336,6 +338,7 @@ function renderPayment(payment = {}, tokenValue = token) {
         <div><span>Счёт</span><strong>${Number(payment.requested_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
         ${payment.paid_amount ? `<div><span>Оплачено</span><strong>${Number(payment.paid_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.paid_currency || payment.requested_currency || "CNY")}</strong></div>` : ""}
         ${payment.paid_at ? `<div><span>Дата</span><strong>${escapeHtml(shortDateTime(payment.paid_at))}</strong></div>` : ""}
+        ${receiptCount > 1 ? `<div><span>Скрины</span><strong>${receiptCount}</strong></div>` : ""}
       </div>
       ${delta.amount ? `
         <p class="supplier-payment-note ${delta.significant ? "supplier-payment-note--warning" : ""}">
@@ -699,6 +702,7 @@ function supplierAmount(value, currency = "CNY") {
 function paymentLabel(status) {
   const labels = {
     paid: "Оплачено",
+    partial: "Частично оплачено",
     requested: "Ждёт оплаты",
     needs_review: "Скрин на проверке",
     canceled: "Отменено",

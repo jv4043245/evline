@@ -46,7 +46,7 @@ function orderSelect(options = {}) {
           order_id,
           COUNT(*) AS supplier_payment_count,
           SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS supplier_payment_paid_count,
-          SUM(CASE WHEN status IN ('requested', 'needs_review') THEN 1 ELSE 0 END) AS supplier_payment_open_count,
+          SUM(CASE WHEN status IN ('requested', 'needs_review', 'partial') THEN 1 ELSE 0 END) AS supplier_payment_open_count,
           SUM(CASE WHEN status = 'needs_review' THEN 1 ELSE 0 END) AS supplier_payment_review_count,
           SUM(COALESCE(requested_amount, 0)) AS supplier_payment_requested_amount,
           SUM(COALESCE(paid_amount, 0)) AS supplier_payment_paid_amount,

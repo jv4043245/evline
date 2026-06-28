@@ -330,6 +330,7 @@ export async function onRequestDelete({ request, params, env }) {
   await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id IN (SELECT id FROM supplier_requests WHERE order_id = ?)", params.id);
   await safeDelete(env, "DELETE FROM supplier_quotes WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM supplier_requests WHERE order_id = ?", params.id);
+  await safeDelete(env, "DELETE FROM supplier_payment_receipts WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM notification_queue WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_status_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_items WHERE order_id = ?", params.id);

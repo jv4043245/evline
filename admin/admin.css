@@ -1797,6 +1797,11 @@ body.audit-log-open .audit-log-panel {
   color: #15803d;
 }
 
+.supplier-payment-status--partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .supplier-payment-status--needs_review {
   background: #fef3c7;
   color: #92400e;

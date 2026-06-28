@@ -1,6 +1,6 @@
 import { integer, number, text } from "./http.js";
 import { insertStatusEvent, loadOrder, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
-import { createSupplierPaymentRequest } from "./supplier-payments.js";
+import { createSupplierPaymentRequest, hydrateSupplierPayment } from "./supplier-payments.js";
 import { DEFAULT_TRANSLATION_MODEL, supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
 
 export const SUPPLIER_REQUEST_STATUS_LABELS = {
@@ -699,12 +699,13 @@ async function loadSupplierPaymentForRequest(env, supplierRequest) {
   const hasSupplierRequestId = await tableHasColumn(env, "supplier_payments", "supplier_request_id");
   const hasPaymentId = await tableHasColumn(env, "supplier_requests", "payment_id");
   if (hasPaymentId && supplierRequest.payment_id) {
-    return env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?")
+    const payment = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?")
       .bind(supplierRequest.payment_id)
       .first();
+    return hydrateSupplierPayment(env, payment);
   }
   if (hasSupplierRequestId) {
-    return env.DB.prepare(
+    const payment = await env.DB.prepare(
       `SELECT * FROM supplier_payments
       WHERE supplier_request_id = ?
       ORDER BY created_at DESC
@@ -712,6 +713,7 @@ async function loadSupplierPaymentForRequest(env, supplierRequest) {
     )
       .bind(supplierRequest.id)
       .first();
+    return hydrateSupplierPayment(env, payment);
   }
   return null;
 }
@@ -758,6 +760,7 @@ function publicQuote(quote) {
 function publicPayment(payment) {
   if (!payment) return null;
   const hasReceiptFile = Boolean(payment.receipt_telegram_file_id);
+  const receipts = Array.isArray(payment.receipts) ? payment.receipts : [];
   return {
     status: payment.status,
     requested_amount: payment.requested_amount,
@@ -767,6 +770,13 @@ function publicPayment(payment) {
     paid_at: payment.paid_at,
     receipt_present: hasReceiptFile,
     receipt_recorded: Boolean(payment.receipt_telegram_file_id || payment.receipt_message_id),
+    receipt_count: receipts.length || number(payment.receipt_count),
+    receipts: receipts.map((receipt) => ({
+      amount: receipt.amount,
+      currency: receipt.currency,
+      receipt_present: Boolean(receipt.telegram_file_id),
+      created_at: receipt.created_at,
+    })),
     receipt_url: hasReceiptFile ? "payment-receipt" : "",
     updated_at: payment.updated_at,
   };
@@ -898,10 +908,10 @@ async function supplierDashboardPaymentSummary(env, supplierId) {
       SUM(CASE WHEN supplier_payments.status = 'paid'
           AND COALESCE(supplier_payments.paid_at, supplier_payments.updated_at, supplier_payments.created_at) >= ?
         THEN 1 ELSE 0 END) AS paid_30_count,
-      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review')
+      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review', 'partial')
         THEN COALESCE(supplier_payments.requested_amount, 0)
         ELSE 0 END) AS waiting_amount,
-      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review') THEN 1 ELSE 0 END) AS waiting_count,
+      SUM(CASE WHEN supplier_payments.status IN ('requested', 'needs_review', 'partial') THEN 1 ELSE 0 END) AS waiting_count,
       COALESCE(MAX(NULLIF(supplier_payments.paid_currency, '')), MAX(NULLIF(supplier_payments.requested_currency, '')), 'CNY') AS currency
     FROM supplier_payments
     INNER JOIN supplier_requests ON supplier_requests.id = supplier_payments.supplier_request_id
@@ -1790,6 +1800,7 @@ export async function deleteSupplierRequest(env, supplierRequestId) {
 
   await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id = ?", id);
   await safeDelete(env, "DELETE FROM supplier_tracking_events WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_payment_receipts WHERE supplier_request_id = ?", id);
   await safeDelete(env, "DELETE FROM supplier_payments WHERE supplier_request_id = ?", id);
   await safeDelete(
     env,

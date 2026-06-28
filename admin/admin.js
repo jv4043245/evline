@@ -81,6 +81,7 @@ const paymentLabels = {
 
 const supplierPaymentStatusLabels = {
   requested: "Очікує оплати",
+  partial: "Частично оплачено",
   needs_review: "Перевірити",
   paid: "Оплачено",
   canceled: "Скасовано",
@@ -1101,9 +1102,11 @@ function signedSupplierAmount(value, currency = "CNY") {
 
 function supplierPaymentAmountLines(payment = {}) {
   const paid = Number(payment.paid_amount || 0);
+  const receiptCount = Number(payment.receipt_count || 0);
   return `
     <span>Счёт: <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b></span>
     ${paid > 0 ? `<span>Оплачено: <b>${supplierAmount(payment.paid_amount, payment.paid_currency || payment.requested_currency)}</b></span>` : ""}
+    ${receiptCount > 1 ? `<span>Скрины: <b>${receiptCount}</b></span>` : ""}
   `;
 }
 
@@ -1214,6 +1217,7 @@ function chinaPreorderStage(bundle = {}) {
   if (request.status === "china_tracking") return "Отправлено, ждём доставку";
   if (request.status === "china_warehouse") return "На складе в Китае";
   if (payment.status === "paid") return "Оплачено";
+  if (payment.status === "partial") return "Частично оплачено";
   if (payment.status === "requested" || payment.status === "needs_review") return "Ждём оплату";
   if (request.status === "accepted") return "Согласовано";
   if (quote) return "Цена получена";
@@ -1934,7 +1938,7 @@ function renderSupplierPayments(order) {
               </div>
               <div class="supplier-payment-card__telegram">
                 <span>Запит: ${payment.request_message_id ? `msg ${escapeHtml(payment.request_message_id)}` : "не відправлено"}</span>
-                <span>Скрин: ${payment.receipt_message_id ? `msg ${escapeHtml(payment.receipt_message_id)}` : "ще немає"}</span>
+                <span>Скрин: ${payment.receipt_message_id ? `msg ${escapeHtml(payment.receipt_message_id)}` : "ще немає"}${Number(payment.receipt_count || 0) > 1 ? ` · ${Number(payment.receipt_count || 0)} шт.` : ""}</span>
                 ${payment.matched_by ? `<span>Збіг: ${escapeHtml(payment.matched_by)} · ${escapeHtml(payment.match_confidence || "-")}</span>` : ""}
               </div>
               <div class="supplier-payment-card__edit">
