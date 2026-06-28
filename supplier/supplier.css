@@ -705,6 +705,28 @@ body.supplier-shell {
   box-shadow: 0 10px 24px rgba(22, 163, 74, 0.08);
 }
 
+.supplier-tracking-form--compact {
+  gap: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.07);
+}
+
+.supplier-tracking-form--compact h2 {
+  font-size: 15px;
+}
+
+.supplier-tracking-form__grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.supplier-tracking-form--compact textarea {
+  min-height: 42px;
+  max-height: 90px;
+}
+
 .supplier-form--compact {
   box-shadow: none;
 }
@@ -1285,6 +1307,14 @@ body.supplier-shell {
   .supplier-data,
   .supplier-form__grid {
     grid-template-columns: 1fr;
+  }
+
+  .supplier-tracking-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .supplier-tracking-form--compact .supplier-form__inline-head {
+    align-items: stretch;
   }
 
   .supplier-card--request-passport .supplier-data {

@@ -620,20 +620,22 @@ function renderBottomTrackingForm(data = {}) {
   if (!active) return "";
   return `
     <section class="supplier-section supplier-section--tracking">
-      <form class="supplier-form supplier-tracking-form" data-tracking-form>
-        <h2>Отправка по Китаю</h2>
-        <div class="supplier-form__grid">
+      <form class="supplier-form supplier-tracking-form supplier-tracking-form--compact" data-tracking-form>
+        <div class="supplier-form__inline-head">
+          <h2>Отправка по Китаю</h2>
+          <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Сохранить</button>
+        </div>
+        <div class="supplier-tracking-form__grid">
           <input name="status" type="hidden" value="china_tracking">
           <label>
             Трек-номер
             <input name="tracking_number" placeholder="номер отправки по Китаю" required>
           </label>
-          <label class="supplier-wide">
+          <label>
             Комментарий
-            <textarea name="comment_cn" rows="3" placeholder="служба доставки, упаковка, детали отправки"></textarea>
+            <textarea name="comment_cn" rows="1" placeholder="служба, упаковка, детали"></textarea>
           </label>
         </div>
-        <button class="supplier-button supplier-button--primary" type="submit">Сохранить трек</button>
       </form>
     </section>
   `;
