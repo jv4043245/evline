@@ -1335,6 +1335,42 @@ async function sendTelegramSupplierAttachmentDetailed(env, chatId, attachment = 
   };
 }
 
+function supplierTelegramNotice(source, supplierRequest) {
+  const supplierName = supplierRequest.supplier_name || "поставщик";
+  const notices = {
+    supplier_no_stock: {
+      headline: `🚫 Поставщик ${supplierName} сообщил: нет поставки`,
+      status: "Статус: поставка невозможна",
+      action: "Проверьте запрос. Можно ответить reply на это сообщение, чтобы написать поставщику.",
+    },
+    supplier_needs_info: {
+      headline: `❓ Поставщик ${supplierName} просит уточнение`,
+      status: "Статус: нужно уточнение от EVLine",
+      action: "Ответьте reply на это сообщение, чтобы отправить уточнение китайцу.",
+    },
+    supplier_problem: {
+      headline: `⚠️ Поставщик ${supplierName} сообщил о проблеме`,
+      status: "Статус: проблема по запросу",
+      action: "Проверьте запрос. Можно ответить reply на это сообщение, чтобы написать поставщику.",
+    },
+    supplier_china_tracking: {
+      headline: `📦 Поставщик ${supplierName} добавил трек`,
+      status: "Статус: отправлено, ждём доставку",
+      action: "Действий от менеджера сейчас не требуется.",
+    },
+    supplier_china_warehouse: {
+      headline: `📦 Поставщик ${supplierName} добавил трек`,
+      status: "Статус: на складе в Китае",
+      action: "Действий от менеджера сейчас не требуется.",
+    },
+  };
+  return notices[source] || {
+    headline: `🇨🇳 Поставщик ${supplierName} ответил`,
+    status: "",
+    action: "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
+  };
+}
+
 async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua", options = {}) {
   const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
   const chatId = chinaManagerChatId(env, supplierRequest);
@@ -1342,6 +1378,7 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
 
   const origin = publicOrigin(requestUrl);
   const source = text(options.source || (quote ? "supplier_quote" : "supplier_message"));
+  const notice = supplierTelegramNotice(source, supplierRequest);
   const messageRu = text(options.messageRu || quote?.comment_ru || quote?.comment_translated || "");
   const deliveryCost = Object.prototype.hasOwnProperty.call(options, "deliveryCostCny")
     ? normalizeOptionalAmount(options.deliveryCostCny)
@@ -1349,16 +1386,13 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
   const trackingNumber = text(options.trackingNumber).toUpperCase();
   const attachment = options.attachment || null;
   const attachmentName = text(options.attachmentName || attachment?.name);
-  const isTrackingUpdate = source === "supplier_china_tracking" || source === "supplier_china_warehouse";
   const lines = [
-    isTrackingUpdate
-      ? `📦 Поставщик ${supplierRequest.supplier_name} добавил трек`
-      : `🇨🇳 Поставщик ${supplierRequest.supplier_name} ответил`,
+    notice.headline,
     `Запрос: ${supplierRequest.public_number || supplierRequest.id}`,
     order ? `Заказ CRM: ${order.order_number || order.id}` : "",
     supplierRequest.item_name ? `Позиция: ${supplierRequest.item_name}` : "",
     supplierRequest.vin ? `VIN: ${supplierRequest.vin}` : "",
-    isTrackingUpdate ? `Статус: ${source === "supplier_china_warehouse" ? "на складе в Китае" : "отправлено, ждём доставку"}` : "",
+    notice.status,
     trackingNumber ? `Трек: ${trackingNumber}` : "",
     quote && Number(quote.price_cny || 0) > 0 ? `Цена: ${quote.price_cny || 0} CNY` : "",
     quote?.purchase_days ? `Срок поставки: ${quote.purchase_days} дн.` : "",
@@ -1367,7 +1401,7 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
     messageRu ? `Сообщение: ${messageRu}` : "",
     attachmentName ? `Файл: ${attachmentName}` : "",
     "",
-    isTrackingUpdate ? "Действий от менеджера сейчас не требуется." : "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
+    notice.action,
     `CRM: ${origin}/admin/`,
   ];
 
