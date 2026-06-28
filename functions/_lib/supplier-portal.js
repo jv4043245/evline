@@ -689,8 +689,8 @@ async function loadSupplierBundle(env, supplierRequest) {
     quotes: attachImages(quotes, images),
     tracking_events: attachEventAttachments(trackingEvents, images),
     payment,
-    supplier_link: `/supplier/request/${supplierRequest.access_token}`,
-    dashboard_link: supplier?.dashboard_access_token ? `/supplier/dashboard/${supplier.dashboard_access_token}` : "",
+    supplier_link: supplierInterfacePath(`/supplier/request/${supplierRequest.access_token}`),
+    dashboard_link: supplier?.dashboard_access_token ? supplierInterfacePath(`/supplier/dashboard/${supplier.dashboard_access_token}`) : "",
   };
 }
 
@@ -724,6 +724,13 @@ function publicImage(image) {
     image_type: image.image_type,
     created_at: image.created_at,
   };
+}
+
+function supplierInterfacePath(path) {
+  const raw = text(path);
+  if (!raw) return "";
+  if (/[?&]lang=/.test(raw)) return raw;
+  return `${raw}${raw.includes("?") ? "&" : "?"}lang=zh`;
 }
 
 function publicAttachment(attachment) {
@@ -847,7 +854,7 @@ function publicDashboardRequest(row, payment = null, bundle = null) {
     delivery_cost_updated_at: row.delivery_cost_updated_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    supplier_link: `/supplier/request/${row.access_token}`,
+    supplier_link: supplierInterfacePath(`/supplier/request/${row.access_token}`),
     request_images: detail?.request_images || [],
     quotes: detail?.quotes || [],
     tracking_events: detail?.tracking_events || [],
@@ -871,7 +878,7 @@ function publicDashboardPayment(row = {}) {
     updated_at: row.updated_at,
     request_public_number: row.request_public_number,
     item_name: row.request_item_name,
-    supplier_link: accessToken ? `/supplier/request/${accessToken}` : "",
+    supplier_link: accessToken ? supplierInterfacePath(`/supplier/request/${accessToken}`) : "",
     receipt_present: hasReceiptFile,
     receipt_recorded: Boolean(row.receipt_telegram_file_id || row.receipt_message_id),
   };
@@ -1100,8 +1107,8 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
   const origin = options.origin || "https://evline.com.ua";
   return {
     ...bundle,
-    supplier_url: `${origin}/supplier/request/${token}`,
-    dashboard_url: supplier.dashboard_access_token ? `${origin}/supplier/dashboard/${supplier.dashboard_access_token}` : "",
+    supplier_url: supplierInterfacePath(`${origin}/supplier/request/${token}`),
+    dashboard_url: supplier.dashboard_access_token ? supplierInterfacePath(`${origin}/supplier/dashboard/${supplier.dashboard_access_token}`) : "",
   };
 }
 
