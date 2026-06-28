@@ -1614,7 +1614,7 @@ function renderChinaPreorders() {
       ? `${supplierAmount(payment.requested_amount, payment.requested_currency)} · ${supplierPaymentStatusLabels[payment.status] || payment.status || "оплата"}`
       : "не отправляли";
     return `
-      <article class="china-request-row ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""} ${logisticsEvent ? "has-logistics-status" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
+      <article class="china-request-row china-request-row--status-${safeClass(request.status || "sent")} ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""} ${logisticsEvent ? "has-logistics-status" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
         <button class="china-request-row__summary" type="button" data-china-open-preorder="${escapeHtml(request.id)}" aria-label="Открыть ${escapeHtml(request.public_number || request.id || "запрос")}">
           <span class="china-request-row__number">
             <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>

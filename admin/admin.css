@@ -1933,29 +1933,57 @@ body.audit-log-open .audit-log-panel {
   margin-top: 3px;
   padding: 3px 8px;
   border-radius: 999px;
+  border: 1px solid rgba(2, 132, 199, 0.16);
   background: #e0f2fe;
   color: #0369a1;
   font-size: 12px;
   font-weight: 900;
 }
 
+.supplier-request-status--draft,
+.supplier-request-status--closed {
+  border-color: rgba(100, 116, 139, 0.16);
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.supplier-request-status--sent {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.supplier-request-status--viewed,
+.supplier-request-status--needs_info {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .supplier-request-status--quoted,
-.supplier-request-status--accepted,
-.supplier-request-status--purchased,
-.supplier-request-status--china_tracking,
-.supplier-request-status--china_warehouse {
+.supplier-request-status--accepted {
+  border-color: rgba(79, 70, 229, 0.18);
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.supplier-request-status--purchased {
+  border-color: rgba(22, 163, 74, 0.2);
   background: #dcfce7;
   color: #15803d;
 }
 
-.supplier-request-status--needs_info {
-  background: #fef3c7;
-  color: #92400e;
+.supplier-request-status--china_tracking,
+.supplier-request-status--china_warehouse {
+  border-color: rgba(13, 148, 136, 0.22);
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 .supplier-request-status--no_stock,
 .supplier-request-status--problem,
 .supplier-request-status--canceled {
+  border-color: rgba(220, 38, 38, 0.18);
   background: #fee2e2;
   color: #b91c1c;
 }
@@ -2309,13 +2337,66 @@ body.audit-log-open .audit-log-panel {
 }
 
 .china-request-row {
+  --china-row-accent: #cbd5e1;
+  --china-row-surface: #fff;
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   border: 1px solid var(--china-border);
+  border-left-color: var(--china-row-accent);
   border-radius: 8px;
-  background: #fff;
+  background: var(--china-row-surface);
   overflow: hidden;
+}
+
+.china-request-row::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--china-row-accent);
+  content: "";
+  pointer-events: none;
+}
+
+.china-request-row--status-sent {
+  --china-row-accent: #60a5fa;
+  --china-row-surface: #f8fbff;
+}
+
+.china-request-row--status-viewed,
+.china-request-row--status-needs_info {
+  --china-row-accent: #f59e0b;
+  --china-row-surface: #fffaf0;
+}
+
+.china-request-row--status-quoted,
+.china-request-row--status-accepted {
+  --china-row-accent: #818cf8;
+  --china-row-surface: #fbfbff;
+}
+
+.china-request-row--status-purchased {
+  --china-row-accent: #22c55e;
+  --china-row-surface: #f6fef9;
+}
+
+.china-request-row--status-china_tracking,
+.china-request-row--status-china_warehouse {
+  --china-row-accent: #14b8a6;
+  --china-row-surface: #f0fdfa;
+}
+
+.china-request-row--status-no_stock,
+.china-request-row--status-problem,
+.china-request-row--status-canceled {
+  --china-row-accent: #ef4444;
+  --china-row-surface: #fff7f7;
+}
+
+.china-request-row--status-closed {
+  --china-row-accent: #94a3b8;
+  --china-row-surface: #f8fafc;
 }
 
 .china-request-row.is-selected {

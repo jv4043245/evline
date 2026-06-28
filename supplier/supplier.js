@@ -625,8 +625,9 @@ function renderDashboardRequestCard(request = {}) {
   const payment = request.payment || null;
   const key = dashboardRequestKey(request);
   const selected = dashboardSelectedRequestId === key;
+  const statusClass = String(request.status || "sent").replace(/[^a-z0-9_-]/gi, "");
   return `
-    <article class="supplier-dashboard-card ${selected ? "is-selected" : ""}">
+    <article class="supplier-dashboard-card supplier-dashboard-card--status-${escapeHtml(statusClass)} ${selected ? "is-selected" : ""}">
       <button class="supplier-dashboard-card__open" type="button" data-dashboard-open-request="${escapeHtml(key)}">
         <div class="supplier-card__head">
           <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
