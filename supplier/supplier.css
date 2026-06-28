@@ -886,11 +886,21 @@ body.supplier-shell {
   border-radius: 8px;
   background: #fff;
   color: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+
+.supplier-dashboard-card__open {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   appearance: none;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
 }
 
 .supplier-dashboard-card:hover,
@@ -904,6 +914,51 @@ body.supplier-shell {
 
 .supplier-dashboard-card__title {
   font-weight: 900;
+}
+
+.supplier-dashboard-tracking {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  border-radius: 8px;
+  background: #f0fdfa;
+}
+
+.supplier-dashboard-tracking--active {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  border-color: rgba(34, 197, 94, 0.34);
+  background: #f0fdf4;
+}
+
+.supplier-dashboard-tracking label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.supplier-dashboard-tracking span {
+  color: var(--supplier-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.supplier-dashboard-tracking input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid rgba(34, 197, 94, 0.34);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--supplier-ink);
+  font: inherit;
+}
+
+.supplier-dashboard-tracking--done strong {
+  overflow-wrap: anywhere;
+  color: #0f766e;
+  font-size: 13px;
 }
 
 .supplier-dashboard-card__meta {
@@ -1076,6 +1131,14 @@ body.supplier-shell {
 
   .supplier-dashboard-payment {
     display: grid;
+  }
+
+  .supplier-dashboard-tracking--active {
+    grid-template-columns: 1fr;
+  }
+
+  .supplier-dashboard-tracking--active .supplier-button {
+    width: 100%;
   }
 
   .supplier-dashboard-payment div:last-child {

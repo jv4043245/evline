@@ -7,8 +7,8 @@ function dashboardPageHtml(token) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>EVLine · Запросы поставщику</title>
-    <link rel="stylesheet" href="/supplier/supplier.css?v=20260628-dual-tracking-message">
-    <script src="/supplier/supplier.js?v=20260628-dual-tracking-message" defer></script>
+    <link rel="stylesheet" href="/supplier/supplier.css?v=20260628-dashboard-tracking">
+    <script src="/supplier/supplier.js?v=20260628-dashboard-tracking" defer></script>
   </head>
   <body class="supplier-shell" data-supplier-page="dashboard" data-token="${safeToken}">
     <main class="supplier-app" data-app>

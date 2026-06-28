@@ -604,23 +604,51 @@ function selectedDashboardRequest() {
   return (dashboardData?.requests || []).find((request) => dashboardRequestKey(request) === dashboardSelectedRequestId) || null;
 }
 
+function dashboardRequestTrackingLine(request = {}) {
+  const data = dashboardRequestAsData(request);
+  const trackingEvent = latestLogisticsEvent(data);
+  if (trackingEvent) {
+    return `
+      <div class="supplier-dashboard-tracking supplier-dashboard-tracking--done">
+        <span>Трек</span>
+        <strong>${escapeHtml(trackingEvent.tracking_number)}</strong>
+      </div>
+    `;
+  }
+  const canAddTracking = request.payment?.status === "paid" && ["accepted", "purchased", "problem"].includes(request.status);
+  if (!canAddTracking) return "";
+  return `
+    <form class="supplier-dashboard-tracking supplier-dashboard-tracking--active" data-tracking-form data-request-token="${escapeHtml(requestTokenFromLink(request.supplier_link))}">
+      <input name="status" type="hidden" value="china_tracking">
+      <label>
+        <span>Нужен трек</span>
+        <input name="tracking_number" placeholder="номер отправки" required>
+      </label>
+      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Сохранить</button>
+    </form>
+  `;
+}
+
 function renderDashboardRequestCard(request = {}) {
   const payment = request.payment || null;
   const key = dashboardRequestKey(request);
   const selected = dashboardSelectedRequestId === key;
   return `
-    <button class="supplier-dashboard-card ${selected ? "is-selected" : ""}" type="button" data-dashboard-open-request="${escapeHtml(key)}">
-      <div class="supplier-card__head">
-        <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
-        ${statusBadge(request.status)}
-      </div>
-      <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || "Деталь")}</div>
-      <div class="supplier-dashboard-card__meta">
-        <span>${escapeHtml(request.car || "Авто не указано")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
-        ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
-        ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<span>Доставка: ${supplierAmount(request.delivery_cost_cny, "CNY")}</span>` : ""}
-      </div>
-    </button>
+    <article class="supplier-dashboard-card ${selected ? "is-selected" : ""}">
+      <button class="supplier-dashboard-card__open" type="button" data-dashboard-open-request="${escapeHtml(key)}">
+        <div class="supplier-card__head">
+          <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
+          ${statusBadge(request.status)}
+        </div>
+        <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || "Деталь")}</div>
+        <div class="supplier-dashboard-card__meta">
+          <span>${escapeHtml(request.car || "Авто не указано")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
+          ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
+          ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<span>Доставка: ${supplierAmount(request.delivery_cost_cny, "CNY")}</span>` : ""}
+        </div>
+      </button>
+      ${dashboardRequestTrackingLine(request)}
+    </article>
   `;
 }
 
