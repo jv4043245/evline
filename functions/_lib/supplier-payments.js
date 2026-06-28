@@ -315,6 +315,19 @@ function paymentAmountDeltaText(payment = {}, paidAmount = 0, paidCurrency = "CN
   return `Увага: оплачено менше рахунку на ${formatAmount(Math.abs(delta.amount), delta.currency)}`;
 }
 
+async function markSupplierRequestPaymentPaid(env, payment, now = new Date().toISOString()) {
+  if (!payment?.supplier_request_id || !(await tableHasColumn(env, "supplier_requests", "payment_id"))) return;
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET payment_id = ?,
+      status = CASE WHEN status IN ('accepted', 'purchased') THEN 'purchased' ELSE status END,
+      updated_at = ?
+    WHERE id = ?`
+  )
+    .bind(payment.id, now, payment.supplier_request_id)
+    .run();
+}
+
 function buildPaymentRequestMessage(order, payment) {
   const lines = [
     "💳 Оплата постачальнику EVLine",
@@ -496,6 +509,7 @@ export async function updateSupplierPayment(env, paymentId, payload = {}) {
   const updated = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(paymentId).first();
 
   if (updated?.status === "paid") {
+    await markSupplierRequestPaymentPaid(env, updated, now);
     await advanceOrderStatus(env, updated.order_id, "paid", {
       actor: "manager",
       comment: `Оплату постачальнику ${updated.supplier_name || "без назви"} позначено як оплачену в CRM${number(updated.paid_amount) > 0 ? `: ${formatAmount(updated.paid_amount, updated.paid_currency)}` : ""}`,
@@ -587,11 +601,35 @@ async function recognizePaymentScreenshot(env, fileId) {
   };
 }
 
+function parsePaymentNumber(rawNumber) {
+  const raw = text(rawNumber);
+  if (!raw) return 0;
+  const compact = raw.replace(/\s+/g, "");
+  const separators = compact.match(/[.,]/g) || [];
+  if (!separators.length) return number(compact);
+
+  if (separators.length === 1) {
+    const [whole, fraction = ""] = compact.split(/[.,]/);
+    if (fraction.length === 3 && whole.length <= 3) return number(`${whole}${fraction}`);
+    if (fraction.length >= 1 && fraction.length <= 2) return number(`${whole}.${fraction}`);
+    return number(`${whole}${fraction}`);
+  }
+
+  const lastSeparatorIndex = Math.max(compact.lastIndexOf("."), compact.lastIndexOf(","));
+  const decimalTail = compact.slice(lastSeparatorIndex + 1);
+  const hasDecimalTail = decimalTail.length >= 1 && decimalTail.length <= 2;
+  if (hasDecimalTail) {
+    const whole = compact.slice(0, lastSeparatorIndex).replace(/[.,]/g, "");
+    return number(`${whole}.${decimalTail}`);
+  }
+  return number(compact.replace(/[.,]/g, ""));
+}
+
 function paymentAmountCandidates(value) {
   const input = text(value).replace(/\s+/g, " ");
   if (!input) return [];
 
-  const matches = [...input.matchAll(/([¥￥])?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*(?:(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
+  const matches = [...input.matchAll(/([¥￥])?\s*((?:\d{1,3}(?:[\s,.]\d{3})+(?:[.,]\d{1,2})?)|\d{1,7}(?:[.,]\d{1,2})?)\s*(?:(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
   return matches
     .map((match) => {
       const rawNumber = String(match[2] || "");
@@ -601,9 +639,13 @@ function paymentAmountCandidates(value) {
       const before = input[start - 1] || "";
       const after = input[end] || "";
       const hasCurrency = Boolean(match[1] || match[3]);
-      const amount = Number(rawNumber.replace(",", "."));
+      const amount = parsePaymentNumber(rawNumber);
       const context = input.slice(Math.max(0, start - 30), Math.min(input.length, end + 30)).toLowerCase();
-      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber };
+      const beforeContext = input.slice(Math.max(0, start - 22), start).toLowerCase();
+      const afterContext = input.slice(end, Math.min(input.length, end + 18)).toLowerCase();
+      const hasPaymentContext = /оплач|сплач|paid|付款|支付|实付|фактич|actual/.test(`${beforeContext} ${afterContext}`);
+      const hasInvoiceContext = /рахунок|сч[её]т|invoice|request|заявк|замовл|заказ/.test(beforeContext);
+      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber, hasPaymentContext, hasInvoiceContext };
     })
     .filter((candidate) => {
       if (!Number.isFinite(candidate.amount) || candidate.amount <= 0) return false;
@@ -620,6 +662,16 @@ export function parsePaymentAmount(value, { requestedAmount = 0 } = {}) {
   const withCurrency = candidates.filter((candidate) => candidate.hasCurrency);
   const pool = withCurrency.length ? withCurrency : candidates;
   const requested = number(requestedAmount);
+
+  const paymentContextCandidates = candidates.filter((candidate) => candidate.hasPaymentContext && !candidate.hasInvoiceContext);
+  if (paymentContextCandidates.length) {
+    const aboveRequested = requested > 0
+      ? paymentContextCandidates.filter((candidate) => candidate.amount >= requested * 0.95)
+      : [];
+    const targetPool = aboveRequested.length ? aboveRequested : paymentContextCandidates;
+    const chosen = [...targetPool].sort((a, b) => b.amount - a.amount)[0];
+    return { amount: chosen?.amount || 0, currency: "CNY" };
+  }
 
   if (withCurrency.length) {
     const chosen = [...withCurrency].sort((a, b) => b.amount - a.amount)[0];
@@ -744,15 +796,7 @@ async function attachPaymentReceipt(env, payment, {
   let statusAdvance = { advanced: false, event_id: "" };
 
   if (nextStatus === "paid") {
-    if (payment.supplier_request_id && await tableHasColumn(env, "supplier_requests", "payment_id")) {
-      await env.DB.prepare(
-        `UPDATE supplier_requests
-        SET payment_id = ?, status = CASE WHEN status IN ('accepted', 'purchased') THEN 'purchased' ELSE status END, updated_at = ?
-        WHERE id = ?`
-      )
-        .bind(payment.id, now, payment.supplier_request_id)
-        .run();
-    }
+    await markSupplierRequestPaymentPaid(env, payment, now);
 
     const deltaText = paymentAmountDeltaText(payment, parsedPaid, currency);
     statusAdvance = await advanceOrderStatus(env, payment.order_id, "paid", {
