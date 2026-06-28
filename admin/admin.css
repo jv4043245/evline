@@ -2548,6 +2548,10 @@ body.audit-log-open .audit-log-panel {
   gap: 8px;
 }
 
+.china-preorder-card__grid .wide {
+  grid-column: span 2;
+}
+
 .china-preorder-card__grid > div,
 .china-preorder-card__payment,
 .china-preorder-card__tracking,
@@ -2651,7 +2655,9 @@ body.audit-log-open .audit-log-panel {
 }
 
 .china-chat__bubble p {
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .china-chat__attachments {
@@ -3152,6 +3158,7 @@ body.audit-log-open .audit-log-panel {
   .google-ads-summary,
   .manual-order-form,
   .china-preorder-form,
+  .china-preorder-card__grid,
   .order-editor,
   .cost-form,
   .shipping-form,

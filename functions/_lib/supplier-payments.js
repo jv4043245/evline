@@ -644,11 +644,13 @@ function paymentAmountCandidates(value) {
       const beforeContext = input.slice(Math.max(0, start - 22), start).toLowerCase();
       const afterContext = input.slice(end, Math.min(input.length, end + 18)).toLowerCase();
       const hasPaymentContext = /оплач|сплач|paid|付款|支付|实付|фактич|actual/.test(`${beforeContext} ${afterContext}`);
-      const hasInvoiceContext = /рахунок|сч[её]т|invoice|request|заявк|замовл|заказ/.test(beforeContext);
-      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber, hasPaymentContext, hasInvoiceContext };
+      const hasInvoiceContext = /(?:рахунок|сч[её]т|invoice|request|заявк|замовл|заказ)\s*[:#№-]?\s*$/i.test(beforeContext.trim());
+      const isDateFragment = !hasCurrency && /[-/]/.test(`${before}${after}`);
+      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber, hasPaymentContext, hasInvoiceContext, isDateFragment };
     })
     .filter((candidate) => {
       if (!Number.isFinite(candidate.amount) || candidate.amount <= 0) return false;
+      if (candidate.isDateFragment) return false;
       if ((candidate.before === ":" || candidate.after === ":") && !candidate.hasCurrency && !candidate.hasPaymentContext) return false;
       if (!candidate.hasCurrency && /^0\d+$/.test(candidate.rawNumber)) return false;
       return true;

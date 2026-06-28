@@ -757,6 +757,7 @@ function publicQuote(quote) {
 
 function publicPayment(payment) {
   if (!payment) return null;
+  const hasReceiptFile = Boolean(payment.receipt_telegram_file_id);
   return {
     status: payment.status,
     requested_amount: payment.requested_amount,
@@ -764,8 +765,9 @@ function publicPayment(payment) {
     paid_amount: payment.paid_amount,
     paid_currency: payment.paid_currency,
     paid_at: payment.paid_at,
-    receipt_present: Boolean(payment.receipt_telegram_file_id || payment.receipt_message_id),
-    receipt_url: payment.receipt_telegram_file_id ? "payment-receipt" : "",
+    receipt_present: hasReceiptFile,
+    receipt_recorded: Boolean(payment.receipt_telegram_file_id || payment.receipt_message_id),
+    receipt_url: hasReceiptFile ? "payment-receipt" : "",
     updated_at: payment.updated_at,
   };
 }
@@ -841,6 +843,7 @@ function dashboardAmount(value) {
 
 function publicDashboardPayment(row = {}) {
   const accessToken = text(row.request_access_token);
+  const hasReceiptFile = Boolean(row.receipt_telegram_file_id);
   return {
     payment_number: row.payment_number || row.id,
     status: row.status,
@@ -851,7 +854,8 @@ function publicDashboardPayment(row = {}) {
     request_public_number: row.request_public_number,
     item_name: row.request_item_name,
     supplier_link: accessToken ? `/supplier/request/${accessToken}` : "",
-    receipt_present: Boolean(row.receipt_telegram_file_id || row.receipt_message_id),
+    receipt_present: hasReceiptFile,
+    receipt_recorded: Boolean(row.receipt_telegram_file_id || row.receipt_message_id),
   };
 }
 
@@ -1121,7 +1125,7 @@ export async function listSupplierDashboardByToken(env, token) {
     `SELECT * FROM supplier_requests
     WHERE supplier_id = ?
       AND status NOT IN ('closed', 'canceled')
-    ORDER BY created_at DESC
+    ORDER BY updated_at DESC, created_at DESC
     LIMIT 80`,
     supplier.id
   );

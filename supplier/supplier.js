@@ -322,7 +322,7 @@ function paymentDelta(payment = {}) {
 function renderPayment(payment = {}, tokenValue = token) {
   if (!payment) return "";
   const paid = payment.status === "paid";
-  const receiptAttached = Boolean(payment.receipt_present);
+  const receiptAttached = Boolean(payment.receipt_url || payment.receipt_present);
   const receiptVersion = encodeURIComponent(payment.updated_at || payment.paid_at || "");
   const receiptUrl = `/api/supplier/request/${encodeURIComponent(tokenValue)}/payment-receipt${receiptVersion ? `?v=${receiptVersion}` : ""}`;
   const delta = paymentDelta(payment);
