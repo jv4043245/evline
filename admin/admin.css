@@ -2654,6 +2654,63 @@ body.audit-log-open .audit-log-panel {
   white-space: pre-wrap;
 }
 
+.china-chat__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.china-chat__attachment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border: 1px solid var(--china-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #1d4ed8;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.china-chat__attachment--image {
+  width: 86px;
+  height: 66px;
+}
+
+.china-chat__attachment--image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.china-chat__attachment--file {
+  gap: 7px;
+  max-width: 220px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.china-chat__attachment--file svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.china-chat__attachment--file span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .china-preorder-card__thread label {
   display: grid;
   gap: 6px;
@@ -2668,6 +2725,60 @@ body.audit-log-open .audit-log-panel {
 
 .china-preorder-card__thread-actions {
   justify-content: flex-end;
+}
+
+.china-preorder-card__thread .china-file-button {
+  min-height: 34px;
+  max-width: 180px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--china-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.china-file-button:hover,
+.china-file-button:focus-within,
+.china-file-button.has-file {
+  border-color: var(--china-accent);
+  background: var(--china-accent-soft);
+  color: #1d4ed8;
+  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+.china-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.china-file-button svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.china-file-button span {
+  min-width: 0;
+  max-width: 112px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-link-button {

@@ -31,6 +31,7 @@ async function recordSupplierAudit(env, action, bundle, payload = {}) {
       purchase_days: quote.purchase_days ?? payload.purchase_days,
       tracking_number: payload.tracking_number,
       message: payload.comment_cn || payload.comment || payload.comment_translated,
+      attachment_name: payload.attachment_name,
     },
   });
 }

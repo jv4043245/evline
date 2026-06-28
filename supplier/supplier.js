@@ -71,6 +71,24 @@ function sendButton(extraClass = "") {
   `;
 }
 
+function paperclipIcon() {
+  return `
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+    </svg>
+  `;
+}
+
+function supplierFileButton() {
+  return `
+    <label class="supplier-file-button" aria-label="Прикрепить файл" title="Прикрепить файл">
+      <input name="attachment" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" data-supplier-chat-file>
+      ${paperclipIcon()}
+      <span data-supplier-file-name></span>
+    </label>
+  `;
+}
+
 function noSupplyButton(extraClass = "") {
   return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply ${escapeHtml(extraClass)}" type="button" data-action="no_stock" aria-label="Отметить, что по позиции нет поставки" title="无法供货">Нет поставки</button>`;
 }
@@ -125,6 +143,102 @@ async function supplierApi(path, options = {}) {
   return body;
 }
 
+const CHAT_ATTACHMENT_MAX_DATA_URL = 1_200_000;
+const CHAT_ATTACHMENT_MAX_PDF_BYTES = 900 * 1024;
+const CHAT_ATTACHMENT_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const CHAT_ATTACHMENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+
+function readFileDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Не удалось прочитать файл."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Не удалось открыть изображение."));
+    image.src = dataUrl;
+  });
+}
+
+function canvasToBlob(canvas, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", quality);
+  });
+}
+
+function normalizedAttachmentMime(file) {
+  return String(file?.type || "").toLowerCase().replace("image/jpg", "image/jpeg");
+}
+
+function chatAttachmentName(file, mime) {
+  const fallback = mime === "application/pdf" ? "document.pdf" : "attachment.jpg";
+  return plainText(file?.name).slice(0, 120) || fallback;
+}
+
+async function compressChatImage(file) {
+  const source = await readFileDataUrl(file);
+  if (source.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return source;
+  const image = await loadImage(source);
+  const maxSide = 1400;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  for (const quality of [0.82, 0.72, 0.62, 0.52, 0.42]) {
+    const blob = await canvasToBlob(canvas, quality);
+    if (!blob) continue;
+    const dataUrl = await readFileDataUrl(blob);
+    if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
+  }
+  throw new Error("Файл слишком большой. Выберите изображение поменьше.");
+}
+
+async function prepareChatAttachment(input) {
+  const file = input?.files?.[0];
+  if (!file) return null;
+  const mime = normalizedAttachmentMime(file);
+  if (!CHAT_ATTACHMENT_TYPES.has(mime)) {
+    throw new Error("Можно прикрепить PNG, JPG, WEBP или PDF.");
+  }
+  if (mime === "application/pdf") {
+    if (file.size > CHAT_ATTACHMENT_MAX_PDF_BYTES) {
+      throw new Error("PDF слишком большой. Максимум около 900 КБ.");
+    }
+    return {
+      attachment_name: chatAttachmentName(file, mime),
+      attachment_mime: mime,
+      attachment_data_url: await readFileDataUrl(file),
+    };
+  }
+  if (file.size > CHAT_ATTACHMENT_MAX_IMAGE_BYTES) {
+    throw new Error("Изображение слишком большое. Максимум 8 МБ.");
+  }
+  return {
+    attachment_name: chatAttachmentName(file, mime),
+    attachment_mime: "image/jpeg",
+    attachment_data_url: await compressChatImage(file),
+  };
+}
+
+async function appendChatAttachmentPayload(form, payload) {
+  delete payload.attachment;
+  const attachment = await prepareChatAttachment(form?.querySelector("[data-supplier-chat-file]"));
+  if (!attachment) return false;
+  Object.assign(payload, attachment);
+  return true;
+}
+
 function statusBadge(status) {
   const safe = String(status || "sent").replace(/[^a-z0-9_-]/gi, "");
   return `<span class="supplier-status supplier-status--${safe}">${escapeHtml(requestStatusLabels[status] || status || "Новый запрос")}</span>`;
@@ -139,6 +253,35 @@ function requestImages(images = []) {
           <img src="${escapeHtml(image.image_url)}" alt="Фото детали" loading="lazy">
         </a>
       `).join("")}
+    </div>
+  `;
+}
+
+function chatAttachmentLabel(attachment = {}) {
+  return plainText(attachment.name) || (attachment.kind === "pdf" ? "document.pdf" : "Файл");
+}
+
+function chatAttachments(attachments = []) {
+  const visible = attachments.filter((attachment) => plainText(attachment.url));
+  if (!visible.length) return "";
+  return `
+    <div class="supplier-chat__attachments">
+      ${visible.map((attachment) => {
+        const label = chatAttachmentLabel(attachment);
+        if (attachment.kind === "image" || String(attachment.mime || "").startsWith("image/")) {
+          return `
+            <a class="supplier-chat__attachment supplier-chat__attachment--image" href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener" title="${escapeHtml(label)}">
+              <img src="${escapeHtml(attachment.url)}" alt="${escapeHtml(label)}" loading="lazy">
+            </a>
+          `;
+        }
+        return `
+          <a class="supplier-chat__attachment supplier-chat__attachment--file" href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener">
+            ${paperclipIcon()}
+            <span>${escapeHtml(label)}</span>
+          </a>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -267,34 +410,39 @@ function supplierChatMessages(data = {}) {
   for (const event of events) {
     const status = plainText(event.status);
     const comment = plainText(event.comment_cn || event.comment_translated);
+    const attachments = event.attachments || [];
+    const hasAttachments = attachments.length > 0;
     if (status === "quoted") {
-      if (comment && !isDuplicateQuoteEvent(event, quotes)) {
+      if ((comment || hasAttachments) && (!comment || !isDuplicateQuoteEvent(event, quotes) || hasAttachments)) {
         messages.push({
           actor: "supplier",
           title: supplierSelfTitle(),
           meta: "Сообщение",
           text: comment,
+          attachments,
           created_at: event.created_at,
           order: 3,
         });
       }
       continue;
     }
-    if (status === "needs_info" && comment) {
+    if (status === "needs_info" && (comment || hasAttachments)) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
         meta: "Нужно уточнение",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 3,
       });
-    } else if (status === "sent" && comment) {
+    } else if (status === "sent" && (comment || hasAttachments)) {
       messages.push({
         actor: "evline",
         title: "EVLine",
         meta: "Ответ",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 4,
       });
@@ -304,24 +452,27 @@ function supplierChatMessages(data = {}) {
         title: supplierSelfTitle(),
         meta: "Нет поставки",
         text: comment || "Вы отметили, что по позиции нет поставки.",
+        attachments,
         created_at: event.created_at,
         order: 5,
       });
-    } else if (status === "problem" && comment) {
+    } else if (status === "problem" && (comment || hasAttachments)) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
         meta: "Проблема",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 6,
       });
-    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
+    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number) || hasAttachments)) {
       messages.push({
         actor: "system",
         title: "Логистика",
         meta: status === "china_tracking" ? "Отправлено, ждём доставку" : "На складе в Китае",
         text: [plainText(event.tracking_number) ? `Трек: ${plainText(event.tracking_number)}` : "", comment].filter(Boolean).join("\n"),
+        attachments,
         created_at: event.created_at,
         order: 7,
       });
@@ -344,7 +495,8 @@ function renderSupplierChat(data = {}) {
               <strong>${escapeHtml(message.title)}</strong>
               <span>${escapeHtml(message.meta)} · ${escapeHtml(shortDateTime(message.created_at))}</span>
             </div>
-            <p>${escapeHtml(message.text)}</p>
+            ${message.text ? `<p>${escapeHtml(message.text)}</p>` : ""}
+            ${chatAttachments(message.attachments || [])}
           </div>
         </article>
       `).join("")}
@@ -403,6 +555,7 @@ function renderMessageForm(data = {}) {
         <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0">
       </label>` : ""}
       <div class="supplier-message-form__actions">
+        ${supplierFileButton()}
         ${sendButton("supplier-button--small")}
       </div>
     </form>
@@ -804,6 +957,17 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+root?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-supplier-chat-file]");
+  if (!input) return;
+  const label = input.closest(".supplier-file-button");
+  const file = input.files?.[0];
+  const name = label?.querySelector("[data-supplier-file-name]");
+  label?.classList.toggle("has-file", Boolean(file));
+  if (label) label.title = file?.name || "Прикрепить файл";
+  if (name) name.textContent = file?.name ? file.name.slice(0, 32) : "";
+});
+
 root?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
@@ -840,10 +1004,12 @@ root?.addEventListener("submit", async (event) => {
       const payload = Object.fromEntries(new FormData(form));
       const hasComment = Boolean(plainText(payload.comment_cn));
       const hasDelivery = Boolean(formHasDeliveryCost(payload));
-      if (!hasComment && !hasDelivery) {
+      const hasAttachment = Boolean(form.querySelector("[data-supplier-chat-file]")?.files?.[0]);
+      if (!hasComment && !hasDelivery && !hasAttachment) {
         throw new Error(form.elements.namedItem("delivery_cost_cny") ? "Напишите сообщение или укажите доставку." : "Напишите сообщение.");
       }
-      payload.action = hasComment ? "message" : "delivery_cost";
+      await appendChatAttachmentPayload(form, payload);
+      payload.action = hasComment || hasAttachment ? "message" : "delivery_cost";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
         method: "POST",
         body: JSON.stringify(payload),

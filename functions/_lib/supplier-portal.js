@@ -53,6 +53,8 @@ const SUPPLIER_STATUS_PROGRESS = {
 };
 const MAX_PUBLIC_QUOTES_PER_REQUEST = 5;
 const MAX_PUBLIC_EVENTS_PER_REQUEST = 30;
+const MAX_SUPPLIER_ATTACHMENT_DATA_URL = 1_250_000;
+const SUPPLIER_ATTACHMENT_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const DIRECTORY_SUPPLIERS = new Map([
   ["zeekr", { id: "supplier_zeekr", name: "Zeekr" }],
   ["byd", { id: "supplier_byd", name: "BYD" }],
@@ -221,6 +223,56 @@ function assertUrlLike(value) {
   return url.slice(0, 1000);
 }
 
+function safeDecodeURIComponent(value) {
+  try {
+    return decodeURIComponent(value || "");
+  } catch {
+    return value || "";
+  }
+}
+
+function normalizeSupplierAttachmentName(value, mime = "") {
+  const raw = text(value)
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    .replace(/[\u0000-\u001F<>:"|?*]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (raw) return raw.slice(0, 120);
+  return mime === "application/pdf" ? "document.pdf" : "attachment";
+}
+
+function normalizeSupplierAttachment(payload = {}) {
+  const url = text(payload.attachment_data_url || payload.attachment_url);
+  if (!url) return null;
+  if (url.length > MAX_SUPPLIER_ATTACHMENT_DATA_URL) {
+    const error = new Error("Attachment is too large");
+    error.status = 400;
+    throw error;
+  }
+
+  const match = url.match(/^data:(image\/(?:png|jpe?g|webp)|application\/pdf);base64,/i);
+  if (!match) {
+    const error = new Error("Attachment must be PNG, JPG, WEBP or PDF");
+    error.status = 400;
+    throw error;
+  }
+
+  const mime = match[1].toLowerCase().replace("image/jpg", "image/jpeg");
+  if (!SUPPLIER_ATTACHMENT_MIME.has(mime)) {
+    const error = new Error("Unsupported attachment type");
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    url,
+    mime,
+    name: normalizeSupplierAttachmentName(payload.attachment_name, mime),
+  };
+}
+
 function assertSupplierTextSafe(...values) {
   const content = values.map(text).filter(Boolean).join("\n");
   if (!content) return;
@@ -272,6 +324,17 @@ async function safeDelete(env, sql, ...binds) {
 async function insertSupplierEvent(env, supplierRequest, payload = {}) {
   const status = normalizeStatus(payload.status, supplierRequest.status);
   const now = new Date().toISOString();
+  const event = {
+    id: crypto.randomUUID(),
+    supplier_request_id: supplierRequest.id,
+    order_id: supplierRequest.order_id,
+    supplier_id: supplierRequest.supplier_id,
+    status,
+    tracking_number: text(payload.tracking_number),
+    comment_cn: text(payload.comment_cn),
+    comment_translated: text(payload.comment_translated),
+    created_at: now,
+  };
   await env.DB.prepare(
     `INSERT INTO supplier_tracking_events (
       id, supplier_request_id, order_id, supplier_id, status, tracking_number,
@@ -279,17 +342,18 @@ async function insertSupplierEvent(env, supplierRequest, payload = {}) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
-      crypto.randomUUID(),
-      supplierRequest.id,
-      supplierRequest.order_id,
-      supplierRequest.supplier_id,
-      status,
-      text(payload.tracking_number),
-      text(payload.comment_cn),
-      text(payload.comment_translated),
-      now
+      event.id,
+      event.supplier_request_id,
+      event.order_id,
+      event.supplier_id,
+      event.status,
+      event.tracking_number,
+      event.comment_cn,
+      event.comment_translated,
+      event.created_at
     )
     .run();
+  return event;
 }
 
 function normalizeSupplierChatKey(value) {
@@ -542,6 +606,70 @@ function attachImages(quotes, images) {
   }));
 }
 
+function supplierAttachmentType(event, actor, attachment) {
+  return [
+    "attachment",
+    event.id,
+    actor,
+    encodeURIComponent(attachment.name || "attachment"),
+    encodeURIComponent(attachment.mime || "application/octet-stream"),
+  ].join(":");
+}
+
+function parseSupplierAttachment(image = {}) {
+  const match = text(image.image_type).match(/^attachment:([^:]+):([^:]+):([^:]*):([^:]*)$/);
+  if (!match) return null;
+  return {
+    id: image.id,
+    event_id: match[1],
+    actor: safeDecodeURIComponent(match[2]),
+    name: safeDecodeURIComponent(match[3]) || "attachment",
+    mime: safeDecodeURIComponent(match[4]) || "",
+    url: image.image_url,
+    created_at: image.created_at,
+  };
+}
+
+function isSupplierAttachmentImage(image = {}) {
+  return text(image.image_type).startsWith("attachment:");
+}
+
+function attachEventAttachments(events, images) {
+  const attachmentsByEvent = new Map();
+  for (const image of images) {
+    const attachment = parseSupplierAttachment(image);
+    if (!attachment?.event_id) continue;
+    const rows = attachmentsByEvent.get(attachment.event_id) || [];
+    rows.push(attachment);
+    attachmentsByEvent.set(attachment.event_id, rows);
+  }
+
+  return events.map((event) => ({
+    ...event,
+    attachments: attachmentsByEvent.get(event.id) || [],
+  }));
+}
+
+async function saveSupplierEventAttachment(env, supplierRequest, event, payload = {}, actor = "supplier") {
+  const attachment = normalizeSupplierAttachment(payload);
+  if (!attachment || !event?.id) return null;
+  await env.DB.prepare(
+    `INSERT INTO supplier_request_images (
+      id, supplier_request_id, quote_id, image_url, image_type, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      crypto.randomUUID(),
+      supplierRequest.id,
+      null,
+      attachment.url,
+      supplierAttachmentType(event, actor, attachment),
+      event.created_at || new Date().toISOString()
+    )
+    .run();
+  return attachment;
+}
+
 async function loadSupplierBundle(env, supplierRequest) {
   if (!supplierRequest) return null;
   const [quotes, images, trackingEvents] = await Promise.all([
@@ -556,9 +684,9 @@ async function loadSupplierBundle(env, supplierRequest) {
 
   return {
     request: supplierRequest,
-    request_images: images.filter((image) => !image.quote_id),
+    request_images: images.filter((image) => !image.quote_id && !isSupplierAttachmentImage(image)),
     quotes: attachImages(quotes, images),
-    tracking_events: trackingEvents,
+    tracking_events: attachEventAttachments(trackingEvents, images),
     payment,
     supplier_link: `/supplier/request/${supplierRequest.access_token}`,
     dashboard_link: supplier?.dashboard_access_token ? `/supplier/dashboard/${supplier.dashboard_access_token}` : "",
@@ -592,6 +720,17 @@ function publicImage(image) {
     image_url: image.image_url,
     image_type: image.image_type,
     created_at: image.created_at,
+  };
+}
+
+function publicAttachment(attachment) {
+  const mime = text(attachment.mime);
+  return {
+    name: text(attachment.name) || "attachment",
+    mime,
+    kind: mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : "file",
+    url: attachment.url,
+    created_at: attachment.created_at,
   };
 }
 
@@ -636,6 +775,7 @@ function publicEvent(event) {
     tracking_number: event.tracking_number,
     comment_cn: event.comment_cn,
     comment_translated: event.comment_translated,
+    attachments: (event.attachments || []).map(publicAttachment),
     created_at: event.created_at,
   };
 }
@@ -1021,6 +1161,7 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
     ? normalizeOptionalAmount(options.deliveryCostCny)
     : normalizeOptionalAmount(supplierRequest.delivery_cost_cny);
   const trackingNumber = text(options.trackingNumber).toUpperCase();
+  const attachmentName = text(options.attachmentName);
   const isTrackingUpdate = source === "supplier_china_tracking" || source === "supplier_china_warehouse";
   const lines = [
     isTrackingUpdate
@@ -1037,6 +1178,7 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
     deliveryCost !== null ? `Доставка: ${deliveryCost} CNY` : "",
     "",
     messageRu ? `Сообщение: ${messageRu}` : "",
+    attachmentName ? `Файл: ${attachmentName}` : "",
     "",
     isTrackingUpdate ? "Действий от менеджера сейчас не требуется." : "Ответьте reply на это сообщение, чтобы отправить ответ китайцу.",
     `CRM: ${origin}/admin/`,
@@ -1225,15 +1367,17 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
   const commentRu = comment
     ? await translateSupplierText(env, comment, supplierTranslationDirections().supplierToManager)
     : "";
+  const attachment = normalizeSupplierAttachment(payload);
+  const hasAttachment = Boolean(attachment);
   const hasDeliveryUpdate = hasDeliveryCostPayload(payload);
-  if (!comment && !hasDeliveryUpdate) {
-    const error = new Error("Message text is required");
+  if (!comment && !hasDeliveryUpdate && !hasAttachment) {
+    const error = new Error("Message text or attachment is required");
     error.status = 400;
     throw error;
   }
   if (comment) assertSupplierTextSafe(comment);
 
-  if (comment) {
+  if (comment || hasAttachment) {
     const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
       .bind(supplierRequest.id)
       .first();
@@ -1253,17 +1397,19 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
       .run();
   }
 
-  if (comment) {
-    await insertSupplierEvent(env, supplierRequest, {
+  if (comment || hasAttachment) {
+    const event = await insertSupplierEvent(env, supplierRequest, {
       status: "quoted",
       comment_cn: comment,
       comment_translated: commentRu,
     });
+    await saveSupplierEventAttachment(env, supplierRequest, event, payload, "supplier");
 
     await notifyManagerSupplierQuote(env, supplierRequest, null, options.requestUrl, {
       messageRu: commentRu,
       messageCn: comment,
       deliveryCostCny: payload.delivery_cost_cny,
+      attachmentName: attachment?.name || "",
       source: "supplier_message",
     }).catch(() => null);
   }
@@ -1445,15 +1591,19 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
   }
 
   const commentRu = text(payload.manager_comment || payload.comment || payload.comment_ru || payload.comment_cn).slice(0, 2000);
-  if (!commentRu) {
-    const error = new Error("Clarification text is required");
+  const attachment = normalizeSupplierAttachment(payload);
+  const hasAttachment = Boolean(attachment);
+  if (!commentRu && !hasAttachment) {
+    const error = new Error("Clarification text or attachment is required");
     error.status = 400;
     throw error;
   }
-  assertSupplierTextSafe(commentRu);
-  const commentCn = text(payload.comment_cn) && !text(payload.manager_comment || payload.comment || payload.comment_ru)
+  if (commentRu) assertSupplierTextSafe(commentRu);
+  const commentCn = commentRu && text(payload.comment_cn) && !text(payload.manager_comment || payload.comment || payload.comment_ru)
     ? text(payload.comment_cn).slice(0, 2000)
-    : await translateSupplierText(env, commentRu, supplierTranslationDirections().managerToSupplier);
+    : commentRu
+      ? await translateSupplierText(env, commentRu, supplierTranslationDirections().managerToSupplier)
+      : "";
 
   const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
     .bind(supplierRequest.id)
@@ -1467,12 +1617,14 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
   const now = new Date().toISOString();
   const nextStatus = supplierRequest.status === "needs_info" ? "sent" : supplierRequest.status;
   const fields = [
-    ["manager_comment", commentRu],
     ["status", nextStatus],
     ["updated_at", now],
   ];
+  if (commentRu) {
+    fields.unshift(["manager_comment", commentRu]);
+  }
   if (await tableHasColumn(env, "supplier_requests", "manager_comment_ru")) {
-    fields.push(["manager_comment_ru", commentRu], ["manager_comment_cn", commentCn]);
+    if (commentRu) fields.push(["manager_comment_ru", commentRu], ["manager_comment_cn", commentCn]);
   }
 
   await env.DB.prepare(
@@ -1483,16 +1635,17 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     .bind(...fields.map(([, value]) => value), supplierRequest.id)
     .run();
 
-  await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
+  const event = await insertSupplierEvent(env, { ...supplierRequest, status: nextStatus }, {
     status: "sent",
     comment_cn: commentCn,
     comment_translated: commentRu,
   });
+  await saveSupplierEventAttachment(env, supplierRequest, event, payload, "manager");
 
   const updated = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
     .bind(supplierRequest.id)
     .first();
-  return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: commentRu, updated_at: now });
+  return loadSupplierBundle(env, updated || { ...supplierRequest, status: nextStatus, manager_comment: commentRu || supplierRequest.manager_comment, updated_at: now });
 }
 
 export async function handleSupplierTelegramUpdate(env, message = {}) {

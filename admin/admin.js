@@ -304,6 +304,14 @@ function textOrDash(value) {
   return valueText ? escapeHtml(valueText) : "-";
 }
 
+function paperclipIcon() {
+  return `
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+    </svg>
+  `;
+}
+
 function safeClass(value) {
   return String(value || "new").replace(/[^a-z0-9_-]/gi, "");
 }
@@ -1364,6 +1372,45 @@ async function showChinaTelegramSettings(button) {
   }
 }
 
+function chinaChatAttachmentLabel(attachment = {}) {
+  return plainText(attachment.name) || (attachment.kind === "pdf" ? "document.pdf" : "Файл");
+}
+
+function renderChinaChatAttachments(attachments = []) {
+  const visible = attachments.filter((attachment) => plainText(attachment.url));
+  if (!visible.length) return "";
+  return `
+    <div class="china-chat__attachments">
+      ${visible.map((attachment) => {
+        const label = chinaChatAttachmentLabel(attachment);
+        if (attachment.kind === "image" || String(attachment.mime || "").startsWith("image/")) {
+          return `
+            <a class="china-chat__attachment china-chat__attachment--image" href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener" title="${escapeHtml(label)}">
+              <img src="${escapeHtml(attachment.url)}" alt="${escapeHtml(label)}" loading="lazy">
+            </a>
+          `;
+        }
+        return `
+          <a class="china-chat__attachment china-chat__attachment--file" href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener">
+            ${paperclipIcon()}
+            <span>${escapeHtml(label)}</span>
+          </a>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function chinaReplyFileButton() {
+  return `
+    <label class="china-file-button" aria-label="Прикрепить файл" title="Прикрепить файл">
+      <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf" data-china-reply-file>
+      ${paperclipIcon()}
+      <span data-china-reply-file-name></span>
+    </label>
+  `;
+}
+
 function chinaChatMessages(bundle = {}) {
   const request = bundle.request || {};
   const events = bundle.tracking_events || [];
@@ -1413,13 +1460,16 @@ function chinaChatMessages(bundle = {}) {
   for (const event of events) {
     const status = plainText(event.status);
     const comment = plainText(event.comment_translated || event.comment_cn);
+    const attachments = event.attachments || [];
+    const hasAttachments = attachments.length > 0;
     if (status === "quoted") {
-      if (comment && !isDuplicateChinaQuoteEvent(event, quotes)) {
+      if ((comment || hasAttachments) && (!comment || !isDuplicateChinaQuoteEvent(event, quotes) || hasAttachments)) {
         messages.push({
           actor: "supplier",
           title: supplierChatTitle(request),
           meta: "Сообщение",
           text: comment,
+          attachments,
           created_at: event.created_at,
           order: 3,
           status,
@@ -1427,22 +1477,24 @@ function chinaChatMessages(bundle = {}) {
       }
       continue;
     }
-    if (status === "needs_info" && comment) {
+    if (status === "needs_info" && (comment || hasAttachments)) {
       messages.push({
         actor: "supplier",
         title: supplierChatTitle(request),
         meta: "Нужно уточнение",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 3,
         status,
       });
-    } else if (status === "sent" && comment) {
+    } else if (status === "sent" && (comment || hasAttachments)) {
       messages.push({
         actor: "evline",
         title: "EVLine",
         meta: "Ответ",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 4,
         status,
@@ -1453,26 +1505,29 @@ function chinaChatMessages(bundle = {}) {
         title: supplierChatTitle(request),
         meta: "Нет поставки",
         text: comment || "Поставщик отметил, что по позиции нет поставки.",
+        attachments,
         created_at: event.created_at,
         order: 5,
         status,
       });
-    } else if (status === "problem" && comment) {
+    } else if (status === "problem" && (comment || hasAttachments)) {
       messages.push({
         actor: "supplier",
         title: supplierChatTitle(request),
         meta: "Проблема",
         text: comment,
+        attachments,
         created_at: event.created_at,
         order: 6,
         status,
       });
-    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number))) {
+    } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number) || hasAttachments)) {
       messages.push({
         actor: "system",
         title: "Логистика",
         meta: status === "china_tracking" ? "Отправлено, ждём доставку" : "На складе в Китае",
         text: [plainText(event.tracking_number) ? `Трек: ${plainText(event.tracking_number)}` : "", comment].filter(Boolean).join("\n"),
+        attachments,
         created_at: event.created_at,
         order: 7,
         status,
@@ -1500,7 +1555,8 @@ function renderChinaThread(bundle = {}) {
                 <b>${escapeHtml(message.title)}</b>
                 <span>${escapeHtml(message.meta)} · ${escapeHtml(shortDateTime(message.created_at))}</span>
               </div>
-              <p>${escapeHtml(message.text)}</p>
+              ${message.text ? `<p>${escapeHtml(message.text)}</p>` : ""}
+              ${renderChinaChatAttachments(message.attachments || [])}
             </div>
           </article>
           `).join("")}
@@ -1512,6 +1568,7 @@ function renderChinaThread(bundle = {}) {
           <textarea rows="2" placeholder="Написать сообщение по этому запросу" data-china-reply-text></textarea>
         </label>
         <div class="china-preorder-card__thread-actions">
+          ${chinaReplyFileButton()}
           <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Отправить</button>
         </div>
       ` : ""}
@@ -2917,6 +2974,79 @@ async function compressChinaPhoto(file) {
   throw new Error("Фото слишком большое. Выберите изображение поменьше.");
 }
 
+const CHAT_ATTACHMENT_MAX_DATA_URL = 1_200_000;
+const CHAT_ATTACHMENT_MAX_PDF_BYTES = 900 * 1024;
+const CHAT_ATTACHMENT_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const CHAT_ATTACHMENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+
+function normalizedAttachmentMime(file) {
+  return String(file?.type || "").toLowerCase().replace("image/jpg", "image/jpeg");
+}
+
+function chatAttachmentName(file, mime) {
+  const fallback = mime === "application/pdf" ? "document.pdf" : "attachment.jpg";
+  return plainText(file?.name).slice(0, 120) || fallback;
+}
+
+async function compressChatImage(file) {
+  const source = await readFileDataUrl(file);
+  if (source.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return source;
+  const image = await loadImage(source);
+  const maxSide = 1400;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  for (const quality of [0.82, 0.72, 0.62, 0.52, 0.42]) {
+    const blob = await canvasToBlob(canvas, quality);
+    if (!blob) continue;
+    const dataUrl = await readFileDataUrl(blob);
+    if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
+  }
+
+  throw new Error("Файл слишком большой. Выберите изображение поменьше.");
+}
+
+async function prepareChatAttachment(input) {
+  const file = input?.files?.[0];
+  if (!file) return null;
+  const mime = normalizedAttachmentMime(file);
+  if (!CHAT_ATTACHMENT_TYPES.has(mime)) {
+    throw new Error("Можно прикрепить PNG, JPG, WEBP или PDF.");
+  }
+  if (mime === "application/pdf") {
+    if (file.size > CHAT_ATTACHMENT_MAX_PDF_BYTES) {
+      throw new Error("PDF слишком большой. Максимум около 900 КБ.");
+    }
+    return {
+      attachment_name: chatAttachmentName(file, mime),
+      attachment_mime: mime,
+      attachment_data_url: await readFileDataUrl(file),
+    };
+  }
+  if (file.size > CHAT_ATTACHMENT_MAX_IMAGE_BYTES) {
+    throw new Error("Изображение слишком большое. Максимум 8 МБ.");
+  }
+  return {
+    attachment_name: chatAttachmentName(file, mime),
+    attachment_mime: "image/jpeg",
+    attachment_data_url: await compressChatImage(file),
+  };
+}
+
+async function appendChinaReplyAttachmentPayload(card, payload) {
+  const input = card?.querySelector("[data-china-reply-file]");
+  const attachment = await prepareChatAttachment(input);
+  if (!attachment) return false;
+  Object.assign(payload, attachment);
+  return true;
+}
+
 function renderChinaPhotoPreview(form, dataUrl, fileName = "") {
   if (!form) return;
   const preview = form.querySelector("[data-china-photo-preview]");
@@ -3188,6 +3318,17 @@ document.querySelector("[data-china-search]")?.addEventListener("input", () => {
   syncFilterMenuButtons();
   clearTimeout(window.__chinaSearchTimer);
   window.__chinaSearchTimer = setTimeout(loadChinaPreorders, 250);
+});
+
+document.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-china-reply-file]");
+  if (!input) return;
+  const label = input.closest(".china-file-button");
+  const file = input.files?.[0];
+  const name = label?.querySelector("[data-china-reply-file-name]");
+  label?.classList.toggle("has-file", Boolean(file));
+  if (label) label.title = file?.name || "Прикрепить файл";
+  if (name) name.textContent = file?.name ? file.name.slice(0, 32) : "";
 });
 
 document.querySelector("[data-china-photo-input]")?.addEventListener("change", async (event) => {
@@ -3489,18 +3630,22 @@ async function handleChinaPreorderClick(event) {
     const requestId = replyButton.dataset.chinaReply || "";
     const card = replyButton.closest("[data-china-preorder]");
     const textarea = card?.querySelector("[data-china-reply-text]");
+    const fileInput = card?.querySelector("[data-china-reply-file]");
     const managerComment = plainText(textarea?.value);
-    if (!managerComment) {
-      alert("Добавьте сообщение поставщику.");
-      textarea?.focus();
+    const hasAttachment = Boolean(fileInput?.files?.[0]);
+    if (!managerComment && !hasAttachment) {
+      alert("Добавьте сообщение или файл поставщику.");
+      (textarea || fileInput)?.focus();
       return;
     }
     replyButton.disabled = true;
     replyButton.textContent = "Отправляю...";
     try {
+      const payload = { manager_comment: managerComment };
+      await appendChinaReplyAttachmentPayload(card, payload);
       const result = await api(`/api/admin/supplier-requests/${encodeURIComponent(requestId)}`, {
         method: "PATCH",
-        body: JSON.stringify({ manager_comment: managerComment }),
+        body: JSON.stringify(payload),
       });
       state.chinaPreorders = result.preorders || state.chinaPreorders;
       renderChinaPreorders();

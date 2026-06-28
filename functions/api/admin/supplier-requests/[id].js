@@ -24,6 +24,7 @@ export async function onRequestPatch({ request, params, env }) {
         public_number: requestRow.public_number,
         supplier_name: requestRow.supplier_name,
         message: payload.manager_comment || payload.comment || payload.comment_cn,
+        attachment_name: payload.attachment_name,
       },
     });
 
