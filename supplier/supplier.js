@@ -819,16 +819,23 @@ function chatAttachments(attachments = []) {
 
 function requestData(request = {}) {
   const description = localizedRequestText(request);
+  const itemName = localizedItemName(request);
   return `
     <div class="supplier-data supplier-data--request">
       <div><span>${escapeHtml(t("data.vin"))}</span><strong>${escapeHtml(request.vin || "-")}</strong></div>
       <div><span>${escapeHtml(t("data.car"))}</span><strong>${escapeHtml(request.car || "-")}</strong></div>
       <div><span>${escapeHtml(t("data.year"))}</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
-      <div><span>${escapeHtml(t("data.detail"))}</span><strong>${escapeHtml(request.item_name || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.detail"))}</span><strong>${escapeHtml(itemName || "-")}</strong></div>
       <div><span>${escapeHtml(t("data.quantity"))}</span><strong>${Number(request.quantity || 1).toLocaleString(supplierLocale())}</strong></div>
       <div class="supplier-data--wide"><span>${escapeHtml(t("data.description"))}</span><strong>${escapeHtml(description || "-")}</strong></div>
     </div>
   `;
+}
+
+function localizedItemName(request = {}) {
+  if (supplierLang === "zh") return plainText(request.item_name_cn || request.item_name);
+  if (supplierLang === "en") return plainText(request.item_name_en || request.item_name_cn || request.item_name_ru || request.item_name);
+  return plainText(request.item_name_ru || request.item_name || request.item_name_cn);
 }
 
 function localizedRequestText(request = {}) {
@@ -1238,6 +1245,7 @@ function renderRequestPage(data) {
   requestDataCache = data;
   syncLanguageMeta("page.requestTitle");
   const request = data.request || {};
+  const itemName = localizedItemName(request);
   root.innerHTML = `
     <header class="supplier-topbar supplier-topbar--request">
       <div class="supplier-brand">
@@ -1252,7 +1260,7 @@ function renderRequestPage(data) {
     </header>
 
     <section class="supplier-hero supplier-hero--compact">
-      <h1>${escapeHtml(request.item_name || t("page.requestFallback"))}</h1>
+      <h1>${escapeHtml(itemName || t("page.requestFallback"))}</h1>
     </section>
 
     ${renderRequestDetail(data, token)}
@@ -1344,6 +1352,7 @@ function renderDashboardRequestCard(request = {}) {
   const key = dashboardRequestKey(request);
   const selected = dashboardSelectedRequestId === key;
   const statusClass = String(request.status || "sent").replace(/[^a-z0-9_-]/gi, "");
+  const itemName = localizedItemName(request);
   return `
     <article class="supplier-dashboard-card supplier-dashboard-card--status-${escapeHtml(statusClass)} ${selected ? "is-selected" : ""}">
       <button class="supplier-dashboard-card__open" type="button" data-dashboard-open-request="${escapeHtml(key)}">
@@ -1351,7 +1360,7 @@ function renderDashboardRequestCard(request = {}) {
           <strong>${escapeHtml(request.public_number || t("ui.request"))}</strong>
           ${statusBadge(request.status)}
         </div>
-        <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || t("ui.detail"))}</div>
+        <div class="supplier-dashboard-card__title">${escapeHtml(itemName || t("ui.detail"))}</div>
         <div class="supplier-dashboard-card__meta">
           <span>${escapeHtml(request.car || t("data.noCar"))}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
           ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
@@ -1426,13 +1435,14 @@ function renderDashboardRequestPanel() {
   const request = selectedDashboardRequest();
   if (!request) return "";
   const requestToken = requestTokenFromLink(request.supplier_link);
+  const itemName = localizedItemName(request);
   return `
     <div class="supplier-request-panel-backdrop" data-dashboard-close-request></div>
     <aside class="supplier-request-panel" data-request-token="${escapeHtml(requestToken)}" aria-label="${escapeHtml(t("dashboard.panelLabel"))}">
       <div class="supplier-request-panel__head">
         <div>
           <strong>${escapeHtml(request.public_number || t("ui.request"))}</strong>
-          <span>${escapeHtml(request.item_name || t("ui.detail"))}${request.car ? ` · ${escapeHtml(request.car)}` : ""}</span>
+          <span>${escapeHtml(itemName || t("ui.detail"))}${request.car ? ` · ${escapeHtml(request.car)}` : ""}</span>
         </div>
         <button class="supplier-button supplier-button--small" type="button" data-dashboard-close-request>${escapeHtml(t("ui.back"))}</button>
       </div>

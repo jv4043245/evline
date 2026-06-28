@@ -1,7 +1,7 @@
 import { integer, number, text } from "./http.js";
 import { insertStatusEvent, loadOrder, nextPublicNumber, sendTelegramMessageDetailed, tableHasColumn } from "./crm.js";
 import { createSupplierPaymentRequest, hydrateSupplierPayment } from "./supplier-payments.js";
-import { DEFAULT_TRANSLATION_MODEL, supplierTranslationDirections, translateSupplierText } from "./supplier-translation.js";
+import { DEFAULT_TRANSLATION_MODEL, supplierTranslationDirections, supplierTranslationLooksMissing, translateSupplierText } from "./supplier-translation.js";
 
 export const SUPPLIER_REQUEST_STATUS_LABELS = {
   draft: "Чернетка",
@@ -673,6 +673,7 @@ async function saveSupplierEventAttachment(env, supplierRequest, event, payload 
 
 async function loadSupplierBundle(env, supplierRequest) {
   if (!supplierRequest) return null;
+  supplierRequest = await ensureSupplierRequestTranslations(env, supplierRequest);
   const [quotes, images, trackingEvents] = await Promise.all([
     safeSelect(env, "SELECT * FROM supplier_quotes WHERE supplier_request_id = ? ORDER BY created_at DESC", supplierRequest.id),
     safeSelect(env, "SELECT * FROM supplier_request_images WHERE supplier_request_id = ? ORDER BY created_at ASC", supplierRequest.id),
@@ -692,6 +693,65 @@ async function loadSupplierBundle(env, supplierRequest) {
     supplier_link: supplierInterfacePath(`/supplier/request/${supplierRequest.access_token}`),
     dashboard_link: supplier?.dashboard_access_token ? supplierInterfacePath(`/supplier/dashboard/${supplier.dashboard_access_token}`) : "",
   };
+}
+
+async function ensureSupplierRequestTranslations(env, supplierRequest) {
+  if (!supplierRequest?.id) return supplierRequest;
+  const fields = [];
+  const translated = { ...supplierRequest };
+  const toSupplier = supplierTranslationDirections().managerToSupplier;
+
+  const hasItemNameCn = await tableHasColumn(env, "supplier_requests", "item_name_cn");
+  if (hasItemNameCn) {
+    const itemNameRu = text(supplierRequest.item_name_ru || supplierRequest.item_name);
+    if (itemNameRu && !text(supplierRequest.item_name_ru)) {
+      fields.push(["item_name_ru", itemNameRu]);
+      translated.item_name_ru = itemNameRu;
+    }
+    if (supplierTranslationLooksMissing(itemNameRu, supplierRequest.item_name_cn, toSupplier)) {
+      const itemNameCn = await translateSupplierText(env, itemNameRu, toSupplier);
+      fields.push(["item_name_cn", itemNameCn]);
+      translated.item_name_cn = itemNameCn;
+    }
+  }
+
+  if (await tableHasColumn(env, "supplier_requests", "request_text_ru")) {
+    const requestTextRu = text(supplierRequest.request_text_ru || supplierRequest.request_text);
+    if (requestTextRu && !text(supplierRequest.request_text_ru)) {
+      fields.push(["request_text_ru", requestTextRu]);
+      translated.request_text_ru = requestTextRu;
+    }
+    if (supplierTranslationLooksMissing(requestTextRu, supplierRequest.request_text_cn, toSupplier)) {
+      const requestTextCn = await translateSupplierText(env, requestTextRu, toSupplier);
+      fields.push(["request_text_cn", requestTextCn], ["request_text", requestTextCn]);
+      translated.request_text_cn = requestTextCn;
+      translated.request_text = requestTextCn;
+    }
+  }
+
+  if (await tableHasColumn(env, "supplier_requests", "manager_comment_ru")) {
+    const managerCommentRu = text(supplierRequest.manager_comment_ru || supplierRequest.manager_comment);
+    if (managerCommentRu && !text(supplierRequest.manager_comment_ru)) {
+      fields.push(["manager_comment_ru", managerCommentRu]);
+      translated.manager_comment_ru = managerCommentRu;
+    }
+    if (supplierTranslationLooksMissing(managerCommentRu, supplierRequest.manager_comment_cn, toSupplier)) {
+      const managerCommentCn = await translateSupplierText(env, managerCommentRu, toSupplier);
+      fields.push(["manager_comment_cn", managerCommentCn]);
+      translated.manager_comment_cn = managerCommentCn;
+    }
+  }
+
+  if (!fields.length) return supplierRequest;
+  fields.push(["updated_at", supplierRequest.updated_at || new Date().toISOString()]);
+  await env.DB.prepare(
+    `UPDATE supplier_requests
+    SET ${fields.map(([name]) => `${name} = ?`).join(", ")}
+    WHERE id = ?`
+  )
+    .bind(...fields.map(([, value]) => value), supplierRequest.id)
+    .run();
+  return translated;
 }
 
 async function loadSupplierPaymentForRequest(env, supplierRequest) {
@@ -811,7 +871,9 @@ export function publicSupplierBundle(bundle) {
       car: request.car,
       car_year: request.car_year,
       vin: request.vin,
-      item_name: request.item_name,
+      item_name: request.item_name_cn || request.item_name,
+      item_name_ru: request.item_name_ru || request.item_name,
+      item_name_cn: request.item_name_cn || request.item_name,
       quantity: request.quantity,
       request_text: request.request_text_cn || request.request_text || request.request_text_ru,
       request_text_ru: request.request_text_ru || request.request_text,
@@ -842,7 +904,9 @@ function publicDashboardRequest(row, payment = null, bundle = null) {
     car: row.car,
     car_year: row.car_year,
     vin: row.vin,
-    item_name: row.item_name,
+    item_name: row.item_name_cn || row.item_name,
+    item_name_ru: row.item_name_ru || row.item_name,
+    item_name_cn: row.item_name_cn || row.item_name,
     quantity: row.quantity,
     request_text: row.request_text_cn || row.request_text || row.request_text_ru,
     request_text_ru: row.request_text_ru || row.request_text,
@@ -949,11 +1013,14 @@ async function supplierDashboardPaymentSummary(env, supplierId) {
 async function listSupplierDashboardPayments(env, supplierId) {
   if (!(await tableExists(env, "supplier_payments"))) return [];
   if (!(await tableHasColumn(env, "supplier_payments", "supplier_request_id"))) return [];
+  const hasItemNameCn = await tableHasColumn(env, "supplier_requests", "item_name_cn");
   const rows = await safeSelect(
     env,
     `SELECT supplier_payments.*,
       supplier_requests.public_number AS request_public_number,
-      supplier_requests.item_name AS request_item_name,
+      ${hasItemNameCn
+        ? "COALESCE(NULLIF(supplier_requests.item_name_cn, ''), supplier_requests.item_name)"
+        : "supplier_requests.item_name"} AS request_item_name,
       supplier_requests.access_token AS request_access_token
     FROM supplier_payments
     INNER JOIN supplier_requests ON supplier_requests.id = supplier_payments.supplier_request_id
@@ -1007,6 +1074,9 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     ? await translateSupplierText(env, managerCommentRu, supplierTranslationDirections().managerToSupplier)
     : "";
   const carYear = normalizeCarYear(payload.car_year) || normalizeCarYear(order.car_year);
+  const itemNameRu = text(payload.item_name) || text(order.item_name) || text(order.service_name);
+  const itemNameCn = text(payload.item_name_cn)
+    || await translateSupplierText(env, itemNameRu, supplierTranslationDirections().managerToSupplier);
   assertSupplierTextSafe(requestTextRu, managerCommentRu);
   const supplierRequest = {
     id: crypto.randomUUID(),
@@ -1019,7 +1089,9 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     car: text(payload.car) || text(order.car),
     car_year: carYear,
     vin: (text(payload.vin) || text(order.vin)).toUpperCase(),
-    item_name: text(payload.item_name) || text(order.item_name) || text(order.service_name),
+    item_name: itemNameRu,
+    item_name_ru: itemNameRu,
+    item_name_cn: itemNameCn,
     quantity: normalizeQuantity(payload.quantity, 1),
     request_text: requestTextCn,
     request_text_ru: requestTextRu,
@@ -1071,6 +1143,15 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
       WHERE id = ?`
     )
       .bind(supplierRequest.request_text_ru, supplierRequest.request_text_cn, supplierRequest.id)
+      .run();
+  }
+  if (await tableHasColumn(env, "supplier_requests", "item_name_cn")) {
+    await env.DB.prepare(
+      `UPDATE supplier_requests
+      SET item_name_ru = ?, item_name_cn = ?
+      WHERE id = ?`
+    )
+      .bind(supplierRequest.item_name_ru, supplierRequest.item_name_cn, supplierRequest.id)
       .run();
   }
   if (await tableHasColumn(env, "supplier_requests", "manager_comment_ru")) {
