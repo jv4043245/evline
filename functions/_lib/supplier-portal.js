@@ -53,7 +53,8 @@ const SUPPLIER_STATUS_PROGRESS = {
 };
 const MAX_PUBLIC_QUOTES_PER_REQUEST = 5;
 const MAX_PUBLIC_EVENTS_PER_REQUEST = 30;
-const MAX_SUPPLIER_ATTACHMENT_DATA_URL = 1_250_000;
+const MAX_SUPPLIER_IMAGE_DATA_URL = 7_000_000;
+const MAX_SUPPLIER_ATTACHMENT_DATA_URL = 7_000_000;
 const SUPPLIER_ATTACHMENT_MIME = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const DIRECTORY_SUPPLIERS = new Map([
   ["zeekr", { id: "supplier_zeekr", name: "Zeekr" }],
@@ -208,7 +209,7 @@ function assertUrlLike(value) {
   const url = text(value);
   if (!url) return "";
   if (/^data:image\/(?:png|jpe?g|webp);base64,/i.test(url)) {
-    if (url.length > 1_250_000) {
+    if (url.length > MAX_SUPPLIER_IMAGE_DATA_URL) {
       const error = new Error("image_url is too large");
       error.status = 400;
       throw error;

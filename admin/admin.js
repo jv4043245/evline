@@ -2968,15 +2968,15 @@ async function compressChinaPhoto(file) {
     const blob = await canvasToBlob(canvas, quality);
     if (!blob) continue;
     const dataUrl = await readFileDataUrl(blob);
-    if (dataUrl.length <= 1_200_000) return dataUrl;
+    if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
   }
 
   throw new Error("Фото слишком большое. Выберите изображение поменьше.");
 }
 
-const CHAT_ATTACHMENT_MAX_DATA_URL = 1_200_000;
-const CHAT_ATTACHMENT_MAX_PDF_BYTES = 900 * 1024;
-const CHAT_ATTACHMENT_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const CHAT_ATTACHMENT_MAX_DATA_URL = 7_000_000;
+const CHAT_ATTACHMENT_MAX_PDF_BYTES = 5 * 1024 * 1024;
+const CHAT_ATTACHMENT_MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const CHAT_ATTACHMENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 
 function normalizedAttachmentMime(file) {
@@ -3021,7 +3021,7 @@ async function prepareChatAttachment(input) {
   }
   if (mime === "application/pdf") {
     if (file.size > CHAT_ATTACHMENT_MAX_PDF_BYTES) {
-      throw new Error("PDF слишком большой. Максимум около 900 КБ.");
+      throw new Error("PDF слишком большой. Максимум 5 МБ.");
     }
     return {
       attachment_name: chatAttachmentName(file, mime),
@@ -3030,7 +3030,7 @@ async function prepareChatAttachment(input) {
     };
   }
   if (file.size > CHAT_ATTACHMENT_MAX_IMAGE_BYTES) {
-    throw new Error("Изображение слишком большое. Максимум 8 МБ.");
+    throw new Error("Изображение слишком большое. Максимум 16 МБ.");
   }
   return {
     attachment_name: chatAttachmentName(file, mime),
