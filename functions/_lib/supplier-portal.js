@@ -1798,15 +1798,27 @@ export async function deleteSupplierRequest(env, supplierRequestId) {
     throw error;
   }
 
-  await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id = ?", id);
-  await safeDelete(env, "DELETE FROM supplier_tracking_events WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_telegram_messages WHERE supplier_request_id = ?", id);
+  await safeDelete(
+    env,
+    `DELETE FROM supplier_payment_receipts
+    WHERE supplier_payment_id IN (
+      SELECT id FROM supplier_payments
+      WHERE supplier_request_id = ?
+        OR supplier_quote_id IN (SELECT id FROM supplier_quotes WHERE supplier_request_id = ?)
+    )`,
+    id,
+    id
+  );
   await safeDelete(env, "DELETE FROM supplier_payment_receipts WHERE supplier_request_id = ?", id);
+  await safeDelete(env, "DELETE FROM supplier_tracking_events WHERE supplier_request_id = ?", id);
   await safeDelete(env, "DELETE FROM supplier_payments WHERE supplier_request_id = ?", id);
   await safeDelete(
     env,
     "DELETE FROM supplier_payments WHERE supplier_quote_id IN (SELECT id FROM supplier_quotes WHERE supplier_request_id = ?)",
     id
   );
+  await safeDelete(env, "DELETE FROM supplier_request_images WHERE supplier_request_id = ?", id);
   await safeDelete(env, "DELETE FROM supplier_quotes WHERE supplier_request_id = ?", id);
   await safeDelete(env, "DELETE FROM supplier_requests WHERE id = ?", id);
 
