@@ -1149,6 +1149,81 @@ export async function listSupplierDashboardByToken(env, token) {
   };
 }
 
+function telegramCaption(value) {
+  const caption = text(value);
+  if (caption.length <= 1000) return caption;
+  return `${caption.slice(0, 997)}...`;
+}
+
+function dataUrlToBlob(dataUrl, mime) {
+  const match = text(dataUrl).match(/^data:([^;]+);base64,(.+)$/i);
+  if (!match) return null;
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime || match[1] || "application/octet-stream" });
+}
+
+async function telegramSendSupplierAttachment(env, chatId, attachment = {}, caption = "") {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  const mime = text(attachment.mime);
+  const isImage = mime.startsWith("image/");
+  const method = isImage ? "sendPhoto" : "sendDocument";
+  const field = isImage ? "photo" : "document";
+  const fileName = normalizeSupplierAttachmentName(attachment.name, mime);
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  if (caption) form.append("caption", telegramCaption(caption));
+
+  const attachmentUrl = text(attachment.url);
+  if (/^data:/i.test(attachmentUrl)) {
+    const blob = dataUrlToBlob(attachmentUrl, mime);
+    if (!blob) throw new Error("Attachment data is invalid");
+    form.append(field, blob, fileName);
+  } else {
+    form.append(field, attachmentUrl);
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
+    method: "POST",
+    body: form,
+  });
+  const data = await response.json().catch(() => ({}));
+  return {
+    ...data,
+    http_ok: response.ok,
+    requested_chat_id: String(chatId),
+  };
+}
+
+async function sendTelegramSupplierAttachmentDetailed(env, chatId, attachment = {}, caption = "") {
+  let data = await telegramSendSupplierAttachment(env, chatId, attachment, caption);
+  let effectiveChatId = String(chatId);
+  let migratedFromChatId = "";
+
+  if ((!data.http_ok || !data.ok) && data.parameters?.migrate_to_chat_id) {
+    migratedFromChatId = String(chatId);
+    effectiveChatId = String(data.parameters.migrate_to_chat_id);
+    data = await telegramSendSupplierAttachment(env, effectiveChatId, attachment, caption);
+  }
+
+  if (!data.http_ok || !data.ok) {
+    const error = new Error(data.description || "Telegram attachment send failed");
+    if (data.parameters?.migrate_to_chat_id) {
+      error.migrate_to_chat_id = String(data.parameters.migrate_to_chat_id);
+    }
+    throw error;
+  }
+
+  return {
+    chat_id: effectiveChatId,
+    message_id: String(data.result?.message_id || ""),
+    migrated_from_chat_id: migratedFromChatId,
+  };
+}
+
 async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUrl = "https://evline.com.ua", options = {}) {
   const order = await loadOrder(env, supplierRequest.order_id).catch(() => null);
   const chatId = chinaManagerChatId(env, supplierRequest);
@@ -1161,7 +1236,8 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
     ? normalizeOptionalAmount(options.deliveryCostCny)
     : normalizeOptionalAmount(supplierRequest.delivery_cost_cny);
   const trackingNumber = text(options.trackingNumber).toUpperCase();
-  const attachmentName = text(options.attachmentName);
+  const attachment = options.attachment || null;
+  const attachmentName = text(options.attachmentName || attachment?.name);
   const isTrackingUpdate = source === "supplier_china_tracking" || source === "supplier_china_warehouse";
   const lines = [
     isTrackingUpdate
@@ -1184,7 +1260,10 @@ async function notifyManagerSupplierQuote(env, supplierRequest, quote, requestUr
     `CRM: ${origin}/admin/`,
   ];
 
-  const telegram = await sendTelegramMessageDetailed(env, chatId, lines.filter(Boolean).join("\n"));
+  const body = lines.filter(Boolean).join("\n");
+  const telegram = attachment?.url
+    ? await sendTelegramSupplierAttachmentDetailed(env, chatId, attachment, body).catch(() => sendTelegramMessageDetailed(env, chatId, body))
+    : await sendTelegramMessageDetailed(env, chatId, body);
   await saveSupplierTelegramMessage(env, supplierRequest, telegram, {
     direction: "supplier_to_manager",
     source,
@@ -1409,6 +1488,7 @@ export async function createSupplierMessageByToken(env, token, payload = {}, opt
       messageRu: commentRu,
       messageCn: comment,
       deliveryCostCny: payload.delivery_cost_cny,
+      attachment,
       attachmentName: attachment?.name || "",
       source: "supplier_message",
     }).catch(() => null);
