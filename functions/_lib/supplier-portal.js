@@ -1700,7 +1700,11 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     throw error;
   }
 
-  const commentRu = text(payload.manager_comment || payload.comment || payload.comment_ru || payload.comment_cn).slice(0, 2000);
+  const managerCommentRu = text(payload.manager_comment || payload.comment || payload.comment_ru).slice(0, 2000);
+  const pretranslatedCommentCn = text(payload.comment_cn).slice(0, 2000);
+  const commentRu = managerCommentRu || (pretranslatedCommentCn
+    ? await translateSupplierText(env, pretranslatedCommentCn, supplierTranslationDirections().supplierToManager)
+    : "");
   const attachment = normalizeSupplierAttachment(payload);
   const hasAttachment = Boolean(attachment);
   if (!commentRu && !hasAttachment) {
@@ -1709,11 +1713,9 @@ export async function replySupplierRequestClarification(env, supplierRequestId, 
     throw error;
   }
   if (commentRu) assertSupplierTextSafe(commentRu);
-  const commentCn = commentRu && text(payload.comment_cn) && !text(payload.manager_comment || payload.comment || payload.comment_ru)
-    ? text(payload.comment_cn).slice(0, 2000)
-    : commentRu
+  const commentCn = pretranslatedCommentCn || (managerCommentRu
       ? await translateSupplierText(env, commentRu, supplierTranslationDirections().managerToSupplier)
-      : "";
+      : "");
 
   const eventCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_tracking_events WHERE supplier_request_id = ?")
     .bind(supplierRequest.id)
@@ -1797,7 +1799,10 @@ export async function handleSupplierTelegramUpdate(env, message = {}) {
   return {
     handled: true,
     supplier_request: request,
-    message: `Отправил китайцу по запросу ${request.public_number || request.id}: ${incoming}`,
+    message: [
+      `Отправил китайцу по запросу ${request.public_number || request.id}: ${incoming}`,
+      latestSent.comment_cn && latestSent.comment_cn !== incoming ? `Китайская версия: ${latestSent.comment_cn}` : "",
+    ].filter(Boolean).join("\n"),
   };
 }
 
