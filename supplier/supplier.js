@@ -572,14 +572,6 @@ function renderDashboardSummary(summary = {}) {
   `;
 }
 
-function dashboardRequestPriority(request = {}) {
-  if (["sent", "viewed"].includes(request.status)) return 0;
-  if (request.payment?.status === "paid" && ["accepted", "purchased"].includes(request.status)) return 1;
-  if (["quoted", "accepted"].includes(request.status) && request.payment?.status !== "paid") return 2;
-  if (["problem", "no_stock"].includes(request.status)) return 3;
-  return 4;
-}
-
 function dashboardRequestKey(request = {}) {
   return request.supplier_link || request.public_number || `${request.item_name || ""}-${request.created_at || ""}`;
 }
@@ -653,7 +645,7 @@ function renderDashboardRequestCard(request = {}) {
 }
 
 function renderDashboardWork(requests = []) {
-  const sorted = [...requests].sort((a, b) => dashboardRequestPriority(a) - dashboardRequestPriority(b) || dateMs(b.updated_at) - dateMs(a.updated_at));
+  const sorted = [...requests].sort((a, b) => (dateMs(b.created_at) - dateMs(a.created_at)) || (dateMs(b.updated_at) - dateMs(a.updated_at)));
   return `
     <section class="supplier-dashboard-panel">
       <div class="supplier-dashboard-panel__head">
