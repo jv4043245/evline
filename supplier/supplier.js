@@ -392,7 +392,7 @@ function renderQuoteForm(data = {}) {
 function renderMessageForm(data = {}) {
   const request = data.request || {};
   const hasQuote = (data.quotes || []).length > 0;
-  const canMessage = hasQuote && ["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"].includes(request.status);
+  const canMessage = hasQuote && ["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem", "china_tracking", "china_warehouse"].includes(request.status);
   if (!canMessage) return "";
   const showDeliveryField = !supplierHasDeliveryCost(request);
   return `
@@ -458,6 +458,34 @@ function renderPassportTrackingWidget(data = {}) {
   `;
 }
 
+function renderBottomTrackingForm(data = {}) {
+  const request = data.request || {};
+  const payment = data.payment || null;
+  const trackingEvent = latestLogisticsEvent(data);
+  const paid = payment?.status === "paid";
+  const active = paid && ["accepted", "purchased", "problem"].includes(request.status) && !trackingEvent;
+  if (!active) return "";
+  return `
+    <section class="supplier-section supplier-section--tracking">
+      <form class="supplier-form supplier-tracking-form" data-tracking-form>
+        <h2>Отправка по Китаю</h2>
+        <div class="supplier-form__grid">
+          <input name="status" type="hidden" value="china_tracking">
+          <label>
+            Трек-номер
+            <input name="tracking_number" placeholder="номер отправки по Китаю" required>
+          </label>
+          <label class="supplier-wide">
+            Комментарий
+            <textarea name="comment_cn" rows="3" placeholder="служба доставки, упаковка, детали отправки"></textarea>
+          </label>
+        </div>
+        <button class="supplier-button supplier-button--primary" type="submit">Сохранить трек</button>
+      </form>
+    </section>
+  `;
+}
+
 function renderRequestDetail(data = {}, tokenValue = token) {
   const request = data.request || {};
   return `
@@ -479,10 +507,11 @@ function renderRequestDetail(data = {}, tokenValue = token) {
     <section class="supplier-section supplier-section--dialog">
       ${renderSupplierChat(data)}
       ${renderQuoteForm(data)}
-      ${renderMessageForm(data)}
     </section>
 
     ${renderPayment(data.payment, tokenValue)}
+    ${renderBottomTrackingForm(data)}
+    ${renderMessageForm(data)}
   `;
 }
 

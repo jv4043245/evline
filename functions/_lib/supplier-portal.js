@@ -33,7 +33,7 @@ const SUPPLIER_EVENT_STATUSES = new Set([
 ]);
 const TERMINAL_REQUEST_STATUSES = new Set(["closed", "canceled"]);
 const PRE_ACCEPTANCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock"]);
-const POST_QUOTE_MESSAGE_STATUSES = new Set(["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem"]);
+const POST_QUOTE_MESSAGE_STATUSES = new Set(["quoted", "accepted", "purchased", "needs_info", "no_stock", "problem", "china_tracking", "china_warehouse"]);
 const NO_STOCK_SOURCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock", "accepted", "purchased"]);
 const DELIVERY_COST_SOURCE_STATUSES = new Set(["sent", "viewed", "quoted", "needs_info", "no_stock", "accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
 const LOGISTICS_SOURCE_STATUSES = new Set(["accepted", "purchased", "china_tracking", "china_warehouse", "problem"]);
