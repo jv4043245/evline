@@ -94,6 +94,44 @@ body.supplier-shell {
   text-transform: uppercase;
 }
 
+.supplier-language {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.supplier-language button {
+  min-width: 34px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--supplier-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.supplier-language button:hover,
+.supplier-language button:focus-visible {
+  background: #eef2ff;
+  color: var(--supplier-blue);
+  outline: none;
+}
+
+.supplier-language button.is-active {
+  background: var(--supplier-blue);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
 .supplier-panel,
 .supplier-card,
 .supplier-form,
@@ -1297,7 +1335,12 @@ body.supplier-shell {
   }
 
   .supplier-topbar__aside {
-    max-width: 48%;
+    max-width: 56%;
+  }
+
+  .supplier-language button {
+    min-width: 30px;
+    padding: 0 7px;
   }
 
   .supplier-hero--compact h1 {

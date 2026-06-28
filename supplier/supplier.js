@@ -6,24 +6,576 @@ const token = document.body.dataset.token || query.get("token") || tokenFromPath
 const page = document.body.dataset.supplierPage || query.get("page") || (pathParts[1] === "dashboard" ? "dashboard" : "request");
 let requestPollTimer = null;
 let dashboardData = null;
+let requestDataCache = null;
 let dashboardTab = "work";
 let dashboardSelectedRequestId = "";
 
-const requestStatusLabels = {
-  draft: "Черновик",
-  sent: "Новый запрос",
-  viewed: "Просмотрено",
-  quoted: "Предложение отправлено",
-  needs_info: "Нужно уточнение",
-  no_stock: "Нет поставки",
-  accepted: "Согласовано EVLine",
-  purchased: "Оплачено",
-  china_tracking: "Отправлено по Китаю",
-  china_warehouse: "На складе в Китае",
-  problem: "Проблема",
-  closed: "Закрыто",
-  canceled: "Отменено",
+const SUPPLIER_LANG_KEY = "evline_supplier_lang_v1";
+const supplierLanguages = {
+  zh: { label: "中文", locale: "zh-CN", html: "zh-CN" },
+  en: { label: "EN", locale: "en-US", html: "en" },
+  ru: { label: "RU", locale: "ru-RU", html: "ru" },
 };
+
+const supplierI18n = {
+  ru: {
+    page: {
+      requestTitle: "EVLine · Запрос",
+      dashboardTitle: "EVLine · Кабинет поставщика",
+      requestFallback: "Запрос по детали",
+      supplierFallback: "Поставщик",
+      dashboardRequestsTitle: "EVLine · Запросы поставщику",
+    },
+    status: {
+      draft: "Черновик",
+      sent: "Новый запрос",
+      viewed: "Просмотрено",
+      quoted: "Предложение отправлено",
+      needs_info: "Нужно уточнение",
+      no_stock: "Нет поставки",
+      accepted: "Согласовано EVLine",
+      purchased: "Оплачено",
+      china_tracking: "Отправлено по Китаю",
+      china_warehouse: "На складе в Китае",
+      problem: "Проблема",
+      closed: "Закрыто",
+      canceled: "Отменено",
+    },
+    paymentLabel: {
+      paid: "Оплачено",
+      partial: "Частично оплачено",
+      requested: "Ждёт оплаты",
+      needs_review: "Скрин на проверке",
+      canceled: "Отменено",
+      fallback: "Оплата",
+    },
+    errors: {
+      "price_cny is required": "Укажите цену.",
+      "Supplier quote is required before payment": "Сначала поставщик должен отправить цену.",
+      "Client approval is required before payment": "Перед оплатой менеджер должен подтвердить согласование с клиентом.",
+      "Payment receipt is required before supplier tracking": "Трек можно внести только после подтверждения оплаты.",
+      "Logistics status is available only after manager accepts a quote": "Трек можно внести только после того, как EVLine выберет предложение.",
+      "Supplier request is closed": "Этот запрос уже закрыт.",
+      "Supplier request not found": "Запрос не найден или ссылка устарела.",
+      "Unsupported supplier status": "Этот статус сейчас недоступен.",
+      "Supplier event limit reached": "Достигнут лимит обновлений по этому запросу.",
+      "Tracking number is required": "Укажите трек-номер.",
+      "Clarification text is required": "Напишите, что нужно уточнить.",
+      "Message text is required": "Напишите сообщение.",
+      "Supplier message is available only after quote": "Сообщение доступно после первого предложения.",
+      "Delivery cost is not available for this supplier request": "Стоимость доставки сейчас недоступна.",
+      "D1 migration 0015_supplier_delivery_cost.sql is required": "На сервере ещё не применена миграция доставки.",
+      "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
+      "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
+      "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
+      "Supplier quote does not belong to this supplier request": "Предложение не относится к этому запросу.",
+      fallback: "Ошибка запроса",
+    },
+    ui: {
+      send: "Отправить",
+      sending: "Отправляем...",
+      attachFile: "Прикрепить файл",
+      noSupply: "Нет поставки",
+      noSupplyTitle: "Отметить, что по позиции нет поставки",
+      self: "Я",
+      evline: "EVLine",
+      logistics: "Логистика",
+      requestData: "Данные запроса",
+      dialog: "Диалог по заказу",
+      quoteAnswer: "Ответ по запросу",
+      payment: "Оплата",
+      account: "Счёт",
+      paid: "Оплачено",
+      date: "Дата",
+      receipts: "Скрины",
+      receiptOpen: "посмотреть скрин",
+      paymentConfirmed: "Оплата подтверждена",
+      receiptAttached: "Скрин оплаты прикреплён",
+      paymentMarkedNoReceipt: "Оплата отмечена, скрин пока не прикреплён.",
+      paymentReceiptPending: "После оплаты здесь появится подтверждение.",
+      price: "Цена, CNY",
+      delivery: "Доставка, CNY",
+      deliveryShort: "Доставка",
+      days: "Срок поставки, дней",
+      commentClarify: "Комментарий / уточнение",
+      chinaShipping: "Отправка по Китаю",
+      nextTrack: "Следующий шаг: внесите трек",
+      trackAfterPayment: "Трек после оплаты",
+      trackingNumber: "Трек-номер",
+      save: "Сохранить",
+      comment: "Комментарий",
+      request: "Запрос",
+      detail: "Деталь",
+      back: "Назад",
+      file: "Файл",
+      language: "Язык",
+    },
+    data: {
+      vin: "VIN",
+      car: "Авто",
+      year: "Год",
+      detail: "Деталь",
+      quantity: "Количество",
+      description: "Описание",
+      photoAlt: "Фото детали",
+      noCar: "Авто не указано",
+    },
+    meta: {
+      clarification: "Уточнение",
+      quote: "Предложение",
+      message: "Сообщение",
+      needsInfo: "Нужно уточнение",
+      reply: "Ответ",
+      noSupply: "Нет поставки",
+      problem: "Проблема",
+      chinaTracking: "Отправлено, ждём доставку",
+      chinaWarehouse: "На складе в Китае",
+      tracking: "Трек: {value}",
+      purchaseDays: "Срок поставки: {days} дн.",
+    },
+    placeholder: {
+      price: "например 1200",
+      delivery: "0",
+      quoteComment: "цена, нюансы, условия или что нужно уточнить",
+      message: "Написать сообщение по этому запросу",
+      tracking: "номер отправки",
+      chinaTracking: "номер отправки по Китаю",
+      trackingComment: "служба, упаковка, детали",
+    },
+    paymentStatus: {
+      paid: "оплачено EVLine",
+      partial: "частично оплачено EVLine",
+      receipt: "скрин оплаты прикреплён",
+      pending: "ожидает оплаты EVLine",
+      overpaid: "Оплачено больше счёта на +{amount} {currency}.",
+      underpaid: "Оплачено меньше счёта на {amount} {currency}.",
+    },
+    dashboard: {
+      needAnswer: "Нужно ответить",
+      waitingPayment: "Ждёт оплату",
+      needTrack: "Нужен трек",
+      paid30: "Оплачено за 30 дней",
+      work: "Работа",
+      money: "Деньги",
+      activeCount: "{count} активных",
+      emptyWorkTitle: "Пока нет активных запросов",
+      emptyWorkText: "Новые запросы EVLine появятся здесь.",
+      paidOrders: "{count} оплаченных заказов",
+      paidTotal: "Оплачено всего",
+      waitingPaymentAmount: "Ждёт оплаты",
+      ordersCount: "{count} заказов",
+      noPaymentsTitle: "Оплат пока нет",
+      noPaymentsText: "Когда EVLine оплатит заказ, он появится здесь.",
+      sectionLabel: "Раздел кабинета",
+      panelLabel: "Карточка запроса",
+      receiptPresent: "скрин есть",
+      requestEvline: "Запрос EVLine",
+      track: "Трек",
+    },
+    empty: {
+      supplierCabinet: "Кабинет поставщика",
+      openSupplierLink: "Откройте ссылку на запрос, которую отправил менеджер EVLine.",
+      openFailed: "Не удалось открыть ссылку",
+    },
+    validation: {
+      fileReadFailed: "Не удалось прочитать файл.",
+      imageOpenFailed: "Не удалось открыть изображение.",
+      imageTooLargeCompress: "Файл слишком большой. Выберите изображение поменьше.",
+      fileType: "Можно прикрепить PNG, JPG, WEBP или PDF.",
+      pdfTooLarge: "PDF слишком большой. Максимум 5 МБ.",
+      imageTooLarge: "Изображение слишком большое. Максимум 16 МБ.",
+      quoteRequiredWithDelivery: "Укажите цену, доставку или комментарий.",
+      quoteRequired: "Укажите цену или комментарий.",
+      messageRequiredWithDelivery: "Напишите сообщение или укажите доставку.",
+      messageRequired: "Напишите сообщение.",
+      noSupplyConfirm: "Отметить, что по этой позиции нет поставки?",
+    },
+  },
+  en: {
+    page: {
+      requestTitle: "EVLine · Request",
+      dashboardTitle: "EVLine · Supplier dashboard",
+      requestFallback: "Part request",
+      supplierFallback: "Supplier",
+      dashboardRequestsTitle: "EVLine · Supplier requests",
+    },
+    status: {
+      draft: "Draft",
+      sent: "New request",
+      viewed: "Viewed",
+      quoted: "Offer sent",
+      needs_info: "Needs clarification",
+      no_stock: "No supply",
+      accepted: "Approved by EVLine",
+      purchased: "Paid",
+      china_tracking: "Shipped in China",
+      china_warehouse: "At China warehouse",
+      problem: "Issue",
+      closed: "Closed",
+      canceled: "Canceled",
+    },
+    paymentLabel: {
+      paid: "Paid",
+      partial: "Partially paid",
+      requested: "Waiting for payment",
+      needs_review: "Receipt under review",
+      canceled: "Canceled",
+      fallback: "Payment",
+    },
+    errors: {
+      "price_cny is required": "Enter the price.",
+      "Supplier quote is required before payment": "Please send a price first.",
+      "Client approval is required before payment": "EVLine must approve the client agreement before payment.",
+      "Payment receipt is required before supplier tracking": "Tracking can be added only after payment is confirmed.",
+      "Logistics status is available only after manager accepts a quote": "Tracking is available only after EVLine selects the offer.",
+      "Supplier request is closed": "This request is already closed.",
+      "Supplier request not found": "Request not found or the link has expired.",
+      "Unsupported supplier status": "This status is not available now.",
+      "Supplier event limit reached": "The update limit for this request has been reached.",
+      "Tracking number is required": "Enter the tracking number.",
+      "Clarification text is required": "Write what needs clarification.",
+      "Message text is required": "Write a message.",
+      "Supplier message is available only after quote": "Messages are available after the first offer.",
+      "Delivery cost is not available for this supplier request": "Delivery cost is not available now.",
+      "D1 migration 0015_supplier_delivery_cost.sql is required": "The delivery migration has not been applied on the server yet.",
+      "CRM already has another tracking number": "CRM already has another tracking number. Contact EVLine.",
+      "Supplier request does not belong to this order": "The supplier request does not belong to this order.",
+      "Supplier quote does not belong to this order": "The supplier offer does not belong to this order.",
+      "Supplier quote does not belong to this supplier request": "The offer does not belong to this request.",
+      fallback: "Request error",
+    },
+    ui: {
+      send: "Send",
+      sending: "Sending...",
+      attachFile: "Attach file",
+      noSupply: "No supply",
+      noSupplyTitle: "Mark that this item cannot be supplied",
+      self: "Me",
+      evline: "EVLine",
+      logistics: "Logistics",
+      requestData: "Request details",
+      dialog: "Order dialog",
+      quoteAnswer: "Reply to request",
+      payment: "Payment",
+      account: "Invoice",
+      paid: "Paid",
+      date: "Date",
+      receipts: "Receipts",
+      receiptOpen: "view receipt",
+      paymentConfirmed: "Payment confirmed",
+      receiptAttached: "Payment receipt attached",
+      paymentMarkedNoReceipt: "Payment is marked, receipt is not attached yet.",
+      paymentReceiptPending: "Payment confirmation will appear here after payment.",
+      price: "Price, CNY",
+      delivery: "Delivery, CNY",
+      deliveryShort: "Delivery",
+      days: "Lead time, days",
+      commentClarify: "Comment / clarification",
+      chinaShipping: "Shipping in China",
+      nextTrack: "Next step: enter tracking",
+      trackAfterPayment: "Tracking after payment",
+      trackingNumber: "Tracking number",
+      save: "Save",
+      comment: "Comment",
+      request: "Request",
+      detail: "Part",
+      back: "Back",
+      file: "File",
+      language: "Language",
+    },
+    data: {
+      vin: "VIN",
+      car: "Car",
+      year: "Year",
+      detail: "Part",
+      quantity: "Quantity",
+      description: "Description",
+      photoAlt: "Part photo",
+      noCar: "Car not specified",
+    },
+    meta: {
+      clarification: "Clarification",
+      quote: "Offer",
+      message: "Message",
+      needsInfo: "Needs clarification",
+      reply: "Reply",
+      noSupply: "No supply",
+      problem: "Issue",
+      chinaTracking: "Shipped in China",
+      chinaWarehouse: "At China warehouse",
+      tracking: "Tracking: {value}",
+      purchaseDays: "Lead time: {days} days",
+    },
+    placeholder: {
+      price: "for example 1200",
+      delivery: "0",
+      quoteComment: "price, details, terms or what needs clarification",
+      message: "Write a message about this request",
+      tracking: "tracking number",
+      chinaTracking: "domestic China tracking number",
+      trackingComment: "carrier, packaging, details",
+    },
+    paymentStatus: {
+      paid: "paid by EVLine",
+      partial: "partially paid by EVLine",
+      receipt: "payment receipt attached",
+      pending: "waiting for EVLine payment",
+      overpaid: "Paid above invoice by +{amount} {currency}.",
+      underpaid: "Paid below invoice by {amount} {currency}.",
+    },
+    dashboard: {
+      needAnswer: "Need reply",
+      waitingPayment: "Waiting payment",
+      needTrack: "Need tracking",
+      paid30: "Paid in 30 days",
+      work: "Work",
+      money: "Money",
+      activeCount: "{count} active",
+      emptyWorkTitle: "No active requests yet",
+      emptyWorkText: "New EVLine requests will appear here.",
+      paidOrders: "{count} paid orders",
+      paidTotal: "Paid total",
+      waitingPaymentAmount: "Waiting payment",
+      ordersCount: "{count} orders",
+      noPaymentsTitle: "No payments yet",
+      noPaymentsText: "When EVLine pays an order, it will appear here.",
+      sectionLabel: "Dashboard section",
+      panelLabel: "Request card",
+      receiptPresent: "receipt attached",
+      requestEvline: "EVLine request",
+      track: "Tracking",
+    },
+    empty: {
+      supplierCabinet: "Supplier dashboard",
+      openSupplierLink: "Open the request link sent by the EVLine manager.",
+      openFailed: "Could not open the link",
+    },
+    validation: {
+      fileReadFailed: "Could not read the file.",
+      imageOpenFailed: "Could not open the image.",
+      imageTooLargeCompress: "The file is too large. Choose a smaller image.",
+      fileType: "You can attach PNG, JPG, WEBP or PDF.",
+      pdfTooLarge: "The PDF is too large. Maximum 5 MB.",
+      imageTooLarge: "The image is too large. Maximum 16 MB.",
+      quoteRequiredWithDelivery: "Enter price, delivery cost or comment.",
+      quoteRequired: "Enter price or comment.",
+      messageRequiredWithDelivery: "Write a message or enter delivery cost.",
+      messageRequired: "Write a message.",
+      noSupplyConfirm: "Mark that this item cannot be supplied?",
+    },
+  },
+  zh: {
+    page: {
+      requestTitle: "EVLine · 询价",
+      dashboardTitle: "EVLine · 供应商后台",
+      requestFallback: "配件询价",
+      supplierFallback: "供应商",
+      dashboardRequestsTitle: "EVLine · 供应商询价",
+    },
+    status: {
+      draft: "草稿",
+      sent: "新询价",
+      viewed: "已查看",
+      quoted: "已报价",
+      needs_info: "需要补充信息",
+      no_stock: "无法供货",
+      accepted: "EVLine 已确认",
+      purchased: "已付款",
+      china_tracking: "中国境内已发货",
+      china_warehouse: "已到中国仓库",
+      problem: "问题",
+      closed: "已关闭",
+      canceled: "已取消",
+    },
+    paymentLabel: {
+      paid: "已付款",
+      partial: "部分付款",
+      requested: "等待付款",
+      needs_review: "付款截图待确认",
+      canceled: "已取消",
+      fallback: "付款",
+    },
+    errors: {
+      "price_cny is required": "请填写价格。",
+      "Supplier quote is required before payment": "请先发送报价。",
+      "Client approval is required before payment": "付款前需要 EVLine 确认客户已同意。",
+      "Payment receipt is required before supplier tracking": "确认付款后才能填写运单号。",
+      "Logistics status is available only after manager accepts a quote": "EVLine 选择报价后才能填写运单号。",
+      "Supplier request is closed": "此询价已关闭。",
+      "Supplier request not found": "未找到询价，或链接已失效。",
+      "Unsupported supplier status": "当前不能使用此状态。",
+      "Supplier event limit reached": "此询价的更新次数已达上限。",
+      "Tracking number is required": "请填写运单号。",
+      "Clarification text is required": "请填写需要补充的信息。",
+      "Message text is required": "请填写消息内容。",
+      "Supplier message is available only after quote": "首次报价后才能发送消息。",
+      "Delivery cost is not available for this supplier request": "当前不能填写运费。",
+      "D1 migration 0015_supplier_delivery_cost.sql is required": "服务器尚未应用运费迁移。",
+      "CRM already has another tracking number": "CRM 中已有其他运单号，请联系 EVLine。",
+      "Supplier request does not belong to this order": "此供应商询价不属于该订单。",
+      "Supplier quote does not belong to this order": "此报价不属于该订单。",
+      "Supplier quote does not belong to this supplier request": "此报价不属于该询价。",
+      fallback: "请求错误",
+    },
+    ui: {
+      send: "发送",
+      sending: "发送中...",
+      attachFile: "添加附件",
+      noSupply: "无法供货",
+      noSupplyTitle: "标记此配件无法供货",
+      self: "我",
+      evline: "EVLine",
+      logistics: "物流",
+      requestData: "询价信息",
+      dialog: "订单沟通",
+      quoteAnswer: "回复询价",
+      payment: "付款",
+      account: "账单",
+      paid: "已付",
+      date: "日期",
+      receipts: "截图",
+      receiptOpen: "查看截图",
+      paymentConfirmed: "付款已确认",
+      receiptAttached: "付款截图已上传",
+      paymentMarkedNoReceipt: "已标记付款，截图暂未上传。",
+      paymentReceiptPending: "付款后这里会显示确认信息。",
+      price: "价格，CNY",
+      delivery: "运费，CNY",
+      deliveryShort: "运费",
+      days: "备货周期，天",
+      commentClarify: "备注 / 需要补充的信息",
+      chinaShipping: "中国境内发货",
+      nextTrack: "下一步：填写运单号",
+      trackAfterPayment: "付款后填写运单号",
+      trackingNumber: "运单号",
+      save: "保存",
+      comment: "备注",
+      request: "询价",
+      detail: "配件",
+      back: "返回",
+      file: "文件",
+      language: "语言",
+    },
+    data: {
+      vin: "VIN",
+      car: "车型",
+      year: "年份",
+      detail: "配件",
+      quantity: "数量",
+      description: "说明",
+      photoAlt: "配件照片",
+      noCar: "未填写车型",
+    },
+    meta: {
+      clarification: "补充信息",
+      quote: "报价",
+      message: "消息",
+      needsInfo: "需要补充信息",
+      reply: "回复",
+      noSupply: "无法供货",
+      problem: "问题",
+      chinaTracking: "中国境内已发货",
+      chinaWarehouse: "已到中国仓库",
+      tracking: "运单号：{value}",
+      purchaseDays: "备货周期：{days} 天",
+    },
+    placeholder: {
+      price: "例如 1200",
+      delivery: "0",
+      quoteComment: "价格、细节、条件，或需要补充的信息",
+      message: "输入此询价的消息",
+      tracking: "运单号",
+      chinaTracking: "中国境内运单号",
+      trackingComment: "快递、包装、细节",
+    },
+    paymentStatus: {
+      paid: "EVLine 已付款",
+      partial: "EVLine 已部分付款",
+      receipt: "付款截图已上传",
+      pending: "等待 EVLine 付款",
+      overpaid: "付款比账单多 +{amount} {currency}。",
+      underpaid: "付款比账单少 {amount} {currency}。",
+    },
+    dashboard: {
+      needAnswer: "待回复",
+      waitingPayment: "待付款",
+      needTrack: "待填运单号",
+      paid30: "30 天已付款",
+      work: "工作",
+      money: "资金",
+      activeCount: "{count} 个进行中",
+      emptyWorkTitle: "暂无进行中的询价",
+      emptyWorkText: "EVLine 的新询价会显示在这里。",
+      paidOrders: "{count} 个已付款订单",
+      paidTotal: "累计已付款",
+      waitingPaymentAmount: "待付款",
+      ordersCount: "{count} 个订单",
+      noPaymentsTitle: "暂无付款",
+      noPaymentsText: "EVLine 付款后，订单会显示在这里。",
+      sectionLabel: "后台分区",
+      panelLabel: "询价卡片",
+      receiptPresent: "有截图",
+      requestEvline: "EVLine 询价",
+      track: "运单号",
+    },
+    empty: {
+      supplierCabinet: "供应商后台",
+      openSupplierLink: "请打开 EVLine 经理发送的询价链接。",
+      openFailed: "无法打开链接",
+    },
+    validation: {
+      fileReadFailed: "无法读取文件。",
+      imageOpenFailed: "无法打开图片。",
+      imageTooLargeCompress: "文件太大，请选择较小的图片。",
+      fileType: "可以上传 PNG、JPG、WEBP 或 PDF。",
+      pdfTooLarge: "PDF 文件太大，最大 5 MB。",
+      imageTooLarge: "图片太大，最大 16 MB。",
+      quoteRequiredWithDelivery: "请填写价格、运费或备注。",
+      quoteRequired: "请填写价格或备注。",
+      messageRequiredWithDelivery: "请填写消息或运费。",
+      messageRequired: "请填写消息。",
+      noSupplyConfirm: "确认标记此配件无法供货吗？",
+    },
+  },
+};
+
+function normalizeLanguage(value) {
+  const lang = String(value || "").toLowerCase().slice(0, 2);
+  return supplierLanguages[lang] ? lang : "";
+}
+
+let supplierLang = normalizeLanguage(query.get("lang"))
+  || normalizeLanguage(localStorage.getItem(SUPPLIER_LANG_KEY))
+  || "zh";
+
+function supplierLocale() {
+  return supplierLanguages[supplierLang]?.locale || supplierLanguages.zh.locale;
+}
+
+function t(key, replacements = {}) {
+  const read = (lang) => key.split(".").reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), supplierI18n[lang]);
+  let value = read(supplierLang);
+  if (value === undefined) value = read("ru");
+  if (value === undefined) value = key;
+  return String(value).replace(/\{(\w+)\}/g, (_, name) => replacements[name] ?? "");
+}
+
+function languageSwitcher() {
+  return `
+    <div class="supplier-language" role="group" aria-label="${escapeHtml(t("ui.language"))}">
+      ${Object.entries(supplierLanguages).map(([lang, item]) => `
+        <button type="button" class="${supplierLang === lang ? "is-active" : ""}" data-supplier-lang="${lang}" aria-pressed="${supplierLang === lang ? "true" : "false"}">
+          ${escapeHtml(item.label)}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function syncLanguageMeta(titleKey) {
+  document.documentElement.lang = supplierLanguages[supplierLang]?.html || "zh-CN";
+  document.title = t(titleKey || (page === "dashboard" ? "page.dashboardTitle" : "page.requestTitle"));
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -40,7 +592,7 @@ function plainText(value) {
 
 function shortDateTime(value) {
   if (!value) return "-";
-  return new Date(value).toLocaleString("ru-RU", {
+  return new Date(value).toLocaleString(supplierLocale(), {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -64,9 +616,9 @@ function sendIcon() {
 
 function sendButton(extraClass = "") {
   return `
-    <button class="supplier-button supplier-button--primary supplier-button--send ${escapeHtml(extraClass)}" type="submit" aria-label="Отправить" title="Отправить">
+    <button class="supplier-button supplier-button--primary supplier-button--send ${escapeHtml(extraClass)}" type="submit" aria-label="${escapeHtml(t("ui.send"))}" title="${escapeHtml(t("ui.send"))}">
       ${sendIcon()}
-      <span>Отправить</span>
+      <span>${escapeHtml(t("ui.send"))}</span>
     </button>
   `;
 }
@@ -81,7 +633,7 @@ function paperclipIcon() {
 
 function supplierFileButton() {
   return `
-    <label class="supplier-file-button" aria-label="Прикрепить файл" title="Прикрепить файл">
+    <label class="supplier-file-button" aria-label="${escapeHtml(t("ui.attachFile"))}" title="${escapeHtml(t("ui.attachFile"))}">
       <input name="attachment" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" data-supplier-chat-file>
       ${paperclipIcon()}
       <span data-supplier-file-name></span>
@@ -90,7 +642,7 @@ function supplierFileButton() {
 }
 
 function noSupplyButton(extraClass = "") {
-  return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply ${escapeHtml(extraClass)}" type="button" data-action="no_stock" aria-label="Отметить, что по позиции нет поставки" title="无法供货">Нет поставки</button>`;
+  return `<button class="supplier-button supplier-button--quiet-danger supplier-button--no-supply ${escapeHtml(extraClass)}" type="button" data-action="no_stock" aria-label="${escapeHtml(t("ui.noSupplyTitle"))}" title="${escapeHtml(t("ui.noSupply"))}">${escapeHtml(t("ui.noSupply"))}</button>`;
 }
 
 function canMarkNoSupply(data = {}) {
@@ -103,28 +655,7 @@ function canMarkNoSupply(data = {}) {
 
 function supplierErrorMessage(message) {
   const value = plainText(message);
-  const dictionary = {
-    "price_cny is required": "Укажите цену.",
-    "Supplier quote is required before payment": "Сначала поставщик должен отправить цену.",
-    "Client approval is required before payment": "Перед оплатой менеджер должен подтвердить согласование с клиентом.",
-    "Payment receipt is required before supplier tracking": "Трек можно внести только после подтверждения оплаты.",
-    "Logistics status is available only after manager accepts a quote": "Трек можно внести только после того, как EVLine выберет предложение.",
-    "Supplier request is closed": "Этот запрос уже закрыт.",
-    "Supplier request not found": "Запрос не найден или ссылка устарела.",
-    "Unsupported supplier status": "Этот статус сейчас недоступен.",
-    "Supplier event limit reached": "Достигнут лимит обновлений по этому запросу.",
-    "Tracking number is required": "Укажите трек-номер.",
-    "Clarification text is required": "Напишите, что нужно уточнить.",
-    "Message text is required": "Напишите сообщение.",
-    "Supplier message is available only after quote": "Сообщение доступно после первого предложения.",
-    "Delivery cost is not available for this supplier request": "Стоимость доставки сейчас недоступна.",
-    "D1 migration 0015_supplier_delivery_cost.sql is required": "На сервере ещё не применена миграция доставки.",
-    "CRM already has another tracking number": "В CRM уже указан другой трек-номер. Свяжитесь с EVLine.",
-    "Supplier request does not belong to this order": "Запрос поставщику не относится к этому заказу.",
-    "Supplier quote does not belong to this order": "Предложение поставщика не относится к этому заказу.",
-    "Supplier quote does not belong to this supplier request": "Предложение не относится к этому запросу.",
-  };
-  return dictionary[value] || value || "Ошибка запроса";
+  return supplierI18n[supplierLang]?.errors?.[value] || supplierI18n.ru.errors[value] || value || t("errors.fallback");
 }
 
 async function supplierApi(path, options = {}) {
@@ -152,7 +683,7 @@ function readFileDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Не удалось прочитать файл."));
+    reader.onerror = () => reject(reader.error || new Error(t("validation.fileReadFailed")));
     reader.readAsDataURL(file);
   });
 }
@@ -161,7 +692,7 @@ function loadImage(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Не удалось открыть изображение."));
+    image.onerror = () => reject(new Error(t("validation.imageOpenFailed")));
     image.src = dataUrl;
   });
 }
@@ -201,7 +732,7 @@ async function compressChatImage(file) {
     const dataUrl = await readFileDataUrl(blob);
     if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
   }
-  throw new Error("Файл слишком большой. Выберите изображение поменьше.");
+  throw new Error(t("validation.imageTooLargeCompress"));
 }
 
 async function prepareChatAttachment(input) {
@@ -209,11 +740,11 @@ async function prepareChatAttachment(input) {
   if (!file) return null;
   const mime = normalizedAttachmentMime(file);
   if (!CHAT_ATTACHMENT_TYPES.has(mime)) {
-    throw new Error("Можно прикрепить PNG, JPG, WEBP или PDF.");
+    throw new Error(t("validation.fileType"));
   }
   if (mime === "application/pdf") {
     if (file.size > CHAT_ATTACHMENT_MAX_PDF_BYTES) {
-      throw new Error("PDF слишком большой. Максимум 5 МБ.");
+      throw new Error(t("validation.pdfTooLarge"));
     }
     return {
       attachment_name: chatAttachmentName(file, mime),
@@ -222,7 +753,7 @@ async function prepareChatAttachment(input) {
     };
   }
   if (file.size > CHAT_ATTACHMENT_MAX_IMAGE_BYTES) {
-    throw new Error("Изображение слишком большое. Максимум 16 МБ.");
+    throw new Error(t("validation.imageTooLarge"));
   }
   return {
     attachment_name: chatAttachmentName(file, mime),
@@ -241,7 +772,7 @@ async function appendChatAttachmentPayload(form, payload) {
 
 function statusBadge(status) {
   const safe = String(status || "sent").replace(/[^a-z0-9_-]/gi, "");
-  return `<span class="supplier-status supplier-status--${safe}">${escapeHtml(requestStatusLabels[status] || status || "Новый запрос")}</span>`;
+  return `<span class="supplier-status supplier-status--${safe}">${escapeHtml(t(`status.${status || "sent"}`) || status || t("status.sent"))}</span>`;
 }
 
 function requestImages(images = []) {
@@ -250,7 +781,7 @@ function requestImages(images = []) {
     <div class="supplier-images">
       ${images.map((image) => `
         <a href="${escapeHtml(image.image_url)}" target="_blank" rel="noopener">
-          <img src="${escapeHtml(image.image_url)}" alt="Фото детали" loading="lazy">
+          <img src="${escapeHtml(image.image_url)}" alt="${escapeHtml(t("data.photoAlt"))}" loading="lazy">
         </a>
       `).join("")}
     </div>
@@ -258,7 +789,7 @@ function requestImages(images = []) {
 }
 
 function chatAttachmentLabel(attachment = {}) {
-  return plainText(attachment.name) || (attachment.kind === "pdf" ? "document.pdf" : "Файл");
+  return plainText(attachment.name) || (attachment.kind === "pdf" ? "document.pdf" : t("ui.file"));
 }
 
 function chatAttachments(attachments = []) {
@@ -287,23 +818,40 @@ function chatAttachments(attachments = []) {
 }
 
 function requestData(request = {}) {
+  const description = localizedRequestText(request);
   return `
     <div class="supplier-data supplier-data--request">
-      <div><span>VIN</span><strong>${escapeHtml(request.vin || "-")}</strong></div>
-      <div><span>Авто</span><strong>${escapeHtml(request.car || "-")}</strong></div>
-      <div><span>Год</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
-      <div><span>Деталь</span><strong>${escapeHtml(request.item_name || "-")}</strong></div>
-      <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
-      <div class="supplier-data--wide"><span>Описание</span><strong>${escapeHtml(request.request_text || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.vin"))}</span><strong>${escapeHtml(request.vin || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.car"))}</span><strong>${escapeHtml(request.car || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.year"))}</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.detail"))}</span><strong>${escapeHtml(request.item_name || "-")}</strong></div>
+      <div><span>${escapeHtml(t("data.quantity"))}</span><strong>${Number(request.quantity || 1).toLocaleString(supplierLocale())}</strong></div>
+      <div class="supplier-data--wide"><span>${escapeHtml(t("data.description"))}</span><strong>${escapeHtml(description || "-")}</strong></div>
     </div>
   `;
 }
 
+function localizedRequestText(request = {}) {
+  if (supplierLang === "zh") {
+    return plainText(request.request_text_cn || request.manager_comment_cn || request.request_text || request.request_text_ru);
+  }
+  if (supplierLang === "en") {
+    return plainText(request.request_text_en || request.request_text_cn || request.request_text_ru || request.request_text);
+  }
+  return plainText(request.request_text_ru || request.request_text || request.request_text_cn);
+}
+
+function localizedSupplierNote(request = {}) {
+  if (supplierLang === "zh") return plainText(request.supplier_note_cn || request.supplier_note || request.supplier_note_ru);
+  if (supplierLang === "en") return plainText(request.supplier_note_en || request.supplier_note_cn || request.supplier_note_ru || request.supplier_note);
+  return plainText(request.supplier_note_ru || request.supplier_note || request.supplier_note_cn);
+}
+
 function paymentStatusText(payment = {}) {
-  if (payment.status === "paid") return "оплачено EVLine";
-  if (payment.status === "partial") return "частично оплачено EVLine";
-  if (payment.receipt_present) return "скрин оплаты прикреплён";
-  return "ожидает оплаты EVLine";
+  if (payment.status === "paid") return t("paymentStatus.paid");
+  if (payment.status === "partial") return t("paymentStatus.partial");
+  if (payment.receipt_present) return t("paymentStatus.receipt");
+  return t("paymentStatus.pending");
 }
 
 function paymentDelta(payment = {}) {
@@ -331,44 +879,56 @@ function renderPayment(payment = {}, tokenValue = token) {
   return `
     <section class="supplier-card supplier-payment supplier-payment--compact">
       <div class="supplier-card__head">
-        <h2>Оплата</h2>
+        <h2>${escapeHtml(t("ui.payment"))}</h2>
         <span class="supplier-muted">${escapeHtml(paymentStatusText(payment))}</span>
       </div>
       <div class="supplier-data">
-        <div><span>Счёт</span><strong>${Number(payment.requested_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
-        ${payment.paid_amount ? `<div><span>Оплачено</span><strong>${Number(payment.paid_amount || 0).toLocaleString("ru-RU")} ${escapeHtml(payment.paid_currency || payment.requested_currency || "CNY")}</strong></div>` : ""}
-        ${payment.paid_at ? `<div><span>Дата</span><strong>${escapeHtml(shortDateTime(payment.paid_at))}</strong></div>` : ""}
-        ${receiptCount > 1 ? `<div><span>Скрины</span><strong>${receiptCount}</strong></div>` : ""}
+        <div><span>${escapeHtml(t("ui.account"))}</span><strong>${Number(payment.requested_amount || 0).toLocaleString(supplierLocale())} ${escapeHtml(payment.requested_currency || "CNY")}</strong></div>
+        ${payment.paid_amount ? `<div><span>${escapeHtml(t("ui.paid"))}</span><strong>${Number(payment.paid_amount || 0).toLocaleString(supplierLocale())} ${escapeHtml(payment.paid_currency || payment.requested_currency || "CNY")}</strong></div>` : ""}
+        ${payment.paid_at ? `<div><span>${escapeHtml(t("ui.date"))}</span><strong>${escapeHtml(shortDateTime(payment.paid_at))}</strong></div>` : ""}
+        ${receiptCount > 1 ? `<div><span>${escapeHtml(t("ui.receipts"))}</span><strong>${receiptCount.toLocaleString(supplierLocale())}</strong></div>` : ""}
       </div>
       ${delta.amount ? `
         <p class="supplier-payment-note ${delta.significant ? "supplier-payment-note--warning" : ""}">
           ${delta.amount > 0
-            ? `Оплачено больше счёта на +${Number(delta.amount).toLocaleString("ru-RU")} ${escapeHtml(delta.currency)}.`
-            : `Оплачено меньше счёта на ${Number(Math.abs(delta.amount)).toLocaleString("ru-RU")} ${escapeHtml(delta.currency)}.`}
+            ? t("paymentStatus.overpaid", { amount: Number(delta.amount).toLocaleString(supplierLocale()), currency: escapeHtml(delta.currency) })
+            : t("paymentStatus.underpaid", { amount: Number(Math.abs(delta.amount)).toLocaleString(supplierLocale()), currency: escapeHtml(delta.currency) })}
         </p>
       ` : ""}
       ${receiptAttached ? `
         <div class="supplier-receipt">
-          <strong>${paid ? "Оплата подтверждена" : "Скрин оплаты прикреплён"}</strong>
-          <a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener">посмотреть скрин</a>
+          <strong>${escapeHtml(paid ? t("ui.paymentConfirmed") : t("ui.receiptAttached"))}</strong>
+          <a href="${escapeHtml(receiptUrl)}" target="_blank" rel="noopener">${escapeHtml(t("ui.receiptOpen"))}</a>
         </div>
-      ` : `<p class="supplier-muted">${paid ? "Оплата отмечена, скрин пока не прикреплён." : "После оплаты здесь появится подтверждение."}</p>`}
+      ` : `<p class="supplier-muted">${escapeHtml(paid ? t("ui.paymentMarkedNoReceipt") : t("ui.paymentReceiptPending"))}</p>`}
     </section>
   `;
 }
 
 function quoteChatText(quote = {}) {
   return [
-    quote.price_cny ? `${Number(quote.price_cny || 0).toLocaleString("ru-RU")} CNY` : "",
-    quote.purchase_days ? `Срок поставки: ${Number(quote.purchase_days)} дн.` : "",
-    plainText(quote.comment_cn),
+    quote.price_cny ? `${Number(quote.price_cny || 0).toLocaleString(supplierLocale())} CNY` : "",
+    quote.purchase_days ? t("meta.purchaseDays", { days: Number(quote.purchase_days).toLocaleString(supplierLocale()) }) : "",
+    localizedQuoteComment(quote),
   ].filter(Boolean).join("\n");
 }
 
+function localizedQuoteComment(quote = {}) {
+  if (supplierLang === "zh") return plainText(quote.comment_cn || quote.comment_translated || quote.comment_ru);
+  if (supplierLang === "en") return plainText(quote.comment_en || quote.comment_translated || quote.comment_cn || quote.comment_ru);
+  return plainText(quote.comment_ru || quote.comment_translated || quote.comment_cn);
+}
+
+function localizedEventComment(event = {}) {
+  if (supplierLang === "zh") return plainText(event.comment_cn || event.comment_translated);
+  if (supplierLang === "en") return plainText(event.comment_en || event.comment_translated || event.comment_cn);
+  return plainText(event.comment_translated || event.comment_cn);
+}
+
 function isDuplicateQuoteEvent(event = {}, quotes = []) {
-  const eventComment = plainText(event.comment_cn || event.comment_translated);
+  const eventComment = localizedEventComment(event);
   return quotes.some((quote) => {
-    const quoteComment = plainText(quote.comment_cn || quote.comment_translated || quote.comment_ru);
+    const quoteComment = localizedQuoteComment(quote);
     const commentsMatch = eventComment === quoteComment;
     const timeGap = Math.abs(dateMs(event.created_at) - dateMs(quote.created_at));
     return commentsMatch && timeGap <= 2000;
@@ -376,7 +936,7 @@ function isDuplicateQuoteEvent(event = {}, quotes = []) {
 }
 
 function supplierSelfTitle() {
-  return "Я";
+  return t("ui.self");
 }
 
 function supplierChatMessages(data = {}) {
@@ -385,13 +945,14 @@ function supplierChatMessages(data = {}) {
   const quotes = data.quotes || [];
   const messages = [];
 
-  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_cn) === plainText(request.supplier_note));
-  if (plainText(request.supplier_note) && !hasNoteEvent) {
+  const supplierNote = localizedSupplierNote(request);
+  const hasNoteEvent = events.some((event) => event.status === "sent" && plainText(event.comment_cn) === supplierNote);
+  if (supplierNote && !hasNoteEvent) {
     messages.push({
       actor: "evline",
-      title: "EVLine",
-      meta: "Уточнение",
-      text: plainText(request.supplier_note),
+      title: t("ui.evline"),
+      meta: t("meta.clarification"),
+      text: supplierNote,
       created_at: request.updated_at || request.created_at,
       order: 1,
     });
@@ -403,7 +964,7 @@ function supplierChatMessages(data = {}) {
     messages.push({
       actor: "supplier",
       title: supplierSelfTitle(),
-      meta: "Предложение",
+      meta: t("meta.quote"),
       text: textValue,
       created_at: quote.created_at,
       order: 2,
@@ -412,7 +973,7 @@ function supplierChatMessages(data = {}) {
 
   for (const event of events) {
     const status = plainText(event.status);
-    const comment = plainText(event.comment_cn || event.comment_translated);
+    const comment = localizedEventComment(event);
     const attachments = event.attachments || [];
     const hasAttachments = attachments.length > 0;
     if (status === "quoted") {
@@ -420,7 +981,7 @@ function supplierChatMessages(data = {}) {
         messages.push({
           actor: "supplier",
           title: supplierSelfTitle(),
-          meta: "Сообщение",
+          meta: t("meta.message"),
           text: comment,
           attachments,
           created_at: event.created_at,
@@ -433,7 +994,7 @@ function supplierChatMessages(data = {}) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
-        meta: "Нужно уточнение",
+        meta: t("meta.needsInfo"),
         text: comment,
         attachments,
         created_at: event.created_at,
@@ -442,8 +1003,8 @@ function supplierChatMessages(data = {}) {
     } else if (status === "sent" && (comment || hasAttachments)) {
       messages.push({
         actor: "evline",
-        title: "EVLine",
-        meta: "Ответ",
+        title: t("ui.evline"),
+        meta: t("meta.reply"),
         text: comment,
         attachments,
         created_at: event.created_at,
@@ -453,8 +1014,8 @@ function supplierChatMessages(data = {}) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
-        meta: "Нет поставки",
-        text: comment || "Вы отметили, что по позиции нет поставки.",
+        meta: t("meta.noSupply"),
+        text: comment || t("ui.noSupplyTitle"),
         attachments,
         created_at: event.created_at,
         order: 5,
@@ -463,7 +1024,7 @@ function supplierChatMessages(data = {}) {
       messages.push({
         actor: "supplier",
         title: supplierSelfTitle(),
-        meta: "Проблема",
+        meta: t("meta.problem"),
         text: comment,
         attachments,
         created_at: event.created_at,
@@ -472,9 +1033,9 @@ function supplierChatMessages(data = {}) {
     } else if (["china_tracking", "china_warehouse"].includes(status) && (comment || plainText(event.tracking_number) || hasAttachments)) {
       messages.push({
         actor: "system",
-        title: "Логистика",
-        meta: status === "china_tracking" ? "Отправлено, ждём доставку" : "На складе в Китае",
-        text: [plainText(event.tracking_number) ? `Трек: ${plainText(event.tracking_number)}` : "", comment].filter(Boolean).join("\n"),
+        title: t("ui.logistics"),
+        meta: status === "china_tracking" ? t("meta.chinaTracking") : t("meta.chinaWarehouse"),
+        text: [plainText(event.tracking_number) ? t("meta.tracking", { value: plainText(event.tracking_number) }) : "", comment].filter(Boolean).join("\n"),
         attachments,
         created_at: event.created_at,
         order: 7,
@@ -489,7 +1050,7 @@ function renderSupplierChat(data = {}) {
   const messages = supplierChatMessages(data);
   if (!messages.length) return "";
   return `
-    <h2>Диалог по заказу</h2>
+    <h2>${escapeHtml(t("ui.dialog"))}</h2>
     <div class="supplier-chat">
       ${messages.map((message) => `
         <article class="supplier-chat__message supplier-chat__message--${escapeHtml(message.actor)}">
@@ -515,26 +1076,26 @@ function renderQuoteForm(data = {}) {
   const showDeliveryField = !supplierHasDeliveryCost(request);
   return `
     <form class="supplier-form supplier-form--compact supplier-answer-form" data-answer-form>
-      <h2>Ответ по запросу</h2>
+      <h2>${escapeHtml(t("ui.quoteAnswer"))}</h2>
       <div class="supplier-form__grid">
         <input name="quote_type" type="hidden" value="original">
         <input name="availability" type="hidden" value="in_stock">
         <input name="quantity" type="hidden" value="${Number(request.quantity || 1)}">
         <label>
-          Цена, CNY
-          <input name="price_cny" type="number" min="0" step="0.01" placeholder="например 1200">
+          ${escapeHtml(t("ui.price"))}
+          <input name="price_cny" type="number" min="0" step="0.01" placeholder="${escapeHtml(t("placeholder.price"))}">
         </label>
         ${showDeliveryField ? `<label>
-          Доставка, CNY
-          <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0">
+          ${escapeHtml(t("ui.delivery"))}
+          <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="${escapeHtml(t("placeholder.delivery"))}">
         </label>` : ""}
         <label>
-          Срок поставки, дней
-          <input name="purchase_days" type="number" min="0" step="1" placeholder="0">
+          ${escapeHtml(t("ui.days"))}
+          <input name="purchase_days" type="number" min="0" step="1" placeholder="${escapeHtml(t("placeholder.delivery"))}">
         </label>
         <label class="supplier-wide">
-          Комментарий / уточнение
-          <textarea name="comment_cn" rows="3" placeholder="цена, нюансы, условия или что нужно уточнить"></textarea>
+          ${escapeHtml(t("ui.commentClarify"))}
+          <textarea name="comment_cn" rows="3" placeholder="${escapeHtml(t("placeholder.quoteComment"))}"></textarea>
         </label>
       </div>
       <div class="supplier-answer-form__actions">
@@ -551,11 +1112,11 @@ function renderMessageForm(data = {}) {
   if (!canMessage) return "";
   const showDeliveryField = !supplierHasDeliveryCost(request);
   return `
-    <form class="supplier-message-form ${showDeliveryField ? "" : "supplier-message-form--no-delivery"}" data-message-form aria-label="Сообщение по запросу">
-      <textarea name="comment_cn" rows="2" placeholder="Написать сообщение по этому запросу"></textarea>
+    <form class="supplier-message-form ${showDeliveryField ? "" : "supplier-message-form--no-delivery"}" data-message-form aria-label="${escapeHtml(t("meta.message"))}">
+      <textarea name="comment_cn" rows="2" placeholder="${escapeHtml(t("placeholder.message"))}"></textarea>
       ${showDeliveryField ? `<label class="supplier-message-form__delivery">
-        Доставка, CNY
-        <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="0">
+        ${escapeHtml(t("ui.delivery"))}
+        <input name="delivery_cost_cny" type="number" min="0" step="0.01" placeholder="${escapeHtml(t("placeholder.delivery"))}">
       </label>` : ""}
       <div class="supplier-message-form__actions">
         ${supplierFileButton()}
@@ -595,8 +1156,8 @@ function renderPassportTrackingWidget(data = {}) {
   if (trackingEvent) {
     return `
       <div class="supplier-passport-tracking supplier-passport-tracking--done">
-        <span>Отправка по Китаю</span>
-        <strong>${escapeHtml(trackingEvent.status === "china_warehouse" ? "На складе в Китае" : "Отправлено, ждём доставку")}</strong>
+        <span>${escapeHtml(t("ui.chinaShipping"))}</span>
+        <strong>${escapeHtml(trackingEvent.status === "china_warehouse" ? t("meta.chinaWarehouse") : t("meta.chinaTracking"))}</strong>
         <b>${escapeHtml(trackingEvent.tracking_number)}</b>
       </div>
     `;
@@ -605,11 +1166,11 @@ function renderPassportTrackingWidget(data = {}) {
     <form class="supplier-passport-tracking ${active ? "supplier-passport-tracking--active" : "supplier-passport-tracking--disabled"}" data-tracking-form>
       <input name="status" type="hidden" value="china_tracking">
       <label>
-        <span>Отправка по Китаю</span>
-        <strong>${active ? "Следующий шаг: внесите трек" : "Трек после оплаты"}</strong>
-        <input name="tracking_number" placeholder="номер отправки" ${active ? "required" : "disabled"}>
+        <span>${escapeHtml(t("ui.chinaShipping"))}</span>
+        <strong>${escapeHtml(active ? t("ui.nextTrack") : t("ui.trackAfterPayment"))}</strong>
+        <input name="tracking_number" placeholder="${escapeHtml(t("placeholder.tracking"))}" ${active ? "required" : "disabled"}>
       </label>
-      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit" ${active ? "" : "disabled"}>Сохранить</button>
+      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit" ${active ? "" : "disabled"}>${escapeHtml(t("ui.save"))}</button>
     </form>
   `;
 }
@@ -625,18 +1186,18 @@ function renderBottomTrackingForm(data = {}) {
     <section class="supplier-section supplier-section--tracking">
       <form class="supplier-form supplier-tracking-form supplier-tracking-form--compact" data-tracking-form>
         <div class="supplier-form__inline-head">
-          <h2>Отправка по Китаю</h2>
-          <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Сохранить</button>
+          <h2>${escapeHtml(t("ui.chinaShipping"))}</h2>
+          <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">${escapeHtml(t("ui.save"))}</button>
         </div>
         <div class="supplier-tracking-form__grid">
           <input name="status" type="hidden" value="china_tracking">
           <label>
-            Трек-номер
-            <input name="tracking_number" placeholder="номер отправки по Китаю" required>
+            ${escapeHtml(t("ui.trackingNumber"))}
+            <input name="tracking_number" placeholder="${escapeHtml(t("placeholder.chinaTracking"))}" required>
           </label>
           <label>
-            Комментарий
-            <textarea name="comment_cn" rows="1" placeholder="служба, упаковка, детали"></textarea>
+            ${escapeHtml(t("ui.comment"))}
+            <textarea name="comment_cn" rows="1" placeholder="${escapeHtml(t("placeholder.trackingComment"))}"></textarea>
           </label>
         </div>
       </form>
@@ -650,7 +1211,7 @@ function renderRequestDetail(data = {}, tokenValue = token) {
     <section class="supplier-card supplier-card--request-passport">
       <div class="supplier-card__head supplier-card__head--request">
         <div class="supplier-card__title">
-          <h2>Данные запроса</h2>
+          <h2>${escapeHtml(t("ui.requestData"))}</h2>
           <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
         </div>
         <div class="supplier-passport-actions">
@@ -674,21 +1235,24 @@ function renderRequestDetail(data = {}, tokenValue = token) {
 }
 
 function renderRequestPage(data) {
+  requestDataCache = data;
+  syncLanguageMeta("page.requestTitle");
   const request = data.request || {};
   root.innerHTML = `
     <header class="supplier-topbar supplier-topbar--request">
       <div class="supplier-brand">
-        <strong>EVLine · Запрос</strong>
+        <strong>${escapeHtml(t("page.requestTitle"))}</strong>
         <span>${escapeHtml(request.public_number || "")}</span>
       </div>
       <div class="supplier-topbar__aside">
-        <span class="supplier-kicker">${escapeHtml(request.supplier_name || "Поставщик")}</span>
+        ${languageSwitcher()}
+        <span class="supplier-kicker">${escapeHtml(request.supplier_name || t("page.supplierFallback"))}</span>
         ${statusBadge(request.status)}
       </div>
     </header>
 
     <section class="supplier-hero supplier-hero--compact">
-      <h1>${escapeHtml(request.item_name || "Запрос по детали")}</h1>
+      <h1>${escapeHtml(request.item_name || t("page.requestFallback"))}</h1>
     </section>
 
     ${renderRequestDetail(data, token)}
@@ -696,18 +1260,13 @@ function renderRequestPage(data) {
 }
 
 function supplierAmount(value, currency = "CNY") {
-  return `${Number(value || 0).toLocaleString("ru-RU")} ${escapeHtml(currency || "CNY")}`;
+  return `${Number(value || 0).toLocaleString(supplierLocale())} ${escapeHtml(currency || "CNY")}`;
 }
 
 function paymentLabel(status) {
-  const labels = {
-    paid: "Оплачено",
-    partial: "Частично оплачено",
-    requested: "Ждёт оплаты",
-    needs_review: "Скрин на проверке",
-    canceled: "Отменено",
-  };
-  return labels[status] || status || "Оплата";
+  const key = `paymentLabel.${status || "fallback"}`;
+  const value = t(key);
+  return value === key ? (status || t("paymentLabel.fallback")) : value;
 }
 
 function dashboardSummaryCard(label, value, hint = "") {
@@ -723,10 +1282,10 @@ function dashboardSummaryCard(label, value, hint = "") {
 function renderDashboardSummary(summary = {}) {
   return `
     <section class="supplier-dashboard-stats">
-      ${dashboardSummaryCard("Нужно ответить", Number(summary.need_answer || 0).toLocaleString("ru-RU"))}
-      ${dashboardSummaryCard("Ждёт оплату", Number(summary.waiting_payment || 0).toLocaleString("ru-RU"))}
-      ${dashboardSummaryCard("Нужен трек", Number(summary.paid_needs_tracking || 0).toLocaleString("ru-RU"))}
-      ${dashboardSummaryCard("Оплачено за 30 дней", supplierAmount(summary.paid_30_amount, summary.currency), `${Number(summary.paid_30_count || 0)} заказов`)}
+      ${dashboardSummaryCard(t("dashboard.needAnswer"), Number(summary.need_answer || 0).toLocaleString(supplierLocale()))}
+      ${dashboardSummaryCard(t("dashboard.waitingPayment"), Number(summary.waiting_payment || 0).toLocaleString(supplierLocale()))}
+      ${dashboardSummaryCard(t("dashboard.needTrack"), Number(summary.paid_needs_tracking || 0).toLocaleString(supplierLocale()))}
+      ${dashboardSummaryCard(t("dashboard.paid30"), supplierAmount(summary.paid_30_amount, summary.currency), t("dashboard.ordersCount", { count: Number(summary.paid_30_count || 0).toLocaleString(supplierLocale()) }))}
     </section>
   `;
 }
@@ -761,7 +1320,7 @@ function dashboardRequestTrackingLine(request = {}) {
   if (trackingEvent) {
     return `
       <div class="supplier-dashboard-tracking supplier-dashboard-tracking--done">
-        <span>Трек</span>
+        <span>${escapeHtml(t("dashboard.track"))}</span>
         <strong>${escapeHtml(trackingEvent.tracking_number)}</strong>
       </div>
     `;
@@ -772,10 +1331,10 @@ function dashboardRequestTrackingLine(request = {}) {
     <form class="supplier-dashboard-tracking supplier-dashboard-tracking--active" data-tracking-form data-request-token="${escapeHtml(requestTokenFromLink(request.supplier_link))}">
       <input name="status" type="hidden" value="china_tracking">
       <label>
-        <span>Нужен трек</span>
-        <input name="tracking_number" placeholder="номер отправки" required>
+        <span>${escapeHtml(t("dashboard.needTrack"))}</span>
+        <input name="tracking_number" placeholder="${escapeHtml(t("placeholder.tracking"))}" required>
       </label>
-      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">Сохранить</button>
+      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit">${escapeHtml(t("ui.save"))}</button>
     </form>
   `;
 }
@@ -789,14 +1348,14 @@ function renderDashboardRequestCard(request = {}) {
     <article class="supplier-dashboard-card supplier-dashboard-card--status-${escapeHtml(statusClass)} ${selected ? "is-selected" : ""}">
       <button class="supplier-dashboard-card__open" type="button" data-dashboard-open-request="${escapeHtml(key)}">
         <div class="supplier-card__head">
-          <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
+          <strong>${escapeHtml(request.public_number || t("ui.request"))}</strong>
           ${statusBadge(request.status)}
         </div>
-        <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || "Деталь")}</div>
+        <div class="supplier-dashboard-card__title">${escapeHtml(request.item_name || t("ui.detail"))}</div>
         <div class="supplier-dashboard-card__meta">
-          <span>${escapeHtml(request.car || "Авто не указано")}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
+          <span>${escapeHtml(request.car || t("data.noCar"))}${request.car_year ? ` · ${escapeHtml(request.car_year)}` : ""}</span>
           ${payment ? `<span>${escapeHtml(paymentLabel(payment.status))}${payment.requested_amount ? ` · ${supplierAmount(payment.paid_amount || payment.requested_amount, payment.paid_currency || payment.requested_currency)}` : ""}</span>` : ""}
-          ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<span>Доставка: ${supplierAmount(request.delivery_cost_cny, "CNY")}</span>` : ""}
+          ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<span>${escapeHtml(t("ui.deliveryShort"))}: ${supplierAmount(request.delivery_cost_cny, "CNY")}</span>` : ""}
         </div>
       </button>
       ${dashboardRequestTrackingLine(request)}
@@ -809,11 +1368,11 @@ function renderDashboardWork(requests = []) {
   return `
     <section class="supplier-dashboard-panel">
       <div class="supplier-dashboard-panel__head">
-        <h2>Работа</h2>
-        <span class="supplier-muted">${Number(requests.length || 0)} активных</span>
+        <h2>${escapeHtml(t("dashboard.work"))}</h2>
+        <span class="supplier-muted">${escapeHtml(t("dashboard.activeCount", { count: Number(requests.length || 0).toLocaleString(supplierLocale()) }))}</span>
       </div>
       <div class="supplier-dashboard">
-        ${sorted.length ? sorted.map(renderDashboardRequestCard).join("") : `<div class="supplier-empty"><strong>Пока нет активных запросов</strong><span class="supplier-muted">Новые запросы EVLine появятся здесь.</span></div>`}
+        ${sorted.length ? sorted.map(renderDashboardRequestCard).join("") : `<div class="supplier-empty"><strong>${escapeHtml(t("dashboard.emptyWorkTitle"))}</strong><span class="supplier-muted">${escapeHtml(t("dashboard.emptyWorkText"))}</span></div>`}
       </div>
     </section>
   `;
@@ -823,12 +1382,12 @@ function renderDashboardPaymentCard(payment = {}) {
   return `
     <a class="supplier-dashboard-payment" href="${escapeHtml(payment.supplier_link || "#")}">
       <div>
-        <strong>${escapeHtml(payment.request_public_number || payment.payment_number || "Оплата")}</strong>
-        <span>${escapeHtml(payment.item_name || "Запрос EVLine")}</span>
+        <strong>${escapeHtml(payment.request_public_number || payment.payment_number || t("ui.payment"))}</strong>
+        <span>${escapeHtml(payment.item_name || t("dashboard.requestEvline"))}</span>
       </div>
       <div>
         <b>${supplierAmount(payment.amount, payment.currency)}</b>
-        <span>${escapeHtml(paymentLabel(payment.status))}${payment.receipt_present ? " · скрин есть" : ""}</span>
+        <span>${escapeHtml(paymentLabel(payment.status))}${payment.receipt_present ? ` · ${escapeHtml(t("dashboard.receiptPresent"))}` : ""}</span>
       </div>
     </a>
   `;
@@ -840,15 +1399,15 @@ function renderDashboardMoney(data = {}) {
   return `
     <section class="supplier-dashboard-panel">
       <div class="supplier-dashboard-panel__head">
-        <h2>Деньги</h2>
-        <span class="supplier-muted">${Number(summary.paid_total_count || 0)} оплаченных заказов</span>
+        <h2>${escapeHtml(t("dashboard.money"))}</h2>
+        <span class="supplier-muted">${escapeHtml(t("dashboard.paidOrders", { count: Number(summary.paid_total_count || 0).toLocaleString(supplierLocale()) }))}</span>
       </div>
       <div class="supplier-money-summary">
-        ${dashboardSummaryCard("Оплачено всего", supplierAmount(summary.paid_total_amount, summary.currency))}
-        ${dashboardSummaryCard("Ждёт оплаты", supplierAmount(summary.waiting_amount, summary.currency), `${Number(summary.waiting_count || 0)} заказов`)}
+        ${dashboardSummaryCard(t("dashboard.paidTotal"), supplierAmount(summary.paid_total_amount, summary.currency))}
+        ${dashboardSummaryCard(t("dashboard.waitingPaymentAmount"), supplierAmount(summary.waiting_amount, summary.currency), t("dashboard.ordersCount", { count: Number(summary.waiting_count || 0).toLocaleString(supplierLocale()) }))}
       </div>
       <div class="supplier-dashboard-payments">
-        ${payments.length ? payments.map(renderDashboardPaymentCard).join("") : `<div class="supplier-empty"><strong>Оплат пока нет</strong><span class="supplier-muted">Когда EVLine оплатит заказ, он появится здесь.</span></div>`}
+        ${payments.length ? payments.map(renderDashboardPaymentCard).join("") : `<div class="supplier-empty"><strong>${escapeHtml(t("dashboard.noPaymentsTitle"))}</strong><span class="supplier-muted">${escapeHtml(t("dashboard.noPaymentsText"))}</span></div>`}
       </div>
     </section>
   `;
@@ -856,9 +1415,9 @@ function renderDashboardMoney(data = {}) {
 
 function renderDashboardTabs() {
   return `
-    <div class="supplier-dashboard-tabs" role="tablist" aria-label="Раздел кабинета">
-      <button type="button" class="${dashboardTab === "work" ? "is-active" : ""}" data-dashboard-tab="work">Работа</button>
-      <button type="button" class="${dashboardTab === "money" ? "is-active" : ""}" data-dashboard-tab="money">Деньги</button>
+    <div class="supplier-dashboard-tabs" role="tablist" aria-label="${escapeHtml(t("dashboard.sectionLabel"))}">
+      <button type="button" class="${dashboardTab === "work" ? "is-active" : ""}" data-dashboard-tab="work">${escapeHtml(t("dashboard.work"))}</button>
+      <button type="button" class="${dashboardTab === "money" ? "is-active" : ""}" data-dashboard-tab="money">${escapeHtml(t("dashboard.money"))}</button>
     </div>
   `;
 }
@@ -869,13 +1428,13 @@ function renderDashboardRequestPanel() {
   const requestToken = requestTokenFromLink(request.supplier_link);
   return `
     <div class="supplier-request-panel-backdrop" data-dashboard-close-request></div>
-    <aside class="supplier-request-panel" data-request-token="${escapeHtml(requestToken)}" aria-label="Карточка запроса">
+    <aside class="supplier-request-panel" data-request-token="${escapeHtml(requestToken)}" aria-label="${escapeHtml(t("dashboard.panelLabel"))}">
       <div class="supplier-request-panel__head">
         <div>
-          <strong>${escapeHtml(request.public_number || "Запрос")}</strong>
-          <span>${escapeHtml(request.item_name || "Деталь")}${request.car ? ` · ${escapeHtml(request.car)}` : ""}</span>
+          <strong>${escapeHtml(request.public_number || t("ui.request"))}</strong>
+          <span>${escapeHtml(request.item_name || t("ui.detail"))}${request.car ? ` · ${escapeHtml(request.car)}` : ""}</span>
         </div>
-        <button class="supplier-button supplier-button--small" type="button" data-dashboard-close-request>Назад</button>
+        <button class="supplier-button supplier-button--small" type="button" data-dashboard-close-request>${escapeHtml(t("ui.back"))}</button>
       </div>
       <div class="supplier-request-panel__body">
         ${renderRequestDetail(dashboardRequestAsData(request), requestToken)}
@@ -885,6 +1444,7 @@ function renderDashboardRequestPanel() {
 }
 
 function renderDashboardPage(data) {
+  syncLanguageMeta("page.dashboardTitle");
   dashboardData = data;
   const requests = data.requests || [];
   if (dashboardSelectedRequestId && !requests.some((request) => dashboardRequestKey(request) === dashboardSelectedRequestId)) {
@@ -893,12 +1453,13 @@ function renderDashboardPage(data) {
   root.innerHTML = `
     <header class="supplier-topbar">
       <div class="supplier-brand">
-        <strong>EVLine · Кабинет поставщика</strong>
-        <span>${escapeHtml(data.supplier?.name || "Поставщик")}</span>
+        <strong>${escapeHtml(t("page.dashboardTitle"))}</strong>
+        <span>${escapeHtml(data.supplier?.name || t("page.supplierFallback"))}</span>
       </div>
+      ${languageSwitcher()}
     </header>
     <section class="supplier-hero">
-      <h1>${escapeHtml(data.supplier?.name || "Поставщик")}</h1>
+      <h1>${escapeHtml(data.supplier?.name || t("page.supplierFallback"))}</h1>
       ${renderDashboardSummary(data.summary || {})}
     </section>
     ${renderDashboardTabs()}
@@ -912,7 +1473,7 @@ function setButtonBusy(button, busy, text) {
   if (busy) {
     button.dataset.originalText = button.textContent;
     button.disabled = true;
-    button.textContent = text || "Отправляем...";
+    button.textContent = text || t("ui.sending");
   } else {
     button.disabled = false;
     button.textContent = button.dataset.originalText || button.textContent;
@@ -970,7 +1531,7 @@ root?.addEventListener("change", (event) => {
   const file = input.files?.[0];
   const name = label?.querySelector("[data-supplier-file-name]");
   label?.classList.toggle("has-file", Boolean(file));
-  if (label) label.title = file?.name || "Прикрепить файл";
+  if (label) label.title = file?.name || t("ui.attachFile");
   if (name) name.textContent = file?.name ? file.name.slice(0, 32) : "";
 });
 
@@ -987,7 +1548,7 @@ root?.addEventListener("submit", async (event) => {
       const hasComment = Boolean(plainText(payload.comment_cn));
       const hasDelivery = Boolean(formHasDeliveryCost(payload));
       if (!hasPrice && !hasComment && !hasDelivery) {
-        throw new Error(form.elements.namedItem("delivery_cost_cny") ? "Укажите цену, доставку или комментарий." : "Укажите цену или комментарий.");
+        throw new Error(form.elements.namedItem("delivery_cost_cny") ? t("validation.quoteRequiredWithDelivery") : t("validation.quoteRequired"));
       }
       payload.action = hasPrice ? "quote" : hasComment ? "needs_info" : "delivery_cost";
       const data = await supplierApi(`/api/supplier/request/${encodeURIComponent(requestToken)}`, {
@@ -1012,7 +1573,7 @@ root?.addEventListener("submit", async (event) => {
       const hasDelivery = Boolean(formHasDeliveryCost(payload));
       const hasAttachment = Boolean(form.querySelector("[data-supplier-chat-file]")?.files?.[0]);
       if (!hasComment && !hasDelivery && !hasAttachment) {
-        throw new Error(form.elements.namedItem("delivery_cost_cny") ? "Напишите сообщение или укажите доставку." : "Напишите сообщение.");
+        throw new Error(form.elements.namedItem("delivery_cost_cny") ? t("validation.messageRequiredWithDelivery") : t("validation.messageRequired"));
       }
       await appendChatAttachmentPayload(form, payload);
       payload.action = hasComment || hasAttachment ? "message" : "delivery_cost";
@@ -1030,6 +1591,20 @@ root?.addEventListener("submit", async (event) => {
 });
 
 root?.addEventListener("click", async (event) => {
+  const langButton = event.target.closest("[data-supplier-lang]");
+  if (langButton) {
+    supplierLang = normalizeLanguage(langButton.dataset.supplierLang) || supplierLang;
+    localStorage.setItem(SUPPLIER_LANG_KEY, supplierLang);
+    if (page === "dashboard") {
+      renderDashboardPage(dashboardData || {});
+    } else if (requestDataCache) {
+      renderRequestPage(requestDataCache);
+    } else {
+      loadRequest().catch(() => null);
+    }
+    return;
+  }
+
   const openRequestButton = event.target.closest("[data-dashboard-open-request]");
   if (openRequestButton) {
     dashboardSelectedRequestId = openRequestButton.dataset.dashboardOpenRequest || "";
@@ -1054,7 +1629,7 @@ root?.addEventListener("click", async (event) => {
   if (!button) return;
   const action = button.dataset.action;
   if (action !== "no_stock") return;
-  if (!confirm("Отметить, что по этой позиции нет поставки?")) return;
+  if (!confirm(t("validation.noSupplyConfirm"))) return;
   setButtonBusy(button, true);
   try {
     const requestToken = supplierTokenForElement(button);
@@ -1076,10 +1651,11 @@ document.addEventListener("keydown", (event) => {
 });
 
 if (!token && root) {
+  syncLanguageMeta(page === "dashboard" ? "page.dashboardTitle" : "page.requestTitle");
   root.innerHTML = `
     <section class="supplier-empty">
-      <strong>Кабинет поставщика</strong>
-      <span class="supplier-muted">Откройте ссылку на запрос, которую отправил менеджер EVLine.</span>
+      <strong>${escapeHtml(t("empty.supplierCabinet"))}</strong>
+      <span class="supplier-muted">${escapeHtml(t("empty.openSupplierLink"))}</span>
     </section>
   `;
 } else {
@@ -1087,7 +1663,7 @@ if (!token && root) {
   if (!root) return;
   root.innerHTML = `
     <section class="supplier-empty">
-      <strong>Не удалось открыть ссылку</strong>
+      <strong>${escapeHtml(t("empty.openFailed"))}</strong>
       <span class="supplier-muted">${escapeHtml(error.message)}</span>
     </section>
   `;
