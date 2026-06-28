@@ -189,6 +189,89 @@ body.supplier-shell {
   align-items: center;
 }
 
+.supplier-passport-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.supplier-passport-tracking {
+  min-width: min(100%, 280px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 9px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.supplier-passport-tracking label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.supplier-passport-tracking span {
+  color: var(--supplier-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.supplier-passport-tracking strong {
+  color: var(--supplier-ink);
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.supplier-passport-tracking input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--supplier-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--supplier-ink);
+  font: inherit;
+}
+
+.supplier-passport-tracking--disabled {
+  opacity: 0.58;
+}
+
+.supplier-passport-tracking--active {
+  border-color: rgba(34, 197, 94, 0.38);
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%);
+  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.1);
+}
+
+.supplier-passport-tracking--active strong {
+  color: #15803d;
+}
+
+.supplier-passport-tracking--active input {
+  border-color: rgba(34, 197, 94, 0.42);
+}
+
+.supplier-passport-tracking--done {
+  grid-template-columns: 1fr;
+  border-color: rgba(20, 184, 166, 0.26);
+  background: #f0fdfa;
+}
+
+.supplier-passport-tracking--done strong {
+  color: #0f766e;
+}
+
+.supplier-passport-tracking--done b {
+  overflow-wrap: anywhere;
+  color: var(--supplier-ink);
+  font-size: 14px;
+}
+
 .supplier-card--request-passport h2 {
   font-size: 16px;
 }
@@ -944,6 +1027,20 @@ body.supplier-shell {
 
   .supplier-card--request-passport .supplier-data {
     grid-template-columns: 1fr;
+  }
+
+  .supplier-card--request-passport .supplier-card__head {
+    align-items: stretch;
+  }
+
+  .supplier-passport-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .supplier-passport-tracking {
+    width: 100%;
+    min-width: 0;
   }
 
   .supplier-answer-form .supplier-form__grid {

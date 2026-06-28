@@ -421,30 +421,39 @@ function formPositiveNumber(value) {
   return Number(String(value || "").replace(",", ".")) > 0;
 }
 
-function renderTrackingForm(request = {}, payment = null) {
+function latestLogisticsEvent(data = {}) {
+  return (data.tracking_events || [])
+    .filter((event) => ["china_tracking", "china_warehouse"].includes(plainText(event.status)) && plainText(event.tracking_number))
+    .sort((a, b) => dateMs(b.created_at) - dateMs(a.created_at))[0] || null;
+}
+
+function renderPassportTrackingWidget(data = {}) {
+  const request = data.request || {};
+  const payment = data.payment || null;
+  const trackingEvent = latestLogisticsEvent(data);
   const paid = payment?.status === "paid";
-  const allowed = paid && ["accepted", "purchased", "china_tracking", "china_warehouse", "problem"].includes(request.status);
-  if (!allowed) {
-    if (["accepted", "purchased"].includes(request.status) && !paid) {
-      return `<section class="supplier-card"><h2>Отправка</h2><p class="supplier-muted">Трек-номер можно будет внести после подтверждения оплаты.</p></section>`;
-    }
-    return "";
+  const trackingSourceReady = ["accepted", "purchased", "china_tracking", "china_warehouse", "problem"].includes(request.status);
+  const active = paid && trackingSourceReady;
+  const relevant = Boolean(payment) || trackingSourceReady;
+  if (!trackingEvent && !relevant) return "";
+  if (trackingEvent) {
+    return `
+      <div class="supplier-passport-tracking supplier-passport-tracking--done">
+        <span>Отправка по Китаю</span>
+        <strong>${escapeHtml(trackingEvent.status === "china_warehouse" ? "На складе в Китае" : "Отправлено, ждём доставку")}</strong>
+        <b>${escapeHtml(trackingEvent.tracking_number)}</b>
+      </div>
+    `;
   }
   return `
-    <form class="supplier-form" data-tracking-form>
-      <h2>Отправка по Китаю</h2>
-      <div class="supplier-form__grid">
-        <input name="status" type="hidden" value="china_tracking">
-        <label>
-          Трек-номер
-          <input name="tracking_number" placeholder="номер отправки по Китаю" required>
-        </label>
-        <label class="supplier-wide">
-          Комментарий
-          <textarea name="comment_cn" rows="3" placeholder="служба доставки, упаковка, детали отправки"></textarea>
-        </label>
-      </div>
-      <button class="supplier-button supplier-button--primary" type="submit">Сохранить трек</button>
+    <form class="supplier-passport-tracking ${active ? "supplier-passport-tracking--active" : "supplier-passport-tracking--disabled"}" data-tracking-form>
+      <input name="status" type="hidden" value="china_tracking">
+      <label>
+        <span>Отправка по Китаю</span>
+        <strong>${active ? "Следующий шаг: внесите трек" : "Трек после оплаты"}</strong>
+        <input name="tracking_number" placeholder="номер отправки" ${active ? "required" : "disabled"}>
+      </label>
+      <button class="supplier-button supplier-button--primary supplier-button--small" type="submit" ${active ? "" : "disabled"}>Сохранить</button>
     </form>
   `;
 }
@@ -458,7 +467,10 @@ function renderRequestDetail(data = {}, tokenValue = token) {
           <h2>Данные запроса</h2>
           <span class="supplier-muted">${escapeHtml(shortDateTime(request.created_at))}</span>
         </div>
-        ${canMarkNoSupply(data) ? noSupplyButton("supplier-button--passport-action") : ""}
+        <div class="supplier-passport-actions">
+          ${renderPassportTrackingWidget(data)}
+          ${canMarkNoSupply(data) ? noSupplyButton("supplier-button--passport-action") : ""}
+        </div>
       </div>
       ${requestImages(data.request_images || [])}
       ${requestData(request)}
@@ -471,10 +483,6 @@ function renderRequestDetail(data = {}, tokenValue = token) {
     </section>
 
     ${renderPayment(data.payment, tokenValue)}
-
-    <section class="supplier-section">
-      ${renderTrackingForm(request, data.payment)}
-    </section>
   `;
 }
 
