@@ -649,7 +649,7 @@ function paymentAmountCandidates(value) {
     })
     .filter((candidate) => {
       if (!Number.isFinite(candidate.amount) || candidate.amount <= 0) return false;
-      if (candidate.before === ":" || candidate.after === ":") return false;
+      if ((candidate.before === ":" || candidate.after === ":") && !candidate.hasCurrency && !candidate.hasPaymentContext) return false;
       if (!candidate.hasCurrency && /^0\d+$/.test(candidate.rawNumber)) return false;
       return true;
     });
