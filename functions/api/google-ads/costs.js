@@ -1,5 +1,7 @@
 import { integer, json, number, readPayload, text } from "../../_lib/http.js";
 
+const DB_WRITE_BATCH_SIZE = 50;
+
 function syncToken(request, env, payload) {
   const auth = request.headers.get("authorization") || "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
@@ -72,12 +74,12 @@ function isMissingKeywordStatsTable(error) {
   return /no such table: google_ads_keyword_stats/i.test(error?.message || String(error));
 }
 
-async function importKeywordStat(env, row, payload, now, batchId) {
+function keywordStatStatement(env, row, payload, now, batchId) {
   const level = normalizedLevel(row.level);
-  if (level === "campaign") return false;
+  if (level === "campaign") return null;
 
   const costDate = normalizedDate(row.date || row.cost_date || row.segmentsDate);
-  if (!costDate) return false;
+  if (!costDate) return null;
 
   const campaignId = text(row.campaignId || row.campaign_id);
   const campaignName = text(row.campaignName || row.campaign_name || row.campaign);
@@ -91,7 +93,7 @@ async function importKeywordStat(env, row, payload, now, batchId) {
   const impressions = integer(row.impressions);
   const notes = notesForRow(row, payload, batchId);
 
-  await env.DB.prepare(
+  return env.DB.prepare(
     `INSERT INTO google_ads_keyword_stats (
       id, stat_key, created_at, updated_at, stat_date, google_ads_customer_id, level,
       source, medium, campaign, campaign_id, campaign_name, ad_group_id, ad_group_name,
@@ -146,10 +148,74 @@ async function importKeywordStat(env, row, payload, now, batchId) {
       number(row.conversionValue ?? row.conversion_value),
       text(row.currencyCode || payload.currencyCode || payload.currency_code) || "UAH",
       notes
-    )
-    .run();
+    );
+}
 
-  return true;
+function campaignStatements(env, row, payload, now, batchId) {
+  const costDate = normalizedDate(row.date || row.cost_date || row.segmentsDate);
+  const campaignId = text(row.campaignId || row.campaign_id);
+  const campaignName = text(row.campaignName || row.campaign_name || row.campaign);
+  const campaign = campaignId || campaignName || "без кампанії";
+  if (!costDate) return null;
+
+  const spend = rowSpend(row);
+  const clicks = integer(row.clicks);
+  const impressions = integer(row.impressions);
+  const notes = notesForRow(row, payload, batchId);
+
+  return {
+    spend,
+    clicks,
+    impressions,
+    statements: [
+      env.DB.prepare(
+        `DELETE FROM ad_costs
+         WHERE cost_date = ?
+           AND platform = 'google'
+           AND source = 'google'
+           AND medium = 'cpc'
+           AND (
+             campaign = ?
+             OR campaign = ?
+             OR notes LIKE ?
+           )
+           AND notes LIKE 'Google Ads sync:%'`
+      ).bind(costDate, campaign, campaignName, campaignId ? `%campaignId=${campaignId};%` : "__no_campaign_id__"),
+      env.DB.prepare(
+        `INSERT INTO ad_costs (
+          id, created_at, updated_at, cost_date, platform, source, medium, campaign, spend_uah, clicks, impressions, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        crypto.randomUUID(),
+        now,
+        now,
+        costDate,
+        "google",
+        "google",
+        "cpc",
+        campaign,
+        spend,
+        clicks,
+        impressions,
+        notes
+      ),
+    ],
+  };
+}
+
+async function runStatementBatch(env, statements) {
+  if (!statements.length) return;
+
+  for (let index = 0; index < statements.length; index += DB_WRITE_BATCH_SIZE) {
+    const chunk = statements.slice(index, index + DB_WRITE_BATCH_SIZE);
+    if (typeof env.DB.batch === "function") {
+      await env.DB.batch(chunk);
+      continue;
+    }
+    for (const statement of chunk) {
+      await statement.run();
+    }
+  }
 }
 
 export async function onRequestOptions() {
@@ -188,89 +254,47 @@ export async function onRequestPost({ request, env }) {
   let keywordStatsImported = 0;
   let keywordStatsSkipped = 0;
   let keywordStatsTableMissing = false;
+  const statements = [];
 
   for (const row of rows) {
     const level = normalizedLevel(row.level);
     if (level !== "campaign") {
-      try {
-        const importedKeywordStat = await importKeywordStat(env, row, payload, now, batchId);
-        if (importedKeywordStat) {
-          imported += 1;
-          keywordStatsImported += 1;
-          spendTotal += rowSpend(row);
-          clicksTotal += integer(row.clicks);
-          impressionsTotal += integer(row.impressions);
-        } else {
-          skipped += 1;
-          keywordStatsSkipped += 1;
-        }
-      } catch (error) {
-        if (isMissingKeywordStatsTable(error)) {
-          skipped += 1;
-          keywordStatsSkipped += 1;
-          keywordStatsTableMissing = true;
-          continue;
-        }
-        throw error;
+      const statement = keywordStatStatement(env, row, payload, now, batchId);
+      if (statement) {
+        statements.push(statement);
+        imported += 1;
+        keywordStatsImported += 1;
+        spendTotal += rowSpend(row);
+        clicksTotal += integer(row.clicks);
+        impressionsTotal += integer(row.impressions);
+      } else {
+        skipped += 1;
+        keywordStatsSkipped += 1;
       }
       continue;
     }
 
-    const costDate = normalizedDate(row.date || row.cost_date || row.segmentsDate);
-    const campaignId = text(row.campaignId || row.campaign_id);
-    const campaignName = text(row.campaignName || row.campaign_name || row.campaign);
-    const campaign = campaignId || campaignName || "без кампанії";
-    if (!costDate) {
+    const campaign = campaignStatements(env, row, payload, now, batchId);
+    if (!campaign) {
       skipped += 1;
       continue;
     }
 
-    const spend = rowSpend(row);
-    const clicks = integer(row.clicks);
-    const impressions = integer(row.impressions);
-    const notes = notesForRow(row, payload, batchId);
-
-    await env.DB.prepare(
-      `DELETE FROM ad_costs
-       WHERE cost_date = ?
-         AND platform = 'google'
-         AND source = 'google'
-         AND medium = 'cpc'
-         AND (
-           campaign = ?
-           OR campaign = ?
-           OR notes LIKE ?
-         )
-         AND notes LIKE 'Google Ads sync:%'`
-    )
-      .bind(costDate, campaign, campaignName, campaignId ? `%campaignId=${campaignId};%` : "__no_campaign_id__")
-      .run();
-
-    await env.DB.prepare(
-      `INSERT INTO ad_costs (
-        id, created_at, updated_at, cost_date, platform, source, medium, campaign, spend_uah, clicks, impressions, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        crypto.randomUUID(),
-        now,
-        now,
-        costDate,
-        "google",
-        "google",
-        "cpc",
-        campaign,
-        spend,
-        clicks,
-        impressions,
-        notes
-      )
-      .run();
-
+    statements.push(...campaign.statements);
     imported += 1;
-    spendTotal += spend;
-    clicksTotal += clicks;
-    impressionsTotal += impressions;
+    spendTotal += campaign.spend;
+    clicksTotal += campaign.clicks;
+    impressionsTotal += campaign.impressions;
+  }
+
+  try {
+    await runStatementBatch(env, statements);
+  } catch (error) {
+    if (isMissingKeywordStatsTable(error)) {
+      keywordStatsTableMissing = true;
+    } else {
+      throw error;
+    }
   }
 
   return json({
