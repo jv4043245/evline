@@ -392,6 +392,12 @@
             </div>
             <div class="source-list" data-sources></div>
           </article>
+          <article class="admin-panel">
+            <div class="admin-panel__head">
+              <h2>Кампанії</h2>
+            </div>
+            <div class="source-list" data-campaigns></div>
+          </article>
         </section>
 
         <section class="admin-grid admin-grid--two">
@@ -479,6 +485,41 @@
               </thead>
               <tbody data-google-ads-conversions>
                 <tr><td colspan="7" class="muted">Дані з'являться після застосування міграції.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="admin-panel google-ads-panel">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Прибутковість ключів</h2>
+              <p class="muted" data-google-ads-keywords-status>Ключові слова і пошукові запити з витратами, оплатами і маржею.</p>
+            </div>
+            <div class="admin-panel__actions">
+              <select data-google-ads-keywords-level aria-label="Рівень звіту">
+                <option value="all">Ключі + запити</option>
+                <option value="keyword">Ключові слова</option>
+                <option value="search_term">Пошукові запити</option>
+              </select>
+              <a class="admin-btn" href="/api/admin/google-ads/keywords?format=csv&range=30d" data-google-ads-keywords-export>CSV ключів</a>
+            </div>
+          </div>
+          <div class="google-ads-summary" data-google-ads-keywords-summary></div>
+          <div class="table-wrap">
+            <table class="orders-table google-ads-table">
+              <thead>
+                <tr>
+                  <th>Ключ / запит</th>
+                  <th>Кампанія</th>
+                  <th>Витрати</th>
+                  <th>CRM</th>
+                  <th>Маржа</th>
+                  <th>Рішення</th>
+                </tr>
+              </thead>
+              <tbody data-google-ads-keywords>
+                <tr><td colspan="6" class="muted">Дані з'являться після оновлення Google Ads cost sync.</td></tr>
               </tbody>
             </table>
           </div>

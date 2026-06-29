@@ -29,6 +29,12 @@ const state = {
     apiMissing: [],
     apiVersion: "",
   },
+  googleAdsKeywords: {
+    keywords: [],
+    summary: {},
+    migrationRequired: false,
+    error: "",
+  },
 };
 
 const CHINA_SEEN_SUPPLIER_ACTIVITY_KEY = "evline_china_seen_supplier_activity_v1";
@@ -280,6 +286,17 @@ const googleAdsStatusLabels = {
   failed: "помилка",
 };
 
+const googleAdsValueModeLabels = {
+  gross_profit: "маржа",
+  revenue: "виручка",
+};
+
+const keywordLevelLabels = {
+  keyword: "Ключ",
+  search_term: "Запит",
+  utm_term: "UTM term",
+};
+
 const adminTabs = new Set(["orders", "china", "analytics", "delivery"]);
 const orderEditorTabs = new Set(["main", "suppliers", "delivery", "payment", "messages", "history"]);
 
@@ -397,6 +414,7 @@ function renderSummary(data) {
   setText("close_rate", `${Math.round((totals.close_rate || 0) * 100)}%`);
   renderChart(data.daily || []);
   renderSources(data.sources || []);
+  renderCampaigns(data.campaigns || []);
   renderInsights(data);
 }
 
@@ -431,6 +449,31 @@ function renderSources(sources) {
         })
         .join("")
     : "<p class=\"muted\">Поки немає джерел.</p>";
+}
+
+function renderCampaigns(campaigns) {
+  const root = document.querySelector("[data-campaigns]");
+  if (!root) return;
+  const max = Math.max(1, ...campaigns.map((campaign) => campaign.ad_spend_uah || campaign.gross_profit_uah || campaign.orders || campaign.leads || 0));
+  root.innerHTML = campaigns.length
+    ? campaigns
+        .map((campaign) => {
+          const value = campaign.ad_spend_uah || Math.max(0, campaign.gross_profit_uah || 0) || campaign.orders || campaign.leads || 0;
+          const width = Math.max(3, Math.round((value / max) * 100));
+          const profitRoas = Number(campaign.profit_roas || 0).toFixed(1);
+          const paidRate = Math.round((campaign.lead_to_paid_rate || 0) * 100);
+          return `
+            <div class="source-item">
+              <strong>${textOrDash(campaign.campaign)}</strong>
+              <span>${textOrDash(campaign.source)} · ${numberFmt.format(campaign.leads || 0)} лідів · ${numberFmt.format(campaign.paid_orders || 0)} оплат</span>
+              <span>${money.format(campaign.ad_spend_uah || 0)} витрати · ${money.format(campaign.gross_profit_uah || 0)} маржа · ${escapeHtml(profitRoas)}x</span>
+              <span>${paidRate}% лід → оплата</span>
+              <div class="source-meter"><span style="width:${width}%"></span></div>
+            </div>
+          `;
+        })
+        .join("")
+    : "<p class=\"muted\">Поки немає кампаній.</p>";
 }
 
 function renderInsights(data) {
@@ -567,9 +610,11 @@ function renderGoogleAds(data = state.googleAds) {
   const settings = data.settings || {};
   if (!data.error) {
     const missing = (data.apiMissing || []).map((item) => item.name || item).filter(Boolean);
+    const apiState = data.apiReady ? "готовий до відправки" : `поки CSV/черга · бракує ${missing.length || "ключів"}`;
+    const valueMode = googleAdsValueModeLabels[settings.conversion_value_mode] || settings.conversion_value_mode || "маржа";
     statusNode.textContent = `Customer ID: ${settings.customer_id || "4028488894"} · API ${
-      data.apiVersion || "v22"
-    }: ${data.apiReady ? "готовий до відправки" : `поки CSV/черга · бракує ${missing.length || "ключів"}`}`;
+      data.apiVersion || "v24"
+    }: ${apiState} · value: ${valueMode}`;
   }
 
   const eventBreakdown = (data.byEventType || [])
@@ -627,6 +672,73 @@ function renderGoogleAds(data = state.googleAds) {
         })
         .join("")
     : `<tr><td colspan="7" class="muted">Поки немає підготовлених конверсій.</td></tr>`;
+}
+
+function renderGoogleAdsKeywords(data = state.googleAdsKeywords) {
+  const statusNode = document.querySelector("[data-google-ads-keywords-status]");
+  const summaryRoot = document.querySelector("[data-google-ads-keywords-summary]");
+  const tableRoot = document.querySelector("[data-google-ads-keywords]");
+  if (!statusNode || !summaryRoot || !tableRoot) return;
+
+  if (data.migrationRequired) {
+    statusNode.textContent = "Потрібно застосувати D1-міграцію для keyword/search-term статистики.";
+    summaryRoot.innerHTML = "";
+    tableRoot.innerHTML = `<tr><td colspan="6" class="muted">Міграція google_ads_keyword_stats ще не застосована.</td></tr>`;
+    return;
+  }
+
+  if (data.error) {
+    statusNode.textContent = `Звіт по ключах: ${data.error}`;
+  } else {
+    statusNode.textContent = "Ключові слова і пошукові запити: витрати Google Ads + маржа CRM.";
+  }
+
+  const summary = data.summary || {};
+  summaryRoot.innerHTML = `
+    <div class="google-ads-summary__item">
+      <span>Рядків</span>
+      <strong>${numberFmt.format(summary.rows || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Витрати</span>
+      <strong>${money.format(summary.spend_uah || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Оплати</span>
+      <strong>${numberFmt.format(summary.paid_orders || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Value / маржа</span>
+      <strong>${money.format(summary.value_uah || 0)}</strong>
+    </div>
+    <div class="google-ads-summary__item">
+      <span>Profit ROAS</span>
+      <strong>${Number(summary.profit_roas || 0).toFixed(1)}x</strong>
+    </div>
+    <p class="muted">Масштабувати: ${numberFmt.format(summary.scale_candidates || 0)} · кандидати у мінус-слова: ${numberFmt.format(summary.negative_candidates || 0)}</p>
+  `;
+
+  tableRoot.innerHTML = data.keywords?.length
+    ? data.keywords
+        .map((row) => {
+          const term = row.search_term || row.keyword_text || row.term || "-";
+          const level = keywordLevelLabels[row.level] || row.level || "Ключ";
+          const recommendation = row.recommendation || {};
+          const profitRoas = Number(row.profit_roas || 0).toFixed(1);
+          const cpa = row.cpa_uah ? money.format(row.cpa_uah) : "-";
+          return `
+            <tr>
+              <td><strong>${textOrDash(term)}</strong><br><span class="muted">${escapeHtml(level)}${row.match_type ? ` · ${escapeHtml(row.match_type)}` : ""}</span></td>
+              <td>${textOrDash(row.campaign_name || row.campaign_id || row.campaign)}<br><span class="muted">${textOrDash(row.ad_group_name || row.ad_group_id)}</span></td>
+              <td>${money.format(row.spend_uah || 0)}<br><span class="muted">${numberFmt.format(row.clicks || 0)} кліків · ${numberFmt.format(row.impressions || 0)} показів</span></td>
+              <td>${numberFmt.format(row.leads || 0)} лідів · ${numberFmt.format(row.paid_orders || 0)} оплат<br><span class="muted">CPA ${escapeHtml(cpa)}${row.crm_match ? ` · ${escapeHtml(row.crm_match)}` : ""}</span></td>
+              <td>${money.format(row.value_uah || 0)}<br><span class="muted">CRM ${money.format(row.gross_profit_uah || 0)} · Google ${money.format(row.google_conversion_value || 0)} · ${profitRoas}x</span></td>
+              <td><span class="conversion-status conversion-status--${safeClass(recommendation.code || "watch")}">${textOrDash(recommendation.label || "Спостерігати")}</span><br><span class="muted">${textOrDash(recommendation.reason)}</span></td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `<tr><td colspan="6" class="muted">Поки немає keyword/search-term статистики.</td></tr>`;
 }
 
 function rateFromMode(carrierId, mode) {
@@ -2834,6 +2946,32 @@ async function loadGoogleAds() {
   renderGoogleAds(state.googleAds);
 }
 
+async function loadGoogleAdsKeywords() {
+  const level = document.querySelector("[data-google-ads-keywords-level]")?.value || "all";
+  const params = new URLSearchParams({
+    range: state.range,
+    level,
+    limit: "80",
+  });
+  try {
+    const data = await api(`/api/admin/google-ads/keywords?${params}`);
+    state.googleAdsKeywords = {
+      keywords: data.keywords || [],
+      summary: data.summary || {},
+      migrationRequired: Boolean(data.migration_required),
+      error: data.error || "",
+    };
+  } catch (error) {
+    state.googleAdsKeywords = {
+      keywords: [],
+      summary: {},
+      migrationRequired: /migration|google_ads_keyword_stats/i.test(error.message),
+      error: error.message,
+    };
+  }
+  renderGoogleAdsKeywords(state.googleAdsKeywords);
+}
+
 async function refresh() {
   try {
     state.range = document.querySelector("#range")?.value || "30d";
@@ -2841,7 +2979,12 @@ async function refresh() {
     if (exportLink) exportLink.href = `/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`;
     const googleAdsExport = document.querySelector("[data-google-ads-export]");
     if (googleAdsExport) googleAdsExport.href = `/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`;
-    await Promise.all([loadSummary(), loadOrders(), loadChinaPreorders(), loadShipping(), loadGoogleAds()]);
+    const googleAdsKeywordsExport = document.querySelector("[data-google-ads-keywords-export]");
+    const keywordLevel = document.querySelector("[data-google-ads-keywords-level]")?.value || "all";
+    if (googleAdsKeywordsExport) {
+      googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
+    }
+    await Promise.all([loadSummary(), loadOrders(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
       await loadAuditLog();
@@ -3455,6 +3598,37 @@ document.querySelector("[data-google-ads-export]")?.addEventListener("click", as
     alert(error.message);
   }
 });
+
+document.querySelector("[data-google-ads-keywords-export]")?.addEventListener("click", async (event) => {
+  event.preventDefault();
+  const level = document.querySelector("[data-google-ads-keywords-level]")?.value || "all";
+  try {
+    const csv = await api(`/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(level)}`, {
+      headers: { accept: "text/csv" },
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `evline-google-ads-keywords-${level}-${state.range}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+document.querySelector("[data-google-ads-keywords-level]")?.addEventListener("change", async () => {
+  const googleAdsKeywordsExport = document.querySelector("[data-google-ads-keywords-export]");
+  const level = document.querySelector("[data-google-ads-keywords-level]")?.value || "all";
+  if (googleAdsKeywordsExport) {
+    googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(level)}`;
+  }
+  await loadGoogleAdsKeywords();
+});
+
 document.querySelector("[data-google-ads-backfill]")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
   button.disabled = true;

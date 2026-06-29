@@ -9,8 +9,22 @@ import {
 } from "../../../_lib/crm.js";
 import { listSupplierPayments } from "../../../_lib/supplier-payments.js";
 import { listSupplierRequests } from "../../../_lib/supplier-portal.js";
-import { queueGoogleAdsConversionsForStatus } from "../../../_lib/google-ads.js";
 import { auditActor, recordAuditEvent } from "../../../_lib/audit-log.js";
+import {
+  googleAdsEventTypesForStatus,
+  queueGoogleAdsConversionsForOrder,
+  queueGoogleAdsConversionsForStatus,
+} from "../../../_lib/google-ads.js";
+
+const FINANCE_FIELDS = [
+  "revenue_uah",
+  "purchase_cost_uah",
+  "delivery_cost_uah",
+  "customs_cost_uah",
+  "processing_cost_uah",
+  "ad_cost_uah",
+  "other_cost_uah",
+];
 
 function statusDates(status) {
   const now = new Date().toISOString();
@@ -52,6 +66,10 @@ const AUDITED_ORDER_FIELDS = [
 
 function changedOrderFields(current, updated) {
   return AUDITED_ORDER_FIELDS.filter((field) => String(current?.[field] ?? "") !== String(updated?.[field] ?? ""));
+}
+
+function financeFingerprint(order = {}) {
+  return FINANCE_FIELDS.map((field) => `${field}:${number(order[field])}`).join("|");
 }
 
 export async function onRequestGet({ params, env }) {
@@ -97,6 +115,7 @@ export async function onRequestPatch({ request, params, env }) {
 
   const nextStatus = normalizeOrderStatus(payload.status, current.status);
   const statusChanged = nextStatus !== current.status;
+  const financeBefore = financeFingerprint(current);
   const now = new Date().toISOString();
   const dates = statusChanged ? statusDates(nextStatus) : {};
 
@@ -201,6 +220,7 @@ export async function onRequestPatch({ request, params, env }) {
   let notification = null;
   let googleAdsConversions = [];
   const updated = await loadOrder(env, params.id);
+  const financeChanged = financeBefore !== financeFingerprint(updated);
 
   if (statusChanged) {
     googleAdsConversions = await queueGoogleAdsConversionsForStatus(env, updated, nextStatus);
@@ -224,6 +244,11 @@ export async function onRequestPatch({ request, params, env }) {
         status: nextStatus,
         message,
       });
+    }
+  } else if (financeChanged) {
+    const valueEvents = googleAdsEventTypesForStatus(updated.status).filter((eventType) => eventType !== "lead");
+    if (valueEvents.length) {
+      googleAdsConversions = await queueGoogleAdsConversionsForOrder(env, updated, valueEvents);
     }
   }
 

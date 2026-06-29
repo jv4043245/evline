@@ -22,6 +22,8 @@ Where to add it in Google Ads:
 
 The CRM uses `utm_campaign={campaignid}` because campaign names can change, while campaign ids are stable. Google Ads cost sync stores costs by the same campaign id and keeps the readable campaign name in the row notes.
 
+`utm_term={keyword}` stores the matched keyword in the CRM. This is enough to connect many orders back to keyword-level Google Ads cost. The exact user search phrase is synced separately from Google Ads `search_term_view`; that report becomes strongest after offline conversions with margin value have been uploaded back to Google Ads.
+
 ## Cost sync script
 
 Google Ads:
@@ -35,4 +37,10 @@ Google Ads:
 7. Run once manually and approve access.
 8. Set schedule: daily, morning.
 
-The script sends the last 30 days. This intentionally rewrites synced Google Ads rows for the same date/campaign, because Google Ads can adjust recent statistics after clicks and conversions settle.
+The script sends the last 30 days. It now sends:
+
+- campaign-level costs into `ad_costs`;
+- keyword-level stats into `google_ads_keyword_stats`;
+- search-term stats into `google_ads_keyword_stats`.
+
+This intentionally rewrites/upserts synced Google Ads rows for the same period, because Google Ads can adjust recent statistics after clicks and conversions settle.

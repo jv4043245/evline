@@ -184,6 +184,7 @@ export async function onRequestGet({ request, env }) {
         lead_conversion_action_name: settings.lead_conversion_action_name || "EVLine Lead",
         paid_conversion_action_name: settings.paid_conversion_action_name || "EVLine Paid Order",
         completed_conversion_action_name: settings.completed_conversion_action_name || "EVLine Completed Order",
+        conversion_value_mode: text(env.GOOGLE_ADS_CONVERSION_VALUE_MODE) || settings.conversion_value_mode || "gross_profit",
       },
       api_ready: apiStatus.ready,
       api_missing: apiStatus.missing,

@@ -30,6 +30,8 @@ const PAID_OR_LATER = new Set([
   "completed",
 ]);
 
+const VALUE_MODES = new Set(["gross_profit", "revenue"]);
+
 function costTotal(row) {
   return (
     number(row.purchase_cost_uah) +
@@ -63,8 +65,16 @@ function formatGoogleConversionTime(value) {
   return date.toISOString().slice(0, 19).replace("T", " ") + "+00:00";
 }
 
-function conversionValueFor(order, eventType) {
+function normalizeValueMode(value) {
+  const mode = text(value).toLowerCase();
+  return VALUE_MODES.has(mode) ? mode : "gross_profit";
+}
+
+function conversionValueFor(order, eventType, valueMode = "gross_profit") {
   if (eventType === "lead") return 0;
+  if (normalizeValueMode(valueMode) === "gross_profit") {
+    return Math.max(0, grossProfit(order));
+  }
   return number(order.revenue_uah);
 }
 
@@ -95,6 +105,12 @@ async function googleAdsSetting(env, key, fallback = "") {
   }
 }
 
+async function googleAdsConversionValueMode(env) {
+  const envMode = text(env.GOOGLE_ADS_CONVERSION_VALUE_MODE);
+  if (envMode) return normalizeValueMode(envMode);
+  return normalizeValueMode(await googleAdsSetting(env, "conversion_value_mode", "gross_profit"));
+}
+
 export function googleAdsEventTypesForStatus(status) {
   const normalized = text(status) || "new";
   const events = ["lead"];
@@ -119,7 +135,8 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
   const currency = text(env.GOOGLE_ADS_CURRENCY_CODE) || (await googleAdsSetting(env, "currency_code", "UAH"));
   const conversionActionName = await googleAdsSetting(env, definition.setting_key, definition.conversion_action_name);
   const conversionAction = text(env[`GOOGLE_ADS_${eventType.toUpperCase()}_CONVERSION_ACTION`]);
-  const conversionValue = conversionValueFor(order, eventType);
+  const valueMode = await googleAdsConversionValueMode(env);
+  const conversionValue = conversionValueFor(order, eventType, valueMode);
   const profit = grossProfit(order);
   const hasClickId = orderHasClickId(order) ? 1 : 0;
   const hasCustomerIdentifier = orderHasCustomerIdentifier(order) ? 1 : 0;
@@ -173,9 +190,9 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
       google_ads_customer_id = ?,
       conversion_action = COALESCE(NULLIF(?, ''), conversion_action),
       conversion_action_name = ?,
-      conversion_time = ?,
-      conversion_value = ?,
-      gross_profit_uah = ?,
+      conversion_time = CASE WHEN status = 'uploaded' THEN conversion_time ELSE ? END,
+      conversion_value = CASE WHEN status = 'uploaded' THEN conversion_value ELSE ? END,
+      gross_profit_uah = CASE WHEN status = 'uploaded' THEN gross_profit_uah ELSE ? END,
       currency_code = ?,
       source = ?,
       medium = ?,
@@ -214,7 +231,14 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
     )
     .run();
 
-  return { event_type: eventType, status, conversion_value: conversionValue, currency_code: currency };
+  return {
+    event_type: eventType,
+    status,
+    conversion_value: conversionValue,
+    gross_profit_uah: profit,
+    currency_code: currency,
+    conversion_value_mode: valueMode,
+  };
 }
 
 export async function queueGoogleAdsConversionsForOrder(env, order, eventTypes) {

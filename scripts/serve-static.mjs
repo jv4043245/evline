@@ -977,6 +977,67 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true, cost });
   }
 
+  if (url.pathname === "/api/admin/google-ads/conversions" && req.method === "GET") {
+    if (url.searchParams.get("format") === "csv") {
+      return sendCsv(res, "created_at,event_type,status,conversion_value,gross_profit_uah\n", "evline-google-ads-conversions.csv");
+    }
+    return sendJson(res, 200, {
+      migration_required: false,
+      settings: {
+        customer_id: "4028488894",
+        currency_code: "UAH",
+        conversion_value_mode: "gross_profit",
+      },
+      api_ready: false,
+      api_missing: [],
+      api_version: "v24",
+      summary: { total: 0, queued: 0, skipped: 0, uploaded: 0, failed: 0 },
+      by_event_type: [],
+      conversions: [],
+    });
+  }
+
+  if (url.pathname === "/api/admin/google-ads/conversions" && req.method === "POST") {
+    const payload = await readBody(req);
+    return sendJson(res, 200, {
+      ok: true,
+      action: text(payload.action) || "backfill",
+      processed: 0,
+      queued: 0,
+      statuses: {},
+      uploaded: 0,
+      failed: 0,
+      validated: 0,
+    });
+  }
+
+  if (url.pathname === "/api/admin/google-ads/keywords" && req.method === "GET") {
+    const summary = {
+      rows: 0,
+      spend_uah: 0,
+      clicks: 0,
+      impressions: 0,
+      leads: 0,
+      paid_orders: 0,
+      revenue_uah: 0,
+      gross_profit_uah: 0,
+      value_uah: 0,
+      profit_roas: 0,
+      negative_candidates: 0,
+      scale_candidates: 0,
+    };
+    if (url.searchParams.get("format") === "csv") {
+      return sendCsv(res, "level,campaign_id,campaign_name,keyword_text,search_term,spend_uah,clicks,leads,paid_orders,value_uah,profit_roas,recommendation\n", "evline-google-ads-keywords.csv");
+    }
+    return sendJson(res, 200, {
+      migration_required: false,
+      range: url.searchParams.get("range") || "30d",
+      summary,
+      keywords: [],
+      limit: integer(url.searchParams.get("limit")) || 100,
+    });
+  }
+
   if (url.pathname === "/api/admin/summary" && req.method === "GET") {
     const range = url.searchParams.get("range") || "30d";
     const leads = (await readJsonList(leadsFile)).filter((lead) => inRange(lead, range));
@@ -990,6 +1051,29 @@ async function handleApi(req, res, url) {
     const bySource = new Map();
     const byCampaign = new Map();
     const byDay = new Map();
+    const ensureCampaign = (source, campaign) => {
+      const key = `${source}/${campaign}`;
+      const row = byCampaign.get(key) || {
+        source,
+        campaign,
+        leads: 0,
+        orders: 0,
+        paid_orders: 0,
+        completed_orders: 0,
+        revenue_uah: 0,
+        gross_profit_uah: 0,
+        ad_spend_uah: 0,
+        clicks: 0,
+        impressions: 0,
+      };
+      byCampaign.set(key, row);
+      return row;
+    };
+    for (const lead of leads) {
+      const source = lead.source || "direct";
+      const campaign = lead.campaign || "без кампанії";
+      ensureCampaign(source, campaign).leads += 1;
+    }
     for (const order of orders) {
       const source = order.source || "direct";
       const campaign = order.campaign || "без кампанії";
@@ -1000,12 +1084,12 @@ async function handleApi(req, res, url) {
       sourceRow.revenue_uah += number(order.revenue_uah);
       sourceRow.gross_profit_uah += number(order.gross_profit_uah);
       bySource.set(source, sourceRow);
-      const campaignRow = byCampaign.get(`${source}/${campaign}`) || { source, campaign, orders: 0, completed_orders: 0, revenue_uah: 0, gross_profit_uah: 0 };
+      const campaignRow = ensureCampaign(source, campaign);
       campaignRow.orders += 1;
+      campaignRow.paid_orders += ["paid", "sourcing_china", "china_warehouse", "left_china", "in_ukraine", "ready_for_pickup", "completed"].includes(order.status) ? 1 : 0;
       campaignRow.completed_orders += order.status === "completed" ? 1 : 0;
       campaignRow.revenue_uah += number(order.revenue_uah);
       campaignRow.gross_profit_uah += number(order.gross_profit_uah);
-      byCampaign.set(`${source}/${campaign}`, campaignRow);
       const dayRow = byDay.get(day) || { day, orders: 0, completed_orders: 0, revenue_uah: 0, gross_profit_uah: 0 };
       dayRow.orders += 1;
       dayRow.completed_orders += order.status === "completed" ? 1 : 0;
@@ -1013,6 +1097,30 @@ async function handleApi(req, res, url) {
       dayRow.gross_profit_uah += number(order.gross_profit_uah);
       byDay.set(day, dayRow);
     }
+    for (const cost of costs) {
+      const source = cost.source || "direct";
+      const campaign = cost.campaign || "без кампанії";
+      const campaignRow = ensureCampaign(source, campaign);
+      campaignRow.ad_spend_uah += number(cost.spend_uah);
+      campaignRow.clicks += integer(cost.clicks);
+      campaignRow.impressions += integer(cost.impressions);
+    }
+    const campaigns = [...byCampaign.values()]
+      .map((campaign) => ({
+        ...campaign,
+        cpl_uah: campaign.leads && campaign.ad_spend_uah ? campaign.ad_spend_uah / campaign.leads : 0,
+        cpa_uah: campaign.paid_orders && campaign.ad_spend_uah ? campaign.ad_spend_uah / campaign.paid_orders : 0,
+        roas: campaign.ad_spend_uah ? campaign.revenue_uah / campaign.ad_spend_uah : 0,
+        profit_roas: campaign.ad_spend_uah ? campaign.gross_profit_uah / campaign.ad_spend_uah : 0,
+        lead_to_paid_rate: campaign.leads ? campaign.paid_orders / campaign.leads : 0,
+      }))
+      .sort((a, b) =>
+        number(b.ad_spend_uah) - number(a.ad_spend_uah) ||
+        number(b.gross_profit_uah) - number(a.gross_profit_uah) ||
+        number(b.orders) - number(a.orders) ||
+        number(b.leads) - number(a.leads)
+      )
+      .slice(0, 20);
     const totals = {
       leads: leads.length,
       new_leads: leads.filter((lead) => lead.status === "new").length,
@@ -1046,7 +1154,7 @@ async function handleApi(req, res, url) {
       range,
       totals,
       sources: [...bySource.values()].sort((a, b) => b.orders - a.orders).slice(0, 12),
-      campaigns: [...byCampaign.values()].sort((a, b) => b.orders - a.orders).slice(0, 20),
+      campaigns,
       daily: [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day)).slice(-30),
     });
   }

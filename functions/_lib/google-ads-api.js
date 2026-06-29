@@ -1,6 +1,6 @@
 import { number, text } from "./http.js";
 
-const DEFAULT_API_VERSION = "v22";
+const DEFAULT_API_VERSION = "v24";
 const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 const EVENT_ACTION_ENV = {
@@ -39,11 +39,16 @@ function actionForRow(env, row) {
   return normalizeConversionAction(envName ? env[envName] : "", customerId);
 }
 
-function clickIdForRow(row) {
-  if (text(row.gclid)) return ["gclid", text(row.gclid)];
-  if (text(row.gbraid)) return ["gbraid", text(row.gbraid)];
-  if (text(row.wbraid)) return ["wbraid", text(row.wbraid)];
-  return ["", ""];
+function clickIdsForRow(row) {
+  return {
+    gclid: text(row.gclid),
+    gbraid: text(row.gbraid),
+    wbraid: text(row.wbraid),
+  };
+}
+
+function hasClickId(clickIds) {
+  return Boolean(clickIds.gclid || clickIds.gbraid || clickIds.wbraid);
 }
 
 function normalizePhone(value) {
@@ -137,12 +142,12 @@ async function googleAdsAccessToken(env) {
 
 export async function buildGoogleAdsClickConversion(env, row) {
   const conversionAction = actionForRow(env, row);
-  const [clickIdKey, clickIdValue] = clickIdForRow(row);
+  const clickIds = clickIdsForRow(row);
   const userIdentifiers = await userIdentifiersForRow(row);
   const errors = [];
 
   if (!conversionAction) errors.push(`Не задано conversion action для ${row.event_type || "події"}.`);
-  if (!clickIdValue && !userIdentifiers.length) {
+  if (!hasClickId(clickIds) && !userIdentifiers.length) {
     errors.push("Немає gclid/gbraid/wbraid або email/телефону для enhanced conversion.");
   }
 
@@ -156,9 +161,12 @@ export async function buildGoogleAdsClickConversion(env, row) {
     conversionValue: number(row.conversion_value),
     currencyCode: text(row.currency_code) || text(env.GOOGLE_ADS_CURRENCY_CODE) || "UAH",
     orderId: text(row.order_id_for_google || `${row.order_id}_${row.event_type}`),
+    conversionEnvironment: text(env.GOOGLE_ADS_CONVERSION_ENVIRONMENT).toUpperCase() || "WEB",
   };
 
-  if (clickIdKey) conversion[clickIdKey] = clickIdValue;
+  if (clickIds.gclid) conversion.gclid = clickIds.gclid;
+  if (clickIds.gbraid) conversion.gbraid = clickIds.gbraid;
+  if (clickIds.wbraid) conversion.wbraid = clickIds.wbraid;
   if (userIdentifiers.length) conversion.userIdentifiers = userIdentifiers;
 
   const adUserData = text(env.GOOGLE_ADS_AD_USER_DATA_CONSENT).toUpperCase();
