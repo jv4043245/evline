@@ -5,12 +5,14 @@
  * Tools -> Bulk actions -> Scripts -> + -> paste this file.
  *
  * Replace SYNC_TOKEN with either GOOGLE_ADS_SYNC_TOKEN or ADMIN_TOKEN from Cloudflare.
- * The script sends campaign-level costs for the last LOOKBACK_DAYS to EVLine CRM.
+ * The script sends campaign, keyword, and search-term costs for the last LOOKBACK_DAYS
+ * to EVLine CRM.
  */
 
 var CRM_ENDPOINT = "https://evline.com.ua/api/google-ads/costs";
 var SYNC_TOKEN = "PASTE_SYNC_TOKEN_HERE";
 var LOOKBACK_DAYS = 30;
+var IMPORT_BATCH_SIZE = 500;
 var ENABLE_KEYWORD_SYNC = true;
 var ENABLE_SEARCH_TERM_SYNC = true;
 
@@ -69,27 +71,8 @@ function main() {
     }));
   }
 
-  var response = UrlFetchApp.fetch(CRM_ENDPOINT, {
-    method: "post",
-    contentType: "application/json",
-    headers: {
-      Authorization: "Bearer " + SYNC_TOKEN,
-    },
-    payload: JSON.stringify({
-      customerId: customerId,
-      currencyCode: currencyCode,
-      rows: rows,
-    }),
-    muteHttpExceptions: true,
-  });
-
-  var code = response.getResponseCode();
-  var body = response.getContentText();
-  Logger.log("EVLine CRM response " + code + ": " + body);
-
-  if (code < 200 || code >= 300) {
-    throw new Error("EVLine CRM sync failed: " + code + " " + body);
-  }
+  Logger.log("EVLine total rows: " + rows.length);
+  sendRowsInBatches(rows, customerId, currencyCode);
 }
 
 function campaignRows(dateRange, customerId, currencyCode) {
@@ -180,6 +163,40 @@ function collectRows(label, query, mapper) {
     Logger.log("EVLine " + label + " sync skipped: " + error);
   }
   return rows;
+}
+
+function sendRowsInBatches(rows, customerId, currencyCode) {
+  if (!rows.length) {
+    Logger.log("EVLine CRM sync skipped: no rows");
+    return;
+  }
+
+  for (var offset = 0; offset < rows.length; offset += IMPORT_BATCH_SIZE) {
+    var batchRows = rows.slice(offset, offset + IMPORT_BATCH_SIZE);
+    var response = UrlFetchApp.fetch(CRM_ENDPOINT, {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        Authorization: "Bearer " + SYNC_TOKEN,
+      },
+      payload: JSON.stringify({
+        customerId: customerId,
+        currencyCode: currencyCode,
+        rows: batchRows,
+      }),
+      muteHttpExceptions: true,
+    });
+
+    var code = response.getResponseCode();
+    var body = response.getContentText();
+    var start = offset + 1;
+    var end = offset + batchRows.length;
+    Logger.log("EVLine CRM batch " + start + "-" + end + "/" + rows.length + " response " + code + ": " + body);
+
+    if (code < 200 || code >= 300) {
+      throw new Error("EVLine CRM sync failed for batch " + start + "-" + end + ": " + code + " " + body);
+    }
+  }
 }
 
 function lastNDays(days) {
