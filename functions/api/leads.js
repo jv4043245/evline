@@ -112,20 +112,13 @@ async function notifyTelegram(env, lead, orderId, request) {
 
   const lines = [
     lead.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
-    ...(lead.lead_number ? [`Лід CRM: ${lead.lead_number}`] : []),
-    `Замовлення CRM: ${orderId || "-"}`,
     `Менеджер: ${managerContactForType(lead.type)}`,
-    `Тип: ${lead.type}`,
-    `Ім'я: ${lead.name || "-"}`,
-    `Телефон: ${lead.phone || "-"}`,
-    `Telegram: ${lead.telegram || "-"}`,
-    `Авто: ${lead.car || "-"}`,
-    `VIN: ${lead.vin || "-"}`,
+    ...(lead.phone ? [`Телефон: ${lead.phone}`] : []),
+    ...(lead.name ? [`Ім'я: ${lead.name}`] : []),
+    ...(lead.telegram ? [`Telegram: ${lead.telegram}`] : []),
+    ...(lead.car ? [`Авто: ${lead.car}`] : []),
+    ...(lead.vin ? [`VIN: ${lead.vin}`] : []),
     ...(lead.part ? [`Запчастина: ${lead.part}`] : []),
-    `Джерело: ${lead.source || "-"} / ${lead.campaign || "-"}`,
-    `Атрибуція: ${lead.attribution_type || "-"}${lead.gclid ? " / gclid" : lead.gbraid ? " / gbraid" : lead.wbraid ? " / wbraid" : ""}`,
-    ...(lead.form_name || lead.form_id ? [`Форма: ${lead.form_name || lead.form_id}`] : []),
-    `Запит: ${lead.details || (lead.part ? "" : lead.message) || "-"}`,
     `Адмінка: ${url.origin}/admin/`,
   ];
 
