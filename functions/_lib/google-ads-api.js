@@ -16,7 +16,6 @@ const REQUIRED_SECRET_LABELS = {
   GOOGLE_ADS_REFRESH_TOKEN: "OAuth refresh token",
   GOOGLE_ADS_LEAD_CONVERSION_ACTION: "Lead conversion action",
   GOOGLE_ADS_PAID_CONVERSION_ACTION: "Paid conversion action",
-  GOOGLE_ADS_COMPLETED_CONVERSION_ACTION: "Completed conversion action",
 };
 
 function googleAdsCustomerId(env, row) {

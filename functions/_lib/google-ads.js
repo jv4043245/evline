@@ -115,13 +115,11 @@ export function googleAdsEventTypesForStatus(status) {
   const normalized = text(status) || "new";
   const events = ["lead"];
   if (PAID_OR_LATER.has(normalized)) events.push("paid");
-  if (normalized === "completed") events.push("completed");
   return events;
 }
 
 export function googleAdsEventTypesForStatusChange(status) {
   const normalized = text(status) || "new";
-  if (normalized === "completed") return ["paid", "completed"];
   if (PAID_OR_LATER.has(normalized)) return ["paid"];
   return [];
 }

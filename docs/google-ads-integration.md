@@ -31,9 +31,8 @@ The CRM queues conversion events in `google_ads_conversion_events`:
 
 - `lead` when a site lead becomes a CRM order
 - `paid` when an order reaches paid or later statuses
-- `completed` when an order is completed
 
-Conversion value is `0` for leads. For paid/completed orders the default value is gross profit:
+Conversion value is `0` for leads. For paid orders the default value is gross profit:
 
 ```text
 revenue_uah - purchase_cost_uah - delivery_cost_uah - customs_cost_uah - processing_cost_uah - ad_cost_uah - other_cost_uah
@@ -49,7 +48,7 @@ GOOGLE_ADS_CONVERSION_VALUE_MODE=revenue
 
 or update `google_ads_settings.conversion_value_mode` to `revenue`.
 
-When a manager edits finance fields on an already paid/completed order, queued or failed conversion rows are recalculated before upload. Uploaded conversions are kept as the already-sent historical payload; if a value must be changed after upload, handle that as a manual Google Ads adjustment.
+When a manager edits finance fields on an already paid order, queued or failed conversion rows are recalculated before upload. Uploaded conversions are kept as the already-sent historical payload; if a value must be changed after upload, handle that as a manual Google Ads adjustment.
 
 ## Google Ads account
 
@@ -75,9 +74,15 @@ This action is a website purchase event. Do not reuse it for form submits or CRM
 
 Default conversion action names:
 
-- `EVLine Lead`
-- `EVLine Paid Order`
-- `EVLine Completed Order`
+- `EVLine Lead` - secondary action, for funnel observation.
+- `EVLine Paid Order` - primary action, for bidding and value reporting.
+
+Created Google Ads conversion actions on 2026-07-01:
+
+```text
+EVLine Lead: customers/4028488894/conversionActions/7668868753
+EVLine Paid Order: customers/4028488894/conversionActions/7668868750
+```
 
 The real Google Ads API upload needs the final conversion action resource names, for example:
 
@@ -97,11 +102,11 @@ CSV/export and queue work without these. Direct upload to Google Ads API needs C
 - optional `GOOGLE_ADS_LOGIN_CUSTOMER_ID`
 - `GOOGLE_ADS_LEAD_CONVERSION_ACTION`
 - `GOOGLE_ADS_PAID_CONVERSION_ACTION`
-- `GOOGLE_ADS_COMPLETED_CONVERSION_ACTION`
 - optional `GOOGLE_ADS_API_VERSION`, defaults to `v24`
 - optional `GOOGLE_ADS_AD_USER_DATA_CONSENT`, allowed values: `GRANTED` or `DENIED`
 - optional `GOOGLE_ADS_CONVERSION_VALUE_MODE`, allowed values: `gross_profit` or `revenue`, defaults to `gross_profit`
 - optional `GOOGLE_ADS_CONVERSION_ENVIRONMENT`, defaults to `WEB`
+- optional `GOOGLE_ADS_OFFLINE_IMPORT_START_AT`, defaults to `2026-07-01T09:37:02Z`
 
 `GOOGLE_ADS_*_CONVERSION_ACTION` can be either the numeric conversion action ID or the full resource name:
 
@@ -116,6 +121,8 @@ Until these are configured, the admin panel shows the queue and exports CSV. Aft
 
 The upload uses the official Google Ads API `uploadClickConversions` method with `partialFailure=true`. Rows with `gclid`, `gbraid`, or `wbraid` are sent with the click ID. Rows without click IDs can still be sent as enhanced conversions when email or phone is available; email and phone are normalized and SHA-256 hashed before upload.
 
+Paid orders are not exported/uploaded until at least one finance field is filled. This prevents sending a real paid order with a temporary `0` value before managers add revenue and costs.
+
 Important 2026 limitation: Google Ads API no longer accepts new offline conversion import adopters after June 15, 2026. If upload returns `CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`, keep using the CRM queue/CSV export and switch the direct upload path to Google Data Manager / Data Manager API or ask Google for the required access.
 
 ## Google Ads/Data Manager setup still required
@@ -124,7 +131,7 @@ The repository cannot create these account-level items without an approved Googl
 
 - accept customer data terms for enhanced conversions;
 - enable enhanced conversions for leads/offline sources;
-- create import conversion actions for lead, paid order, and completed order, or decide to upload only paid/completed value;
+- create import conversion actions for lead and paid order, or decide to upload only paid value;
 - provide either Data Manager import configuration or Google Ads API credentials and conversion action ids.
 
 After those account-level items exist, set the Cloudflare secrets from the list above and use the admin panel validation before uploading real conversions.
@@ -147,8 +154,27 @@ After applying the migration, open `/admin/`, go to `Аналітика і ре�
 3. `/api/leads` writes the lead and creates an order with the same attribution.
 4. Manager updates order status and fills revenue/cost fields.
 5. CRM calculates margin and campaign performance in `/api/admin/summary`.
-6. Google Ads queue prepares `lead`, `paid`, and `completed` conversion events.
-7. Admin validates/uploads queued events from `/admin/` or exports CSV if API secrets are not configured.
+6. Google Ads queue prepares `lead` and `paid` conversion events.
+7. Admin validates/uploads queued events from `/admin/`, or Google Ads imports the scheduled HTTPS CSV.
+
+## Scheduled CSV upload
+
+The endpoint for Google Ads scheduled HTTPS uploads is:
+
+```text
+https://evline.com.ua/api/google-ads/offline-conversions?range=90d
+```
+
+It requires HTTP Basic Auth. The username can be any non-empty value; the password must match `GOOGLE_ADS_UPLOAD_TOKEN`.
+
+The CSV format is the Google Ads click import format:
+
+```text
+Parameters:TimeZone=+0000
+Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency,Order ID
+```
+
+Only rows with `gclid` are included in this scheduled CSV. Rows that only have `gbraid`/`wbraid` are still available to the API path.
 
 ## Keyword profitability
 

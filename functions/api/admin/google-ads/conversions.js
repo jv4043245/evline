@@ -7,6 +7,7 @@ import {
 import { googleAdsApiConfigStatus, uploadGoogleAdsConversions } from "../../../_lib/google-ads-api.js";
 
 const TABLE_MISSING = "google_ads_conversion_events_missing";
+const DEFAULT_IMPORT_START_AT = "2026-07-01T09:37:02Z";
 
 function isMissingTableError(error) {
   return /no such table|no such column/i.test(error?.message || String(error));
@@ -63,20 +64,42 @@ function conversionSelect() {
       o.item_name,
       o.service_name,
       o.revenue_uah,
+      o.purchase_cost_uah,
+      o.delivery_cost_uah,
+      o.customs_cost_uah,
+      o.processing_cost_uah,
+      o.ad_cost_uah,
+      o.other_cost_uah,
       o.manager_contact
     FROM google_ads_conversion_events e
     LEFT JOIN orders o ON o.id = e.order_id
   `;
 }
 
+function importStart(env) {
+  return text(env.GOOGLE_ADS_OFFLINE_IMPORT_START_AT) || DEFAULT_IMPORT_START_AT;
+}
+
 async function loadUploadCandidates(env, limit) {
   const rows = await env.DB.prepare(
     `${conversionSelect()}
     WHERE e.status IN ('queued', 'failed')
+      AND e.event_type IN ('lead', 'paid')
+      AND e.conversion_time >= ?
+      AND (
+        e.event_type = 'lead'
+        OR o.revenue_uah > 0
+        OR o.purchase_cost_uah > 0
+        OR o.delivery_cost_uah > 0
+        OR o.customs_cost_uah > 0
+        OR o.processing_cost_uah > 0
+        OR o.ad_cost_uah > 0
+        OR o.other_cost_uah > 0
+      )
     ORDER BY e.created_at ASC
     LIMIT ?`
   )
-    .bind(limit)
+    .bind(importStart(env), limit)
     .all();
   return rows.results || [];
 }
@@ -183,7 +206,6 @@ export async function onRequestGet({ request, env }) {
         currency_code: text(settings.currency_code) || text(env.GOOGLE_ADS_CURRENCY_CODE) || "UAH",
         lead_conversion_action_name: settings.lead_conversion_action_name || "EVLine Lead",
         paid_conversion_action_name: settings.paid_conversion_action_name || "EVLine Paid Order",
-        completed_conversion_action_name: settings.completed_conversion_action_name || "EVLine Completed Order",
         conversion_value_mode: text(env.GOOGLE_ADS_CONVERSION_VALUE_MODE) || settings.conversion_value_mode || "gross_profit",
       },
       api_ready: apiStatus.ready,
