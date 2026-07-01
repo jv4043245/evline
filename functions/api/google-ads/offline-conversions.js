@@ -58,16 +58,33 @@ function rowToCsv(row) {
   ].map(escapeCsv).join(",");
 }
 
-export async function onRequestGet({ request, env }) {
+function unauthorizedResponse(isHead = false) {
+  return new Response(isHead ? null : "Unauthorized", {
+    status: 401,
+    headers: {
+      "www-authenticate": 'Basic realm="EVLine Google Ads"',
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function methodNotAllowedResponse() {
+  return new Response("Method Not Allowed", {
+    status: 405,
+    headers: {
+      allow: "GET, HEAD",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+export async function onRequest({ request, env }) {
+  const isHead = request.method === "HEAD";
+  if (request.method !== "GET" && !isHead) return methodNotAllowedResponse();
+
   const url = new URL(request.url);
   if (!isAuthorized(request, env, url)) {
-    return new Response("Unauthorized", {
-      status: 401,
-      headers: {
-        "www-authenticate": 'Basic realm="EVLine Google Ads"',
-        "cache-control": "no-store",
-      },
-    });
+    return unauthorizedResponse(isHead);
   }
 
   const start = rangeStart(url.searchParams.get("range") || "90d");
@@ -112,24 +129,14 @@ export async function onRequestGet({ request, env }) {
     ...exportRows.map(rowToCsv),
   ].join("\n");
 
-  return csv(body, "evline-google-ads-offline-conversions.csv");
-}
-
-export async function onRequestHead({ request, env }) {
-  const url = new URL(request.url);
-  if (!isAuthorized(request, env, url)) {
+  if (isHead) {
     return new Response(null, {
-      status: 401,
       headers: {
-        "www-authenticate": 'Basic realm="EVLine Google Ads"',
+        "content-type": "text/csv; charset=utf-8",
         "cache-control": "no-store",
       },
     });
   }
-  return new Response(null, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "cache-control": "no-store",
-    },
-  });
+
+  return csv(body, "evline-google-ads-offline-conversions.csv");
 }
