@@ -12,6 +12,29 @@ utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupi
 
 Keep Google Ads auto-tagging enabled. Google adds `gclid`, `gbraid`, or `wbraid`; the EVLine site stores those identifiers together with UTM fields.
 
+## Google tag
+
+The current Google Ads tag installed on public website pages is:
+
+```html
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18146559745"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-18146559745');
+</script>
+```
+
+The existing website conversion action in Google Ads is:
+
+```text
+Покупка: AW-18146559745/FW5-CKC0lakcEIGO-sxD
+```
+
+Do not fire the `Покупка` event on lead form submit. Form submits are leads, not paid orders. EVLine sends the real paid order value back through offline conversions after the CRM knows payment and margin.
+
 Where to add it in Google Ads:
 
 1. Admin / Settings.

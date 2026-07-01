@@ -59,6 +59,20 @@ Customer ID:
 4028488894
 ```
 
+Google tag found in the account and installed on the public site pages:
+
+```text
+AW-18146559745
+```
+
+Existing website conversion action found in Google Ads on 2026-07-01:
+
+```text
+Покупка: AW-18146559745/FW5-CKC0lakcEIGO-sxD
+```
+
+This action is a website purchase event. Do not reuse it for form submits or CRM-paid orders unless the Google Ads goal is intentionally changed, because that would mix leads with real purchases. CRM offline conversion imports should use separate import actions.
+
 Default conversion action names:
 
 - `EVLine Lead`
@@ -102,7 +116,18 @@ Until these are configured, the admin panel shows the queue and exports CSV. Aft
 
 The upload uses the official Google Ads API `uploadClickConversions` method with `partialFailure=true`. Rows with `gclid`, `gbraid`, or `wbraid` are sent with the click ID. Rows without click IDs can still be sent as enhanced conversions when email or phone is available; email and phone are normalized and SHA-256 hashed before upload.
 
-Important 2026 limitation: Google Ads API no longer accepts new offline conversion import adopters after June 15, 2026. If upload returns `CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`, keep using the CRM queue/CSV export and switch the direct upload path to Google Data Manager API or ask Google for the required access.
+Important 2026 limitation: Google Ads API no longer accepts new offline conversion import adopters after June 15, 2026. If upload returns `CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`, keep using the CRM queue/CSV export and switch the direct upload path to Google Data Manager / Data Manager API or ask Google for the required access.
+
+## Google Ads/Data Manager setup still required
+
+The repository cannot create these account-level items without an approved Google Ads/Data Manager configuration:
+
+- accept customer data terms for enhanced conversions;
+- enable enhanced conversions for leads/offline sources;
+- create import conversion actions for lead, paid order, and completed order, or decide to upload only paid/completed value;
+- provide either Data Manager import configuration or Google Ads API credentials and conversion action ids.
+
+After those account-level items exist, set the Cloudflare secrets from the list above and use the admin panel validation before uploading real conversions.
 
 ## Migration
 
