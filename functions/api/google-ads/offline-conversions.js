@@ -114,3 +114,22 @@ export async function onRequestGet({ request, env }) {
 
   return csv(body, "evline-google-ads-offline-conversions.csv");
 }
+
+export async function onRequestHead({ request, env }) {
+  const url = new URL(request.url);
+  if (!isAuthorized(request, env, url)) {
+    return new Response(null, {
+      status: 401,
+      headers: {
+        "www-authenticate": 'Basic realm="EVLine Google Ads"',
+        "cache-control": "no-store",
+      },
+    });
+  }
+  return new Response(null, {
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
