@@ -89,7 +89,7 @@
   /* ───────── hero ───────── */
   .hero{background:linear-gradient(160deg,#fbfdfc 55%,#e8f5ee);color:var(--text);padding:44px 0 40px;border-bottom:1px solid var(--line)}
   .hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(250px,.72fr) minmax(290px,.68fr);gap:22px;align-items:stretch}
-  .hero-copy{grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:18px}
+  .hero-copy{grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:22px}
   .hero .leadbox{grid-column:3;grid-row:1;align-self:stretch}
   .hero h1{font-size:38px;line-height:1.12;letter-spacing:-1px;margin-bottom:14px}
   .hero h1 em{color:var(--green-d);font-style:normal;border-bottom:4px solid var(--green)}
@@ -100,7 +100,8 @@
   .hero-trust__icon svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .hero-trust__card b{display:block;color:var(--text);font-size:14px;line-height:1.2;margin-bottom:3px}
   .hero-trust__card span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25}
-  .hero-route{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:10px;background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .hero-route{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;margin:0;padding:13px 14px 14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .hero-route__title{grid-column:1 / -1;color:var(--green-d);font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;line-height:1}
   .hero-route__item{display:grid;grid-template-columns:auto 1fr;column-gap:7px;align-items:center;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.22}
   .hero-route__item b{grid-column:2;color:var(--text);font-size:13.5px;line-height:1.1}
   .hero-route__item > span:not(.hero-route__dot){grid-column:2;min-width:0}
@@ -397,6 +398,7 @@
         </div>
       </div>
       <div class="hero-route" aria-label="Как быстро проходит заказ">
+        <div class="hero-route__title">Как проходит заказ</div>
         <div class="hero-route__item"><span class="hero-route__dot">1</span><b>VIN</b><span>или фото детали</span></div>
         <span class="hero-route__arrow">→</span>
         <div class="hero-route__item"><span class="hero-route__dot">2</span><b>Цена</b><span>до 30 минут</span></div>
