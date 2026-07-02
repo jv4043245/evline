@@ -96,7 +96,8 @@
   .hero .sub{font-size:17px;color:var(--muted);max-width:540px}
   .hero-trust{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .hero-trust__card{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;min-height:74px;padding:13px 14px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
-  .hero-trust__icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--green-l);font-size:16px;line-height:1}
+  .hero-trust__icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--green-l);color:var(--green-d);line-height:1}
+  .hero-trust__icon svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .hero-trust__card b{display:block;color:var(--text);font-size:14px;line-height:1.2;margin-bottom:3px}
   .hero-trust__card span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25}
   .hero-route{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:10px;background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
@@ -151,7 +152,6 @@
   .brand-wordmark--xpeng img{height:20px;max-width:138px}
   .brand-wordmark--li img{height:22px;max-width:128px}
   .brand-wordmark--avatr img{height:20px;max-width:112px}
-  .brand-wordmark--text{font-size:22px;font-weight:900;letter-spacing:.24em;line-height:1;text-transform:uppercase}
   @media (prefers-reduced-motion:reduce){.ticker__track{animation:none}}
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .brand-seo-strip{padding:28px 0;background:#fff;border-top:1px solid var(--line)}
@@ -286,6 +286,9 @@
   @media(max-width:900px){
     .hero .wrap{grid-template-columns:1fr;gap:18px}
     .hero-copy,.hero-proof,.hero .leadbox,.hero-route{grid-column:1;grid-row:auto}
+    .hero-copy{grid-row:1}
+    .hero .leadbox{grid-row:2}
+    .hero-proof{grid-row:3}
     .hero h1{font-size:34px}
     .hero-copy{gap:18px}
     .hero-proof{height:178px;min-height:0}
@@ -313,13 +316,25 @@
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .hero{padding:38px 0 34px}
+    .hero .wrap{gap:14px}
+    .hero-copy{display:contents}
+    .hero-copy__main{grid-column:1;grid-row:1}
+    .hero .leadbox{grid-column:1;grid-row:2;padding:18px}
+    .hero-trust{grid-column:1;grid-row:3}
+    .hero-proof{grid-row:4}
     .hero h1{font-size:30px;letter-spacing:-.4px}
     .hero .sub{font-size:16px}
     .hero-trust{display:flex;flex-wrap:wrap;gap:8px}
     .hero-trust__card{display:flex;align-items:center;gap:7px;min-height:0;width:auto;padding:8px 13px;border-radius:999px}
-    .hero-trust__icon{width:auto;height:auto;background:transparent;font-size:14px}
+    .hero-trust__icon{width:auto;height:auto;background:transparent}
+    .hero-trust__icon svg{width:15px;height:15px}
     .hero-trust__card b{font-size:13.5px;margin:0}
     .hero-trust__card div span{display:none}
+    .hero .leadbox h3{font-size:18px;line-height:1.25;margin-bottom:13px}
+    .hero .leadbox label{margin:7px 0 3px}
+    .hero .leadbox input{padding:9px 12px}
+    .hero .leadbox .btn{margin-top:10px;padding:13px 22px}
+    .hero .leadbox .privacy{display:none}
     .hero-proof{height:156px;min-height:0}
     .hero-proof__grid{height:100%;min-height:0;padding:7px;gap:7px}
     .hero-proof__caption span{display:none}
@@ -364,11 +379,15 @@
       </div>
       <div class="hero-trust">
         <div class="hero-trust__card">
-          <span class="hero-trust__icon">🔍</span>
+          <span class="hero-trust__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path><path d="m8.5 11.2 1.8 1.8 3.8-4"></path></svg>
+          </span>
           <div><b>Проверка перед отправкой</b><span>фото детали и упаковки</span></div>
         </div>
         <div class="hero-trust__card">
-          <span class="hero-trust__icon">📦</span>
+          <span class="hero-trust__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 4 7.4 12 12l8-4.6L12 3Z"></path><path d="M4 7.4v9.2L12 21l8-4.4V7.4"></path><path d="M12 12v9"></path><path d="m8 5.2 8 4.6"></path></svg>
+          </span>
           <div><b>С Китаем с 2021 года</b><span>проверенные поставщики</span></div>
         </div>
       </div>
@@ -424,7 +443,6 @@
       <span class="brand-wordmark brand-wordmark--nio"><img src="../assets/brand-logos/nio.svg" alt="NIO"></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="../assets/brand-logos/xpeng.svg" alt="XPeng"></span>
       <span class="brand-wordmark brand-wordmark--li"><img src="../assets/brand-logos/li-auto.svg" alt="Li Auto"></span>
-      <span class="brand-wordmark brand-wordmark--text" aria-label="AITO">AITO</span>
       <span class="brand-wordmark brand-wordmark--avatr"><img src="../assets/brand-logos/avatr-wordmark.svg" alt="AVATR"></span>
     </div>
     <div class="ticker__set" aria-hidden="true">
@@ -436,7 +454,6 @@
       <span class="brand-wordmark brand-wordmark--nio"><img src="../assets/brand-logos/nio.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="../assets/brand-logos/xpeng.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--li"><img src="../assets/brand-logos/li-auto.svg" alt=""></span>
-      <span class="brand-wordmark brand-wordmark--text">AITO</span>
       <span class="brand-wordmark brand-wordmark--avatr"><img src="../assets/brand-logos/avatr-wordmark.svg" alt=""></span>
     </div>
   </div>
