@@ -137,6 +137,7 @@
   .stats{display:flex;justify-content:center;gap:64px;padding:30px 20px;background:linear-gradient(135deg,#2a7048,#3fa66a);flex-wrap:wrap;text-align:center}
   .stats b{display:block;font-size:31px;color:#fff;font-weight:800;letter-spacing:-1px;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.15)}
   .stats span{font-size:13.5px;color:#d9f0e3}
+  .mobile-lead{display:none}
   /* ticker */
   .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:17px 0;white-space:nowrap}
   .ticker__track{display:inline-flex;align-items:center;width:max-content;animation:tick 32s linear infinite;will-change:transform}
@@ -287,7 +288,7 @@
     .hero .wrap{grid-template-columns:1fr;gap:18px}
     .hero-copy,.hero-proof,.hero .leadbox,.hero-route{grid-column:1;grid-row:auto}
     .hero-copy{grid-row:1}
-    .hero .leadbox{grid-row:2}
+    .hero .leadbox{display:none}
     .hero-proof{grid-row:3}
     .hero h1{font-size:34px}
     .hero-copy{gap:18px}
@@ -302,6 +303,10 @@
     .cat .grid2{grid-template-columns:1fr 1fr}
     .stats{gap:30px}
     .stats b{font-size:25px}
+    .mobile-lead{display:block;padding:26px 0 34px;background:linear-gradient(180deg,#f6f8f7 0%,#fff 100%);border-bottom:1px solid var(--line)}
+    .mobile-lead .wrap{max-width:560px}
+    .mobile-lead .leadbox{box-shadow:0 14px 38px rgba(20,60,40,.12);padding:20px}
+    .mobile-lead .leadbox h3{font-size:19px;line-height:1.25;margin-bottom:13px}
     .tl{grid-template-columns:1fr 1fr}
     .gbar .items{grid-template-columns:1fr 1fr}
     h2{font-size:27px}
@@ -321,7 +326,6 @@
     .hero-copy__main{grid-column:1;grid-row:1}
     .hero-proof{grid-column:1;grid-row:2}
     .hero-trust{grid-column:1;grid-row:3}
-    .hero .leadbox{grid-column:1;grid-row:4;padding:18px}
     .hero h1{font-size:30px;letter-spacing:-.4px}
     .hero .sub{font-size:16px}
     .hero-trust{display:flex;flex-wrap:wrap;gap:8px}
@@ -330,11 +334,12 @@
     .hero-trust__icon svg{width:15px;height:15px}
     .hero-trust__card b{font-size:13.5px;margin:0}
     .hero-trust__card div span{display:none}
-    .hero .leadbox h3{font-size:18px;line-height:1.25;margin-bottom:13px}
-    .hero .leadbox label{margin:7px 0 3px}
-    .hero .leadbox input{padding:9px 12px}
-    .hero .leadbox .btn{margin-top:10px;padding:13px 22px}
-    .hero .leadbox .privacy{display:none}
+    .mobile-lead{padding:24px 0 30px}
+    .mobile-lead .leadbox{padding:18px}
+    .mobile-lead .leadbox label{margin:7px 0 3px}
+    .mobile-lead .leadbox input{padding:9px 12px}
+    .mobile-lead .leadbox .btn{margin-top:10px;padding:13px 22px}
+    .mobile-lead .leadbox .privacy{display:none}
     .hero-proof{height:156px;min-height:0}
     .hero-proof__grid{height:100%;min-height:0;padding:7px;gap:7px}
     .hero-proof__caption span{display:none}
@@ -466,6 +471,22 @@
   <div><b>з 2021</b><span>прямые поставки из Китая</span></div>
   <div><b>14,5 днів</b><span>средний срок авиа</span></div>
 </div>
+
+<section class="mobile-lead" aria-label="Быстрый подбор запчасти по VIN">
+  <div class="wrap">
+    <form class="leadbox" id="hero-mobile-form" onsubmit="return submitLead('hero-mobile-form')">
+      <h3>Узнайте цену и срок за 30 минут</h3>
+      <label>VIN-код</label>
+      <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
+      <label>Что нужно?</label>
+      <input name="need" placeholder="Напр.: передний бампер, левая фара…">
+      <label>Телефон</label>
+      <input name="contact" placeholder="+380…" required>
+      <button class="btn" type="submit">Получить цену и срок</button>
+      <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
+    </form>
+  </div>
+</section>
 
 <!-- ═══════════ 2. ЩО ПРИВОЗИМО ═══════════ -->
 <section class="cat" style="padding:36px 0">
