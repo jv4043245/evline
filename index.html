@@ -99,19 +99,42 @@
   .hdr-cta .btn{font-size:12px;padding:10px 16px;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px);transition:opacity .22s,transform .22s,visibility .22s}
   body.sticky-cta-visible .hdr-cta .btn{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
   /* ───────── hero ───────── */
-  .hero{background:linear-gradient(160deg,#fbfdfc 55%,#e8f5ee);color:var(--text);padding:44px 0 40px;border-bottom:1px solid var(--line)}
-  .hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:36px;align-items:center}
+  .hero{--hero-panel-h:423px;background:linear-gradient(160deg,#fbfdfc 55%,#e8f5ee);color:var(--text);padding:44px 0 40px;border-bottom:1px solid var(--line)}
+  .hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(250px,.72fr) minmax(290px,.68fr);gap:22px;align-items:start}
+  .hero-copy{grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:22px}
+  .hero .leadbox{grid-column:3;grid-row:1;align-self:start;height:var(--hero-panel-h);padding:20px}
   .hero h1{font-size:38px;line-height:1.12;letter-spacing:-1px;margin-bottom:14px}
   .hero h1 em{color:var(--green-d);font-style:normal;border-bottom:4px solid var(--green)}
-  .hero .sub{font-size:17px;color:var(--muted);margin-bottom:18px;max-width:540px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0}
-  .chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13.5px;color:var(--text);box-shadow:0 2px 8px rgba(20,60,40,.06)}
-  .chip b{color:var(--green-d)}
-  .mini-steps{display:flex;gap:14px;margin-top:26px}
-  .mini-step{flex:1;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--muted);box-shadow:0 2px 8px rgba(20,60,40,.06)}
-  .mini-step b{display:block;color:var(--text);font-size:15px;margin-bottom:3px}
-  .mini-step .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;font-size:12px;align-items:center;justify-content:center;margin-bottom:8px}
-  @media(max-width:900px){.mini-steps{flex-direction:column}}
+  .hero .sub{font-size:17px;color:var(--muted);max-width:540px}
+  .hero-trust{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hero-trust__card{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;min-height:74px;padding:13px 14px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .hero-trust__icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--green-l);color:var(--green-d);line-height:1}
+  .hero-trust__icon svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .hero-trust__card b{display:block;color:var(--text);font-size:14px;line-height:1.2;margin-bottom:3px}
+  .hero-trust__card span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25}
+  .hero-route{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;margin:0;padding:13px 14px 14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .hero-route__title{grid-column:1 / -1;justify-self:center;text-align:center;color:var(--green-d);font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;line-height:1}
+  .hero-route__item{display:grid;grid-template-columns:auto 1fr;column-gap:7px;align-items:center;min-width:0;color:var(--muted);font-size:12.5px;line-height:1.22}
+  .hero-route__item b{grid-column:2;color:var(--text);font-size:13.5px;line-height:1.1}
+  .hero-route__item > span:not(.hero-route__dot){grid-column:2;min-width:0}
+  .hero-route__dot{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:800;flex:0 0 auto}
+  .hero-route__arrow{display:none}
+  .hero-proof{grid-column:2;grid-row:1;position:relative;margin:0;height:var(--hero-panel-h);min-height:0;border:1px solid rgba(63,166,106,.22);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 18px 46px rgba(20,60,40,.14)}
+  .hero-proof__grid{height:100%;min-height:0;display:grid;grid-template-columns:1.18fr .82fr;grid-template-rows:1fr 1fr;gap:8px;padding:8px}
+  .hero-proof__tile{position:relative;overflow:hidden;border-radius:12px;background:#eef3f0}
+  .hero-proof__tile--main{grid-row:1 / 3}
+  .hero-proof__tile img{width:100%;height:100%;display:block;object-fit:cover}
+  .hero-proof__tile--main img{object-position:center}
+  .hero-proof__caption{position:absolute;left:16px;right:16px;bottom:16px;padding:12px 13px;border-radius:14px;background:rgba(17,21,19,.86);color:#fff;box-shadow:0 12px 28px rgba(0,0,0,.22)}
+  .hero-proof__caption b{display:block;font-size:13.5px;line-height:1.2;margin-bottom:3px}
+  .hero-proof__caption span{display:block;color:#d9f0e3;font-size:12.5px;line-height:1.25}
+  .hero-proof__badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;min-height:30px;padding:0 11px;border-radius:999px;background:#fff;color:var(--green-d);font-size:12px;font-weight:800;box-shadow:0 8px 22px rgba(20,60,40,.18)}
+  @media(max-width:1080px){
+    .hero{--hero-panel-h:418px}
+    .hero .wrap{grid-template-columns:minmax(0,1fr) minmax(230px,.66fr) minmax(270px,.72fr);gap:18px}
+    .hero h1{font-size:35px}
+    .hero-route{gap:7px;padding:9px}
+  }
   /* proof cards from the ad landing, adapted for the main funnel */
   .proof-suite{background:linear-gradient(180deg,#fff 0%,#f7faf8 100%);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .proof-suite .lead{max-width:760px}
@@ -130,34 +153,38 @@
   /* hero form */
   .leadbox{background:#fff;border-radius:18px;padding:22px;color:var(--text);box-shadow:0 18px 50px rgba(20,60,40,.14);border:1px solid var(--line)}
   .leadbox h3{font-size:19px;margin-bottom:4px}
+  .hero .leadbox h3{line-height:1.25;margin-bottom:14px}
   .leadbox .small{font-size:13.5px;color:var(--muted);margin-bottom:10px}
   .leadbox label{display:block;font-size:13px;font-weight:700;margin:9px 0 4px}
   .leadbox input,.leadbox textarea,.leadbox select{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
   .leadbox input:focus,.leadbox textarea:focus{outline:none;border-color:var(--green)}
   .leadbox .btn{width:100%;margin-top:12px;padding:14px 30px}
   .leadbox .privacy{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+  .hero .leadbox label{margin:8px 0 3px}
+  .hero .leadbox input{padding:9px 12px}
+  .hero .leadbox .btn{margin-top:11px;padding:13px 24px}
+  .hero .leadbox .privacy{font-size:11.5px;margin-top:9px}
   /* лічильники довіри */
   .stats{display:flex;justify-content:center;gap:64px;padding:30px 20px;background:linear-gradient(135deg,#2a7048,#3fa66a);flex-wrap:wrap;text-align:center}
   .stats b{display:block;font-size:31px;color:#fff;font-weight:800;letter-spacing:-1px;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.15)}
   .stats span{font-size:13.5px;color:#d9f0e3}
+  .mobile-lead{display:none}
   /* ticker */
-  /* словесні логотипи в стрічці */
-  .ticker .wm{font-style:normal;text-transform:uppercase;color:#6b7a72;display:inline-block;padding:0 28px;font-size:21px;vertical-align:middle}
-  .wm-byd{font-weight:900;letter-spacing:.32em}
-  .wm-xiaomi{text-transform:lowercase;font-weight:700;letter-spacing:.02em}
-  .wm-lynk{font-weight:800;letter-spacing:.05em}
-  .wm-leopard{font-weight:600;letter-spacing:.18em}
-  .wm-zeekr{font-weight:900;letter-spacing:.12em}
-  .wm-nio{font-weight:300;letter-spacing:.45em}
-  .wm-xpeng{font-weight:800;letter-spacing:.14em}
-  .wm-li{font-weight:600;letter-spacing:.04em;text-transform:none}
-  .wm-aito{font-weight:800;letter-spacing:.3em}
-  .wm-avatr{font-weight:800;letter-spacing:.22em}
-  .wm-denza{font-weight:700;letter-spacing:.2em}
-  .wm-yang{font-weight:700;letter-spacing:.1em}
-  .wm-fcb{font-weight:600;letter-spacing:.08em}
-  .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:16px 0;white-space:nowrap}
-  .ticker span{display:inline-block;font-size:26px;font-weight:600;color:var(--green-d);padding-right:60px;animation:tick 28s linear infinite}
+  .ticker{max-width:100vw;background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:17px 0;white-space:nowrap}
+  .ticker__track{display:inline-flex;align-items:center;width:max-content;animation:tick 32s linear infinite;will-change:transform}
+  .ticker__set{display:inline-flex;align-items:center;gap:52px;padding-right:52px}
+  .brand-wordmark{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:86px;color:#6b7a72;opacity:.78}
+  .brand-wordmark img{display:block;width:auto;height:24px;max-width:148px;object-fit:contain}
+  .brand-wordmark--byd img{height:22px;max-width:96px}
+  .brand-wordmark--xiaomi img{height:24px;max-width:112px}
+  .brand-wordmark--lynk img{height:21px;max-width:142px}
+  .brand-wordmark--fang img{height:26px;max-width:132px;filter:grayscale(1) contrast(1.28) brightness(.72);opacity:.9}
+  .brand-wordmark--zeekr img{height:24px;max-width:118px}
+  .brand-wordmark--nio img{height:22px;max-width:92px}
+  .brand-wordmark--xpeng img{height:20px;max-width:138px}
+  .brand-wordmark--li img{height:22px;max-width:128px}
+  .brand-wordmark--avatr img{height:20px;max-width:112px}
+  @media (prefers-reduced-motion:reduce){.ticker__track{animation:none}}
   @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .brand-seo-strip{padding:14px 0;background:#fbfdfb;border-top:1px solid var(--line)}
   .brand-seo-strip .wrap{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
@@ -315,12 +342,28 @@
     .trust-panel__grid{grid-template-columns:1fr 1fr}
   }
   @media(max-width:900px){
-    .hero .wrap{grid-template-columns:1fr}
+    .hero .wrap{grid-template-columns:1fr;gap:18px}
+    .hero-copy,.hero-proof,.hero .leadbox,.hero-route{grid-column:1;grid-row:auto}
+    .hero-copy{grid-row:1}
+    .hero .leadbox{display:none}
+    .hero-proof{grid-row:3}
     .hero h1{font-size:34px}
+    .hero-copy{gap:18px}
+    .hero-proof{height:178px;min-height:0}
+    .hero-proof__grid{height:100%;min-height:0;grid-template-columns:1.15fr .85fr;grid-template-rows:1fr 1fr}
+    .hero-proof__caption{left:12px;right:12px;bottom:12px;padding:10px 11px}
+    .hero-proof__badge{top:12px;left:12px}
+    .hero-route{display:grid;grid-template-columns:1fr;gap:8px;padding:12px}
+    .hero-route__item{white-space:normal}
+    .hero-route__arrow{display:none}
     .grid2,.grid3,.grid4{grid-template-columns:1fr}
     .cat .grid2{grid-template-columns:1fr 1fr}
     .stats{gap:30px}
     .stats b{font-size:25px}
+    .mobile-lead{display:block;padding:26px 0 34px;background:linear-gradient(180deg,#f6f8f7 0%,#fff 100%);border-bottom:1px solid var(--line)}
+    .mobile-lead .wrap{max-width:560px}
+    .mobile-lead .leadbox{box-shadow:0 14px 38px rgba(20,60,40,.12);padding:20px}
+    .mobile-lead .leadbox h3{font-size:19px;line-height:1.25;margin-bottom:13px}
     .tl{grid-template-columns:1fr 1fr}
     .gbar .items{grid-template-columns:1fr 1fr}
     h2{font-size:27px}
@@ -334,6 +377,32 @@
     nav.main a,nav.main .nav__pending{flex:0 0 auto}
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
+    .hero{padding:38px 0 34px}
+    .hero .wrap{gap:14px}
+    .hero-copy{display:contents}
+    .hero-copy__main{grid-column:1;grid-row:1}
+    .hero-proof{grid-column:1;grid-row:2}
+    .hero-trust{grid-column:1;grid-row:3}
+    .hero h1{font-size:30px;letter-spacing:-.4px}
+    .hero .sub{font-size:16px}
+    .hero-trust{display:flex;flex-wrap:wrap;gap:8px}
+    .hero-trust__card{display:flex;align-items:center;gap:7px;min-height:0;width:auto;padding:8px 13px;border-radius:999px}
+    .hero-trust__icon{width:auto;height:auto;background:transparent}
+    .hero-trust__icon svg{width:15px;height:15px}
+    .hero-trust__card b{font-size:13.5px;margin:0}
+    .hero-trust__card div span{display:none}
+    .mobile-lead{padding:24px 0 30px}
+    .mobile-lead .leadbox{padding:18px}
+    .mobile-lead .leadbox label{margin:7px 0 3px}
+    .mobile-lead .leadbox input{padding:9px 12px}
+    .mobile-lead .leadbox .btn{margin-top:10px;padding:13px 22px}
+    .mobile-lead .leadbox .privacy{display:none}
+    .hero-proof{height:156px;min-height:0}
+    .hero-proof__grid{height:100%;min-height:0;padding:7px;gap:7px}
+    .hero-proof__caption span{display:none}
+    .hero-proof__caption b{font-size:12.5px;margin:0}
+    .hero-proof__badge{min-height:27px;font-size:11px}
+    .hero-route{display:none}
     .tl,.gbar .items,.cat .grid2{grid-template-columns:1fr}
     .trust-panel{padding:22px}
     .trust-panel__grid{grid-template-columns:1fr}
@@ -369,37 +438,93 @@
 <!-- ═══════════ 1. HERO: оффер + форма VIN ═══════════ -->
 <section class="hero">
   <div class="wrap">
-    <div>
-      <h1>Запчастини для BYD, Zeekr, Xiaomi та інших <em>авто з Китаю</em></h1>
-      <p class="sub">Оригінал та OEM від офіційних дилерів. Підбираємо по VIN — помилку виключено. Авіа 14 днів · море 60 днів.</p>
-      <div class="chips">
-        <span class="chip">🔍 Перевірка <b>перед відправкою</b></span>
-        <span class="chip">🔩 Привеземо <b>навіть один болт</b></span>
-        <span class="chip">📦 З Китаєм <b>з 2021 року</b></span>
+    <div class="hero-copy">
+      <div class="hero-copy__main">
+        <h1>Запчастини для BYD, Zeekr, Xiaomi та інших <em>авто з Китаю</em></h1>
+        <p class="sub">Оригінальні запчастини від офіційних дилерів. Доставка з Китаю від 14 днів.</p>
       </div>
-      <div class="mini-steps">
-        <div class="mini-step"><span class="n">1</span><b>Надсилаєте VIN</b>через форму або Telegram</div>
-        <div class="mini-step"><span class="n">2</span><b>До 30 хвилин</b>ціна «під ключ» і строк</div>
-        <div class="mini-step"><span class="n">3</span><b>Від 14 днів</b>деталь у вас, авіа з Китаю</div>
+      <div class="hero-trust">
+        <div class="hero-trust__card">
+          <span class="hero-trust__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path><path d="m8.5 11.2 1.8 1.8 3.8-4"></path></svg>
+          </span>
+          <div><b>Перевірка перед відправкою</b><span>фото деталі та пакування</span></div>
+        </div>
+        <div class="hero-trust__card">
+          <span class="hero-trust__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 4 7.4 12 12l8-4.6L12 3Z"></path><path d="M4 7.4v9.2L12 21l8-4.4V7.4"></path><path d="M12 12v9"></path><path d="m8 5.2 8 4.6"></path></svg>
+          </span>
+          <div><b>З Китаєм з 2021</b><span>перевірені постачальники</span></div>
+        </div>
+      </div>
+      <div class="hero-route" aria-label="Як швидко проходить замовлення">
+        <div class="hero-route__title">Як проходить замовлення</div>
+        <div class="hero-route__item"><span class="hero-route__dot">1</span><b>VIN</b><span>або фото деталі</span></div>
+        <span class="hero-route__arrow">→</span>
+        <div class="hero-route__item"><span class="hero-route__dot">2</span><b>Ціна</b><span>до 30 хвилин</span></div>
+        <span class="hero-route__arrow">→</span>
+        <div class="hero-route__item"><span class="hero-route__dot">3</span><b>Доставка</b><span>від 14 днів</span></div>
       </div>
     </div>
+    <figure class="hero-proof" aria-label="Реальні запчастини та пакування замовлень EVLine">
+      <div class="hero-proof__grid">
+        <div class="hero-proof__tile hero-proof__tile--main">
+          <img src="assets/gallery-5.jpg" alt="Пневмостійка в захисному пакуванні перед відправкою" loading="eager" decoding="async">
+        </div>
+        <div class="hero-proof__tile">
+          <img src="assets/gallery-3.jpg" alt="Дзеркало з проводкою, перевірка деталі" loading="eager" decoding="async">
+        </div>
+        <div class="hero-proof__tile">
+          <img src="assets/gallery-6.jpg" alt="Запаковане замовлення із запчастинами для доставки" loading="eager" decoding="async">
+        </div>
+      </div>
+      <div class="hero-proof__badge">Реальні фото замовлень</div>
+      <figcaption class="hero-proof__caption">
+        <b>Перевіряємо деталь до відправки</b>
+        <span>пакування, маркування, доставка Китай → Україна</span>
+      </figcaption>
+    </figure>
     <form class="leadbox" id="hero-form" data-form-name="Головна форма запчастини" onsubmit="return submitLead('hero-form')">
       <h3>Дізнайтеся ціну та строк за 30 хвилин</h3>
-      <p class="small">Надішліть VIN — менеджер перевірить сумісність і надішле точну ціну з доставкою «під ключ»</p>
       <label>VIN-код</label>
       <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
       <label>Що потрібно?</label>
-      <input name="need" placeholder="Напр.: передній бампер, фара ліва…">
+      <input name="need" placeholder="Напр.: передній бампер, ліва фара…">
       <label>Телефон</label>
       <input name="contact" placeholder="+380…" required>
       <button class="btn" type="submit">Отримати ціну та строк</button>
-      <p class="privacy">Без спаму. Відповідаємо в робочий час до 30 хв.</p>
+      <p class="privacy">Без спаму. Відповідаємо в робочий час до 30 хвилин.</p>
     </form>
   </div>
 </section>
 
 <!-- стрічка брендів -->
-<div class="ticker"><span><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i><i class="wm">Smart</i><i class="wm">Volvo EX30</i><i class="wm">Volkswagen ID</i><i class="wm">Polestar</i><i class="wm">MG</i><i class="wm">Audi Q5 e-tron</i><i class="wm wm-byd">BYD</i><i class="wm wm-xiaomi">Xiaomi</i><i class="wm wm-lynk">Lynk &amp; Co</i><i class="wm wm-leopard">Leopard</i><i class="wm wm-zeekr">ZEEKR</i><i class="wm wm-nio">NIO</i><i class="wm wm-xpeng">XPENG</i><i class="wm wm-li">Li Auto</i><i class="wm wm-aito">AITO</i><i class="wm wm-avatr">AVATR</i><i class="wm">Smart</i><i class="wm">Volvo EX30</i><i class="wm">Volkswagen ID</i><i class="wm">Polestar</i><i class="wm">MG</i><i class="wm">Audi Q5 e-tron</i></span></div>
+<div class="ticker" aria-label="Марки авто, з якими працює EVLine">
+  <div class="ticker__track">
+    <div class="ticker__set">
+      <span class="brand-wordmark brand-wordmark--byd"><img src="assets/brand-logos/byd.svg" alt="BYD"></span>
+      <span class="brand-wordmark brand-wordmark--xiaomi"><img src="assets/brand-logos/xiaomi.svg" alt="Xiaomi"></span>
+      <span class="brand-wordmark brand-wordmark--lynk"><img src="assets/brand-logos/lynk-co.svg" alt="Lynk & Co"></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.png" alt="Fang Cheng Bao"></span>
+      <span class="brand-wordmark brand-wordmark--zeekr"><img src="assets/brand-logos/zeekr.svg" alt="ZEEKR"></span>
+      <span class="brand-wordmark brand-wordmark--nio"><img src="assets/brand-logos/nio.svg" alt="NIO"></span>
+      <span class="brand-wordmark brand-wordmark--xpeng"><img src="assets/brand-logos/xpeng.svg" alt="XPeng"></span>
+      <span class="brand-wordmark brand-wordmark--li"><img src="assets/brand-logos/li-auto.svg" alt="Li Auto"></span>
+      <span class="brand-wordmark brand-wordmark--avatr"><img src="assets/brand-logos/avatr-wordmark.svg" alt="AVATR"></span>
+    </div>
+    <div class="ticker__set" aria-hidden="true">
+      <span class="brand-wordmark brand-wordmark--byd"><img src="assets/brand-logos/byd.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--xiaomi"><img src="assets/brand-logos/xiaomi.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--lynk"><img src="assets/brand-logos/lynk-co.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.png" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--zeekr"><img src="assets/brand-logos/zeekr.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--nio"><img src="assets/brand-logos/nio.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--xpeng"><img src="assets/brand-logos/xpeng.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--li"><img src="assets/brand-logos/li-auto.svg" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--avatr"><img src="assets/brand-logos/avatr-wordmark.svg" alt=""></span>
+    </div>
+  </div>
+</div>
 
 <!-- лічильники довіри -->
 <div class="stats">
@@ -408,6 +533,22 @@
   <div><b>з 2021</b><span>прямі поставки з Китаю</span></div>
   <div><b>14,5 днів</b><span>середній строк авіа</span></div>
 </div>
+
+<section class="mobile-lead" aria-label="Швидкий підбір запчастини по VIN">
+  <div class="wrap">
+    <form class="leadbox" id="hero-mobile-form" data-form-name="Мобільна форма запчастини" onsubmit="return submitLead('hero-mobile-form')">
+      <h3>Дізнайтеся ціну та строк за 30 хвилин</h3>
+      <label>VIN-код</label>
+      <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
+      <label>Що потрібно?</label>
+      <input name="need" placeholder="Напр.: передній бампер, ліва фара…">
+      <label>Телефон</label>
+      <input name="contact" placeholder="+380…" required>
+      <button class="btn" type="submit">Отримати ціну та строк</button>
+      <p class="privacy">Без спаму. Відповідаємо в робочий час до 30 хвилин.</p>
+    </form>
+  </div>
+</section>
 
 <!-- ═══════════ 2. ЩО ПРИВОЗИМО ═══════════ -->
 <section class="cat" style="padding:36px 0">
