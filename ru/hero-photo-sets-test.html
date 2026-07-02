@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru-UA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тест наборов фото для первого блока | EVLine</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://evline.com.ua/ru/hero-photo-sets-test">
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+<meta name="theme-color" content="#111513">
+<style>
+  :root{
+    --dark:#111513;
+    --green:#3fa66a;
+    --green-d:#2e7d52;
+    --green-l:#e8f5ee;
+    --text:#1c2421;
+    --muted:#5f6b66;
+    --line:#e3e9e6;
+    --bg2:#f6f8f7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{max-width:100%;overflow-x:clip}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:#fff;line-height:1.55}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+  .topbar{background:var(--green);color:#fff;font-size:14px;text-align:center;padding:8px 12px}
+  header.site{background:var(--dark)}
+  header.site .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:14px;padding-bottom:14px}
+  .logo img{height:52px;display:block;max-width:min(245px,38vw)}
+  .tag{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:999px;background:var(--green-l);color:var(--green-d);font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+  .btn{display:inline-block;background:var(--green);color:#fff;font-weight:800;font-size:16px;padding:14px 28px;border-radius:999px;border:0;text-decoration:none;text-align:center}
+  .hero{--hero-panel-h:423px;background:linear-gradient(160deg,#fbfdfc 55%,#e8f5ee);padding:44px 0 40px;border-bottom:1px solid var(--line)}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(250px,.72fr) minmax(290px,.68fr);gap:22px;align-items:start}
+  .copy{display:flex;flex-direction:column;gap:22px;min-width:0}
+  h1{font-size:38px;line-height:1.12;letter-spacing:-1px;margin-bottom:14px}
+  h1 em{color:var(--green-d);font-style:normal;border-bottom:4px solid var(--green)}
+  .sub{font-size:17px;color:var(--muted);max-width:540px}
+  .trust{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .trust-card{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;min-height:74px;padding:13px 14px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .trust-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--green-l);color:var(--green-d)}
+  .trust-icon svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .trust-card b{display:block;font-size:14px;line-height:1.2;margin-bottom:3px}
+  .trust-card span{display:block;color:var(--muted);font-size:12.5px;line-height:1.25}
+  .route{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;padding:13px 14px 14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(20,60,40,.08)}
+  .route-title{grid-column:1 / -1;justify-self:center;text-align:center;color:var(--green-d);font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;line-height:1}
+  .route-item{display:grid;grid-template-columns:auto 1fr;column-gap:7px;align-items:center;color:var(--muted);font-size:12.5px;line-height:1.22}
+  .route-item b{grid-column:2;color:var(--text);font-size:13.5px;line-height:1.1}
+  .route-item span:not(.dot){grid-column:2}
+  .dot{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:850}
+  .proof{position:relative;height:var(--hero-panel-h);margin:0;border:1px solid rgba(63,166,106,.22);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 18px 46px rgba(20,60,40,.14)}
+  .proof-grid{height:100%;display:grid;grid-template-columns:1.18fr .82fr;grid-template-rows:1fr 1fr;gap:8px;padding:8px}
+  .proof-tile{position:relative;overflow:hidden;border-radius:12px;background:#eef3f0}
+  .proof-tile--main{grid-row:1 / 3}
+  .proof-tile img{width:100%;height:100%;display:block;object-fit:cover}
+  .proof-badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;min-height:30px;padding:0 11px;border-radius:999px;background:#fff;color:var(--green-d);font-size:12px;font-weight:850;box-shadow:0 8px 22px rgba(20,60,40,.18)}
+  .proof-caption{position:absolute;left:16px;right:16px;bottom:16px;padding:12px 13px;border-radius:14px;background:rgba(17,21,19,.86);color:#fff;box-shadow:0 12px 28px rgba(0,0,0,.22)}
+  .proof-caption b{display:block;font-size:13.5px;line-height:1.2;margin-bottom:3px}
+  .proof-caption span{display:block;color:#d9f0e3;font-size:12.5px;line-height:1.25}
+  .leadbox{height:var(--hero-panel-h);background:#fff;border-radius:18px;padding:20px;color:var(--text);box-shadow:0 18px 50px rgba(20,60,40,.14);border:1px solid var(--line)}
+  .leadbox h3{font-size:19px;line-height:1.25;margin-bottom:14px}
+  .leadbox label{display:block;font-size:13px;font-weight:750;margin:8px 0 3px}
+  .leadbox input{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
+  .leadbox .btn{width:100%;margin-top:11px;padding:13px 24px}
+  .leadbox .privacy{font-size:11.5px;color:var(--muted);margin-top:9px;text-align:center}
+  .sets{padding:46px 0 56px;background:var(--bg2)}
+  .sets-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:20px}
+  .sets h2{font-size:30px;line-height:1.18;letter-spacing:-.4px}
+  .sets p{color:var(--muted);font-size:15px;max-width:560px}
+  .set-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+  .set-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 12px 32px rgba(20,60,40,.08)}
+  .set-card.is-recommended{border-color:rgba(63,166,106,.44);box-shadow:0 16px 42px rgba(63,166,106,.14)}
+  .set-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .set-meta h3{font-size:17px;line-height:1.2}
+  .set-meta span{white-space:nowrap}
+  .set-card .proof{height:318px;box-shadow:none;border-radius:14px}
+  .files{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;color:var(--muted);font-size:12px}
+  .files span{padding:4px 7px;border-radius:999px;background:#f2f5f3}
+  @media(max-width:1080px){
+    .hero{--hero-panel-h:418px}
+    .hero-grid{grid-template-columns:minmax(0,1fr) minmax(230px,.66fr) minmax(270px,.72fr);gap:18px}
+    h1{font-size:35px}
+    .route{gap:7px;padding:9px}
+  }
+  @media(max-width:900px){
+    .hero-grid,.set-grid{grid-template-columns:1fr}
+    .leadbox{display:none}
+    .proof{height:250px}
+    .set-card .proof{height:250px}
+  }
+  @media(max-width:560px){
+    .hero{--hero-panel-h:auto;padding:34px 0 30px}
+    h1{font-size:30px;letter-spacing:-.4px}
+    .sub{font-size:16px}
+    .copy{display:contents}
+    .trust{display:flex;flex-wrap:wrap;gap:8px}
+    .trust-card{display:flex;align-items:center;gap:7px;min-height:0;width:auto;padding:8px 13px;border-radius:999px}
+    .trust-icon{width:auto;height:auto;background:transparent}
+    .trust-card b{font-size:13.5px;margin:0}
+    .trust-card div span{display:none}
+    .route{display:none}
+    .proof{height:156px;grid-row:2}
+    .proof-grid{padding:7px;gap:7px}
+    .proof-caption span{display:none}
+    .proof-caption b{font-size:12.5px;margin:0}
+    .proof-badge{top:12px;left:12px;min-height:27px;font-size:11px}
+    .sets{padding:34px 0 44px}
+    .sets-head{display:block}
+    .sets h2{font-size:25px;margin-bottom:8px}
+    .set-card{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">Закрытая тестовая страница EVLine</div>
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="./"><img src="../assets/logo.svg" alt="EVLine"></a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="copy">
+      <div>
+        <h1>Запчасти для BYD, Zeekr, Xiaomi и других <em>авто из Китая</em></h1>
+        <p class="sub">Оригинальные запчасти от официальных дилеров. Доставка из Китая от 14 дней.</p>
+      </div>
+      <div class="trust">
+        <div class="trust-card">
+          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path><path d="m8.5 11.2 1.8 1.8 3.8-4"></path></svg></span>
+          <div><b>Проверка перед отправкой</b><span>фото детали и упаковки</span></div>
+        </div>
+        <div class="trust-card">
+          <span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 4 7.4 12 12l8-4.6L12 3Z"></path><path d="M4 7.4v9.2L12 21l8-4.4V7.4"></path><path d="M12 12v9"></path><path d="m8 5.2 8 4.6"></path></svg></span>
+          <div><b>С Китаем с 2021 года</b><span>проверенные поставщики</span></div>
+        </div>
+      </div>
+      <div class="route" aria-label="Как быстро проходит заказ">
+        <div class="route-title">Как проходит заказ</div>
+        <div class="route-item"><span class="dot">1</span><b>VIN</b><span>или фото детали</span></div>
+        <div class="route-item"><span class="dot">2</span><b>Цена</b><span>до 30 минут</span></div>
+        <div class="route-item"><span class="dot">3</span><b>Доставка</b><span>от 14 дней</span></div>
+      </div>
+    </div>
+
+    <figure class="proof" aria-label="Рекомендованный набор фото для первого блока">
+      <div class="proof-grid">
+        <div class="proof-tile proof-tile--main"><img src="../assets/gallery-1.jpg" alt="Пневмостойка перед отправкой"></div>
+        <div class="proof-tile"><img src="../assets/gallery-4.jpg" alt="Проверка разъема детали"></div>
+        <div class="proof-tile"><img src="../assets/gallery-6.jpg" alt="Упакованный заказ для доставки"></div>
+      </div>
+      <div class="proof-badge">Набор A · рекомендуемый</div>
+      <figcaption class="proof-caption">
+        <b>Деталь, проверка и упаковка</b>
+        <span>сразу показывает предмет заказа и процесс перед отправкой</span>
+      </figcaption>
+    </figure>
+
+    <form class="leadbox">
+      <h3>Узнайте цену и срок за 30 минут</h3>
+      <label>VIN-код</label>
+      <input placeholder="LGXC74C44N0000000">
+      <label>Что нужно?</label>
+      <input placeholder="Напр.: передний бампер, левая фара...">
+      <label>Телефон</label>
+      <input placeholder="+380...">
+      <button class="btn" type="button">Получить цену и срок</button>
+      <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
+    </form>
+  </div>
+</section>
+
+<section class="sets">
+  <div class="wrap">
+    <div class="sets-head">
+      <div>
+        <span class="tag">Фото-ротация</span>
+        <h2>Готовые комплекты для hero</h2>
+      </div>
+      <p>Каждый комплект собран под текущую сетку: крупное фото слева, два поддерживающих кадра справа.</p>
+    </div>
+    <div class="set-grid">
+      <article class="set-card is-recommended">
+        <div class="set-meta"><h3>Набор A · деталь + проверка + упаковка</h3><span class="tag">лучший</span></div>
+        <figure class="proof">
+          <div class="proof-grid">
+            <div class="proof-tile proof-tile--main"><img src="../assets/gallery-1.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-4.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-6.jpg" alt=""></div>
+          </div>
+          <div class="proof-badge">Ротация 1</div>
+          <figcaption class="proof-caption"><b>Самый понятный набор</b><span>деталь крупно, проверка, готовая упаковка</span></figcaption>
+        </figure>
+        <div class="files"><span>gallery-1.jpg</span><span>gallery-4.jpg</span><span>gallery-6.jpg</span></div>
+      </article>
+      <article class="set-card">
+        <div class="set-meta"><h3>Набор B · доставка и механика</h3><span class="tag">запасной</span></div>
+        <figure class="proof">
+          <div class="proof-grid">
+            <div class="proof-tile proof-tile--main"><img src="../assets/gallery-6.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/images/parts-gallery-01.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-4.jpg" alt=""></div>
+          </div>
+          <div class="proof-badge">Ротация 2</div>
+          <figcaption class="proof-caption"><b>Больше ощущения логистики</b><span>упаковка, механика, проверка разъема</span></figcaption>
+        </figure>
+        <div class="files"><span>gallery-6.jpg</span><span>parts-gallery-01.jpg</span><span>gallery-4.jpg</span></div>
+      </article>
+      <article class="set-card">
+        <div class="set-meta"><h3>Набор C · расходники и кузов</h3><span class="tag">широта</span></div>
+        <figure class="proof">
+          <div class="proof-grid">
+            <div class="proof-tile proof-tile--main"><img src="../assets/gallery-8.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-2.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-7.jpg" alt=""></div>
+          </div>
+          <div class="proof-badge">Ротация 3</div>
+          <figcaption class="proof-caption"><b>Показывает разные категории</b><span>расходники, кузовной элемент, отделка</span></figcaption>
+        </figure>
+        <div class="files"><span>gallery-8.jpg</span><span>gallery-2.jpg</span><span>gallery-7.jpg</span></div>
+      </article>
+      <article class="set-card">
+        <div class="set-meta"><h3>Набор D · текущий эталон</h3><span class="tag">сейчас</span></div>
+        <figure class="proof">
+          <div class="proof-grid">
+            <div class="proof-tile proof-tile--main"><img src="../assets/gallery-5.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-3.jpg" alt=""></div>
+            <div class="proof-tile"><img src="../assets/gallery-6.jpg" alt=""></div>
+          </div>
+          <div class="proof-badge">Текущий</div>
+          <figcaption class="proof-caption"><b>То, что стоит в тестовом hero</b><span>сильный базовый комплект для сравнения</span></figcaption>
+        </figure>
+        <div class="files"><span>gallery-5.jpg</span><span>gallery-3.jpg</span><span>gallery-6.jpg</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+</body>
+</html>
