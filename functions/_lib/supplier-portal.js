@@ -679,6 +679,7 @@ async function loadSupplierBundle(env, supplierRequest) {
     safeSelect(env, "SELECT * FROM supplier_request_images WHERE supplier_request_id = ? ORDER BY created_at ASC", supplierRequest.id),
     safeSelect(env, "SELECT * FROM supplier_tracking_events WHERE supplier_request_id = ? ORDER BY created_at DESC", supplierRequest.id),
   ]);
+  const translatedTrackingEvents = await ensureSupplierManagerEventTranslations(env, trackingEvents);
   const supplier = (await tableExists(env, "suppliers"))
     ? await env.DB.prepare("SELECT dashboard_access_token FROM suppliers WHERE id = ?").bind(supplierRequest.supplier_id).first()
     : null;
@@ -688,11 +689,36 @@ async function loadSupplierBundle(env, supplierRequest) {
     request: supplierRequest,
     request_images: images.filter((image) => !image.quote_id && !isSupplierAttachmentImage(image)),
     quotes: attachImages(quotes, images),
-    tracking_events: attachEventAttachments(trackingEvents, images),
+    tracking_events: attachEventAttachments(translatedTrackingEvents, images),
     payment,
     supplier_link: supplierInterfacePath(`/supplier/request/${supplierRequest.access_token}`),
     dashboard_link: supplier?.dashboard_access_token ? supplierInterfacePath(`/supplier/dashboard/${supplier.dashboard_access_token}`) : "",
   };
+}
+
+async function ensureSupplierManagerEventTranslations(env, trackingEvents = []) {
+  const toSupplier = supplierTranslationDirections().managerToSupplier;
+  const translatedEvents = [];
+  for (const event of trackingEvents) {
+    const translated = { ...event };
+    const isManagerMessage = text(event.status) === "sent";
+    const commentRu = text(event.comment_translated || event.comment_cn);
+    if (isManagerMessage && supplierTranslationLooksMissing(commentRu, event.comment_cn, toSupplier)) {
+      const commentCn = await translateSupplierText(env, commentRu, toSupplier);
+      translated.comment_cn = commentCn;
+      translated.comment_translated = commentRu;
+      await env.DB.prepare(
+        `UPDATE supplier_tracking_events
+        SET comment_cn = ?, comment_translated = ?
+        WHERE id = ?`
+      )
+        .bind(commentCn, commentRu, event.id)
+        .run()
+        .catch(() => null);
+    }
+    translatedEvents.push(translated);
+  }
+  return translatedEvents;
 }
 
 async function ensureSupplierRequestTranslations(env, supplierRequest) {

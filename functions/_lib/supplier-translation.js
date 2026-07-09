@@ -131,6 +131,62 @@ function dictionaryTranslation(input, from, to) {
   return "";
 }
 
+function googleTranslateLanguage(value) {
+  const lang = normalizeLanguageCode(value);
+  if (lang === "zh-CN") return "zh-CN";
+  return lang;
+}
+
+async function translateViaConfiguredEndpoint(env, input, from, to) {
+  const endpoint = text(env.SUPPLIER_TRANSLATION_ENDPOINT || env.TRANSLATION_ENDPOINT);
+  if (!endpoint) return "";
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: input, from, to }),
+    });
+    if (!response.ok) return "";
+    const data = await response.json().catch(() => ({}));
+    return normalizeTranslation(data.translation || data.translatedText || data.text || data.response || "");
+  } catch (error) {
+    console.error("Supplier configured translation failed", error?.message || error);
+    return "";
+  }
+}
+
+async function translateViaPublicGoogle(input, from, to) {
+  const source = googleTranslateLanguage(from);
+  const target = googleTranslateLanguage(to);
+  if (!input || source === target) return "";
+  const url = new URL("https://translate.googleapis.com/translate_a/single");
+  url.searchParams.set("client", "gtx");
+  url.searchParams.set("sl", source);
+  url.searchParams.set("tl", target);
+  url.searchParams.set("dt", "t");
+  url.searchParams.set("q", input);
+
+  try {
+    const response = await fetch(url.toString(), {
+      headers: { "accept": "application/json" },
+    });
+    if (!response.ok) return "";
+    const data = await response.json();
+    const chunks = Array.isArray(data?.[0]) ? data[0] : [];
+    return normalizeTranslation(chunks.map((chunk) => chunk?.[0] || "").join(""));
+  } catch (error) {
+    console.error("Supplier public translation failed", error?.message || error);
+    return "";
+  }
+}
+
+async function translateViaHttpFallback(env, input, from, to) {
+  const configured = await translateViaConfiguredEndpoint(env, input, from, to);
+  if (configured) return configured;
+  if (text(env.SUPPLIER_TRANSLATION_DISABLE_PUBLIC_FALLBACK) === "1") return "";
+  return translateViaPublicGoogle(input, from, to);
+}
+
 export function supplierTranslationLooksMissing(source, translated, { to = "zh-CN" } = {}) {
   const sourceText = fallbackTranslation(source);
   const translatedText = fallbackTranslation(translated);
@@ -149,43 +205,47 @@ export async function translateSupplierText(env, source, { from = "ru", to = "zh
   const targetLang = normalizeLanguageCode(to);
   if (isLikelyAlreadyTargetLanguage(input, sourceLang, targetLang)) return input;
   const dictionaryFallback = dictionaryTranslation(input, sourceLang, targetLang);
-  if (!env?.AI?.run) return dictionaryFallback || input;
+  let aiCandidate = "";
 
-  const model = text(env.SUPPLIER_TRANSLATION_MODEL || env.TRANSLATION_MODEL) || DEFAULT_TRANSLATION_MODEL;
-  const fromLabel = LANGUAGE_LABELS[sourceLang] || sourceLang;
-  const toLabel = LANGUAGE_LABELS[targetLang] || targetLang;
-  const prompt = [
-    `Translate from ${fromLabel} to ${toLabel}.`,
-    "This is a short business message about car parts between EVLine and a Chinese supplier.",
-    translationGuidance(sourceLang, targetLang),
-    "Preserve VIN codes, model names, part names, numbers, currency, delivery days, and line breaks.",
-    "Do not add explanations, greetings, quotes, markdown, or alternatives.",
-    "Return only the translated text.",
-    "",
-    input,
-  ].join("\n");
+  if (env?.AI?.run) {
+    const model = text(env.SUPPLIER_TRANSLATION_MODEL || env.TRANSLATION_MODEL) || DEFAULT_TRANSLATION_MODEL;
+    const fromLabel = LANGUAGE_LABELS[sourceLang] || sourceLang;
+    const toLabel = LANGUAGE_LABELS[targetLang] || targetLang;
+    const prompt = [
+      `Translate from ${fromLabel} to ${toLabel}.`,
+      "This is a short business message about car parts between EVLine and a Chinese supplier.",
+      translationGuidance(sourceLang, targetLang),
+      "Preserve VIN codes, model names, part names, numbers, currency, delivery days, and line breaks.",
+      "Do not add explanations, greetings, quotes, markdown, or alternatives.",
+      "Return only the translated text.",
+      "",
+      input,
+    ].join("\n");
 
-  try {
-    const result = await env.AI.run(model, {
-      messages: [
-        {
-          role: "system",
-          content: "You are a precise business translator for automotive parts procurement. Return only the translation.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: 800,
-    });
-    const candidate = normalizeTranslation(result?.response || result?.result?.response || result?.text || "");
-    if (candidate && !supplierTranslationLooksMissing(input, candidate, { to: targetLang })) return candidate;
-    return dictionaryFallback || candidate || input;
-  } catch (error) {
-    console.error("Supplier translation failed", error?.message || error);
-    return dictionaryFallback || input;
+    try {
+      const result = await env.AI.run(model, {
+        messages: [
+          {
+            role: "system",
+            content: "You are a precise business translator for automotive parts procurement. Return only the translation.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 800,
+      });
+      aiCandidate = normalizeTranslation(result?.response || result?.result?.response || result?.text || "");
+      if (aiCandidate && !supplierTranslationLooksMissing(input, aiCandidate, { to: targetLang })) return aiCandidate;
+    } catch (error) {
+      console.error("Supplier translation failed", error?.message || error);
+    }
   }
+
+  const httpCandidate = await translateViaHttpFallback(env, input, sourceLang, targetLang);
+  if (httpCandidate && !supplierTranslationLooksMissing(input, httpCandidate, { to: targetLang })) return httpCandidate;
+  return dictionaryFallback || httpCandidate || aiCandidate || input;
 }
 
 export function supplierTranslationDirections() {
