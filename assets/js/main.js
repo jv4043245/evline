@@ -5,18 +5,16 @@ function ensureCoreNavItems() {
 
     const text = document.documentElement.lang.toLowerCase();
     const isRu = text.startsWith("ru") || window.location.pathname.startsWith("/ru/");
-    const hasToItem = links.some((link) => {
+    const hasStoItem = links.some((link) => {
       const value = `${link.textContent || ""} ${link.getAttribute("href") || ""}`;
-      return /komplekty-to|комплект|комплекти/i.test(value);
+      return /spivpratsya-sto|sotrudnichestvo-sto|для сто/i.test(value);
     });
-    let insertAfter = links[1];
 
-    if (!hasToItem) {
+    if (!hasStoItem) {
       const item = document.createElement("a");
-      item.href = isRu ? "/ru/komplekty-to/" : "/komplekty-to/";
-      item.textContent = isRu ? "Комплекты ТО" : "Комплект ТО";
-      insertAfter.after(item);
-      insertAfter = item;
+      item.href = isRu ? "/ru/sotrudnichestvo-sto/" : "/spivpratsya-sto/";
+      item.textContent = "Для СТО";
+      links[1].after(item);
     }
   });
 }
