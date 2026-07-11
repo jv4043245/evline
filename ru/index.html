@@ -141,12 +141,15 @@
   .hero .leadbox h3{line-height:1.25;margin-bottom:14px}
   .leadbox .small{font-size:13.5px;color:var(--muted);margin-bottom:10px}
   .leadbox label{display:block;font-size:13px;font-weight:700;margin:9px 0 4px}
-  .leadbox input,.leadbox textarea,.leadbox select{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
-  .leadbox input:focus,.leadbox textarea:focus{outline:none;border-color:var(--green)}
+  .leadbox input,.leadbox textarea,.leadbox select{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:#fff;color:var(--text)}
+  .leadbox input:focus,.leadbox textarea:focus,.leadbox select:focus{outline:none;border-color:var(--green)}
+  .leadbox-row{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(100px,1fr);gap:8px}
+  .leadbox-row--contact{grid-template-columns:minmax(0,1.3fr) minmax(108px,1fr)}
+  .leadbox-field{min-width:0}
   .leadbox .btn{width:100%;margin-top:12px;padding:14px 30px}
   .leadbox .privacy{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
   .hero .leadbox label{margin:8px 0 3px}
-  .hero .leadbox input{padding:9px 12px}
+  .hero .leadbox input,.hero .leadbox select{padding:9px 12px}
   .hero .leadbox .btn{margin-top:11px;padding:13px 24px}
   .hero .leadbox .privacy{font-size:11.5px;margin-top:9px}
   /* счетчики доверия */
@@ -363,7 +366,7 @@
     .mobile-lead{padding:24px 0 30px}
     .mobile-lead .leadbox{padding:18px}
     .mobile-lead .leadbox label{margin:7px 0 3px}
-    .mobile-lead .leadbox input{padding:9px 12px}
+    .mobile-lead .leadbox input,.mobile-lead .leadbox select{padding:9px 12px}
     .mobile-lead .leadbox .btn{margin-top:10px;padding:13px 22px}
     .mobile-lead .leadbox .privacy{display:none}
     .hero-proof{height:156px;min-height:0}
@@ -452,12 +455,16 @@
     </figure>
     <form class="leadbox" id="hero-form" data-form-name="Главная форма запчасти" onsubmit="return submitLead('hero-form')">
       <h3>Узнайте цену и срок за 30 минут</h3>
-      <label>VIN-код</label>
-      <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
-      <label>Что нужно?</label>
-      <input name="need" placeholder="Напр.: передний бампер, левая фара…">
-      <label>Телефон</label>
-      <input name="contact" placeholder="+380…" required>
+      <div class="leadbox-row">
+        <div class="leadbox-field"><label for="hero-brand">Марка</label><select id="hero-brand" name="brand" data-car-brand required><option value="" selected disabled>Выберите марку</option></select></div>
+        <div class="leadbox-field"><label for="hero-year">Год</label><select id="hero-year" name="year" data-car-year><option value="">Не знаю</option></select></div>
+      </div>
+      <div class="leadbox-row leadbox-row--contact">
+        <div class="leadbox-field"><label for="hero-vin">VIN, если есть</label><input id="hero-vin" name="vin" placeholder="17 символов" maxlength="17"></div>
+        <div class="leadbox-field"><label for="hero-contact">Телефон</label><input id="hero-contact" name="contact" placeholder="+380…" autocomplete="tel" required></div>
+      </div>
+      <label for="hero-need">Что нужно?</label>
+      <input id="hero-need" name="need" placeholder="Напр.: передний бампер, левая фара…">
       <button class="btn" type="submit">Получить цену и срок</button>
       <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
     </form>
@@ -504,12 +511,16 @@
   <div class="wrap">
     <form class="leadbox" id="hero-mobile-form" data-form-name="Мобильная форма запчасти" onsubmit="return submitLead('hero-mobile-form')">
       <h3>Узнайте цену и срок за 30 минут</h3>
-      <label>VIN-код</label>
-      <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
-      <label>Что нужно?</label>
-      <input name="need" placeholder="Напр.: передний бампер, левая фара…">
-      <label>Телефон</label>
-      <input name="contact" placeholder="+380…" required>
+      <div class="leadbox-row">
+        <div class="leadbox-field"><label for="mobile-brand">Марка</label><select id="mobile-brand" name="brand" data-car-brand required><option value="" selected disabled>Выберите марку</option></select></div>
+        <div class="leadbox-field"><label for="mobile-year">Год</label><select id="mobile-year" name="year" data-car-year><option value="">Не знаю</option></select></div>
+      </div>
+      <div class="leadbox-row leadbox-row--contact">
+        <div class="leadbox-field"><label for="mobile-vin">VIN, если есть</label><input id="mobile-vin" name="vin" placeholder="17 символов" maxlength="17"></div>
+        <div class="leadbox-field"><label for="mobile-contact">Телефон</label><input id="mobile-contact" name="contact" placeholder="+380…" autocomplete="tel" required></div>
+      </div>
+      <label for="mobile-need">Что нужно?</label>
+      <input id="mobile-need" name="need" placeholder="Напр.: передний бампер, левая фара…">
       <button class="btn" type="submit">Получить цену и срок</button>
       <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
     </form>
@@ -672,8 +683,8 @@
     <div class="grid2">
       <div>
         <span class="tag">Последний шаг</span>
-        <h2>Отправьте VIN — дальше все сделаем мы</h2>
-        <p class="lead">Проверим совместимость, посчитаем цену «под ключ» и срок доставки. Отвечаем в рабочее время до 30 минут.</p>
+        <h2>Укажите автомобиль — дальше всё сделаем мы</h2>
+        <p class="lead">Выберите марку, по возможности добавьте VIN — проверим совместимость, посчитаем цену «под ключ» и срок доставки.</p>
         <div class="contact-list" style="margin-top:22px">
           📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a><br>
           ✈️ <a href="https://t.me/evline_support" target="_blank">Telegram-чат с менеджером</a><br>
@@ -684,10 +695,14 @@
       <form class="leadbox" id="final-form" data-form-name="Финальная форма запчасти" onsubmit="return submitLead('final-form')">
         <span class="free-badge">Бесплатный подбор</span>
         <h3>Заявка на подбор запчасти</h3>
-        <label>VIN-код</label>
-        <input name="vin" placeholder="17 символів" maxlength="17">
-        <label>Что нужно? Можно списком</label>
-        <textarea name="need" rows="2" placeholder="Напр.: передний бампер, крепления, левая фара"></textarea>
+        <div class="leadbox-row">
+          <div class="leadbox-field"><label for="final-brand">Марка</label><select id="final-brand" name="brand" data-car-brand required><option value="" selected disabled>Выберите марку</option></select></div>
+          <div class="leadbox-field"><label for="final-year">Год</label><select id="final-year" name="year" data-car-year><option value="">Не знаю</option></select></div>
+        </div>
+        <label for="final-vin">VIN-код, если есть</label>
+        <input id="final-vin" name="vin" placeholder="17 символов" maxlength="17">
+        <label for="final-need">Что нужно? Можно списком</label>
+        <textarea id="final-need" name="need" rows="2" placeholder="Напр.: передний бампер, крепления, левая фара"></textarea>
         <div class="row2">
           <div><label>Телефон</label><input name="contact" placeholder="+380…" required></div>
           <div><label>Где ответить?</label><select name="channel"><option>Telegram</option><option>Звонок</option><option>Email</option></select></div>
@@ -799,8 +814,35 @@
 <div class="toast" id="toast">Сообщение скопировано — вставьте его в чат Telegram</div>
 
 <script>
+var vehicleBrandGroups=[
+  {label:'Популярные марки',items:[
+    ['BYD','BYD'],['ZEEKR','ZEEKR'],['Li Auto','Li Auto'],['Xiaomi','Xiaomi'],['NIO','NIO'],['XPeng','XPeng'],['AVATR','AVATR'],['AITO','AITO'],['Voyah','Voyah (Free / Dream)'],['Volkswagen ID','Volkswagen ID']
+  ]},
+  {label:'Другие марки',items:[
+    ['Audi','Audi (Q5 e-tron)'],['Changan','Changan'],['Chery','Chery'],['Deepal','Deepal'],['Denza','Denza'],['Fang Cheng Bao','Fang Cheng Bao'],['GAC Aion','GAC Aion'],['Geely','Geely'],['Hongqi','Hongqi'],['Jaecoo','Jaecoo'],['Leapmotor','Leapmotor'],['Lynk & Co','Lynk & Co'],['MG','MG'],['Omoda','Omoda'],['ORA','ORA'],['Polestar','Polestar'],['smart','smart'],['TANK','TANK'],['Volvo','Volvo (EX30)'],['WEY','WEY']
+  ]}
+];
+function populateVehicleFields(){
+  document.querySelectorAll('[data-car-brand]').forEach(function(select){
+    vehicleBrandGroups.forEach(function(group){
+      var optgroup=document.createElement('optgroup');
+      optgroup.label=group.label;
+      group.items.forEach(function(item){optgroup.appendChild(new Option(item[1],item[0]));});
+      select.appendChild(optgroup);
+    });
+    select.appendChild(new Option('Другая марка','Другая марка'));
+  });
+  document.querySelectorAll('[data-car-year]').forEach(function(select){
+    var currentYear=new Date().getFullYear();
+    for(var year=currentYear;year>=2010;year--){select.appendChild(new Option(String(year),String(year)));}
+    select.appendChild(new Option('2009 и раньше','2009 и раньше'));
+  });
+}
+populateVehicleFields();
 function buildMsg(f){
   return "Добрый день! Хочу подобрать запчасть.\n"
+    +"Марка: "+(f.brand||"—")+"\n"
+    +"Год выпуска: "+(f.year||"не указан")+"\n"
     +"VIN-код: "+(f.vin||"—")+"\n"
     +"Что нужно: "+(f.need||"—")+"\n"
     +(f.name?"Имя: "+f.name+"\n":"")
@@ -891,6 +933,8 @@ function fieldValue(form,name){
 function submitLead(formId){
   var el=document.getElementById(formId);
   var f={
+    brand:fieldValue(el,'brand'),
+    year:fieldValue(el,'year'),
     vin:fieldValue(el,'vin').toUpperCase(),
     need:fieldValue(el,'need'),
     name:fieldValue(el,'name'),
@@ -906,6 +950,7 @@ function submitLead(formId){
     name:f.name,
     phone:f.contact,
     contact:f.contact,
+    car:[f.brand,f.year].filter(Boolean).join(', '),
     vin:f.vin,
     part:f.need,
     item_name:f.need,
