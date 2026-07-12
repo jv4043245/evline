@@ -120,31 +120,12 @@
         font-weight: 900;
       }
       .sto-hero-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
+        display: block;
       }
       .sto-hero-actions .btn {
+        width: 100%;
         min-height: 48px;
-      }
-      .sto-hero-actions__telegram {
-        display: inline-flex;
-        min-height: 48px;
-        align-items: center;
         justify-content: center;
-        padding: 0 18px;
-        border: 1px solid #b9d7c4;
-        border-radius: 8px;
-        color: #17633a;
-        background: #fff;
-        font-size: 14px;
-        font-weight: 850;
-        text-decoration: none;
-      }
-      .sto-hero-actions__telegram:hover {
-        border-color: #2f7d4d;
-        background: #eef8f1;
       }
       .sto-split-grid {
         display: grid;
@@ -611,12 +592,6 @@
         .sto-hero-conversion {
           gap: 14px;
         }
-        .sto-hero-actions .btn {
-          width: 100%;
-        }
-        .sto-hero-actions__telegram {
-          display: none;
-        }
         .sto-offer-grid,
         .sto-flow {
           grid-template-columns: 1fr;
@@ -651,7 +626,7 @@
               <a href="./" lang="ru" aria-current="true">Русский</a>
             </div>
           </details>
-          <a class="btn btn--primary" href="#partner-form">Стать партнером</a>
+          <a class="btn btn--primary" href="#partner-form">Получить условия</a>
           <button class="nav-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
             <span></span>
           </button>
@@ -680,7 +655,6 @@
             </div>
             <div class="sto-hero-actions">
               <a class="btn btn--primary" href="#partner-form">Получить условия для СТО</a>
-              <a class="sto-hero-actions__telegram" href="https://t.me/evline_support" target="_blank" rel="noopener">Написать в Telegram</a>
             </div>
           </div>
         </div>
