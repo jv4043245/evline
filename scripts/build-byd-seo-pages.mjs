@@ -871,7 +871,7 @@ function pageHtml(page, lang) {
     <meta name="twitter:image" content="${siteUrl}/assets/${page.image}">
     <link rel="stylesheet" href="${rel}assets/css/styles.css?v=layout-4">
     <link rel="stylesheet" href="${rel}assets/css/parts-clean.css?v=byd-seo-1">
-    <script src="${rel}assets/js/main.js?v=language-switch-close-1" defer></script>
+    <script src="${rel}assets/js/main.js?v=crm-leads-1" defer></script>
     <script type="application/ld+json">${jsonLd(page, lang)}</script>
   </head>
   <body class="parts-page brand-seo-page byd-seo-page">
@@ -1006,38 +1006,6 @@ function pageHtml(page, lang) {
     </main>
 
     ${footer(lang)}
-
-    <script>
-      document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
-          const data = Object.fromEntries(new FormData(form));
-          const ru = form.dataset.lang === "ru";
-          const lines = ru
-            ? [
-                "Добрый день! Нужна консультация по BYD.",
-                "Тема: " + (form.dataset.topic || "-"),
-                "Модель: " + (data.car || "-"),
-                "VIN-код: " + ((data.vin || "-").toString().toUpperCase()),
-                "Что беспокоит: " + (data.issue || "-"),
-                "Связь: " + (data.contact || "-"),
-                "Подскажите, пожалуйста, что можно проверить и какая стоимость."
-              ]
-            : [
-                "Добрий день! Потрібна консультація по BYD.",
-                "Тема: " + (form.dataset.topic || "-"),
-                "Модель: " + (data.car || "-"),
-                "VIN-код: " + ((data.vin || "-").toString().toUpperCase()),
-                "Що турбує: " + (data.issue || "-"),
-                "Зв'язок: " + (data.contact || "-"),
-                "Підкажіть, будь ласка, що можна перевірити та яка вартість."
-              ];
-          const msg = lines.join("\\n");
-          if (navigator.clipboard) navigator.clipboard.writeText(msg).catch(() => {});
-          window.open("https://t.me/evline_tech?text=" + encodeURIComponent(msg), "_blank", "noopener");
-        });
-      });
-    </script>
   </body>
 </html>
 `;

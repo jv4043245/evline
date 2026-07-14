@@ -40,7 +40,9 @@ function normalizeLead(payload, request) {
   const type = detectType(payload, request);
   const part = text(payload.part || payload.item_name || payload.need || payload.requested_part);
   const details = text(payload.message || payload.request_text || payload.details || payload.comment);
-  const message = [part ? `Запчастина: ${part}` : "", details].filter(Boolean).join("\n");
+  const requestLabel = type === "byd" ? "Запит" : "Запчастина";
+  const distinctDetails = details && details !== part ? details : "";
+  const message = [part ? `${requestLabel}: ${part}` : "", distinctDetails].filter(Boolean).join("\n");
   const attribution = inferAttribution(payload, request);
 
   return {
@@ -118,7 +120,7 @@ async function notifyTelegram(env, lead, orderId, request) {
     ...(lead.telegram ? [`Telegram: ${lead.telegram}`] : []),
     ...(lead.car ? [`Авто: ${lead.car}`] : []),
     ...(lead.vin ? [`VIN: ${lead.vin}`] : []),
-    ...(lead.part ? [`Запчастина: ${lead.part}`] : []),
+    ...(lead.part ? [`${lead.type === "byd" ? "Запит" : "Запчастина"}: ${lead.part}`] : []),
     `Адмінка: ${url.origin}/admin/`,
   ];
 

@@ -83,7 +83,9 @@ export function managerChatIdForType(env, type) {
 function orderRequestText(data) {
   const item = text(data.item_name || data.part);
   const details = text(data.request_text || data.details || data.message);
-  return [item ? `Запчастина/послуга: ${item}` : "", details].filter(Boolean).join("\n");
+  const itemLabel = text(data.type).toLowerCase() === "byd" ? "Запит" : "Запчастина/послуга";
+  const distinctDetails = details && details !== item && details !== `${itemLabel}: ${item}` ? details : "";
+  return [item ? `${itemLabel}: ${item}` : "", distinctDetails].filter(Boolean).join("\n");
 }
 
 function publicNumber(prefix, value) {
@@ -389,7 +391,7 @@ export function buildManagerOrderMessage(order, origin = "https://evline.com.ua"
     ...(order.customer_telegram ? [`Telegram: ${order.customer_telegram}`] : []),
     ...(order.car ? [`Авто: ${order.car}`] : []),
     ...(order.vin ? [`VIN: ${order.vin}`] : []),
-    ...(order.item_name ? [`Запчастина: ${order.item_name}`] : []),
+    ...(order.item_name ? [`${order.type === "byd" ? "Запит" : "Запчастина"}: ${order.item_name}`] : []),
     ...(order.service_name ? [`Послуга: ${order.service_name}`] : []),
     `Адмінка: ${origin}/admin/`,
   ];

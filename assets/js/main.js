@@ -258,6 +258,92 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   });
 });
 
+document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    const car = String(data.car || "").trim();
+    const vin = String(data.vin || "").trim().toUpperCase();
+    const issue = String(data.issue || "").trim();
+    const contact = String(data.contact || data.phone || "").trim();
+    const topic = String(form.dataset.topic || data.topic || "Програмування BYD").trim();
+    const ru = form.dataset.lang === "ru" || isRussianPage();
+    const type = "byd";
+    const button = form.querySelector("button[type='submit']");
+    const originalButtonText = button?.textContent || "";
+
+    const lines = ru
+      ? [
+          "Добрый день! Нужна консультация по BYD.",
+          `Тема: ${topic}`,
+          `Модель: ${car || "-"}`,
+          `VIN-код: ${vin || "-"}`,
+          `Что беспокоит: ${issue || "-"}`,
+          `Телефон: ${contact || "-"}`,
+          "Подскажите, пожалуйста, что можно проверить и какая стоимость.",
+        ]
+      : [
+          "Добрий день! Потрібна консультація по BYD.",
+          `Тема: ${topic}`,
+          `Модель: ${car || "-"}`,
+          `VIN-код: ${vin || "-"}`,
+          `Що турбує: ${issue || "-"}`,
+          `Телефон: ${contact || "-"}`,
+          "Підкажіть, будь ласка, що можна перевірити та яка вартість.",
+        ];
+
+    const payload = {
+      ...data,
+      type,
+      topic,
+      car,
+      vin,
+      phone: contact,
+      contact,
+      part: issue || topic,
+      item_name: issue || topic,
+      message: issue,
+      ...trackingData(form),
+    };
+    if (!payload.form_name) {
+      payload.form_name = `SEO-форма BYD: ${topic}`;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = ru ? "Сохраняем..." : "Зберігаємо...";
+    }
+
+    sendLeadToCrm(payload)
+      .then(() => {
+        form.reset();
+        setFormMessage(
+          form,
+          ru
+            ? "Заявка сохранена в CRM. Telegram открыт с готовым текстом."
+            : "Заявку збережено в CRM. Telegram відкрито з готовим текстом.",
+        );
+      })
+      .catch(() => {
+        setFormMessage(
+          form,
+          ru
+            ? "Telegram открыт, но заявку не удалось сохранить в CRM."
+            : "Telegram відкрито, але заявку не вдалося зберегти в CRM.",
+          true,
+        );
+      })
+      .finally(() => {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalButtonText;
+        }
+      });
+
+    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type));
+  });
+});
+
 document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((form) => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

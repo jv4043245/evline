@@ -628,12 +628,15 @@ async function handleApi(req, res, url) {
     const now = new Date().toISOString();
     const part = text(payload.part || payload.item_name || payload.need || payload.requested_part);
     const details = text(payload.message || payload.request_text || payload.details || payload.comment);
-    const message = [part ? `Запчастина: ${part}` : "", details].filter(Boolean).join("\n");
+    const type = detectLeadType(payload, url.pathname);
+    const requestLabel = type === "byd" ? "Запит" : "Запчастина";
+    const distinctDetails = details && details !== part ? details : "";
+    const message = [part ? `${requestLabel}: ${part}` : "", distinctDetails].filter(Boolean).join("\n");
     const lead = {
       id: randomUUID(),
       created_at: now,
       updated_at: now,
-      type: detectLeadType(payload, url.pathname),
+      type,
       status: "new",
       quality: "unknown",
       name: text(payload.name || payload.customer_name),
@@ -656,6 +659,11 @@ async function handleApi(req, res, url) {
       fbclid: text(payload.fbclid),
       landing_page: text(payload.landing_page),
       referrer: text(payload.referrer || req.headers.referer),
+      page_url: text(payload.page_url || payload.landing_page),
+      form_id: text(payload.form_id),
+      form_name: text(payload.form_name),
+      submitted_at: text(payload.submitted_at || now),
+      tracking_captured_at: text(payload.tracking_captured_at),
       user_agent: text(req.headers["user-agent"]),
       revenue_uah: 0,
       cost_uah: 0,
