@@ -11,6 +11,7 @@ const costsFile = path.join(dataRoot, "ad-costs.json");
 const customersFile = path.join(dataRoot, "customers.json");
 const ordersFile = path.join(dataRoot, "orders.json");
 const eventsFile = path.join(dataRoot, "order-events.json");
+const contactEventsFile = path.join(dataRoot, "contact-events.json");
 const notificationsFile = path.join(dataRoot, "notifications.json");
 const shippingFile = path.join(dataRoot, "shipping.json");
 const port = Number(process.env.PORT || 8787);
@@ -490,6 +491,8 @@ async function createLocalOrderFromLead(lead) {
     fbclid: lead.fbclid,
     landing_page: lead.landing_page,
     referrer: lead.referrer,
+    visitor_id: lead.visitor_id || "",
+    session_id: lead.session_id || "",
     revenue_uah: 0,
     purchase_cost_uah: 0,
     delivery_cost_uah: 0,
@@ -520,6 +523,34 @@ async function createLocalOrderFromLead(lead) {
   });
   await writeJsonList(eventsFile, events);
   return order.id;
+}
+
+async function linkLocalContactEventsToLead(lead, orderId) {
+  if (!lead.visitor_id && !lead.session_id) return;
+  const events = await readJsonList(contactEventsFile);
+  const createdAt = new Date(lead.created_at).getTime();
+  let changed = false;
+  const next = events.map((event) => {
+    const eventTime = new Date(event.created_at).getTime();
+    const sameIdentity =
+      (lead.visitor_id && event.visitor_id === lead.visitor_id) ||
+      (lead.session_id && event.session_id === lead.session_id);
+    if (!event.lead_id && sameIdentity && eventTime >= createdAt - 30 * 86400000 && eventTime <= createdAt + 10 * 60000) {
+      changed = true;
+      return { ...event, lead_id: lead.id, order_id: orderId, converted_at: lead.created_at };
+    }
+    return event;
+  });
+  if (changed) await writeJsonList(contactEventsFile, next);
+}
+
+function localAttributionType(row = {}) {
+  const source = text(row.source || row.utm_source).toLowerCase();
+  const medium = text(row.medium || row.utm_medium).toLowerCase();
+  if (row.gclid || row.gbraid || row.wbraid || (source === "google" && /(cpc|ppc|paid|ads?)/.test(medium))) return "google_ads";
+  if (medium === "organic" || (source === "google" && !medium)) return "organic";
+  if (/facebook|instagram|tiktok|youtube|telegram|social/.test(source) || row.fbclid) return "social";
+  return source && source !== "site" ? "other" : "direct";
 }
 
 function slug(value) {
@@ -664,6 +695,9 @@ async function handleApi(req, res, url) {
       form_name: text(payload.form_name),
       submitted_at: text(payload.submitted_at || now),
       tracking_captured_at: text(payload.tracking_captured_at),
+      attribution_type: localAttributionType(payload),
+      visitor_id: text(payload.visitor_id),
+      session_id: text(payload.session_id),
       user_agent: text(req.headers["user-agent"]),
       revenue_uah: 0,
       cost_uah: 0,
@@ -676,7 +710,137 @@ async function handleApi(req, res, url) {
     leads.push(lead);
     await writeJsonList(leadsFile, leads);
     const orderId = await createLocalOrderFromLead(lead);
+    await linkLocalContactEventsToLead(lead, orderId);
     return sendJson(res, 200, { ok: true, lead_id: lead.id, order_id: orderId });
+  }
+
+  if (url.pathname === "/api/contact-events" && req.method === "POST") {
+    const payload = await readBody(req);
+    const now = new Date().toISOString();
+    const channel = ["telegram", "phone", "email", "whatsapp", "viber"].includes(text(payload.channel).toLowerCase())
+      ? text(payload.channel).toLowerCase()
+      : "telegram";
+    const intentType = ["parts", "byd", "to", "sto", "general"].includes(text(payload.intent_type).toLowerCase())
+      ? text(payload.intent_type).toLowerCase()
+      : "general";
+    const events = await readJsonList(contactEventsFile);
+    const visitorId = text(payload.visitor_id);
+    const sessionId = text(payload.session_id);
+    const duplicateSince = Date.now() - 30 * 60000;
+    const isUnique = !events.some((event) =>
+      new Date(event.created_at).getTime() >= duplicateSince &&
+      event.channel === channel &&
+      event.intent_type === intentType &&
+      ((visitorId && event.visitor_id === visitorId) || (sessionId && event.session_id === sessionId))
+    );
+    const leads = await readJsonList(leadsFile);
+    const recentLead = leads
+      .filter((lead) => {
+        const age = Date.now() - new Date(lead.created_at).getTime();
+        return age >= 0 && age <= 10 * 60000 && (
+          (visitorId && lead.visitor_id === visitorId) ||
+          (sessionId && lead.session_id === sessionId)
+        );
+      })
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+    const orders = recentLead ? await readJsonList(ordersFile) : [];
+    const order = recentLead ? orders.find((item) => item.lead_id === recentLead.id) : null;
+    const event = {
+      id: text(payload.id || payload.event_id) || randomUUID(),
+      created_at: now,
+      event_type: "contact_click",
+      channel,
+      intent_type: intentType,
+      cta_id: text(payload.cta_id),
+      cta_text: text(payload.cta_text),
+      destination: text(payload.destination),
+      visitor_id: visitorId,
+      session_id: sessionId,
+      is_unique: isUnique ? 1 : 0,
+      source: text(payload.utm_source || payload.source) || (payload.gclid || payload.gbraid || payload.wbraid ? "google" : "site"),
+      medium: text(payload.utm_medium || payload.medium) || (payload.gclid || payload.gbraid || payload.wbraid ? "cpc" : ""),
+      campaign: text(payload.utm_campaign || payload.campaign),
+      term: text(payload.utm_term || payload.term),
+      content: text(payload.utm_content || payload.content),
+      gclid: text(payload.gclid),
+      gbraid: text(payload.gbraid),
+      wbraid: text(payload.wbraid),
+      fbclid: text(payload.fbclid),
+      landing_page: text(payload.landing_page),
+      page_url: text(payload.page_url),
+      referrer: text(payload.referrer),
+      attribution_type: localAttributionType(payload),
+      language: text(payload.language),
+      lead_id: recentLead?.id || "",
+      order_id: order?.id || "",
+      converted_at: recentLead ? now : "",
+    };
+    if (!events.some((item) => item.id === event.id)) {
+      events.push(event);
+      await writeJsonList(contactEventsFile, events);
+    }
+    return sendJson(res, 200, { ok: true, event_id: event.id, is_unique: isUnique, linked: Boolean(recentLead) });
+  }
+
+  if (url.pathname === "/api/contact-events" && req.method === "OPTIONS") {
+    res.writeHead(204, {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "content-type",
+    });
+    res.end();
+    return true;
+  }
+
+  if (url.pathname === "/api/admin/contact-events" && req.method === "GET") {
+    const range = url.searchParams.get("range") || "30d";
+    const channel = text(url.searchParams.get("channel"));
+    const intentType = text(url.searchParams.get("intent_type"));
+    const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 80, 1), 200);
+    const leads = await readJsonList(leadsFile);
+    const orders = await readJsonList(ordersFile);
+    const events = (await readJsonList(contactEventsFile))
+      .filter((event) => inRange(event, range))
+      .filter((event) => channel === "all" || !channel || event.channel === channel)
+      .filter((event) => intentType === "all" || !intentType || event.intent_type === intentType);
+    const channelMap = new Map();
+    const pageMap = new Map();
+    for (const event of events) {
+      const channelRow = channelMap.get(event.channel) || { channel: event.channel, clicks: 0, unique_intents: 0, lead_ids: new Set() };
+      channelRow.clicks += 1;
+      channelRow.unique_intents += number(event.is_unique);
+      if (event.lead_id && number(event.is_unique) === 1) channelRow.lead_ids.add(event.lead_id);
+      channelMap.set(event.channel, channelRow);
+      const pageKey = `${event.page_url || ""}|${event.cta_text || ""}|${event.intent_type || ""}`;
+      const pageRow = pageMap.get(pageKey) || { page_url: event.page_url, cta_text: event.cta_text, intent_type: event.intent_type, clicks: 0, unique_intents: 0, lead_ids: new Set() };
+      pageRow.clicks += 1;
+      pageRow.unique_intents += number(event.is_unique);
+      if (event.lead_id && number(event.is_unique) === 1) pageRow.lead_ids.add(event.lead_id);
+      pageMap.set(pageKey, pageRow);
+    }
+    const uniqueIntents = events.reduce((sum, event) => sum + number(event.is_unique), 0);
+    const convertedLeadIds = new Set(events.filter((event) => number(event.is_unique) === 1).map((event) => event.lead_id).filter(Boolean));
+    return sendJson(res, 200, {
+      range,
+      migration_required: false,
+      totals: {
+        clicks: events.length,
+        unique_intents: uniqueIntents,
+        converted_leads: convertedLeadIds.size,
+        conversion_rate: uniqueIntents ? convertedLeadIds.size / uniqueIntents : 0,
+      },
+      channels: [...channelMap.values()].map((row) => ({ ...row, converted_leads: row.lead_ids.size, lead_ids: undefined })).sort((a, b) => b.clicks - a.clicks),
+      pages: [...pageMap.values()].map((row) => ({ ...row, converted_leads: row.lead_ids.size, lead_ids: undefined })).sort((a, b) => b.clicks - a.clicks).slice(0, 30),
+      events: events
+        .slice()
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+        .slice(0, limit)
+        .map((event) => ({
+          ...event,
+          lead_number: leads.find((lead) => lead.id === event.lead_id)?.lead_number || "",
+          order_number: orders.find((order) => order.id === event.order_id)?.order_number || "",
+        })),
+    });
   }
 
   if (url.pathname === "/api/admin/shipping" && req.method === "GET") {

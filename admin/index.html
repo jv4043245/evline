@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260629-google-ads-margin">
-    <script src="/admin/admin.js?v=20260629-google-ads-margin" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260715-contact-events">
+    <script src="/admin/admin.js?v=20260715-contact-events" defer></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -52,6 +52,7 @@
 
       <nav class="admin-tabs" aria-label="Розділи адмінки">
         <button class="admin-tab" type="button" data-admin-tab="orders" aria-selected="true">Замовлення</button>
+        <button class="admin-tab" type="button" data-admin-tab="contacts" aria-selected="false">Звернення</button>
         <button class="admin-tab" type="button" data-admin-tab="china" aria-selected="false">Китай</button>
         <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
         <button class="admin-tab" type="button" data-admin-tab="delivery" aria-selected="false">Доставка</button>
@@ -222,6 +223,74 @@
           </form>
         </aside>
 
+      </section>
+
+      <section class="admin-view" data-admin-view="contacts" hidden>
+        <section class="summary-grid summary-grid--contacts" aria-label="Показники звернень із сайту">
+          <article class="summary-card">
+            <span>Усі натискання</span>
+            <strong data-kpi="contact_clicks">0</strong>
+            <small>Telegram, телефон та інші канали</small>
+          </article>
+          <article class="summary-card">
+            <span>Унікальні звернення</span>
+            <strong data-kpi="contact_unique">0</strong>
+            <small>повтори за 30 хвилин не рахуються</small>
+          </article>
+          <article class="summary-card">
+            <span>Стали лідами</span>
+            <strong data-kpi="contact_leads">0</strong>
+            <small>автоматично пов'язані з CRM</small>
+          </article>
+          <article class="summary-card">
+            <span>Конверсія в лід</span>
+            <strong data-kpi="contact_conversion">0%</strong>
+            <small>від унікальних звернень</small>
+          </article>
+        </section>
+
+        <section class="admin-panel contacts-overview">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Звернення із сайту</h2>
+              <p class="muted" data-contact-status>Фіксуємо намір зв'язатися окремо від заявок і замовлень.</p>
+            </div>
+            <div class="filters">
+              <select data-contact-channel aria-label="Канал звернення">
+                <option value="all">Усі канали</option>
+                <option value="telegram">Telegram</option>
+                <option value="phone">Телефон</option>
+                <option value="email">Email</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="viber">Viber</option>
+              </select>
+              <select data-contact-intent aria-label="Напрям звернення">
+                <option value="all">Усі напрями</option>
+                <option value="parts">Запчастини</option>
+                <option value="byd">Програмування</option>
+                <option value="to">Комплекти ТО</option>
+                <option value="sto">Для СТО</option>
+                <option value="general">Загальне</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-grid admin-grid--two contacts-grid">
+          <article class="admin-panel">
+            <div class="admin-panel__head"><h2>Канали</h2></div>
+            <div class="contact-breakdown" data-contact-channels></div>
+          </article>
+          <article class="admin-panel">
+            <div class="admin-panel__head"><h2>Сторінки та кнопки</h2></div>
+            <div class="contact-breakdown" data-contact-pages></div>
+          </article>
+        </section>
+
+        <section class="admin-panel">
+          <div class="admin-panel__head"><h2>Останні звернення</h2></div>
+          <div class="contact-event-list" data-contact-events></div>
+        </section>
       </section>
 
       <section class="admin-view" data-admin-view="china" hidden>

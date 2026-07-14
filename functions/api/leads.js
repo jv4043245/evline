@@ -1,5 +1,6 @@
 import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
 import { inferAttribution } from "../_lib/attribution.js";
+import { linkContactEventsToLead } from "../_lib/contact-events.js";
 import {
   createOrderFromLead,
   loadOrder,
@@ -78,6 +79,8 @@ function normalizeLead(payload, request) {
     submitted_at: attribution.submitted_at || now,
     tracking_captured_at: attribution.tracking_captured_at,
     attribution_type: attribution.attribution_type,
+    visitor_id: text(payload.visitor_id),
+    session_id: text(payload.session_id),
     user_agent: text(request.headers.get("user-agent")),
     ip_country: text(request.headers.get("cf-ipcountry")),
   };
@@ -181,6 +184,8 @@ export async function onRequestPost({ request, env }) {
       ["submitted_at", lead.submitted_at],
       ["tracking_captured_at", lead.tracking_captured_at],
       ["attribution_type", lead.attribution_type],
+      ["visitor_id", lead.visitor_id],
+      ["session_id", lead.session_id],
       ["user_agent", lead.user_agent],
       ["ip_country", lead.ip_country],
     ]);
@@ -194,6 +199,10 @@ export async function onRequestPost({ request, env }) {
   } catch (error) {
     console.error("Failed to create order from lead", error);
   }
+
+  await linkContactEventsToLead(env, lead, orderId).catch((error) => {
+    console.error("Failed to link contact events to lead", error);
+  });
 
   await notifyTelegram(env, lead, orderId, request).catch((error) => {
     console.error("Failed to notify manager Telegram chat", error);

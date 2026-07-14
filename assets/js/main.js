@@ -19,6 +19,17 @@ function ensureCoreNavItems() {
   });
 }
 
+function ensureContactTracking() {
+  if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
+  const script = document.createElement("script");
+  script.src = "/assets/js/contact-tracking.js?v=20260715-contact-events";
+  script.defer = true;
+  script.dataset.evlineContactTracking = "";
+  document.head.append(script);
+}
+
+ensureContactTracking();
+
 ensureCoreNavItems();
 
 const navToggle = document.querySelector("[data-nav-toggle]");
@@ -92,6 +103,8 @@ function trackingData(form) {
     referrer: document.referrer,
     page_url: window.location.href,
     submitted_at: now,
+    visitor_id: readOrCreateTrackingId(localStorage, "evline_visitor_id_v1"),
+    session_id: readOrCreateTrackingId(sessionStorage, "evline_session_id_v1"),
   };
   const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
   let saved = readTrackingStore(localStorage, storageKey);
@@ -126,6 +139,19 @@ function trackingData(form) {
     current.form_name = form.dataset.formName || form.getAttribute("aria-label") || form.id || "";
   }
   return current;
+}
+
+function readOrCreateTrackingId(store, key) {
+  try {
+    let value = store.getItem(key);
+    if (!value) {
+      value = window.crypto?.randomUUID?.() || `evl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+      store.setItem(key, value);
+    }
+    return value;
+  } catch {
+    return `evl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
 }
 
 trackingData();
@@ -170,6 +196,19 @@ function telegramUsernameForType(type) {
 function openTelegramMessage(message, username = "evline_support") {
   const text = String(message || "").trim();
   if (!text) return;
+  const contactEvent = {
+    channel: "telegram",
+    intent_type: username === "evline_tech" ? "byd" : "parts",
+    destination: `@${username}`,
+    cta_id: "programmatic-telegram",
+    cta_text: String(document.activeElement?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 240),
+  };
+  if (window.EVLineContactTracking) {
+    window.EVLineContactTracking.track(contactEvent);
+  } else {
+    window.__EVLINE_PENDING_CONTACT_EVENTS__ = window.__EVLINE_PENDING_CONTACT_EVENTS__ || [];
+    window.__EVLINE_PENDING_CONTACT_EVENTS__.push(contactEvent);
+  }
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).catch(() => {});
   }

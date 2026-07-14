@@ -261,6 +261,8 @@ export async function createOrderFromLead(env, lead) {
     ["submitted_at", text(lead.submitted_at)],
     ["tracking_captured_at", text(lead.tracking_captured_at)],
     ["attribution_type", text(lead.attribution_type)],
+    ["visitor_id", text(lead.visitor_id)],
+    ["session_id", text(lead.session_id)],
   ]);
 
   await insertStatusEvent(env, {

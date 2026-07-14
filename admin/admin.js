@@ -35,6 +35,13 @@ const state = {
     migrationRequired: false,
     error: "",
   },
+  contacts: {
+    totals: {},
+    channels: [],
+    pages: [],
+    events: [],
+    migrationRequired: false,
+  },
 };
 
 const CHINA_SEEN_SUPPLIER_ACTIVITY_KEY = "evline_china_seen_supplier_activity_v1";
@@ -75,6 +82,22 @@ const typeLabels = {
   parts: "Запчастини",
   byd: "BYD",
   other: "Інше",
+};
+
+const contactChannelLabels = {
+  telegram: "Telegram",
+  phone: "Телефон",
+  email: "Email",
+  whatsapp: "WhatsApp",
+  viber: "Viber",
+};
+
+const contactIntentLabels = {
+  parts: "Запчастини",
+  byd: "Програмування",
+  to: "Комплекти ТО",
+  sto: "Для СТО",
+  general: "Загальне",
 };
 
 const paymentLabels = {
@@ -297,7 +320,7 @@ const keywordLevelLabels = {
   utm_term: "UTM term",
 };
 
-const adminTabs = new Set(["orders", "china", "analytics", "delivery"]);
+const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery"]);
 const orderEditorTabs = new Set(["main", "suppliers", "delivery", "payment", "messages", "history"]);
 
 const money = new Intl.NumberFormat("uk-UA", {
@@ -416,6 +439,85 @@ function renderSummary(data) {
   renderSources(data.sources || []);
   renderCampaigns(data.campaigns || []);
   renderInsights(data);
+}
+
+function renderContactBreakdown(rootSelector, rows, labelForRow) {
+  const root = document.querySelector(rootSelector);
+  if (!root) return;
+  const max = Math.max(1, ...rows.map((row) => Number(row.clicks || 0)));
+  root.innerHTML = rows.length
+    ? rows.map((row) => {
+        const clicks = Number(row.clicks || 0);
+        const unique = Number(row.unique_intents || 0);
+        const leads = Number(row.converted_leads || 0);
+        const width = Math.max(3, Math.round((clicks / max) * 100));
+        return `
+          <div class="contact-breakdown__item">
+            <div class="contact-breakdown__head">
+              <strong>${escapeHtml(labelForRow(row))}</strong>
+              <b>${numberFmt.format(clicks)}</b>
+            </div>
+            <span>${numberFmt.format(unique)} унікальних · ${numberFmt.format(leads)} лідів</span>
+            <div class="source-meter"><span style="width:${width}%"></span></div>
+          </div>
+        `;
+      }).join("")
+    : '<p class="muted">За цей період звернень немає.</p>';
+}
+
+function renderContactEvents(data) {
+  const totals = data.totals || {};
+  setText("contact_clicks", numberFmt.format(totals.clicks || 0));
+  setText("contact_unique", numberFmt.format(totals.unique_intents || 0));
+  setText("contact_leads", numberFmt.format(totals.converted_leads || 0));
+  setText("contact_conversion", `${Math.round(Number(totals.conversion_rate || 0) * 100)}%`);
+
+  const status = document.querySelector("[data-contact-status]");
+  if (status) {
+    status.textContent = data.migration_required
+      ? "Потрібно застосувати міграцію 0020_contact_events.sql."
+      : "Фіксуємо намір зв'язатися окремо від заявок і замовлень.";
+  }
+
+  renderContactBreakdown(
+    "[data-contact-channels]",
+    data.channels || [],
+    (row) => contactChannelLabels[row.channel] || row.channel || "Інше",
+  );
+  renderContactBreakdown(
+    "[data-contact-pages]",
+    data.pages || [],
+    (row) => `${shortUrl(row.page_url) || "Сторінка"}${row.cta_text ? ` · ${row.cta_text}` : ""}`,
+  );
+
+  const root = document.querySelector("[data-contact-events]");
+  if (!root) return;
+  const events = data.events || [];
+  root.innerHTML = events.length
+    ? events.map((event) => {
+        const linkedNumber = event.order_number || event.lead_number || "";
+        return `
+          <article class="contact-event${event.lead_id ? " contact-event--converted" : ""}">
+            <div class="contact-event__time">${escapeHtml(shortDateTime(event.created_at))}</div>
+            <div class="contact-event__channel">
+              <strong>${escapeHtml(contactChannelLabels[event.channel] || event.channel || "Інше")}</strong>
+              <span>${escapeHtml(contactIntentLabels[event.intent_type] || event.intent_type || "Загальне")}</span>
+            </div>
+            <div class="contact-event__context">
+              <strong>${escapeHtml(event.cta_text || "Контактна кнопка")}</strong>
+              <span>${escapeHtml(shortUrl(event.page_url) || event.page_url || "-")}</span>
+              <small>${escapeHtml(attributionLabels[event.attribution_type] || event.attribution_type || "Direct")}${event.campaign ? ` · ${escapeHtml(event.campaign)}` : ""}</small>
+            </div>
+            <div class="contact-event__result">
+              ${event.lead_id
+                ? `<span class="contact-result contact-result--converted">Лід${linkedNumber ? ` · ${escapeHtml(linkedNumber)}` : ""}</span>`
+                : `<span class="contact-result">Перехід</span>`}
+              ${Number(event.is_unique) === 1 ? '<small>унікальне</small>' : '<small>повторне</small>'}
+            </div>
+          </article>
+        `;
+      }).join("")
+    : '<p class="muted contact-event-list__empty">За цей період звернень немає.</p>';
 }
 
 function renderChart(days) {
@@ -2769,6 +2871,24 @@ async function loadOrders() {
   renderOrders();
 }
 
+async function loadContactEvents() {
+  const params = new URLSearchParams({
+    range: state.range,
+    channel: document.querySelector("[data-contact-channel]")?.value || "all",
+    intent_type: document.querySelector("[data-contact-intent]")?.value || "all",
+    limit: "100",
+  });
+  const data = await api(`/api/admin/contact-events?${params}`);
+  state.contacts = {
+    totals: data.totals || {},
+    channels: data.channels || [],
+    pages: data.pages || [],
+    events: data.events || [],
+    migrationRequired: Boolean(data.migration_required),
+  };
+  renderContactEvents(data);
+}
+
 async function loadOrder(id) {
   const data = await api(`/api/admin/orders/${encodeURIComponent(id)}`);
   state.selectedOrder = data.order;
@@ -2984,7 +3104,7 @@ async function refresh() {
     if (googleAdsKeywordsExport) {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
-    await Promise.all([loadSummary(), loadOrders(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords()]);
+    await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
       await loadAuditLog();
@@ -3423,6 +3543,8 @@ document.querySelector("[data-audit-refresh]")?.addEventListener("click", () => 
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
 });
+document.querySelector("[data-contact-channel]")?.addEventListener("change", loadContactEvents);
+document.querySelector("[data-contact-intent]")?.addEventListener("change", loadContactEvents);
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && state.activeTab === "china") {
