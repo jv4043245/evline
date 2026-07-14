@@ -67,6 +67,14 @@ export async function onRequestPost({ request, env }) {
   const headers = leadCorsHeaders(request);
   try {
     const payload = await readPayload(request);
+    const channel = clipped(payload.channel, 24).toLowerCase();
+    const intentType = clipped(payload.intent_type, 24).toLowerCase();
+    const hasContactTarget = Boolean(clipped(payload.destination, 240) || clipped(payload.cta_id, 160));
+
+    if (!CHANNELS.has(channel) || (intentType && !INTENT_TYPES.has(intentType)) || !hasContactTarget) {
+      return json({ ok: false, error: "invalid_contact_event" }, { status: 400, headers });
+    }
+
     const event = normalizeEvent(payload, request);
     event.is_unique = await isUniqueIntent(env, event);
     const linked = await findRecentLeadForContact(env, event);
