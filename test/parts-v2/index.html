@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="uk-UA">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <meta name="theme-color" content="#111513">
+    <title>Тестова сторінка запчастин з Китаю | EVLine</title>
+    <meta name="description" content="Тестова версія посадкової сторінки EVLine для підбору запчастин до сучасних китайських авто.">
+    <link rel="icon" href="../../assets/images/favicon.png">
+    <link rel="stylesheet" href="../../assets/css/parts-test-v2.css?v=20260717">
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+    <script src="../../assets/js/parts-test-v2.js?v=20260717" defer></script>
+  </head>
+  <body>
+    <div class="test-notice" role="status">
+      <div class="container test-notice__inner">
+        <span class="status-dot" aria-hidden="true"></span>
+        <strong>Тестова версія</strong>
+        <span>Заявки не потрапляють у CRM, а фото не завантажуються на сервер.</span>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="../../" aria-label="EVLine, головна сторінка">
+          <img src="../../assets/images/logo.png" width="196" height="80" alt="EVLine">
+        </a>
+
+        <nav class="site-nav" aria-label="Навігація тестової сторінки">
+          <a href="#prices">Ціни</a>
+          <a href="#orders">Замовлення</a>
+          <a href="#process">Як працюємо</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="header-actions">
+          <a class="icon-button" href="tel:+380935251024" aria-label="Подзвонити EVLine" title="Подзвонити">
+            <i data-lucide="phone" aria-hidden="true"></i>
+          </a>
+          <a class="button button--outline" href="https://t.me/evline_support" target="_blank" rel="noopener">
+            <i data-lucide="send" aria-hidden="true"></i>
+            Telegram
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__overlay" aria-hidden="true"></div>
+        <div class="container hero__content">
+          <p class="eyebrow">Оригінальні та OEM запчастини під замовлення</p>
+          <h1 id="hero-title">Знайдемо точну деталь для вашого авто з Китаю</h1>
+          <p class="hero__lead">Можна почати з моделі та фото. VIN знадобиться лише перед остаточним підтвердженням сумісності.</p>
+
+          <ul class="hero__proofs" aria-label="Головні умови">
+            <li><i data-lucide="camera" aria-hidden="true"></i> Фото перевірки до відправки</li>
+            <li><i data-lucide="badge-check" aria-hidden="true"></i> Ціна під ключ до оплати</li>
+            <li><i data-lucide="plane" aria-hidden="true"></i> Зазвичай 18-20 днів авіа</li>
+          </ul>
+
+          <form class="quote-builder" id="parts-test-form" novalidate>
+            <div class="quote-builder__head">
+              <div>
+                <span class="step-label">Крок 1 з 2</span>
+                <h2>Що потрібно для вашого авто?</h2>
+              </div>
+              <span class="reply-time"><i data-lucide="clock-3" aria-hidden="true"></i> Орієнтир за 30 хвилин</span>
+            </div>
+
+            <div class="quote-grid quote-grid--primary">
+              <label class="field">
+                <span>Марка</span>
+                <select name="brand" id="lead-brand" required>
+                  <option value="">Оберіть марку</option>
+                  <option>BYD</option>
+                  <option>ZEEKR</option>
+                  <option>Xiaomi</option>
+                  <option>Li Auto</option>
+                  <option>Denza</option>
+                  <option>Fang Cheng Bao</option>
+                  <option>AVATR</option>
+                  <option>NIO</option>
+                  <option>XPeng</option>
+                  <option>Інша марка</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Модель</span>
+                <input name="model" id="lead-model" list="model-options" placeholder="Напр. Song Plus" autocomplete="off">
+                <datalist id="model-options"></datalist>
+              </label>
+
+              <label class="field field--wide">
+                <span>Яка деталь потрібна?</span>
+                <input name="part" id="lead-part" placeholder="Напр. бампер або фара" required>
+              </label>
+
+              <div class="field field--upload">
+                <span>Фото деталі або пошкодження</span>
+                <button class="upload-button" type="button" id="photo-dropzone">
+                  <i data-lucide="image-plus" aria-hidden="true"></i>
+                  <span>Додати фото</span>
+                  <small>до 5 файлів</small>
+                </button>
+                <input class="visually-hidden" id="lead-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple>
+              </div>
+
+              <button class="button button--primary quote-continue" type="button" id="quote-continue">
+                Продовжити
+                <i data-lucide="arrow-right" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <p class="form-error" id="step-one-error" role="alert" hidden></p>
+            <div class="photo-previews" id="photo-previews" aria-live="polite"></div>
+
+            <div class="quote-builder__second" id="quote-second-step" hidden>
+              <div class="quote-builder__divider"></div>
+              <div class="quote-builder__head quote-builder__head--second">
+                <div>
+                  <span class="step-label">Крок 2 з 2</span>
+                  <h2>Куди надіслати відповідь?</h2>
+                </div>
+                <button class="text-command" type="button" id="quote-back">
+                  <i data-lucide="arrow-left" aria-hidden="true"></i>
+                  Змінити авто
+                </button>
+              </div>
+
+              <div class="quote-grid quote-grid--secondary">
+                <label class="field">
+                  <span>Рік</span>
+                  <select name="year" id="lead-year">
+                    <option value="">Не знаю</option>
+                    <option>2026</option>
+                    <option>2025</option>
+                    <option>2024</option>
+                    <option>2023</option>
+                    <option>2022</option>
+                    <option>2021</option>
+                    <option>2020</option>
+                    <option>2019</option>
+                    <option>2018</option>
+                    <option>2017</option>
+                    <option>2016</option>
+                    <option>2015</option>
+                    <option>2014 або раніше</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>VIN, якщо є</span>
+                  <input name="vin" id="lead-vin" maxlength="17" placeholder="17 символів" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                  <small>Можна додати пізніше</small>
+                </label>
+
+                <fieldset class="field channel-field">
+                  <legend>Як відповісти?</legend>
+                  <div class="segmented" id="channel-options">
+                    <label>
+                      <input type="radio" name="channel" value="telegram" checked>
+                      <span><i data-lucide="send" aria-hidden="true"></i> Telegram</span>
+                    </label>
+                    <label>
+                      <input type="radio" name="channel" value="call">
+                      <span><i data-lucide="phone" aria-hidden="true"></i> Дзвінок</span>
+                    </label>
+                    <label>
+                      <input type="radio" name="channel" value="email">
+                      <span><i data-lucide="mail" aria-hidden="true"></i> Email</span>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <label class="field field--contact">
+                  <span id="contact-label">Telegram або телефон</span>
+                  <input name="contact" id="lead-contact" placeholder="@username або +380..." required autocomplete="tel">
+                </label>
+
+                <button class="button button--primary quote-submit" type="submit">
+                  <i data-lucide="search-check" aria-hidden="true"></i>
+                  Отримати ціну та строк
+                </button>
+              </div>
+
+              <label class="consent">
+                <input type="checkbox" name="consent" required>
+                <span>Погоджуюсь на обробку даних для підбору запчастини</span>
+              </label>
+              <p class="form-error" id="submit-error" role="alert" hidden></p>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="facts-band" aria-label="Умови підбору">
+        <div class="container facts-grid">
+          <div><strong>З 2021 року</strong><span>працюємо з постачальниками в Китаї</span></div>
+          <div><strong>1-4 дні</strong><span>на підбір, погодження та перевірку</span></div>
+          <div><strong>~14 днів</strong><span>авіа з моменту відправки з Китаю</span></div>
+          <div><strong>18-20 днів</strong><span>типовий повний строк авіа під ключ</span></div>
+        </div>
+      </section>
+
+      <section class="section catalog-section" id="prices">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Ціна без вгадування</p>
+              <h2>Орієнтири по популярних запчастинах</h2>
+            </div>
+            <p>Ціни взяті з чинної сторінки EVLine і показують формат майбутнього міні-каталогу. Точну суму та доступність підтверджує менеджер.</p>
+          </div>
+
+          <div class="catalog-controls" aria-label="Фільтри прикладів">
+            <label class="filter-select">
+              <span>Марка</span>
+              <select id="catalog-brand">
+                <option value="all">Усі марки</option>
+                <option value="byd">BYD</option>
+                <option value="zeekr">ZEEKR</option>
+                <option value="li-auto">Li Auto</option>
+                <option value="xiaomi">Xiaomi</option>
+                <option value="fang-cheng-bao">Fang Cheng Bao</option>
+              </select>
+            </label>
+
+            <div class="category-filter" role="group" aria-label="Категорія запчастини">
+              <button class="filter-chip is-active" type="button" data-category="all">Усі</button>
+              <button class="filter-chip" type="button" data-category="body">Кузов</button>
+              <button class="filter-chip" type="button" data-category="optics">Оптика</button>
+              <button class="filter-chip" type="button" data-category="suspension">Ходова</button>
+              <button class="filter-chip" type="button" data-category="service">ТО</button>
+              <button class="filter-chip" type="button" data-category="accessories">Аксесуари</button>
+            </div>
+
+            <button class="icon-button icon-button--light" id="reset-catalog" type="button" aria-label="Скинути фільтри" title="Скинути фільтри">
+              <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+            </button>
+          </div>
+
+          <div class="catalog-meta">
+            <span id="catalog-count">8 позицій</span>
+            <span><i data-lucide="refresh-cw" aria-hidden="true"></i> Актуальність перевіряємо перед оплатою</span>
+          </div>
+
+          <div class="parts-grid" id="parts-grid">
+            <article class="part-card" data-brand="byd" data-category="body">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-11.jpg" alt="Кузовна деталь перед перевіркою" loading="lazy">
+                <span class="status-badge status-badge--estimate">Орієнтир</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">BYD Song Plus</p>
+                <h3>Передній бампер</h3>
+                <dl><div><dt>Варіант</dt><dd>оригінал / OEM</dd></div><div><dt>Доставка</dt><dd>авіа або море</dd></div></dl>
+                <div class="part-card__price"><strong>від $220</strong><span>під ключ</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="BYD" data-model-value="Song Plus" data-part-value="Передній бампер">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="byd" data-category="service">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-07.jpg" alt="Оригінальні технічні рідини для авто з Китаю" loading="lazy">
+                <span class="status-badge status-badge--estimate">Орієнтир</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">BYD Han / Seal</p>
+                <h3>Гальмівні колодки</h3>
+                <dl><div><dt>Комплект</dt><dd>передній або задній</dd></div><div><dt>Підбір</dt><dd>за VIN</dd></div></dl>
+                <div class="part-card__price"><strong>від $45</strong><span>комплект</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="BYD" data-model-value="Han / Seal" data-part-value="Гальмівні колодки">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="zeekr" data-category="optics">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-05.jpg" alt="Камера автомобіля перед відправкою" loading="lazy">
+                <span class="status-badge status-badge--estimate">Орієнтир</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">ZEEKR 001</p>
+                <h3>Передня фара</h3>
+                <dl><div><dt>Перевірка</dt><dd>маркування і версія</dd></div><div><dt>Звіт</dt><dd>фото до відправки</dd></div></dl>
+                <div class="part-card__price"><strong>від $350</strong><span>за одиницю</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="ZEEKR" data-model-value="001" data-part-value="Передня фара">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="li-auto" data-category="body">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-06.jpg" alt="Запаковане замовлення перед доставкою" loading="lazy">
+                <span class="status-badge status-badge--estimate">Орієнтир</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">Li Auto L7</p>
+                <h3>Лобове скло</h3>
+                <dl><div><dt>Комплектація</dt><dd>камери / обігрів</dd></div><div><dt>Маршрут</dt><dd>окреме пакування</dd></div></dl>
+                <div class="part-card__price"><strong>від $280</strong><span>без монтажу</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="Li Auto" data-model-value="L7" data-part-value="Лобове скло">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="byd" data-category="suspension">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-03.jpg" alt="Амортизатор у захисному пакуванні" loading="lazy">
+                <span class="status-badge status-badge--estimate">Орієнтир</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">BYD Tang</p>
+                <h3>Амортизатор</h3>
+                <dl><div><dt>Сторона</dt><dd>звіряємо за VIN</dd></div><div><dt>Перевірка</dt><dd>артикул і кріплення</dd></div></dl>
+                <div class="part-card__price"><strong>від $120</strong><span>за одиницю</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="BYD" data-model-value="Tang" data-part-value="Амортизатор">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="xiaomi" data-category="body">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-10.jpg" alt="Деталь з заводським маркуванням" loading="lazy">
+                <span class="status-badge status-badge--check">Перевіримо в Китаї</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">Xiaomi YU7</p>
+                <h3>Накладка заднього бампера</h3>
+                <dl><div><dt>Статус</dt><dd>є оплачені замовлення</dd></div><div><dt>Версія</dt><dd>ліва / права</dd></div></dl>
+                <div class="part-card__price"><strong>за запитом</strong><span>відповідь до 30 хв</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="Xiaomi" data-model-value="YU7" data-part-value="Накладка заднього бампера">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="fang-cheng-bao" data-category="suspension">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-01.jpg" alt="Деталь ходової у заводському пакуванні" loading="lazy">
+                <span class="status-badge status-badge--check">Перевіримо в Китаї</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">Fang Cheng Bao Leopard 3</p>
+                <h3>Наконечники рульової тяги</h3>
+                <dl><div><dt>Кількість</dt><dd>комплект 2 шт.</dd></div><div><dt>Статус</dt><dd>є оплачені замовлення</dd></div></dl>
+                <div class="part-card__price"><strong>за запитом</strong><span>точно за VIN</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="Fang Cheng Bao" data-model-value="Leopard 3" data-part-value="Наконечники рульової тяги, 2 шт.">Перевірити для мого авто</button>
+              </div>
+            </article>
+
+            <article class="part-card" data-brand="zeekr" data-category="accessories">
+              <div class="part-card__media">
+                <img src="../../assets/images/parts-gallery-04.jpg" alt="Дзеркало у зборі з проводкою" loading="lazy">
+                <span class="status-badge status-badge--check">Перевіримо в Китаї</span>
+              </div>
+              <div class="part-card__body">
+                <p class="part-card__car">ZEEKR 7X</p>
+                <h3>Електричний фаркоп</h3>
+                <dl><div><dt>Сумісність</dt><dd>версія авто і проводка</dd></div><div><dt>Маршрут</dt><dd>авіа або море</dd></div></dl>
+                <div class="part-card__price"><strong>за запитом</strong><span>з доставкою</span></div>
+                <button class="button button--secondary" type="button" data-part-action data-brand-value="ZEEKR" data-model-value="7X" data-part-value="Електричний фаркоп">Перевірити для мого авто</button>
+              </div>
+            </article>
+          </div>
+
+          <div class="empty-state" id="catalog-empty" hidden>
+            <i data-lucide="package-search" aria-hidden="true"></i>
+            <h3>Готового прикладу ще немає</h3>
+            <p>Це не означає, що деталь недоступна. Перевіримо її у постачальників за моделлю, фото або VIN.</p>
+            <button class="button button--primary" type="button" data-scroll-to-form>Надіслати запит</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section orders-section" id="orders">
+        <div class="container">
+          <div class="section-heading section-heading--compact">
+            <div>
+              <p class="eyebrow eyebrow--dark">Не вигадані позиції</p>
+              <h2>Що вже оплачували клієнти</h2>
+            </div>
+            <p>Знеособлені записи з CRM EVLine. Ціни не показуємо, доки вони не підтверджені для публікації.</p>
+          </div>
+
+          <div class="order-list">
+            <article class="order-row">
+              <div class="order-row__date"><strong>11</strong><span>липня</span></div>
+              <div><p>Xiaomi YU7</p><h3>Задня частина лівої розширювальної арки крила</h3></div>
+              <span class="status-badge status-badge--paid"><i data-lucide="circle-check" aria-hidden="true"></i> Оплачено</span>
+            </article>
+            <article class="order-row">
+              <div class="order-row__date"><strong>11</strong><span>липня</span></div>
+              <div><p>Fang Cheng Bao Leopard 3</p><h3>Зовнішні наконечники рульової тяги, 2 шт.</h3></div>
+              <span class="status-badge status-badge--paid"><i data-lucide="circle-check" aria-hidden="true"></i> Оплачено</span>
+            </article>
+            <article class="order-row">
+              <div class="order-row__date"><strong>30</strong><span>червня</span></div>
+              <div><p>BYD Dolphin</p><h3>Наконечники рульових тяг, 2 шт.</h3></div>
+              <span class="status-badge status-badge--paid"><i data-lucide="circle-check" aria-hidden="true"></i> Оплачено</span>
+            </article>
+            <article class="order-row">
+              <div class="order-row__date"><strong>25</strong><span>червня</span></div>
+              <div><p>BYD Sea Lion 07 DM-i / Denza D9</p><h3>Електронний масляний насос та замок багажника</h3></div>
+              <span class="status-badge status-badge--paid"><i data-lucide="circle-check" aria-hidden="true"></i> Оплачено</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section proof-section">
+        <div class="container">
+          <div class="section-heading section-heading--compact">
+            <div>
+              <p class="eyebrow eyebrow--dark">Контроль до оплати</p>
+              <h2>Менше ризику на кожному етапі</h2>
+            </div>
+            <p>Ми не просимо розбиратися у китайських каталогах. Менеджер уточнює тільки те, що впливає на сумісність і кінцеву ціну.</p>
+          </div>
+
+          <div class="proof-grid">
+            <article class="proof-item">
+              <img src="../../assets/images/parts-gallery-04.jpg" alt="Дзеркало з проводкою перед перевіркою" loading="lazy">
+              <div>
+                <span>01</span>
+                <h3>Фото замість довгого опису</h3>
+                <p>Покажіть деталь, пошкодження або маркування. VIN можна додати після першої відповіді менеджера.</p>
+              </div>
+            </article>
+            <article class="proof-item">
+              <img src="../../assets/images/parts-gallery-10.jpg" alt="Заводське маркування автозапчастини" loading="lazy">
+              <div>
+                <span>02</span>
+                <h3>Сумісність до замовлення</h3>
+                <p>Звіряємо модель, рік, комплектацію, сторону, роз'єми та артикул. Якщо помилка підбору наша, вирішуємо за свій рахунок.</p>
+              </div>
+            </article>
+            <article class="proof-item">
+              <img src="../../assets/images/parts-gallery-06.jpg" alt="Запаковані деталі перед відправкою" loading="lazy">
+              <div>
+                <span>03</span>
+                <h3>Ціна і маршрут зафіксовані</h3>
+                <p>До оплати погоджуємо деталь, пакування, авіа або море, орієнтовний строк і підсумковий бюджет.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section process-section" id="process">
+        <div class="container">
+          <div class="section-heading section-heading--light">
+            <div>
+              <p class="eyebrow">Весь шлях замовлення</p>
+              <h2>14 днів у дорозі, зазвичай 18-20 днів під ключ</h2>
+            </div>
+            <p>Так строки не суперечать один одному: до міжнародного перевезення додаються підбір, погодження та перевірка в Китаї.</p>
+          </div>
+
+          <ol class="timeline">
+            <li><span>1</span><div><strong>Запит</strong><p>Модель, деталь, фото або VIN</p></div><small>до 30 хв</small></li>
+            <li><span>2</span><div><strong>Підбір у Китаї</strong><p>Сумісність, варіанти, фінальна ціна</p></div><small>1-4 дні</small></li>
+            <li><span>3</span><div><strong>Перевірка і пакування</strong><p>Фото, маркування, стан деталі</p></div><small>до відправки</small></li>
+            <li><span>4</span><div><strong>Доставка в Україну</strong><p>Статуси на ключових етапах</p></div><small>авіа ~14 днів</small></li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section vin-section">
+        <div class="container vin-layout">
+          <div class="vin-copy">
+            <p class="eyebrow eyebrow--dark">VIN без тиску</p>
+            <h2>Спочатку дамо орієнтир, потім підтвердимо сумісність</h2>
+            <p>VIN потрібен не для «доступу до авто», а щоб знайти точну комплектацію в каталозі. Якщо його зараз немає під рукою, достатньо моделі та фотографії.</p>
+            <ul class="check-list">
+              <li><i data-lucide="check" aria-hidden="true"></i> Не обов'язковий на першому кроці</li>
+              <li><i data-lucide="check" aria-hidden="true"></i> Не публікуємо і не передаємо стороннім продавцям</li>
+              <li><i data-lucide="check" aria-hidden="true"></i> Просимо перед оплатою, якщо без нього є ризик помилки</li>
+            </ul>
+            <button class="button button--primary" type="button" data-scroll-to-form>
+              Отримати попередню ціну без VIN
+              <i data-lucide="arrow-up-right" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="vin-example" aria-label="Приклад перевірки сумісності">
+            <div class="vin-example__head">
+              <span><i data-lucide="shield-check" aria-hidden="true"></i> Перевірка сумісності</span>
+              <strong>BYD Song Plus 2023</strong>
+            </div>
+            <div class="vin-example__row"><span>Фото пошкодження</span><strong class="ok">Отримано</strong></div>
+            <div class="vin-example__row"><span>Сторона деталі</span><strong class="ok">Передня ліва</strong></div>
+            <div class="vin-example__row"><span>Комплектація</span><strong class="pending">Потрібен VIN</strong></div>
+            <div class="vin-example__row"><span>Попередній орієнтир</span><strong>від $220</strong></div>
+            <p>Менеджер уже може дати ціновий діапазон, а VIN попросить перед остаточним замовленням.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section faq-section" id="faq">
+        <div class="container faq-layout">
+          <div class="faq-intro">
+            <p class="eyebrow eyebrow--dark">Перед першим замовленням</p>
+            <h2>Короткі відповіді на важливі питання</h2>
+            <p>Не знайшли свого питання? Менеджер відповість у вибраному каналі без обов'язкового дзвінка.</p>
+            <a class="button button--secondary" href="https://t.me/evline_support" target="_blank" rel="noopener">
+              <i data-lucide="message-circle" aria-hidden="true"></i>
+              Запитати в Telegram
+            </a>
+          </div>
+          <div class="faq-list">
+            <details>
+              <summary>Чи можна дізнатися ціну без VIN?<i data-lucide="plus" aria-hidden="true"></i></summary>
+              <p>Так. За моделлю, роком і фото дамо попередній діапазон. VIN знадобиться перед оплатою, якщо у деталі є кілька несумісних версій.</p>
+            </details>
+            <details>
+              <summary>Чому ціна на сторінці орієнтовна?<i data-lucide="plus" aria-hidden="true"></i></summary>
+              <p>Ціни постачальників, курс, вага і спосіб доставки змінюються. Тому вказуємо дату орієнтира, а суму під ключ фіксуємо після перевірки.</p>
+            </details>
+            <details>
+              <summary>Скільки реально триває доставка?<i data-lucide="plus" aria-hidden="true"></i></summary>
+              <p>Авіа займає приблизно 14 днів з моменту відправки. Разом із підбором, погодженням і перевіркою типовий строк становить 18-20 днів.</p>
+            </details>
+            <details>
+              <summary>Що буде, якщо деталь не підійде?<i data-lucide="plus" aria-hidden="true"></i></summary>
+              <p>Якщо помилилися ми під час погодженого VIN-підбору, вирішуємо питання за свій рахунок. Умови по конкретній позиції фіксуємо до оплати.</p>
+            </details>
+            <details>
+              <summary>Чи можна замовити кузовні деталі морем?<i data-lucide="plus" aria-hidden="true"></i></summary>
+              <p>Так. Для великих або важких деталей море часто вигідніше. Менеджер порівняє строк і повну вартість обох маршрутів.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-cta">
+        <div class="container final-cta__inner">
+          <div>
+            <p class="eyebrow">Можна почати без VIN</p>
+            <h2>Покажіть авто і деталь. Решту уточнимо самі.</h2>
+          </div>
+          <button class="button button--light" type="button" data-scroll-to-form>
+            Почати підбір
+            <i data-lucide="arrow-up" aria-hidden="true"></i>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <div>
+          <img src="../../assets/images/logo.png" width="160" height="65" alt="EVLine">
+          <p>Запчастини для сучасних авто з Китаю під замовлення.</p>
+        </div>
+        <div class="footer-contact">
+          <a href="tel:+380935251024">+38 (093) 525-10-24</a>
+          <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
+          <span>Київ, Оболонська набережна, 3</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="mobile-actions" aria-label="Швидкі дії">
+      <a href="tel:+380935251024"><i data-lucide="phone" aria-hidden="true"></i><span>Подзвонити</span></a>
+      <button type="button" data-scroll-to-form><i data-lucide="file-search" aria-hidden="true"></i><span>Запит</span></button>
+      <a href="https://t.me/evline_support" target="_blank" rel="noopener"><i data-lucide="send" aria-hidden="true"></i><span>Telegram</span></a>
+    </div>
+
+    <dialog class="demo-dialog" id="demo-dialog" aria-labelledby="demo-dialog-title">
+      <button class="dialog-close" type="button" id="dialog-close" aria-label="Закрити" title="Закрити">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+      <div class="dialog-icon"><i data-lucide="badge-check" aria-hidden="true"></i></div>
+      <p class="eyebrow eyebrow--dark">Тест пройдено</p>
+      <h2 id="demo-dialog-title">Так виглядатиме підтвердження заявки</h2>
+      <p>У тестовому режимі дані не надсилалися до CRM. Нижче показано, що отримає менеджер після впровадження.</p>
+      <dl class="demo-summary" id="demo-summary"></dl>
+      <div class="dialog-actions">
+        <button class="button button--secondary" type="button" id="copy-demo-request">
+          <i data-lucide="copy" aria-hidden="true"></i>
+          Скопіювати
+        </button>
+        <button class="button button--primary" type="button" id="dialog-done">Готово</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
