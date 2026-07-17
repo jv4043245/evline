@@ -193,15 +193,19 @@ function telegramUsernameForType(type) {
   return type === "byd" ? "evline_tech" : "evline_support";
 }
 
-function openTelegramMessage(message, username = "evline_support") {
+function openTelegramMessage(message, username = "evline_support", ctaText = "") {
   const text = String(message || "").trim();
   if (!text) return;
+  const activeControl = document.activeElement?.matches?.("button, a, input[type='submit']")
+    ? document.activeElement
+    : null;
+  const activeText = activeControl?.textContent || activeControl?.value || "";
   const contactEvent = {
     channel: "telegram",
     intent_type: username === "evline_tech" ? "byd" : "parts",
     destination: `@${username}`,
     cta_id: "programmatic-telegram",
-    cta_text: String(document.activeElement?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 240),
+    cta_text: String(ctaText || activeText || "Telegram").replace(/\s+/g, " ").trim().slice(0, 240),
   };
   if (window.EVLineContactTracking) {
     window.EVLineContactTracking.track(contactEvent);
@@ -248,6 +252,7 @@ async function sendLeadToCrm(payload) {
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    const submitText = event.submitter?.textContent || form.querySelector("button[type='submit']")?.textContent || "";
     const data = Object.fromEntries(new FormData(form));
     const car = String(data.car || "").trim();
     const vin = String(data.vin || "").trim().toUpperCase();
@@ -294,7 +299,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
         setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
       });
 
-    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type));
+    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type), submitText);
   });
 });
 
@@ -380,7 +385,7 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
         }
       });
 
-    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type));
+    openTelegramMessage(lines.join("\n"), telegramUsernameForType(type), originalButtonText);
   });
 });
 
@@ -427,7 +432,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       if (payload.part) lines.push(ru ? `Запчасть: ${payload.part}` : `Запчастина: ${payload.part}`);
       lines.push(ru ? `Что нужно: ${payload.message || "-"}` : `Що потрібно: ${payload.message || "-"}`);
       setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
-      openTelegramMessage(lines.join("\n"), telegramUsernameForType(payload.type));
+      openTelegramMessage(lines.join("\n"), telegramUsernameForType(payload.type), originalButtonText);
     } finally {
       if (button) {
         button.disabled = false;
