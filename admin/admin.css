@@ -1440,10 +1440,16 @@ body.audit-log-open .audit-log-panel {
 
 .orders-table__actions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.orders-table__china-stack {
+  display: grid;
+  min-width: 66px;
+  justify-items: center;
+  gap: 4px;
 }
 
 .orders-table__open {
@@ -1471,9 +1477,15 @@ body.audit-log-open .audit-log-panel {
 }
 
 .orders-table__delete {
-  width: 38px;
-  min-width: 38px;
-  min-height: 38px;
+  width: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.orders-table__delete svg {
+  width: 15px;
+  height: 15px;
 }
 
 .orders-table__china:hover,
@@ -3515,8 +3527,8 @@ body.audit-log-open .audit-log-panel {
 
   .orders-table__actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px 42px;
-    align-items: stretch;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: start;
   }
 
   .orders-table__open {
@@ -3530,10 +3542,14 @@ body.audit-log-open .audit-log-panel {
     min-height: 40px;
   }
 
+  .orders-table__china-stack {
+    width: 100%;
+  }
+
   .orders-table__delete {
-    width: 42px;
-    min-width: 42px;
-    min-height: 40px;
+    width: 34px;
+    min-width: 34px;
+    min-height: 34px;
   }
 
   .tracking-sync-card {

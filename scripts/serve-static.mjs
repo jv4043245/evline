@@ -1067,6 +1067,21 @@ async function handleApi(req, res, url) {
       customerDeleted = true;
     }
 
+    const contactEvents = await readJsonList(contactEventsFile);
+    let contactEventsChanged = false;
+    const detachedContactEvents = contactEvents.map((event) => {
+      const detachOrder = event.order_id === order.id;
+      const detachLead = leadDeleted && event.lead_id === order.lead_id;
+      if (!detachOrder && !detachLead) return event;
+      contactEventsChanged = true;
+      return {
+        ...event,
+        ...(detachOrder ? { order_id: "" } : {}),
+        ...(detachLead ? { lead_id: "" } : {}),
+      };
+    });
+    if (contactEventsChanged) await writeJsonList(contactEventsFile, detachedContactEvents);
+
     return sendJson(res, 200, {
       ok: true,
       deleted_order_id: order.id,

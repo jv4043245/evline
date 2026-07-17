@@ -353,6 +353,18 @@ function paperclipIcon() {
   `;
 }
 
+function trashIcon() {
+  return `
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M3 6h18"></path>
+      <path d="M8 6V4h8v2"></path>
+      <path d="m19 6-1 14H6L5 6"></path>
+      <path d="M10 11v5"></path>
+      <path d="M14 11v5"></path>
+    </svg>
+  `;
+}
+
 function safeClass(value) {
   return String(value || "new").replace(/[^a-z0-9_-]/gi, "");
 }
@@ -2221,15 +2233,17 @@ function renderOrders() {
               <td class="orders-table__track-cell" data-label="Трек">${trackCell}</td>
               <td data-label="Дії">
                 <div class="orders-table__actions">
-                  <button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запрос в Китай для ${escapeHtml(publicNumber)}" title="Запрос в Китай">
-                    В Китай
-                  </button>
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
                   </button>
-                  <button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}" aria-label="Видалити заявку ${escapeHtml(publicNumber)}" title="Видалити заявку">
-                    <span aria-hidden="true">🗑</span>
-                  </button>
+                  <div class="orders-table__china-stack">
+                    <button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запрос в Китай для ${escapeHtml(publicNumber)}" title="Запрос в Китай">
+                      В Китай
+                    </button>
+                    <button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}" aria-label="Видалити заявку ${escapeHtml(publicNumber)}" title="Видалити заявку">
+                      ${trashIcon()}
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -2527,7 +2541,7 @@ function renderOrderEditor(order) {
       <div class="order-editor__actions">
         <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
         <button class="admin-btn admin-btn--icon admin-btn--subtle-danger order-editor__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}" aria-label="Видалити заявку ${escapeHtml(orderNumber)}" title="Видалити заявку">
-          <span aria-hidden="true">🗑</span>
+          ${trashIcon()}
         </button>
       </div>
       <p class="order-editor__meta-ids">${escapeHtml(serviceIds)}</p>

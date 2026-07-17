@@ -363,6 +363,8 @@ export async function onRequestDelete({ request, params, env }) {
   await safeDelete(env, "DELETE FROM notification_queue WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_status_events WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM order_items WHERE order_id = ?", params.id);
+  // Keep contact analytics, but detach the CRM entity that is being removed.
+  await safeDelete(env, "UPDATE contact_events SET order_id = NULL WHERE order_id = ?", params.id);
   await safeDelete(env, "DELETE FROM orders WHERE id = ?", params.id);
 
   let leadDeleted = false;
@@ -371,6 +373,7 @@ export async function onRequestDelete({ request, params, env }) {
       .bind(leadId)
       .first();
     if (!Number(remainingLeadOrders?.count || 0)) {
+      await safeDelete(env, "UPDATE contact_events SET lead_id = NULL WHERE lead_id = ?", leadId);
       await safeDelete(env, "DELETE FROM leads WHERE id = ?", leadId);
       leadDeleted = true;
     }
