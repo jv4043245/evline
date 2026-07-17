@@ -528,6 +528,107 @@
         font-weight: 500;
         line-height: 1.55;
       }
+      .sto-contact-dialog {
+        width: min(calc(100% - 32px), 470px);
+        max-height: calc(100dvh - 32px);
+        padding: 0;
+        overflow: auto;
+        border: 0;
+        border-radius: 20px;
+        color: #fff;
+        background: #111513;
+        box-shadow: 0 28px 80px rgba(5, 12, 9, 0.34);
+      }
+      .sto-contact-dialog::backdrop {
+        background: rgba(8, 15, 12, 0.62);
+        backdrop-filter: blur(4px);
+      }
+      .sto-contact-dialog__panel {
+        position: relative;
+        padding: 32px;
+      }
+      .sto-contact-dialog__close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 50%;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 26px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .sto-contact-dialog__close:hover {
+        background: rgba(255, 255, 255, 0.13);
+      }
+      .sto-contact-dialog__kicker {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        margin: 0 52px 14px 0;
+        padding: 0 12px;
+        border-radius: 999px;
+        color: #7fd8a9;
+        background: rgba(127, 216, 169, 0.1);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      .sto-contact-dialog h2 {
+        margin: 0;
+        color: #fff;
+        font-size: clamp(27px, 5vw, 34px);
+        line-height: 1.08;
+      }
+      .sto-contact-dialog__intro {
+        margin: 10px 0 0;
+        color: #b9c5c0;
+        font-size: 14px;
+        font-weight: 550;
+        line-height: 1.5;
+      }
+      .sto-contact-dialog .brand-seo-form {
+        gap: 14px;
+        margin-top: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+      .sto-contact-dialog label {
+        display: grid;
+        gap: 7px;
+        color: #dce5e1;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .sto-contact-dialog .brand-seo-form input {
+        min-height: 52px;
+        border-color: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .sto-contact-dialog .brand-seo-form input::placeholder {
+        color: rgba(255, 255, 255, 0.42);
+      }
+      .sto-contact-dialog .brand-seo-form button {
+        margin-top: 2px;
+      }
+      .sto-contact-dialog .form__note {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      html.sto-dialog-open {
+        overflow: hidden;
+      }
       @media (max-width: 980px) {
         .sto-page .brand-seo-hero__grid {
           grid-template-areas:
@@ -596,6 +697,14 @@
         .sto-flow {
           grid-template-columns: 1fr;
         }
+        .sto-contact-dialog {
+          width: min(calc(100% - 24px), 470px);
+          max-height: calc(100dvh - 24px);
+          border-radius: 16px;
+        }
+        .sto-contact-dialog__panel {
+          padding: 26px 20px 22px;
+        }
       }
     </style>
     <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["AutoPartsStore","AutoRepair"],"@id":"https://evline.com.ua/#business","name":"EVLine Ukraine","url":"https://evline.com.ua","logo":"https://evline.com.ua/assets/images/logo.png","telephone":"+380935251024","email":"evlineukraine@gmail.com","priceRange":"$$","address":{"@type":"PostalAddress","streetAddress":"Оболонська набережна, 3, офіс 1","addressLocality":"Київ","addressCountry":"UA"},"areaServed":{"@type":"Country","name":"Україна"},"sameAs":["https://t.me/evline_support"]},{"@type":"BreadcrumbList","@id":"https://evline.com.ua/ru/sotrudnichestvo-sto/#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"EVLine","item":"https://evline.com.ua/ru/"},{"@type":"ListItem","position":2,"name":"СТО back office","item":"https://evline.com.ua/ru/sotrudnichestvo-sto/"}]},{"@type":"Service","@id":"https://evline.com.ua/ru/sotrudnichestvo-sto/#service","name":"Запчасти и техническая база для СТО по китайским авто","serviceType":"B2B auto parts sourcing and technical support for repair shops","provider":{"@id":"https://evline.com.ua/#business"},"areaServed":{"@type":"Country","name":"Украина"},"description":"Подбор запчастей по VIN, EPC-схемы, техкарты, документы и поставка из Китая для СТО, которые обслуживают современные китайские авто."}]}</script>
@@ -626,7 +735,7 @@
               <a href="./" lang="ru" aria-current="true">Русский</a>
             </div>
           </details>
-          <a class="btn btn--primary" href="#partner-form">Получить условия</a>
+          <a class="btn btn--primary" href="#partner-form" data-sto-contact-open>Получить условия</a>
           <button class="nav-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
             <span></span>
           </button>
@@ -654,7 +763,7 @@
               <div><strong>Клиент остаётся за вашим сервисом.</strong> Мы не выходим на него напрямую.</div>
             </div>
             <div class="sto-hero-actions">
-              <a class="btn btn--primary" href="#partner-form">Получить условия для СТО</a>
+              <a class="btn btn--primary" href="#partner-form" data-sto-contact-open>Получить условия для СТО</a>
             </div>
           </div>
         </div>
@@ -744,6 +853,54 @@
         </div>
       </section>
     </main>
+
+    <dialog class="sto-contact-dialog" aria-labelledby="sto-contact-title" aria-describedby="sto-contact-intro" data-sto-contact-dialog>
+      <div class="sto-contact-dialog__panel">
+        <button class="sto-contact-dialog__close" type="button" aria-label="Закрыть форму" title="Закрыть" data-sto-contact-close>×</button>
+        <span class="sto-contact-dialog__kicker">Партнерство с EVLine</span>
+        <h2 id="sto-contact-title">Получить условия для СТО</h2>
+        <p class="sto-contact-dialog__intro" id="sto-contact-intro">Оставьте название сервиса и телефон. Менеджер свяжется с вами и согласует формат работы.</p>
+        <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство: модальная форма RU">
+          <input type="hidden" name="type" value="parts">
+          <input type="hidden" name="topic" value="Сотрудничество с СТО">
+          <input type="hidden" name="message" value="Запрос на партнерство от СТО">
+          <label><span>Название СТО</span><input name="name" placeholder="Название СТО или сервиса" autocomplete="organization" required></label>
+          <label><span>Телефон</span><input name="phone" type="tel" inputmode="tel" placeholder="+380..." autocomplete="tel" required></label>
+          <button type="submit">Получить условия</button>
+        </form>
+      </div>
+    </dialog>
+
+    <script>
+      (() => {
+        const dialog = document.querySelector("[data-sto-contact-dialog]");
+        if (!dialog) return;
+        let opener = null;
+        const closeDialog = () => {
+          if (typeof dialog.close === "function") dialog.close();
+          else dialog.removeAttribute("open");
+          document.documentElement.classList.remove("sto-dialog-open");
+        };
+        document.querySelectorAll("[data-sto-contact-open]").forEach((trigger) => {
+          trigger.addEventListener("click", (event) => {
+            event.preventDefault();
+            opener = trigger;
+            if (typeof dialog.showModal === "function") dialog.showModal();
+            else dialog.setAttribute("open", "");
+            document.documentElement.classList.add("sto-dialog-open");
+            requestAnimationFrame(() => dialog.querySelector("input[name='name']")?.focus());
+          });
+        });
+        dialog.querySelector("[data-sto-contact-close]")?.addEventListener("click", closeDialog);
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) closeDialog();
+        });
+        dialog.addEventListener("close", () => {
+          document.documentElement.classList.remove("sto-dialog-open");
+          opener?.focus();
+        });
+      })();
+    </script>
 
     <a class="floating-chat" href="https://t.me/evline_support" target="_blank" rel="noopener" aria-label="Telegram-чат с менеджером"></a>
 
