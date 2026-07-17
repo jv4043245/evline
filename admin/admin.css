@@ -1300,9 +1300,15 @@ body.audit-log-open .audit-log-panel {
   font-size: 12px;
 }
 
-.orders-table__request {
+.orders-table__request-cell .orders-table__request {
   max-width: 38ch;
+  display: -webkit-box;
+  overflow: hidden;
   color: #4b5d57;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .orders-table__finance {
@@ -3518,7 +3524,7 @@ body.audit-log-open .audit-log-panel {
     margin-top: 5px;
   }
 
-  .orders-table__request {
+  .orders-table__request-cell .orders-table__request {
     max-width: none;
   }
 
