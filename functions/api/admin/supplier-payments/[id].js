@@ -28,6 +28,7 @@ export async function onRequestPatch({ request, params, env }) {
         requested_amount: payment.requested_amount,
         requested_currency: payment.requested_currency,
         paid_amount: payment.paid_amount,
+        commission_amount: payment.commission_amount,
         paid_currency: payment.paid_currency,
         receipt_image_url: payment.receipt_image_url,
       },

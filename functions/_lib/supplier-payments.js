@@ -53,6 +53,10 @@ function normalizeCurrency(value, fallback = "CNY") {
   return currency || fallback;
 }
 
+function roundMoney(value) {
+  return Math.round(number(value) * 100) / 100;
+}
+
 function supplierNameKey(value) {
   return text(value)
     .toLowerCase()
@@ -309,11 +313,9 @@ function paymentAmountDeltaText(payment = {}, paidAmount = 0, paidCurrency = "CN
   const delta = paymentAmountDelta(payment, paidAmount, paidCurrency);
   if (!delta.amount) return "";
   if (delta.state === "overpaid") {
-    return delta.significant
-      ? `Увага: оплачено більше рахунку на +${formatAmount(delta.amount, delta.currency)}`
-      : `Різниця/комісія: +${formatAmount(delta.amount, delta.currency)}`;
+    return `Увага: постачальнику переплачено +${formatAmount(delta.amount, delta.currency)}`;
   }
-  return `Увага: оплачено менше рахунку на ${formatAmount(Math.abs(delta.amount), delta.currency)}`;
+  return `Залишилося сплатити постачальнику ${formatAmount(Math.abs(delta.amount), delta.currency)}`;
 }
 
 async function markSupplierRequestPaymentPaid(env, payment, now = new Date().toISOString()) {
@@ -339,13 +341,28 @@ async function supplierPaymentReceiptsReady(env) {
   }
 }
 
+async function ensureSupplierPaymentReceiptBreakdown(env) {
+  if (!(await supplierPaymentReceiptsReady(env))) return false;
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS supplier_payment_receipt_breakdowns (
+      receipt_id TEXT PRIMARY KEY,
+      supplier_amount REAL NOT NULL DEFAULT 0,
+      commission_amount REAL NOT NULL DEFAULT 0,
+      FOREIGN KEY (receipt_id) REFERENCES supplier_payment_receipts(id)
+    )`
+  ).run();
+  return true;
+}
+
 export async function listSupplierPaymentReceipts(env, paymentId) {
   if (!paymentId || !(await supplierPaymentReceiptsReady(env))) return [];
+  await ensureSupplierPaymentReceiptBreakdown(env);
   const rows = await env.DB.prepare(
-    `SELECT *
-    FROM supplier_payment_receipts
-    WHERE supplier_payment_id = ?
-    ORDER BY created_at DESC`
+    `SELECT receipts.*, breakdown.supplier_amount, breakdown.commission_amount
+    FROM supplier_payment_receipts AS receipts
+    LEFT JOIN supplier_payment_receipt_breakdowns AS breakdown ON breakdown.receipt_id = receipts.id
+    WHERE receipts.supplier_payment_id = ?
+    ORDER BY receipts.created_at DESC`
   )
     .bind(paymentId)
     .all();
@@ -355,22 +372,24 @@ export async function listSupplierPaymentReceipts(env, paymentId) {
 export async function hydrateSupplierPayment(env, payment) {
   if (!payment) return null;
   const receipts = await listSupplierPaymentReceipts(env, payment.id);
-  const total = receipts.reduce((sum, receipt) => {
-    const sameCurrency = normalizeCurrency(receipt.currency || payment.paid_currency || payment.requested_currency)
-      === normalizeCurrency(payment.paid_currency || payment.requested_currency);
-    return sameCurrency ? sum + number(receipt.amount) : sum;
-  }, 0);
+  const summary = summarizeSupplierPaymentReceipts(payment, receipts);
   return {
     ...payment,
     receipts,
     receipt_count: receipts.length,
-    paid_amount: total > 0 ? Math.round(total * 100) / 100 : payment.paid_amount,
+    paid_amount: summary.receipt_count ? summary.paid_amount : payment.paid_amount,
+    commission_amount: summary.receipt_count ? summary.commission_amount : payment.commission_amount,
+    charged_total_amount: summary.receipt_count ? summary.charged_total_amount : roundMoney(
+      number(payment.paid_amount) + number(payment.commission_amount)
+    ),
   };
 }
 
 async function insertSupplierPaymentReceipt(env, payment, payload = {}) {
   if (!(await supplierPaymentReceiptsReady(env))) return { inserted: false, available: false };
   const now = payload.created_at || new Date().toISOString();
+  const hasBreakdown = await ensureSupplierPaymentReceiptBreakdown(env);
+  const receiptId = crypto.randomUUID();
   const result = await env.DB.prepare(
     `INSERT OR IGNORE INTO supplier_payment_receipts (
       id, created_at, supplier_payment_id, order_id, supplier_request_id, supplier_quote_id,
@@ -379,7 +398,7 @@ async function insertSupplierPaymentReceipt(env, payment, payload = {}) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
-      crypto.randomUUID(),
+      receiptId,
       now,
       payment.id,
       payment.order_id,
@@ -397,26 +416,55 @@ async function insertSupplierPaymentReceipt(env, payment, payload = {}) {
       text(payload.source || "telegram")
     )
     .run();
+  const inserted = Number(result?.meta?.changes || 0) > 0;
+  if (inserted && hasBreakdown) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO supplier_payment_receipt_breakdowns (
+        receipt_id, supplier_amount, commission_amount
+      ) VALUES (?, ?, ?)`
+    )
+      .bind(receiptId, number(payload.supplier_amount), number(payload.commission_amount))
+      .run();
+  }
   return {
-    inserted: Number(result?.meta?.changes || 0) > 0,
+    inserted,
     available: true,
+  };
+}
+
+function summarizeSupplierPaymentReceipts(payment, receipts = []) {
+  const currency = normalizeCurrency(payment.paid_currency || payment.requested_currency);
+  const sameCurrencyReceipts = receipts.filter((receipt) => normalizeCurrency(receipt.currency) === currency);
+  const explicitReceipts = sameCurrencyReceipts.filter((receipt) => receipt.supplier_amount !== null && receipt.supplier_amount !== undefined);
+  const legacyReceipts = sameCurrencyReceipts.filter((receipt) => receipt.supplier_amount === null || receipt.supplier_amount === undefined);
+  const explicitSupplier = explicitReceipts.reduce((sum, receipt) => sum + number(receipt.supplier_amount), 0);
+  const explicitCommission = explicitReceipts.reduce((sum, receipt) => sum + number(receipt.commission_amount), 0);
+  const legacyCharged = legacyReceipts.reduce((sum, receipt) => sum + number(receipt.amount), 0);
+  const chargedTotal = sameCurrencyReceipts.reduce((sum, receipt) => sum + number(receipt.amount), 0);
+  const requestedAmount = number(payment.requested_amount);
+  const storedCommission = number(payment.commission_amount);
+
+  let inferredLegacyCommission = Math.max(0, storedCommission - explicitCommission);
+  const supplierBeforeInference = explicitSupplier + legacyCharged - inferredLegacyCommission;
+  if (legacyCharged > 0 && requestedAmount > 0 && chargedTotal >= requestedAmount && supplierBeforeInference > requestedAmount) {
+    inferredLegacyCommission += supplierBeforeInference - requestedAmount;
+  }
+  inferredLegacyCommission = Math.min(legacyCharged, inferredLegacyCommission);
+
+  return {
+    receipts,
+    receipt_count: receipts.length,
+    paid_amount: roundMoney(explicitSupplier + legacyCharged - inferredLegacyCommission),
+    commission_amount: roundMoney(explicitCommission + inferredLegacyCommission),
+    charged_total_amount: roundMoney(chargedTotal),
+    currency,
+    latest_file_id: sameCurrencyReceipts.find((receipt) => text(receipt.telegram_file_id))?.telegram_file_id || "",
   };
 }
 
 async function supplierPaymentReceiptSummary(env, payment) {
   const receipts = await listSupplierPaymentReceipts(env, payment.id);
-  const currency = normalizeCurrency(payment.paid_currency || payment.requested_currency);
-  const paidAmount = receipts.reduce((sum, receipt) => (
-    normalizeCurrency(receipt.currency) === currency ? sum + number(receipt.amount) : sum
-  ), 0);
-  const latestWithFile = receipts.find((receipt) => text(receipt.telegram_file_id));
-  return {
-    receipts,
-    receipt_count: receipts.length,
-    paid_amount: Math.round(paidAmount * 100) / 100,
-    currency,
-    latest_file_id: latestWithFile?.telegram_file_id || "",
-  };
+  return summarizeSupplierPaymentReceipts(payment, receipts);
 }
 
 function buildPaymentRequestMessage(order, payment) {
@@ -550,6 +598,7 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
 }
 
 export async function updateSupplierPayment(env, paymentId, payload = {}) {
+  await ensureSupplierPaymentReceiptBreakdown(env);
   const current = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(paymentId).first();
   if (!current) {
     const error = new Error("Supplier payment not found");
@@ -562,9 +611,7 @@ export async function updateSupplierPayment(env, paymentId, payload = {}) {
   const paidAmount = number(payload.paid_amount ?? current.paid_amount);
   const paidCurrency = normalizeCurrency(payload.paid_currency ?? current.paid_currency ?? current.requested_currency);
   const requestedAmount = number(current.requested_amount);
-  const commissionAmount = paidAmount > 0 && paidCurrency === normalizeCurrency(current.requested_currency)
-    ? Math.max(0, paidAmount - requestedAmount)
-    : number(payload.commission_amount ?? current.commission_amount);
+  const commissionAmount = number(payload.commission_amount ?? current.commission_amount);
   const commissionPercent = requestedAmount > 0 && commissionAmount > 0
     ? (commissionAmount / requestedAmount) * 100
     : number(payload.commission_percent ?? current.commission_percent);
@@ -657,9 +704,11 @@ async function runPaymentOcrModel(env, image) {
     max_tokens: 256,
     prompt: [
       "Read this Chinese payment confirmation screenshot.",
-      "Extract only payment amounts and labels.",
-      "Return plain text. Include total paid amount, supplier amount, commission amount, and currency if visible.",
-      "Do not invent values. Prefer the large top amount as total paid.",
+      "Extract the total charged to the card, the amount received by the supplier, and the payment commission.",
+      "Return exactly three plain-text lines: TOTAL: number CNY; SUPPLIER: number CNY; COMMISSION: number CNY.",
+      "Use 0 only when a value is not shown and cannot be calculated.",
+      "The large top amount is usually TOTAL. If TOTAL and COMMISSION are visible, calculate SUPPLIER as TOTAL minus COMMISSION.",
+      "Do not invent any other values.",
     ].join(" "),
   });
 }
@@ -721,7 +770,7 @@ function parsePaymentNumber(rawNumber) {
 }
 
 function paymentAmountCandidates(value) {
-  const input = text(value).replace(/\s+/g, " ");
+  const input = text(value).replace(/\r\n?/g, "\n");
   if (!input) return [];
 
   const matches = [...input.matchAll(/([¥￥])?\s*((?:\d{1,3}(?:[\s,.]\d{3})+(?:[.,]\d{1,2})?)|\d{1,7}(?:[.,]\d{1,2})?)\s*(?:(cny|rmb|yuan|юан(?:ів|ей|я)?))?/gi)];
@@ -738,10 +787,16 @@ function paymentAmountCandidates(value) {
       const context = input.slice(Math.max(0, start - 30), Math.min(input.length, end + 30)).toLowerCase();
       const beforeContext = input.slice(Math.max(0, start - 22), start).toLowerCase();
       const afterContext = input.slice(end, Math.min(input.length, end + 18)).toLowerCase();
+      const delimiterStart = Math.max(
+        input.lastIndexOf("\n", start - 1),
+        input.lastIndexOf(";", start - 1),
+        input.lastIndexOf("|", start - 1)
+      );
+      const labelContext = input.slice(Math.max(delimiterStart + 1, start - 48), start).toLowerCase();
       const hasPaymentContext = /оплач|сплач|paid|付款|支付|实付|фактич|actual/.test(`${beforeContext} ${afterContext}`);
       const hasInvoiceContext = /(?:рахунок|сч[её]т|invoice|request|заявк|замовл|заказ)\s*[:#№-]?\s*$/i.test(beforeContext.trim());
       const isDateFragment = !hasCurrency && /[-/]/.test(`${before}${after}`);
-      return { amount, hasCurrency, context, raw: match[0], before, after, rawNumber, hasPaymentContext, hasInvoiceContext, isDateFragment };
+      return { amount, hasCurrency, context, labelContext, raw: match[0], before, after, rawNumber, hasPaymentContext, hasInvoiceContext, isDateFragment };
     })
     .filter((candidate) => {
       if (!Number.isFinite(candidate.amount) || candidate.amount <= 0) return false;
@@ -752,43 +807,62 @@ function paymentAmountCandidates(value) {
     });
 }
 
-export function parsePaymentAmount(value, { requestedAmount = 0 } = {}) {
+const COMMISSION_LABEL = /комис|коміс|commission|service\s*fee|\bfee\b|手续费|手續費|服务费|服務費/i;
+const SUPPLIER_LABEL = /постачал|поставщ|supplier|merchant|principal|товар|货款|貨款|收款|本金/i;
+const TOTAL_LABEL = /итог|итого|всего|разом|total|charged|списан|实付|實付|合计|合計|支付总额|支付總額/i;
+
+function largestPaymentCandidate(candidates = []) {
+  return [...candidates].sort((a, b) => b.amount - a.amount)[0] || null;
+}
+
+export function parsePaymentBreakdown(value, { requestedAmount = 0 } = {}) {
   const candidates = paymentAmountCandidates(value);
-  if (!candidates.length) return { amount: 0, currency: "CNY" };
+  if (!candidates.length) {
+    return { amount: 0, total_amount: 0, supplier_amount: 0, commission_amount: 0, currency: "CNY" };
+  }
 
   const withCurrency = candidates.filter((candidate) => candidate.hasCurrency);
   const pool = withCurrency.length ? withCurrency : candidates;
+  const commissionCandidate = largestPaymentCandidate(pool.filter((candidate) => COMMISSION_LABEL.test(candidate.labelContext)));
+  const supplierCandidate = largestPaymentCandidate(pool.filter((candidate) => SUPPLIER_LABEL.test(candidate.labelContext)));
+  const explicitTotalCandidate = largestPaymentCandidate(pool.filter((candidate) => TOTAL_LABEL.test(candidate.labelContext)));
+  const nonCommissionPool = pool.filter((candidate) => candidate !== commissionCandidate);
+  const fallbackTotalCandidate = largestPaymentCandidate(nonCommissionPool.length ? nonCommissionPool : pool);
+
+  let commissionAmount = roundMoney(commissionCandidate?.amount || 0);
+  let supplierAmount = roundMoney(supplierCandidate?.amount || 0);
+  let totalAmount = roundMoney(explicitTotalCandidate?.amount || fallbackTotalCandidate?.amount || 0);
+
+  if (totalAmount > 0 && commissionAmount > 0 && totalAmount >= commissionAmount) {
+    supplierAmount = roundMoney(totalAmount - commissionAmount);
+  } else if (supplierAmount > 0 && commissionAmount > 0) {
+    totalAmount = roundMoney(supplierAmount + commissionAmount);
+  } else if (!supplierAmount) {
+    supplierAmount = totalAmount;
+  }
+
   const requested = number(requestedAmount);
-
-  const paymentContextCandidates = candidates.filter((candidate) => candidate.hasPaymentContext && !candidate.hasInvoiceContext);
-  if (paymentContextCandidates.length) {
-    const aboveRequested = requested > 0
-      ? paymentContextCandidates.filter((candidate) => candidate.amount >= requested * 0.95)
-      : [];
-    const targetPool = aboveRequested.length ? aboveRequested : paymentContextCandidates;
-    const chosen = [...targetPool].sort((a, b) => b.amount - a.amount)[0];
-    return { amount: chosen?.amount || 0, currency: "CNY" };
+  if (!explicitTotalCandidate && requested > 0 && supplierAmount > requested * 1.2 && totalAmount > requested * 1.2) {
+    const plausible = largestPaymentCandidate(pool.filter((candidate) => candidate.amount <= requested * 1.2));
+    if (plausible) {
+      totalAmount = roundMoney(plausible.amount);
+      commissionAmount = 0;
+      supplierAmount = totalAmount;
+    }
   }
 
-  if (withCurrency.length) {
-    const chosen = [...withCurrency].sort((a, b) => b.amount - a.amount)[0];
-    return { amount: chosen?.amount || 0, currency: "CNY" };
-  }
+  return {
+    amount: totalAmount,
+    total_amount: totalAmount,
+    supplier_amount: supplierAmount,
+    commission_amount: commissionAmount,
+    currency: "CNY",
+  };
+}
 
-  if (requested > 0) {
-    const plausibleWithCommission = pool
-      .filter((candidate) => candidate.amount >= requested && candidate.amount <= requested * 1.2)
-      .sort((a, b) => b.amount - a.amount);
-    if (plausibleWithCommission.length) return { amount: plausibleWithCommission[0].amount, currency: "CNY" };
-
-    const aboveRequested = pool
-      .filter((candidate) => candidate.amount >= requested)
-      .sort((a, b) => Math.abs(a.amount - requested) - Math.abs(b.amount - requested));
-    if (aboveRequested.length) return { amount: aboveRequested[0].amount, currency: "CNY" };
-  }
-
-  const chosen = [...pool].sort((a, b) => b.amount - a.amount)[0];
-  return { amount: chosen?.amount || 0, currency: "CNY" };
+export function parsePaymentAmount(value, options = {}) {
+  const parsed = parsePaymentBreakdown(value, options);
+  return { amount: parsed.total_amount, currency: parsed.currency };
 }
 
 async function paymentByReply(env, chatId, replyMessageId) {
@@ -870,7 +944,9 @@ async function attachPaymentReceipt(env, payment, {
   messageId,
   fileId,
   caption,
-  paidAmount,
+  chargedAmount,
+  supplierAmount,
+  commissionAmount,
   paidCurrency,
   matchedBy,
   matchConfidence,
@@ -879,10 +955,14 @@ async function attachPaymentReceipt(env, payment, {
   const now = new Date().toISOString();
   const requestedAmount = number(payment.requested_amount);
   const currency = normalizeCurrency(paidCurrency || payment.requested_currency);
-  const parsedPaid = number(paidAmount);
+  const parsedCharged = roundMoney(chargedAmount);
+  const parsedSupplier = roundMoney(supplierAmount || parsedCharged);
+  const parsedCommission = roundMoney(commissionAmount);
   await insertSupplierPaymentReceipt(env, payment, {
     created_at: now,
-    amount: parsedPaid,
+    amount: parsedCharged,
+    supplier_amount: parsedSupplier,
+    commission_amount: parsedCommission,
     currency,
     chat_id: chatId,
     message_id: messageId,
@@ -894,13 +974,12 @@ async function attachPaymentReceipt(env, payment, {
   });
 
   const receiptSummary = await supplierPaymentReceiptSummary(env, payment);
-  const totalPaid = receiptSummary.receipt_count ? receiptSummary.paid_amount : parsedPaid;
+  const totalPaid = receiptSummary.receipt_count ? receiptSummary.paid_amount : parsedSupplier;
+  const totalCommission = receiptSummary.receipt_count ? receiptSummary.commission_amount : parsedCommission;
+  const totalCharged = receiptSummary.receipt_count ? receiptSummary.charged_total_amount : parsedCharged;
   const totalCurrency = receiptSummary.currency || currency;
-  const commissionAmount = totalPaid > 0 && totalCurrency === normalizeCurrency(payment.requested_currency)
-    ? Math.max(0, totalPaid - requestedAmount)
-    : 0;
-  const commissionPercent = requestedAmount > 0 && commissionAmount > 0
-    ? (commissionAmount / requestedAmount) * 100
+  const commissionPercent = requestedAmount > 0 && totalCommission > 0
+    ? (totalCommission / requestedAmount) * 100
     : 0;
   const trustedPaymentMatch = [
     "telegram_reply",
@@ -908,7 +987,7 @@ async function attachPaymentReceipt(env, payment, {
     "telegram_receipt_reply",
     "telegram_receipt_nested_reply",
   ].includes(text(matchedBy));
-  const amountCoversRequest = totalPaid > 0 && requestedAmount > 0 && totalPaid >= requestedAmount * 0.95;
+  const amountCoversRequest = totalPaid > 0 && requestedAmount > 0 && totalPaid >= requestedAmount * 0.995;
   const nextStatus = totalPaid > 0 && trustedPaymentMatch
     ? (amountCoversRequest ? "paid" : "partial")
     : "needs_review";
@@ -920,8 +999,8 @@ async function attachPaymentReceipt(env, payment, {
       status = ?,
       paid_amount = CASE WHEN ? > 0 THEN ? ELSE paid_amount END,
       paid_currency = ?,
-      commission_amount = CASE WHEN ? > 0 THEN ? ELSE commission_amount END,
-      commission_percent = CASE WHEN ? > 0 THEN ? ELSE commission_percent END,
+      commission_amount = ?,
+      commission_percent = ?,
       receipt_chat_id = ?,
       receipt_message_id = ?,
       receipt_telegram_file_id = COALESCE(NULLIF(?, ''), receipt_telegram_file_id),
@@ -937,9 +1016,7 @@ async function attachPaymentReceipt(env, payment, {
       totalPaid,
       totalPaid,
       totalCurrency,
-      totalPaid,
-      commissionAmount,
-      totalPaid,
+      totalCommission,
       commissionPercent,
       chatId,
       String(messageId || ""),
@@ -966,8 +1043,10 @@ async function attachPaymentReceipt(env, payment, {
       actor: "telegram",
       comment: [
         `Скрин оплати постачальнику ${payment.supplier_name || "без назви"} прив'язано`,
-        parsedPaid > 0 ? `новий скрин ${formatAmount(parsedPaid, currency)}` : "",
-        totalPaid > 0 ? `разом оплачено ${formatAmount(totalPaid, totalCurrency)}` : "",
+        parsedSupplier > 0 ? `постачальнику ${formatAmount(parsedSupplier, currency)}` : "",
+        parsedCommission > 0 ? `комісія ${formatAmount(parsedCommission, currency)}` : "",
+        parsedCharged > 0 ? `списано ${formatAmount(parsedCharged, currency)}` : "",
+        totalPaid > 0 ? `разом постачальнику ${formatAmount(totalPaid, totalCurrency)}` : "",
         totalPaid > 0 ? `рахунок ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
         deltaText,
       ].filter(Boolean).join("; "),
@@ -979,8 +1058,12 @@ async function attachPaymentReceipt(env, payment, {
   return {
     payment: hydrated || updated,
     order,
-    paid_amount_delta: parsedPaid,
+    paid_amount_delta: parsedSupplier,
+    charged_amount_delta: parsedCharged,
+    commission_amount_delta: parsedCommission,
     paid_total_amount: totalPaid,
+    charged_total_amount: totalCharged,
+    commission_total_amount: totalCommission,
     paid_currency: totalCurrency,
     order_status_advanced: statusAdvance.advanced,
     order_status_event_id: statusAdvance.event_id,
@@ -1002,7 +1085,7 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
   });
   let matchedBy = payment ? "telegram_reply" : "";
   let matchConfidence = payment ? "high" : "";
-  let parsed = parsePaymentAmount(caption);
+  let parsed = parsePaymentBreakdown(caption);
 
   if (!payment && parentReplyMessageId) {
     payment = await paymentByReply(env, chatId, parentReplyMessageId).catch((error) => {
@@ -1058,14 +1141,16 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     receiptText = text(ocrResult.text);
   }
 
-  parsed = parsePaymentAmount(receiptText, { requestedAmount: payment.requested_amount });
+  parsed = parsePaymentBreakdown(receiptText, { requestedAmount: payment.requested_amount });
 
   const result = await attachPaymentReceipt(env, payment, {
     chatId,
     messageId,
     fileId,
     caption: receiptText,
-    paidAmount: parsed.amount,
+    chargedAmount: parsed.total_amount,
+    supplierAmount: parsed.supplier_amount,
+    commissionAmount: parsed.commission_amount,
     paidCurrency: parsed.currency,
     matchedBy,
     matchConfidence,
@@ -1080,18 +1165,21 @@ export async function handleSupplierPaymentTelegramUpdate(env, message = {}) {
     ? Math.max(0, number(payment.requested_amount) - totalPaid)
     : 0;
   const lines = [
-    parsed.amount > 0 && paymentStatus === "paid"
+    parsed.total_amount > 0 && paymentStatus === "paid"
       ? "✅ Оплату постачальнику зафіксовано."
       : paymentStatus === "partial"
         ? "🧾 Часткову оплату постачальнику зафіксовано. Очікуємо доплату."
-        : parsed.amount > 0
+        : parsed.total_amount > 0
           ? "🧾 Суму знайдено, скрин прив'язано. Потрібна перевірка: надсилайте скрин відповіддю на повідомлення потрібної оплати."
         : "🧾 Скрин оплати прив'язано, суму треба внести вручну.",
     `Оплата: ${payment.payment_number || payment.id}`,
     `Замовлення: ${orderNumber}`,
-    parsed.amount > 0 ? `Рахунок: ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
-    parsed.amount > 0 ? `Новий скрин: ${formatAmount(parsed.amount, parsed.currency)}` : "",
-    totalPaid > 0 ? `Разом оплачено: ${formatAmount(totalPaid, result.paid_currency || parsed.currency)}` : "",
+    parsed.total_amount > 0 ? `Рахунок: ${formatAmount(payment.requested_amount, payment.requested_currency)}` : "",
+    parsed.supplier_amount > 0 ? `Нова оплата постачальнику: ${formatAmount(parsed.supplier_amount, parsed.currency)}` : "",
+    parsed.commission_amount > 0 ? `Комісія: ${formatAmount(parsed.commission_amount, parsed.currency)}` : "",
+    parsed.total_amount > 0 ? `Списано з картки: ${formatAmount(parsed.total_amount, parsed.currency)}` : "",
+    totalPaid > 0 ? `Разом постачальнику: ${formatAmount(totalPaid, result.paid_currency || parsed.currency)}` : "",
+    number(result.commission_total_amount) > 0 ? `Разом комісія: ${formatAmount(result.commission_total_amount, result.paid_currency || parsed.currency)}` : "",
     remainingAmount > 0 ? `Залишок до оплати: ${formatAmount(remainingAmount, payment.requested_currency)}` : "",
     deltaText,
     ocrResult.source

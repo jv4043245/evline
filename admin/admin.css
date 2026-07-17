@@ -1125,38 +1125,38 @@ body.audit-log-open .audit-log-panel {
 }
 
 .orders-table--manager {
-  min-width: 1240px;
+  min-width: 900px;
   border-collapse: separate;
   border-spacing: 0 8px;
   table-layout: fixed;
 }
 
 .orders-table--manager .orders-table__col-number {
-  width: 122px;
+  width: 10%;
 }
 
 .orders-table--manager .orders-table__col-client {
-  width: 13%;
+  width: 12%;
 }
 
 .orders-table--manager .orders-table__col-request {
-  width: 23%;
+  width: 22%;
 }
 
 .orders-table--manager .orders-table__col-status {
-  width: 96px;
+  width: 8%;
 }
 
 .orders-table--manager .orders-table__col-money {
-  width: 290px;
+  width: 24%;
 }
 
 .orders-table--manager .orders-table__col-track {
-  width: 17%;
+  width: 14%;
 }
 
 .orders-table--manager .orders-table__col-actions {
-  width: 160px;
+  width: 10%;
 }
 
 .orders-table th,
@@ -1176,7 +1176,7 @@ body.audit-log-open .audit-log-panel {
 
 .orders-table--manager th,
 .orders-table--manager td {
-  padding: 11px 13px;
+  padding: 11px 10px;
 }
 
 .orders-table--manager tbody td {
@@ -1842,10 +1842,15 @@ body.audit-log-open .audit-log-panel {
   font-size: 13px;
 }
 
-.supplier-payments__create,
-.supplier-payment-card__edit {
+.supplier-payments__create {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.supplier-payment-card__edit {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 

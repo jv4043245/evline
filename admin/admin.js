@@ -1328,11 +1328,16 @@ function signedSupplierAmount(value, currency = "CNY") {
 
 function supplierPaymentAmountLines(payment = {}) {
   const paid = Number(payment.paid_amount || 0);
+  const commission = Number(payment.commission_amount || 0);
+  const charged = Number(payment.charged_total_amount || (paid + commission));
   const receiptCount = Number(payment.receipt_count || 0);
+  const currency = payment.paid_currency || payment.requested_currency;
   return `
-    <span>Счёт: <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b></span>
-    ${paid > 0 ? `<span>Оплачено: <b>${supplierAmount(payment.paid_amount, payment.paid_currency || payment.requested_currency)}</b></span>` : ""}
-    ${receiptCount > 1 ? `<span>Скрины: <b>${receiptCount}</b></span>` : ""}
+    <span>Рахунок: <b>${supplierAmount(payment.requested_amount, payment.requested_currency)}</b></span>
+    ${paid > 0 ? `<span>Постачальнику: <b>${supplierAmount(paid, currency)}</b></span>` : ""}
+    ${commission > 0 ? `<span>Комісія: <b>${supplierAmount(commission, currency)}</b></span>` : ""}
+    ${charged > 0 ? `<span>Списано: <b>${supplierAmount(charged, currency)}</b></span>` : ""}
+    ${receiptCount > 1 ? `<span>Скрини: <b>${receiptCount}</b></span>` : ""}
   `;
 }
 
@@ -1341,14 +1346,12 @@ function supplierPaymentAmountNotice(payment = {}) {
   if (!delta.amount) return "";
   if (delta.state === "overpaid") {
     return {
-      text: delta.significant
-        ? `Внимание: оплачено больше счёта на ${signedSupplierAmount(delta.amount, delta.currency)}. Проверьте, это отдельная оплата или объединённый платёж.`
-        : `Разница/комиссия: ${signedSupplierAmount(delta.amount, delta.currency)}.`,
-      state: delta.significant ? "warning" : "neutral",
+      text: `Переплата постачальнику: ${signedSupplierAmount(delta.amount, delta.currency)}. Комісія рахується окремо.`,
+      state: "warning",
     };
   }
   return {
-    text: `Внимание: оплачено меньше счёта на ${supplierAmount(Math.abs(delta.amount), delta.currency)}.`,
+    text: `Залишилося сплатити постачальнику ${supplierAmount(Math.abs(delta.amount), delta.currency)}.`,
     state: "warning",
   };
 }
@@ -2175,8 +2178,12 @@ function renderSupplierPayments(order) {
                   </select>
                 </label>
                 <label>
-                  Сплачено з комісією
+                  Постачальнику
                   <input data-supplier-payment-field="paid_amount" type="number" step="0.01" min="0" value="${Number(payment.paid_amount || 0)}">
+                </label>
+                <label>
+                  Комісія
+                  <input data-supplier-payment-field="commission_amount" type="number" step="0.01" min="0" value="${Number(payment.commission_amount || 0)}">
                 </label>
                 <label>
                   Валюта
@@ -3036,6 +3043,7 @@ function collectSupplierPaymentUpdatePayload(card) {
   return {
     status: value("status") || "requested",
     paid_amount: value("paid_amount"),
+    commission_amount: value("commission_amount"),
     paid_currency: value("paid_currency") || "CNY",
     notes: value("notes"),
   };
