@@ -237,6 +237,7 @@ async function sendLeadToCrm(payload) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
+    keepalive: true,
   });
   if (!response.ok) throw new Error("Не вдалося зберегти заявку");
   if (window.dataLayer) window.dataLayer.push(eventPayload);

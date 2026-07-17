@@ -1067,6 +1067,7 @@ function brandPageRu(brand) {
             <input name="car" placeholder="Модель авто (${escapeHtml(brand.models.slice(0, 3).join(", "))})" required>
             <input name="vin" placeholder="VIN-код (по возможности)" autocomplete="off" autocapitalize="characters" spellcheck="false">
             <input name="part" placeholder="Что ищете: фара, бампер, стекло..." required>
+            <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Телефон +380..." required>
             <button type="submit">Отправить запрос в Telegram</button>
             <a href="tel:+380935251024">Или позвонить: +38 (093) 525-10-24</a>
           </form>
@@ -1270,6 +1271,7 @@ function hubPageRu() {
               <input name="car" placeholder="Модель авто" autocomplete="off" required>
               <input name="vin" placeholder="VIN-код (по возможности)" autocomplete="off" autocapitalize="characters" spellcheck="false">
               <input name="part" placeholder="Название запчасти" required>
+              <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Телефон +380..." required>
             </div>
             <button class="quick-request__button" type="submit">Отправить запрос в Telegram</button>
           </form>

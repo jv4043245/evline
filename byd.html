@@ -831,7 +831,7 @@ function submitLead(formId){
     channel:f.channel,
     page_url:window.location.href
   });
-  fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)})
+  fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true})
     .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
     .then(function(){trackLeadSubmit(payload);el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
     .catch(function(){showLeadToast('Telegram відкрито з готовим текстом.');})

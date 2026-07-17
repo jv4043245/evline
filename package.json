@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "serve": "node scripts/serve-static.mjs"
+    "serve": "node scripts/serve-static.mjs",
+    "audit:forms": "node scripts/audit-public-forms.mjs"
   }
 }
