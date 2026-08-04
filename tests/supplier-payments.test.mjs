@@ -36,3 +36,40 @@ test("treats a single receipt amount as supplier principal when no commission is
   assert.equal(parsed.supplier_amount, 440);
   assert.equal(parsed.commission_amount, 0);
 });
+
+test("repairs swapped supplier and commission labels for a 7085 CNY invoice", () => {
+  const parsed = parsePaymentBreakdown(
+    "TOTAL: 7297.55 CNY\nSUPPLIER: 212.55 CNY\nCOMMISSION: 7085 CNY",
+    { requestedAmount: 7085 }
+  );
+  assert.equal(parsed.total_amount, 7297.55);
+  assert.equal(parsed.supplier_amount, 7085);
+  assert.equal(parsed.commission_amount, 212.55);
+});
+
+test("repairs swapped supplier and commission labels for a 1860 CNY invoice", () => {
+  const parsed = parsePaymentBreakdown(
+    "TOTAL: 1915.80 CNY\nSUPPLIER: 55.80 CNY\nCOMMISSION: 1860 CNY",
+    { requestedAmount: 1860 }
+  );
+  assert.equal(parsed.total_amount, 1915.8);
+  assert.equal(parsed.supplier_amount, 1860);
+  assert.equal(parsed.commission_amount, 55.8);
+});
+
+test("keeps a correct partial payment breakdown when the invoice is larger", () => {
+  const parsed = parsePaymentBreakdown(
+    "TOTAL: 8240 CNY\nSUPPLIER: 8000 CNY\nCOMMISSION: 240 CNY",
+    { requestedAmount: 9133 }
+  );
+  assert.equal(parsed.total_amount, 8240);
+  assert.equal(parsed.supplier_amount, 8000);
+  assert.equal(parsed.commission_amount, 240);
+});
+
+test("uses the requested amount when OCR returns only the charged total", () => {
+  const parsed = parsePaymentBreakdown("TOTAL: 7297.55 CNY", { requestedAmount: 7085 });
+  assert.equal(parsed.total_amount, 7297.55);
+  assert.equal(parsed.supplier_amount, 7085);
+  assert.equal(parsed.commission_amount, 212.55);
+});
