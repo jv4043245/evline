@@ -31,6 +31,11 @@ const SUPPLIER_PAYMENT_QR_IMAGES = [
     url: "https://evline.com.ua/assets/images/suppliers/zeekr-payment-qr.jpg",
     caption: "QR для оплати постачальнику Zeekr",
   },
+  {
+    aliases: ["toyota", "t o y o t a", "тойота", "тоёта"],
+    url: "https://evline.com.ua/assets/images/suppliers/toyota-payment-qr.jpg",
+    caption: "QR для оплати постачальнику Toyota",
+  },
 ];
 
 const ORDER_STATUS_RANK = {
@@ -141,7 +146,7 @@ function supplierNameKey(value) {
     .trim();
 }
 
-function supplierPaymentQrImage(supplierName) {
+export function supplierPaymentQrImage(supplierName) {
   const key = supplierNameKey(supplierName);
   if (!key) return null;
   return SUPPLIER_PAYMENT_QR_IMAGES.find((item) =>

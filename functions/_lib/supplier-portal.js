@@ -60,6 +60,7 @@ const DIRECTORY_SUPPLIERS = new Map([
   ["zeekr", { id: "supplier_zeekr", name: "Zeekr" }],
   ["byd", { id: "supplier_byd", name: "BYD" }],
   ["buble", { id: "supplier_buble", name: "Buble" }],
+  ["toyota", { id: "supplier_toyota", name: "Toyota" }],
 ]);
 
 function normalizeStatus(value, fallback = "") {
