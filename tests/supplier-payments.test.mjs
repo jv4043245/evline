@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parsePaymentBreakdown } from "../functions/_lib/supplier-payments.js";
+import { parsePaymentBreakdown, supplierPaymentQrImage } from "../functions/_lib/supplier-payments.js";
+
+test("maps the Toyota supplier to its payment QR", () => {
+  const paymentQr = supplierPaymentQrImage("Toyota");
+  assert.equal(paymentQr?.url, "https://evline.com.ua/assets/images/suppliers/toyota-payment-qr.jpg");
+  assert.equal(paymentQr?.caption, "QR для оплати постачальнику Toyota");
+  assert.equal(supplierPaymentQrImage("Тойота")?.url, paymentQr?.url);
+});
 
 test("separates supplier principal and commission from labeled OCR output", () => {
   assert.deepEqual(

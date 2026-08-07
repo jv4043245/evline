@@ -25,7 +25,7 @@
 
 - `TELEGRAM_PARTS_CHAT_ID` - внутренний чат заявок по запчастям.
 - `TELEGRAM_TECH_CHAT_ID` - внутренний чат заявок по программированию BYD.
-- `TELEGRAM_SUPPLIER_CHAT_IDS` - обязательная для китайского направления карта отдельных чатов поставщиков, например `Zeekr=-100111,BYD=-100222` или JSON `{"Zeekr":"-100111","BYD":"-100222"}`.
+- `TELEGRAM_SUPPLIER_CHAT_IDS` - обязательная для китайского направления карта отдельных чатов поставщиков, например `Zeekr=-100111,BYD=-100222,Toyota=-100333` или JSON `{"Zeekr":"-100111","BYD":"-100222","Toyota":"-100333"}`.
 - `TELEGRAM_CHAT_ID` - общий fallback для обычных менеджерских уведомлений вне китайского направления.
 - `TELEGRAM_WEBHOOK_SECRET` - secret token для Telegram webhook.
 - `SUPPLIER_TRANSLATION_MODEL` - необязательная модель Cloudflare AI для перевода сообщений поставщика; если не задана, используется модель по умолчанию.
@@ -65,11 +65,12 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 - `EVLine Китай Zeekr` - отдельный чат Zeekr.
 - `EVLine Китай BYD` - отдельный чат BYD.
 - `EVLine Китай Buble` - отдельный чат Buble.
+- `EVLine Китай Toyota` - отдельный чат Toyota.
 
 В каждую группу нужно добавить того же Telegram-бота и отправить `/chatid`. Бот вернет Chat ID группы. После этого в Cloudflare Pages нужно прописать:
 
 ```text
-TELEGRAM_SUPPLIER_CHAT_IDS=Zeekr=-100...zeekr,BYD=-100...byd,Buble=-100...buble
+TELEGRAM_SUPPLIER_CHAT_IDS=Zeekr=-100...zeekr,BYD=-100...byd,Buble=-100...buble,Toyota=-100...toyota
 ```
 
 Для проверки в админке есть скрытая ссылка на вкладке `Китай`: меню `...` -> `Проверка Telegram`. Она показывает, какие поставщики уже маршрутизируются в отдельный чат, а какие еще не настроены. Полные Chat ID в диагностике маскируются.
