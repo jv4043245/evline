@@ -4,12 +4,15 @@ import {
   createSupplierPaymentRequest,
   listSupplierPayments,
 } from "../../../../_lib/supplier-payments.js";
+import { registerSupplier } from "../../../../_lib/supplier-portal.js";
 import { auditActor, recordAuditEvent } from "../../../../_lib/audit-log.js";
 
 export async function onRequestPost({ request, params, env }) {
   const payload = await readPayload(request);
 
   try {
+    const supplier = await registerSupplier(env, payload.supplier_name);
+    payload.supplier_name = supplier.display_name;
     const payment = await createSupplierPaymentRequest(env, params.id, payload);
     const order = await loadOrder(env, params.id);
     const supplierPayments = await listSupplierPayments(env, params.id);

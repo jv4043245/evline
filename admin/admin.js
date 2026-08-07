@@ -168,9 +168,12 @@ const auditActionLabels = {
   "supplier.delivery_cost": "Поставщик обновил доставку",
   "supplier.status_update": "Поставщик изменил статус",
   "supplier.tracking_update": "Поставщик добавил трек",
+  "supplier.create": "Добавлен поставщик",
+  "supplier.delete": "Удалён поставщик",
 };
 
-const supplierDirectory = ["Zeekr", "BYD", "Buble", "Toyota"];
+const defaultSupplierDirectory = ["Zeekr", "BYD", "Buble", "Toyota"];
+let supplierDirectory = [...defaultSupplierDirectory];
 
 const defaultShippingCarriers = [
   {
@@ -1367,14 +1370,42 @@ function supplierRequestBadge(status) {
   return `<span class="supplier-request-status supplier-request-status--${safeClass(value)}">${escapeHtml(supplierRequestStatusLabels[value] || value)}</span>`;
 }
 
-function supplierDirectoryOptions(selectedName = "") {
+function supplierDirectoryOptions(selectedName = "", labels = {}) {
   const normalized = plainText(selectedName);
-  const hasDirectoryMatch = supplierDirectory.some((name) => name === normalized);
+  const directoryMatch = supplierDirectory.find((name) => name.toLocaleLowerCase() === normalized.toLocaleLowerCase());
+  const selected = directoryMatch || normalized;
   return [
-    `<option value="">Оберіть постачальника</option>`,
-    ...supplierDirectory.map((name) => `<option value="${escapeHtml(name)}" ${normalized === name ? "selected" : ""}>${escapeHtml(name)}</option>`),
-    `<option value="__custom__" ${normalized && !hasDirectoryMatch ? "selected" : ""}>Інший / додати вручну</option>`,
+    `<option value="">${escapeHtml(labels.placeholder || "Оберіть постачальника")}</option>`,
+    ...supplierDirectory.map((name) => `<option value="${escapeHtml(name)}" ${selected === name ? "selected" : ""}>${escapeHtml(name)}</option>`),
+    `<option value="__custom__" ${normalized && !directoryMatch ? "selected" : ""}>${escapeHtml(labels.custom || "Інший / додати нового")}</option>`,
   ].join("");
+}
+
+function setSupplierDirectory(rows = []) {
+  const names = [...defaultSupplierDirectory];
+  const seen = new Set(names.map((name) => name.toLocaleLowerCase()));
+  rows.forEach((row) => {
+    const name = plainText(row?.display_name || row?.supplier_name || row?.name);
+    const key = name.toLocaleLowerCase();
+    if (!name || seen.has(key)) return;
+    seen.add(key);
+    names.push(name);
+  });
+  supplierDirectory = names;
+  const chinaSelect = document.querySelector("[data-china-supplier]");
+  if (chinaSelect) {
+    const selected = chinaSelect.value;
+    chinaSelect.innerHTML = supplierDirectoryOptions(selected, {
+      placeholder: "Выберите",
+      custom: "Другой / добавить нового",
+    });
+  }
+}
+
+async function loadSupplierDirectory() {
+  const data = await api("/api/admin/suppliers");
+  setSupplierDirectory(data.suppliers || []);
+  return supplierDirectory;
 }
 
 function syncSupplierCustomField(root) {
@@ -3126,7 +3157,7 @@ async function refresh() {
     if (googleAdsKeywordsExport) {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
-    await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords()]);
+    await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory()]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
       await loadAuditLog();
@@ -3689,7 +3720,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
     const custom = document.querySelector("[data-china-custom-supplier]");
     if (custom) custom.hidden = true;
     if (contextOrder) fillChinaPreorderFormFromOrder(form, contextOrder);
-    await Promise.all([loadChinaPreorders(), loadOrders()]);
+    await Promise.all([loadChinaPreorders(), loadOrders(), loadSupplierDirectory()]);
     const link = result.supplier_request?.supplier_url || result.supplier_request?.supplier_link || "";
     if (link) {
       navigator.clipboard?.writeText(link).catch(() => null);
@@ -4177,6 +4208,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       });
       state.selectedOrder = result.order || state.selectedOrder;
       state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
+      await loadSupplierDirectory();
       state.orderEditorTab = "suppliers";
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
@@ -4237,6 +4269,10 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
   const createSupplierPaymentButton = event.target.closest("[data-create-supplier-payment]");
   if (createSupplierPaymentButton) {
     const payload = collectSupplierPaymentCreatePayload(event.currentTarget);
+    if (!plainText(payload.supplier_name)) {
+      alert("Оберіть постачальника.");
+      return;
+    }
     if (!Number(payload.requested_amount || 0)) {
       alert("Вкажіть суму оплати постачальнику.");
       return;
@@ -4250,6 +4286,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       });
       state.selectedOrder = result.order || state.selectedOrder;
       state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+      await loadSupplierDirectory();
       renderOrderEditor(state.selectedOrder);
       await loadOrders();
       await refreshAuditLogIfOpen();

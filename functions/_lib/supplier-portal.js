@@ -62,6 +62,7 @@ const DIRECTORY_SUPPLIERS = new Map([
   ["buble", { id: "supplier_buble", name: "Buble" }],
   ["toyota", { id: "supplier_toyota", name: "Toyota" }],
 ]);
+const DIRECTORY_SUPPLIER_IDS = new Set(Array.from(DIRECTORY_SUPPLIERS.values()).map((supplier) => supplier.id));
 
 function normalizeStatus(value, fallback = "") {
   const status = text(value);
@@ -185,6 +186,94 @@ async function ensureSupplier(env, supplierName) {
     .bind(supplier.id, supplier.display_name, supplier.dashboard_access_token, now, now)
     .run();
   return supplier;
+}
+
+function publicSupplierDirectoryEntry(supplier, isDefault = false) {
+  return {
+    id: text(supplier?.id),
+    display_name: normalizeSupplierName(supplier?.display_name || supplier?.name),
+    is_default: Boolean(isDefault),
+    created_at: text(supplier?.created_at),
+    updated_at: text(supplier?.updated_at),
+  };
+}
+
+export async function listSupplierDirectory(env) {
+  const suppliers = new Map();
+  for (const entry of DIRECTORY_SUPPLIERS.values()) {
+    suppliers.set(entry.id, publicSupplierDirectoryEntry(entry, true));
+  }
+
+  if (await tableExists(env, "suppliers")) {
+    const rows = await safeSelect(
+      env,
+      "SELECT id, display_name, created_at, updated_at FROM suppliers ORDER BY display_name COLLATE NOCASE ASC"
+    );
+    for (const row of rows) {
+      const supplier = publicSupplierDirectoryEntry(row, DIRECTORY_SUPPLIER_IDS.has(text(row.id)));
+      if (supplier.id && supplier.display_name) suppliers.set(supplier.id, supplier);
+    }
+  }
+
+  return Array.from(suppliers.values()).sort((left, right) => {
+    if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
+    return left.display_name.localeCompare(right.display_name, "uk", { sensitivity: "base" });
+  });
+}
+
+export async function registerSupplier(env, value) {
+  const supplierName = normalizeSupplierName(value);
+  if (!supplierName) {
+    const error = new Error("supplier_name is required");
+    error.status = 400;
+    throw error;
+  }
+  const supplier = await ensureSupplier(env, supplierName);
+  return publicSupplierDirectoryEntry(supplier, DIRECTORY_SUPPLIER_IDS.has(text(supplier.id)));
+}
+
+export async function deleteSupplierDirectoryEntry(env, supplierId) {
+  const id = text(supplierId);
+  if (!id) {
+    const error = new Error("supplier_id is required");
+    error.status = 400;
+    throw error;
+  }
+  if (DIRECTORY_SUPPLIER_IDS.has(id)) {
+    const error = new Error("Default suppliers cannot be deleted");
+    error.status = 400;
+    throw error;
+  }
+  if (!(await tableExists(env, "suppliers"))) {
+    const error = new Error("Supplier not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const supplier = await env.DB.prepare("SELECT id, display_name, created_at, updated_at FROM suppliers WHERE id = ?")
+    .bind(id)
+    .first();
+  if (!supplier) {
+    const error = new Error("Supplier not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const usage = await env.DB.prepare("SELECT COUNT(*) AS count FROM supplier_requests WHERE supplier_id = ?")
+    .bind(id)
+    .first()
+    .catch((error) => {
+      if (/no such table/i.test(error.message || String(error))) return { count: 0 };
+      throw error;
+    });
+  if (integer(usage?.count) > 0) {
+    const error = new Error("Supplier is used by existing requests");
+    error.status = 409;
+    throw error;
+  }
+
+  await env.DB.prepare("DELETE FROM suppliers WHERE id = ?").bind(id).run();
+  return publicSupplierDirectoryEntry(supplier, false);
 }
 
 function normalizeQuantity(value, fallback = 1) {
@@ -432,6 +521,7 @@ function maskedChatId(value) {
 
 export async function supplierTelegramSettingsStatus(env) {
   const supplierMap = parseSupplierChatMap(env);
+  const directorySuppliers = await listSupplierDirectory(env);
   const supplierRows = await safeSelect(
     env,
     `SELECT supplier_id, supplier_name, COUNT(*) AS request_count, MAX(updated_at) AS last_request_at
@@ -441,10 +531,10 @@ export async function supplierTelegramSettingsStatus(env) {
     LIMIT 50`
   );
   const suppliers = new Map();
-  for (const entry of DIRECTORY_SUPPLIERS.values()) {
+  for (const entry of directorySuppliers) {
     suppliers.set(entry.id, {
       supplier_id: entry.id,
-      supplier_name: entry.name,
+      supplier_name: entry.display_name,
       request_count: 0,
       last_request_at: "",
     });
