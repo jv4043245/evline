@@ -170,7 +170,7 @@ const auditActionLabels = {
   "supplier.tracking_update": "Поставщик добавил трек",
 };
 
-const supplierDirectory = ["Zeekr", "BYD", "Buble"];
+const supplierDirectory = ["Zeekr", "BYD", "Buble", "Toyota"];
 
 const defaultShippingCarriers = [
   {
