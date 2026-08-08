@@ -2,6 +2,15 @@
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__) return;
   window.__EVLINE_CONTACT_TRACKING_LOADED__ = true;
 
+  function ensureMetaTracking() {
+    if (window.__EVLINE_META_TRACKING_LOADED__ || document.querySelector("script[data-evline-meta-tracking]")) return;
+    var script = document.createElement("script");
+    script.src = "/assets/js/meta-tracking.js?v=20260730-consent-1";
+    script.async = false;
+    script.dataset.evlineMetaTracking = "";
+    document.head.appendChild(script);
+  }
+
   var VISITOR_KEY = "evline_visitor_id_v1";
   var SESSION_KEY = "evline_session_id_v1";
   var ATTRIBUTION_KEY = "evline_attribution_v1";
@@ -39,6 +48,52 @@
     }
   }
 
+  function writeStore(store, key, value) {
+    try {
+      store.setItem(key, JSON.stringify(value));
+    } catch (_) {}
+  }
+
+  function captureFreshPaidClick() {
+    var params = new URLSearchParams(window.location.search);
+    var hasMetaClick = Boolean(params.get("fbclid"));
+    var hasGoogleClick = Boolean(params.get("gclid") || params.get("gbraid") || params.get("wbraid"));
+    if (!hasMetaClick && !hasGoogleClick) return;
+
+    var source = params.get("utm_source") || "";
+    var medium = params.get("utm_medium") || "";
+    if (hasMetaClick) {
+      if (!source || /^(site|direct|google)$/i.test(source)) source = "meta";
+      if (!medium || /^(cpc|ppc|paid|ads?)$/i.test(medium)) medium = "paid_social";
+    } else {
+      source = source || "google";
+      medium = medium || "cpc";
+    }
+
+    var now = new Date().toISOString();
+    var fresh = {
+      utm_source: source,
+      utm_medium: medium,
+      utm_campaign: params.get("utm_campaign") || "",
+      utm_term: params.get("utm_term") || "",
+      utm_content: params.get("utm_content") || "",
+      gclid: hasMetaClick ? "" : params.get("gclid") || "",
+      gbraid: hasMetaClick ? "" : params.get("gbraid") || "",
+      wbraid: hasMetaClick ? "" : params.get("wbraid") || "",
+      fbclid: hasMetaClick ? params.get("fbclid") || "" : "",
+      landing_page: window.location.href,
+      page_url: window.location.href,
+      referrer: document.referrer || "",
+      tracking_captured_at: now,
+      expires_at: Date.now() + 90 * 24 * 60 * 60 * 1000,
+    };
+    writeStore(window.localStorage, ATTRIBUTION_KEY, fresh);
+    writeStore(window.sessionStorage, SESSION_ATTRIBUTION_KEY, fresh);
+  }
+
+  captureFreshPaidClick();
+  ensureMetaTracking();
+
   function attribution() {
     var params = new URLSearchParams(window.location.search);
     var saved = readStore(window.localStorage, ATTRIBUTION_KEY);
@@ -47,7 +102,7 @@
     function pick(name) {
       return params.get(name) || saved[name] || "";
     }
-    return {
+    var result = {
       utm_source: pick("utm_source"),
       utm_medium: pick("utm_medium"),
       utm_campaign: pick("utm_campaign"),
@@ -62,6 +117,16 @@
       page_url: window.location.href,
       tracking_captured_at: saved.tracking_captured_at || new Date().toISOString(),
     };
+    if (params.get("fbclid")) {
+      if (!params.get("utm_source") || /^(site|direct|google)$/i.test(result.utm_source)) result.utm_source = "meta";
+      if (!params.get("utm_medium") || /^(cpc|ppc|paid|ads?)$/i.test(result.utm_medium)) result.utm_medium = "paid_social";
+      result.gclid = "";
+      result.gbraid = "";
+      result.wbraid = "";
+    } else if (params.get("gclid") || params.get("gbraid") || params.get("wbraid")) {
+      result.fbclid = "";
+    }
+    return result;
   }
 
   function endpoint() {
@@ -145,6 +210,20 @@
     lastEvent = { key: duplicateKey, at: now };
 
     send(payload);
+    if (window.EVLineMetaTracking) {
+      window.EVLineMetaTracking.trackContact({
+        event_id: payload.id,
+        channel: payload.channel,
+        intent_type: payload.intent_type,
+      });
+    } else if (marketingConsentGranted()) {
+      window.__EVLINE_PENDING_META_CONTACTS__ = window.__EVLINE_PENDING_META_CONTACTS__ || [];
+      window.__EVLINE_PENDING_META_CONTACTS__.push({
+        event_id: payload.id,
+        channel: payload.channel,
+        intent_type: payload.intent_type,
+      });
+    }
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: "evline_contact_click",
@@ -156,6 +235,37 @@
 
   function enrich(payload) {
     return Object.assign({}, payload || {}, identity);
+  }
+
+  function marketingConsentGranted() {
+    try {
+      var consent = JSON.parse(window.localStorage.getItem("evline_privacy_consent_v1") || "{}");
+      return consent.version === "2026-07-30" && consent.marketing === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function prepareMetaLead(payload) {
+    var prepared = payload || {};
+    if (window.EVLineMetaTracking) return window.EVLineMetaTracking.prepareLeadPayload(prepared);
+    if (!prepared.meta_event_id) prepared.meta_event_id = "evline-lead-" + uuid();
+    prepared.marketing_consent = marketingConsentGranted() ? 1 : 0;
+    prepared.consent_version = "2026-07-30";
+    try {
+      var consent = JSON.parse(window.localStorage.getItem("evline_privacy_consent_v1") || "{}");
+      prepared.marketing_consent_at = consent.decided_at || "";
+    } catch (_) {}
+    return prepared;
+  }
+
+  function trackMetaLead(payload) {
+    if (window.EVLineMetaTracking) {
+      window.EVLineMetaTracking.trackLead(payload);
+      return;
+    }
+    window.__EVLINE_PENDING_META_LEADS__ = window.__EVLINE_PENDING_META_LEADS__ || [];
+    window.__EVLINE_PENDING_META_LEADS__.push(payload);
   }
 
   document.addEventListener("click", function (event) {
@@ -170,10 +280,22 @@
   if (typeof window.trackingPayload === "function" && !window.trackingPayload.__evlineIdentityWrapped) {
     var originalTrackingPayload = window.trackingPayload;
     var wrappedTrackingPayload = function () {
-      return enrich(originalTrackingPayload.apply(this, arguments));
+      return prepareMetaLead(enrich(originalTrackingPayload.apply(this, arguments)));
     };
     wrappedTrackingPayload.__evlineIdentityWrapped = true;
     window.trackingPayload = wrappedTrackingPayload;
+  }
+
+  if (typeof window.trackLeadSubmit === "function" && !window.trackLeadSubmit.__evlineMetaWrapped) {
+    var originalTrackLeadSubmit = window.trackLeadSubmit;
+    var wrappedTrackLeadSubmit = function (payload) {
+      var prepared = prepareMetaLead(payload || {});
+      var result = originalTrackLeadSubmit.call(this, prepared);
+      trackMetaLead(prepared);
+      return result;
+    };
+    wrappedTrackLeadSubmit.__evlineMetaWrapped = true;
+    window.trackLeadSubmit = wrappedTrackLeadSubmit;
   }
 
   if (typeof window.openTelegramMsg === "function" && !window.openTelegramMsg.__evlineContactWrapped) {

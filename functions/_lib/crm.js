@@ -263,6 +263,12 @@ export async function createOrderFromLead(env, lead) {
     ["attribution_type", text(lead.attribution_type)],
     ["visitor_id", text(lead.visitor_id)],
     ["session_id", text(lead.session_id)],
+    ["fbp", text(lead.fbp)],
+    ["fbc", text(lead.fbc)],
+    ["meta_event_id", text(lead.meta_event_id)],
+    ["marketing_consent", lead.marketing_consent ? 1 : 0],
+    ["marketing_consent_at", text(lead.marketing_consent_at)],
+    ["consent_version", text(lead.consent_version)],
   ]);
 
   await insertStatusEvent(env, {

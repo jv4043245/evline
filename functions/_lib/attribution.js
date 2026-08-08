@@ -43,6 +43,13 @@ export function classifyAttribution(attribution = {}) {
   const referrer = text(attribution.referrer);
 
   if (
+    attribution.fbclid ||
+    /^(meta|facebook|instagram|fb|ig)$/.test(source) ||
+    (/(paid_social|social|social_ads)/.test(medium) && /meta|facebook|instagram|fb|ig/.test(source))
+  ) {
+    return "social";
+  }
+  if (
     attribution.gclid ||
     attribution.gbraid ||
     attribution.wbraid ||
@@ -71,9 +78,11 @@ export function inferAttribution(payload = {}, request) {
   const pageParams = paramsFromUrl(pageUrl, requestUrl.origin);
   const requestParams = requestUrl.searchParams;
 
-  const gclid = text(payload.gclid) || pickParam("gclid", landingParams, pageParams, requestParams);
-  const gbraid = text(payload.gbraid) || pickParam("gbraid", landingParams, pageParams, requestParams);
-  const wbraid = text(payload.wbraid) || pickParam("wbraid", landingParams, pageParams, requestParams);
+  const fbclid = text(payload.fbclid) || pickParam("fbclid", landingParams, pageParams, requestParams);
+  const hasMetaClick = Boolean(fbclid);
+  const gclid = hasMetaClick ? "" : text(payload.gclid) || pickParam("gclid", landingParams, pageParams, requestParams);
+  const gbraid = hasMetaClick ? "" : text(payload.gbraid) || pickParam("gbraid", landingParams, pageParams, requestParams);
+  const wbraid = hasMetaClick ? "" : text(payload.wbraid) || pickParam("wbraid", landingParams, pageParams, requestParams);
   const gadCampaignId = pickParam("gad_campaignid", landingParams, pageParams, requestParams);
   const hasGoogleClick = Boolean(
     gclid ||
@@ -84,9 +93,18 @@ export function inferAttribution(payload = {}, request) {
       googleReferrer(referrer)
   );
 
+  const explicitSource = text(payload.utm_source || payload.source).toLowerCase();
+  const explicitMedium = text(payload.utm_medium || payload.medium).toLowerCase();
+  const source = hasMetaClick && (!explicitSource || /^(site|direct|google)$/.test(explicitSource))
+    ? "meta"
+    : explicitSource || (hasGoogleClick ? "google" : "site");
+  const medium = hasMetaClick && (!explicitMedium || /^(cpc|ppc|paid|ads?)$/.test(explicitMedium))
+    ? "paid_social"
+    : explicitMedium || (hasGoogleClick ? "cpc" : "");
+
   const attribution = {
-    source: text(payload.utm_source || payload.source) || (hasGoogleClick ? "google" : "site"),
-    medium: text(payload.utm_medium || payload.medium) || (hasGoogleClick ? "cpc" : ""),
+    source,
+    medium,
     campaign:
       text(payload.utm_campaign || payload.campaign) ||
       pickParam("utm_campaign", landingParams, pageParams, requestParams) ||
@@ -96,7 +114,7 @@ export function inferAttribution(payload = {}, request) {
     gclid,
     gbraid,
     wbraid,
-    fbclid: text(payload.fbclid) || pickParam("fbclid", landingParams, pageParams, requestParams),
+    fbclid,
     landing_page: landingPage,
     referrer,
     page_url: pageUrl,

@@ -19,15 +19,25 @@ function ensureCoreNavItems() {
   });
 }
 
+function ensureMetaTracking() {
+  if (window.__EVLINE_META_TRACKING_LOADED__ || document.querySelector('script[data-evline-meta-tracking]')) return;
+  const script = document.createElement("script");
+  script.src = "/assets/js/meta-tracking.js?v=20260730-consent-1";
+  script.async = false;
+  script.dataset.evlineMetaTracking = "";
+  document.head.append(script);
+}
+
 function ensureContactTracking() {
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/contact-tracking.js?v=20260715-contact-events";
-  script.defer = true;
+  script.src = "/assets/js/contact-tracking.js?v=20260730-meta-consent-1";
+  script.async = false;
   script.dataset.evlineContactTracking = "";
   document.head.append(script);
 }
 
+ensureMetaTracking();
 ensureContactTracking();
 
 ensureCoreNavItems();
@@ -106,12 +116,26 @@ function trackingData(form) {
     visitor_id: readOrCreateTrackingId(localStorage, "evline_visitor_id_v1"),
     session_id: readOrCreateTrackingId(sessionStorage, "evline_session_id_v1"),
   };
+  const hasFreshMetaClick = Boolean(params.get("fbclid"));
+  const hasFreshGoogleClick = Boolean(params.get("gclid") || params.get("gbraid") || params.get("wbraid"));
+  if (hasFreshMetaClick) {
+    current.utm_source = current.utm_source || "meta";
+    current.utm_medium = current.utm_medium || "paid_social";
+    current.gclid = "";
+    current.gbraid = "";
+    current.wbraid = "";
+  } else if (hasFreshGoogleClick) {
+    current.fbclid = "";
+  }
   const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
   let saved = readTrackingStore(localStorage, storageKey);
   if (saved.expires_at && Number(saved.expires_at) < Date.now()) {
     saved = {};
   }
   if (!Object.keys(saved).length) saved = readTrackingStore(sessionStorage, sessionKey);
+  if (hasFreshMetaClick || hasFreshGoogleClick) {
+    saved = {};
+  }
 
   const hasTracking = keys.some((key) => current[key]);
   if (hasTracking) {
@@ -223,7 +247,36 @@ function isRussianPage() {
   return document.documentElement.lang.toLowerCase().startsWith("ru");
 }
 
+function prepareMetaLeadPayload(payload) {
+  if (window.EVLineMetaTracking) {
+    return window.EVLineMetaTracking.prepareLeadPayload(payload);
+  }
+  if (!payload.meta_event_id) {
+    payload.meta_event_id = `evline-lead-${window.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`}`;
+  }
+  try {
+    const consent = JSON.parse(localStorage.getItem("evline_privacy_consent_v1") || "{}");
+    payload.marketing_consent = consent.marketing === true ? 1 : 0;
+    payload.marketing_consent_at = consent.decided_at || "";
+    payload.consent_version = consent.version || "2026-07-30";
+  } catch {
+    payload.marketing_consent = 0;
+    payload.consent_version = "2026-07-30";
+  }
+  return payload;
+}
+
+function trackMetaLead(payload) {
+  if (window.EVLineMetaTracking) {
+    window.EVLineMetaTracking.trackLead(payload);
+    return;
+  }
+  window.__EVLINE_PENDING_META_LEADS__ = window.__EVLINE_PENDING_META_LEADS__ || [];
+  window.__EVLINE_PENDING_META_LEADS__.push(payload);
+}
+
 async function sendLeadToCrm(payload) {
+  payload = prepareMetaLeadPayload(payload);
   const eventPayload = {
     event: "evline_lead_submit",
     lead_type: payload.type || detectLeadType(payload),
@@ -246,6 +299,7 @@ async function sendLeadToCrm(payload) {
   if (!response.ok) throw new Error("Не вдалося зберегти заявку");
   if (window.dataLayer) window.dataLayer.push(eventPayload);
   if (typeof window.gtag === "function") window.gtag("event", "generate_lead", eventPayload);
+  trackMetaLead(payload);
   return response.json().catch(() => ({}));
 }
 

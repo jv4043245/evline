@@ -12,6 +12,11 @@ import {
 
 const ALLOWED_TYPES = new Set(["parts", "byd", "other"]);
 
+function booleanFlag(value) {
+  if (value === true || value === 1) return 1;
+  return ["1", "true", "yes", "on"].includes(text(value).toLowerCase()) ? 1 : 0;
+}
+
 function detectType(payload, request) {
   const explicitType = text(payload.type).toLowerCase();
   if (ALLOWED_TYPES.has(explicitType)) return explicitType;
@@ -35,7 +40,7 @@ function detectType(payload, request) {
   return "parts";
 }
 
-function normalizeLead(payload, request) {
+export function normalizeLead(payload, request) {
   const now = new Date().toISOString();
   const url = new URL(request.url);
   const type = detectType(payload, request);
@@ -45,6 +50,7 @@ function normalizeLead(payload, request) {
   const distinctDetails = details && details !== part ? details : "";
   const message = [part ? `${requestLabel}: ${part}` : "", distinctDetails].filter(Boolean).join("\n");
   const attribution = inferAttribution(payload, request);
+  const marketingConsent = booleanFlag(payload.marketing_consent);
 
   return {
     id: crypto.randomUUID(),
@@ -81,6 +87,12 @@ function normalizeLead(payload, request) {
     attribution_type: attribution.attribution_type,
     visitor_id: text(payload.visitor_id),
     session_id: text(payload.session_id),
+    fbp: marketingConsent ? text(payload.fbp).slice(0, 500) : "",
+    fbc: marketingConsent ? text(payload.fbc).slice(0, 500) : "",
+    meta_event_id: text(payload.meta_event_id || payload.event_id).slice(0, 160),
+    marketing_consent: marketingConsent,
+    marketing_consent_at: text(payload.marketing_consent_at).slice(0, 80),
+    consent_version: text(payload.consent_version).slice(0, 80),
     user_agent: text(request.headers.get("user-agent")),
     ip_country: text(request.headers.get("cf-ipcountry")),
   };
@@ -150,6 +162,35 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Phone, email or Telegram is required" }, { status: 400, headers: leadCorsHeaders(request) });
   }
 
+  if (lead.meta_event_id) {
+    try {
+      const existing = await env.DB.prepare(
+        `SELECT leads.id, leads.lead_number, orders.id AS order_id
+         FROM leads
+         LEFT JOIN orders ON orders.lead_id = leads.id
+         WHERE leads.meta_event_id = ?
+         LIMIT 1`
+      )
+        .bind(lead.meta_event_id)
+        .first();
+      if (existing) {
+        return json(
+          {
+            ok: true,
+            duplicate: true,
+            lead_id: existing.id,
+            lead_number: existing.lead_number || "",
+            order_id: existing.order_id || "",
+            meta_event_id: lead.meta_event_id,
+          },
+          { headers: leadCorsHeaders(request) }
+        );
+      }
+    } catch (error) {
+      if (!/no such column:\s*(meta_event_id|lead_number)/i.test(error.message || String(error))) throw error;
+    }
+  }
+
   try {
     lead.lead_number = await nextPublicNumber(env, "lead", "L");
     await insertKnownFields(env, "leads", [
@@ -186,6 +227,12 @@ export async function onRequestPost({ request, env }) {
       ["attribution_type", lead.attribution_type],
       ["visitor_id", lead.visitor_id],
       ["session_id", lead.session_id],
+      ["fbp", lead.fbp],
+      ["fbc", lead.fbc],
+      ["meta_event_id", lead.meta_event_id],
+      ["marketing_consent", lead.marketing_consent],
+      ["marketing_consent_at", lead.marketing_consent_at],
+      ["consent_version", lead.consent_version],
       ["user_agent", lead.user_agent],
       ["ip_country", lead.ip_country],
     ]);
@@ -209,7 +256,13 @@ export async function onRequestPost({ request, env }) {
   });
 
   return json(
-    { ok: true, lead_id: lead.id, lead_number: lead.lead_number || "", order_id: orderId },
+    {
+      ok: true,
+      lead_id: lead.id,
+      lead_number: lead.lead_number || "",
+      order_id: orderId,
+      meta_event_id: lead.meta_event_id,
+    },
     { headers: leadCorsHeaders(request) }
   );
 }
