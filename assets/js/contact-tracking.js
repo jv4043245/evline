@@ -17,73 +17,6 @@
   var SESSION_ATTRIBUTION_KEY = "evline_tracking";
   var lastEvent = { key: "", at: 0 };
 
-  function isPartsOrderingPage() {
-    var path = window.location.pathname.toLowerCase();
-    try {
-      path = decodeURIComponent(path);
-    } catch (_) {}
-
-    return path === "/"
-      || path === "/index.html"
-      || path === "/ru/"
-      || path === "/ru/index.html"
-      || /(?:zapchast|запчаст|komplekty-to|комплект|spivpratsya-sto|sotrudnichestvo-sto)/i.test(path);
-  }
-
-  function ensureMinimumOrderNotice() {
-    if (!isPartsOrderingPage() || document.querySelector("[data-minimum-order-notice]")) return;
-
-    var isRu = document.documentElement.lang.toLowerCase().indexOf("ru") === 0
-      || window.location.pathname.indexOf("/ru/") === 0;
-    var title = isRu
-      ? "Минимальная сумма заказа — $100"
-      : "Мінімальна сума замовлення — $100";
-    var explanation = isRu
-      ? "Недорогие позиции можно объединить с другими запчастями или расходниками в одном заказе."
-      : "Недорогі позиції можна об’єднати з іншими запчастинами або витратниками в одному замовленні.";
-
-    if (!document.querySelector("style[data-minimum-order-styles]")) {
-      var style = document.createElement("style");
-      style.dataset.minimumOrderStyles = "";
-      style.textContent = ""
-        + ".evline-min-order{background:#14230d;border-top:1px solid rgba(132,204,22,.35);border-bottom:1px solid rgba(132,204,22,.35);color:#fff}"
-        + ".evline-min-order__inner{max-width:1200px;margin:0 auto;padding:11px 24px;display:flex;align-items:center;justify-content:center;gap:10px 18px;text-align:center;line-height:1.35}"
-        + ".evline-min-order__inner strong{color:#a3e635;font-size:1rem;white-space:nowrap}"
-        + ".evline-min-order__inner span{color:rgba(255,255,255,.82);font-size:.92rem}"
-        + ".evline-min-order-form-note{margin:10px 0;color:#a3e635;font-size:.9rem;font-weight:700;line-height:1.4}"
-        + "@media (max-width:720px){.evline-min-order__inner{padding:10px 16px;display:block}.evline-min-order__inner strong,.evline-min-order__inner span{display:block}.evline-min-order__inner span{margin-top:3px}}";
-      document.head.appendChild(style);
-    }
-
-    var notice = document.createElement("aside");
-    notice.className = "evline-min-order";
-    notice.dataset.minimumOrderNotice = "";
-    notice.setAttribute("aria-label", title);
-    var inner = document.createElement("div");
-    inner.className = "evline-min-order__inner";
-    var strong = document.createElement("strong");
-    strong.textContent = title;
-    var span = document.createElement("span");
-    span.textContent = explanation;
-    inner.appendChild(strong);
-    inner.appendChild(span);
-    notice.appendChild(inner);
-
-    var header = document.querySelector("header");
-    if (header && header.parentNode) header.parentNode.insertBefore(notice, header.nextSibling);
-    else document.body.insertBefore(notice, document.body.firstChild);
-
-    Array.prototype.forEach.call(document.querySelectorAll("form"), function (form) {
-      var submit = form.querySelector('button[type="submit"], input[type="submit"]');
-      if (!submit || form.querySelector("[data-minimum-order-form-note]")) return;
-      var note = document.createElement("p");
-      note.className = "evline-min-order-form-note";
-      note.dataset.minimumOrderFormNote = "";
-      note.textContent = title;
-      submit.parentNode.insertBefore(note, submit);
-    });
-  }
-
   function uuid() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
     return "evl-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
@@ -160,7 +93,6 @@
 
   captureFreshPaidClick();
   ensureMetaTracking();
-  ensureMinimumOrderNotice();
 
   function attribution() {
     var params = new URLSearchParams(window.location.search);

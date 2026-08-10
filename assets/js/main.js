@@ -31,7 +31,7 @@ function ensureMetaTracking() {
 function ensureContactTracking() {
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/contact-tracking.js?v=20260808-minimum-order-1";
+  script.src = "/assets/js/contact-tracking.js?v=20260810-no-minimum-order-3";
   script.async = false;
   script.dataset.evlineContactTracking = "";
   document.head.append(script);
