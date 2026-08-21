@@ -741,7 +741,7 @@ function jsonLd(page, lang) {
   const parentName = lang === "uk" ? "Програмування BYD" : "Программирование BYD";
   const country = lang === "uk" ? "Україна" : "Украина";
   const city = lang === "uk" ? "Київ" : "Киев";
-  const street = lang === "uk" ? "Оболонська набережна, 3, офіс 1" : "Оболонская набережная, 3, офис 1";
+  const street = lang === "uk" ? "Оболонська набережна, 1" : "Оболонская набережная, 1";
 
   return JSON.stringify({
     "@context": "https://schema.org",
@@ -998,7 +998,7 @@ function pageHtml(page, lang) {
           </div>
           <div class="origin-contact__details">
             <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
-            <span>${lang === "uk" ? "м. Київ, Оболонська набережна, 3, офіс 1" : "г. Киев, Оболонская набережная, 3, офис 1"}</span>
+            <span>${lang === "uk" ? "м. Київ, Оболонська набережна, 1" : "г. Киев, Оболонская набережная, 1"}</span>
             <strong>EVLine Ukraine</strong>
           </div>
         </div>
