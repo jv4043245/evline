@@ -4,7 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
-const lastmod = "2026-06-11";
+const lastmod = process.env.SITEMAP_LASTMOD || new Date().toISOString().slice(0, 10);
 
 const brandPairs = [
   ["zapchastyny-byd/", "ru/zapchasti-byd/"],

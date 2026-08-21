@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "serve": "node scripts/serve-static.mjs",
+    "build:sitemap": "node scripts/build-sitemap.mjs",
     "audit:forms": "node scripts/audit-public-forms.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:meta": "node --test tests/meta-tracking.test.mjs"

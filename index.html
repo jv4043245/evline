@@ -146,6 +146,7 @@
   .proof-card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 14px 36px rgba(20,60,40,.08);transition:transform .2s,box-shadow .2s,border-color .2s}
   .proof-card:hover{transform:translateY(-4px);border-color:#bee6cf;box-shadow:0 18px 44px rgba(20,60,40,.13)}
   .proof-card__media{height:190px;background:#f5f8f7;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .proof-card__media picture{display:block;width:100%;height:100%}
   .proof-card__media img{width:100%;height:100%;object-fit:cover}
   .proof-card__body{padding:22px}
   .proof-card__body span{display:inline-flex;margin-bottom:10px;background:var(--green-l);color:var(--green-d);border-radius:999px;padding:6px 12px;font-weight:800;font-size:12px;letter-spacing:.07em;text-transform:uppercase}
@@ -379,9 +380,9 @@
   @media(max-width:560px){
     header.site .wrap{justify-content:space-between}
     .logo img{height:44px!important;max-width:180px}
-    nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
+    nav.main{justify-content:center;flex-wrap:nowrap;gap:0;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
     nav.main::-webkit-scrollbar{display:none}
-    nav.main a,nav.main .nav__pending{flex:0 0 auto}
+    nav.main a,nav.main .nav__pending{flex:0 0 auto;margin:0 5px;font-size:11px}
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .hero{padding:38px 0 34px}
@@ -424,7 +425,7 @@
 <div class="topbar">📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a> · ✉️ <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
 <header class="site">
   <div class="wrap">
-    <a class="logo" href="/"><img src="assets/logo.svg" alt="EVLine — запчастини з Китаю" style="height:52px;display:block"></a>
+    <a class="logo" href="/"><img src="assets/logo.svg" alt="EVLine — запчастини з Китаю" width="128" height="52" style="height:52px;display:block"></a>
     <nav class="main">
       <a href="/" class="active">Запчастини з Китаю</a>
       <a href="/byd">Програмування BYD</a>
@@ -477,13 +478,13 @@
     <figure class="hero-proof" aria-label="Реальні запчастини та пакування замовлень EVLine">
       <div class="hero-proof__grid">
         <div class="hero-proof__tile hero-proof__tile--main">
-          <img src="assets/gallery-5.jpg" alt="Пневмостійка в захисному пакуванні перед відправкою" loading="eager" decoding="async">
+          <img src="assets/gallery-5.jpg" alt="Пневмостійка в захисному пакуванні перед відправкою" width="900" height="1200" loading="eager" decoding="async" fetchpriority="high">
         </div>
         <div class="hero-proof__tile">
-          <img src="assets/gallery-3.jpg" alt="Дзеркало з проводкою, перевірка деталі" loading="eager" decoding="async">
+          <img src="assets/gallery-3.jpg" alt="Дзеркало з проводкою, перевірка деталі" width="1200" height="900" loading="eager" decoding="async" fetchpriority="low">
         </div>
         <div class="hero-proof__tile">
-          <img src="assets/gallery-6.jpg" alt="Запаковане замовлення із запчастинами для доставки" loading="eager" decoding="async">
+          <img src="assets/gallery-6.jpg" alt="Запаковане замовлення із запчастинами для доставки" width="900" height="1200" loading="eager" decoding="async" fetchpriority="low">
         </div>
       </div>
       <div class="hero-proof__badge">Реальні фото замовлень</div>
@@ -518,7 +519,7 @@
       <span class="brand-wordmark brand-wordmark--byd"><img src="assets/brand-logos/byd.svg" alt="BYD"></span>
       <span class="brand-wordmark brand-wordmark--xiaomi"><img src="assets/brand-logos/xiaomi.svg" alt="Xiaomi"></span>
       <span class="brand-wordmark brand-wordmark--lynk"><img src="assets/brand-logos/lynk-co.svg" alt="Lynk & Co"></span>
-      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.png" alt="Fang Cheng Bao"></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.webp" alt="Fang Cheng Bao" width="500" height="166" loading="lazy" decoding="async"></span>
       <span class="brand-wordmark brand-wordmark--zeekr"><img src="assets/brand-logos/zeekr.svg" alt="ZEEKR"></span>
       <span class="brand-wordmark brand-wordmark--nio"><img src="assets/brand-logos/nio.svg" alt="NIO"></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="assets/brand-logos/xpeng.svg" alt="XPeng"></span>
@@ -529,7 +530,7 @@
       <span class="brand-wordmark brand-wordmark--byd"><img src="assets/brand-logos/byd.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--xiaomi"><img src="assets/brand-logos/xiaomi.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--lynk"><img src="assets/brand-logos/lynk-co.svg" alt=""></span>
-      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.png" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="assets/brand-logos/fangchengbao.webp" alt="" width="500" height="166" loading="lazy" decoding="async"></span>
       <span class="brand-wordmark brand-wordmark--zeekr"><img src="assets/brand-logos/zeekr.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--nio"><img src="assets/brand-logos/nio.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="assets/brand-logos/xpeng.svg" alt=""></span>
@@ -591,7 +592,7 @@
     </div>
     <div class="proof-cards">
       <article class="proof-card">
-        <div class="proof-card__media"><img src="assets/images/china-delivery-visual.jpg?v=soft-delivery-1" alt="Логістика запчастин з Китаю авіа та морем"></div>
+        <div class="proof-card__media"><picture><source srcset="assets/images/china-delivery-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/china-delivery-visual.jpg?v=soft-delivery-1" alt="Логістика запчастин з Китаю авіа та морем" width="1802" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
         <div class="proof-card__body">
           <span>Логістика</span>
           <h3>Пакуємо правильно без зайвої ваги</h3>
@@ -604,7 +605,7 @@
         </div>
       </article>
       <article class="proof-card">
-        <div class="proof-card__media"><img src="assets/images/vin-parts-visual.jpg?v=proof-cards-1" alt="Точний підбір автозапчастин по VIN-коду"></div>
+        <div class="proof-card__media"><picture><source srcset="assets/images/vin-parts-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/vin-parts-visual.jpg?v=proof-cards-1" alt="Точний підбір автозапчастин по VIN-коду" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
         <div class="proof-card__body">
           <span>Підбір по VIN</span>
           <h3>Деталь має підійти з першого разу</h3>
@@ -617,7 +618,7 @@
         </div>
       </article>
       <article class="proof-card">
-        <div class="proof-card__media"><img src="assets/images/oem-parts-visual.jpg?v=proof-cards-1" alt="Оригінальні та OEM запчастини для китайських авто"></div>
+        <div class="proof-card__media"><picture><source srcset="assets/images/oem-parts-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/oem-parts-visual.jpg?v=proof-cards-1" alt="Оригінальні та OEM запчастини для китайських авто" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
         <div class="proof-card__body">
           <span>Оригінал / OEM</span>
           <h3>Показуємо варіанти і різницю в ціні</h3>
@@ -719,23 +720,23 @@
     <span class="gal-nav prev" onclick="document.getElementById('galrow').scrollBy({left:-531,behavior:'smooth'})">‹</span>
     <span class="gal-nav next" onclick="document.getElementById('galrow').scrollBy({left:531,behavior:'smooth'})">›</span>
     <div class="gal-row" id="galrow">
-      <img class="gal" src="assets/gallery-1.jpg" alt="Пневмостійка в заводській упаковці" loading="lazy">
-      <img class="gal" src="assets/gallery-2.jpg" alt="Перевірка деталі перед відправкою" loading="lazy">
-      <img class="gal" src="assets/gallery-3.jpg" alt="Оригінальні запчастини з Китаю" loading="lazy">
-      <img class="gal" src="assets/gallery-4.jpg" alt="Пакування замовлення клієнта" loading="lazy">
-      <img class="gal" src="assets/gallery-5.jpg" alt="Оригінальна олива та розхідники" loading="lazy">
-      <img class="gal" src="assets/gallery-6.jpg" alt="Деталь із маркуванням виробника" loading="lazy">
-      <img class="gal" src="assets/gallery-7.jpg" alt="Підготовка замовлення до відправки" loading="lazy">
-      <img class="gal" src="assets/gallery-8.jpg" alt="Запчастини для електроавто з Китаю" loading="lazy">
-      <img class="gal" src="assets/gallery-9.jpg" alt="Кругла кришка автозапчастини перед відправкою" loading="lazy">
-      <img class="gal" src="assets/gallery-10.jpg" alt="Корпус кришки з маркуванням виробника" loading="lazy">
-      <img class="gal" src="assets/gallery-11.jpg" alt="Оригінальна деталь з заводським маркуванням" loading="lazy">
-      <img class="gal" src="assets/gallery-12.jpg" alt="Зовнішня кришка для кузовного вузла" loading="lazy">
-      <img class="gal" src="assets/gallery-13.jpg" alt="Пластикова деталь салону або кузова перед пакуванням" loading="lazy">
-      <img class="gal" src="assets/gallery-14.jpg" alt="Алюмінієвий кронштейн з маркуванням виробника" loading="lazy">
-      <img class="gal" src="assets/gallery-15.jpg" alt="Запаковані деталі перед відправкою клієнту" loading="lazy">
-      <img class="gal" src="assets/gallery-16.jpg" alt="Дзеркало у зборі з проводкою та маркуванням" loading="lazy">
-      <img class="gal" src="assets/gallery-17.jpg" alt="Корпус дзеркала у зборі перед доставкою" loading="lazy">
+      <img class="gal" src="assets/thumbs/gallery-1.webp" data-full="assets/gallery-1.jpg" alt="Пневмостійка в заводській упаковці" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-2.webp" data-full="assets/gallery-2.jpg" alt="Перевірка деталі перед відправкою" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-3.webp" data-full="assets/gallery-3.jpg" alt="Оригінальні запчастини з Китаю" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-4.webp" data-full="assets/gallery-4.jpg" alt="Пакування замовлення клієнта" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-5.webp" data-full="assets/gallery-5.jpg" alt="Оригінальна олива та розхідники" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-6.webp" data-full="assets/gallery-6.jpg" alt="Деталь із маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-7.webp" data-full="assets/gallery-7.jpg" alt="Підготовка замовлення до відправки" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-8.webp" data-full="assets/gallery-8.jpg" alt="Запчастини для електроавто з Китаю" width="480" height="853" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-9.webp" data-full="assets/gallery-9.jpg" alt="Кругла кришка автозапчастини перед відправкою" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-10.webp" data-full="assets/gallery-10.jpg" alt="Корпус кришки з маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-11.webp" data-full="assets/gallery-11.jpg" alt="Оригінальна деталь з заводським маркуванням" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-12.webp" data-full="assets/gallery-12.jpg" alt="Зовнішня кришка для кузовного вузла" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-13.webp" data-full="assets/gallery-13.jpg" alt="Пластикова деталь салону або кузова перед пакуванням" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-14.webp" data-full="assets/gallery-14.jpg" alt="Алюмінієвий кронштейн з маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-15.webp" data-full="assets/gallery-15.jpg" alt="Запаковані деталі перед відправкою клієнту" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-16.webp" data-full="assets/gallery-16.jpg" alt="Дзеркало у зборі з проводкою та маркуванням" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="assets/thumbs/gallery-17.webp" data-full="assets/gallery-17.jpg" alt="Корпус дзеркала у зборі перед доставкою" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
     </div>
     </div>
     <div class="grid3" style="margin-top:22px">
@@ -828,9 +829,13 @@
   <div class="wrap">
     <div class="center"><span class="tag">Марки авто</span>
       <h2>Сторінки підбору за брендами</h2>
-      <p class="lead">Службова навігація для пошуку запчастин по VIN для популярних китайських авто та китайських версій світових брендів.</p>
+      <p class="lead">Оберіть марку або популярну модель, щоб побачити особливості підбору кузовних деталей, оптики, підвіски та електроніки по VIN.</p>
     </div>
     <div class="brand-links">
+      <a href="zapchastyny-byd/song-plus/">Бампер і фара BYD Song Plus</a>
+      <a href="zapchastyny-zeekr/001/">Фара і пневмопідвіска Zeekr 001</a>
+      <a href="zapchastyny-xiaomi/su7/">Кузовні деталі Xiaomi SU7</a>
+      <a href="zapchastyny-avatr/11/">Бампер і лідар Avatr 11</a>
       <a href="zapchastyny-byd/">BYD</a>
       <a href="zapchastyny-zeekr/">ZEEKR</a>
       <a href="zapchastyny-xiaomi/">Xiaomi</a>
@@ -1081,7 +1086,7 @@ function submitLead(formId){
   document.body.appendChild(lb);
   lb.onclick=function(){lb.classList.remove('show')};
   document.querySelectorAll('.gal').forEach(function(g){
-    g.onclick=function(){lb.querySelector('img').src=g.src;lb.classList.add('show')};
+    g.onclick=function(){lb.querySelector('img').src=g.dataset.full||g.currentSrc||g.src;lb.classList.add('show')};
   });
 })();
 // закриваємо меню мови при кліку поза ним або Esc

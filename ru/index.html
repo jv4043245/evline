@@ -347,9 +347,9 @@
   @media(max-width:560px){
     header.site .wrap{justify-content:space-between}
     .logo img{height:44px!important;max-width:180px}
-    nav.main{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
+    nav.main{justify-content:center;flex-wrap:nowrap;gap:0;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none}
     nav.main::-webkit-scrollbar{display:none}
-    nav.main a,nav.main .nav__pending{flex:0 0 auto}
+    nav.main a,nav.main .nav__pending{flex:0 0 auto;margin:0 5px;font-size:11px}
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .hero{padding:38px 0 34px}
@@ -389,7 +389,7 @@
 <div class="topbar">📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a> · ✉️ <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
 <header class="site">
   <div class="wrap">
-    <a class="logo" href="./"><img src="../assets/logo.svg" alt="EVLine — запчасти из Китая" style="height:52px;display:block"></a>
+    <a class="logo" href="./"><img src="../assets/logo.svg" alt="EVLine — запчасти из Китая" width="128" height="52" style="height:52px;display:block"></a>
     <nav class="main">
       <a href="./" class="active">Запчасти из Китая</a>
       <a href="/ru/byd">Программирование BYD</a>
@@ -442,13 +442,13 @@
     <figure class="hero-proof" aria-label="Реальные запчасти и упаковка заказов EVLine">
       <div class="hero-proof__grid">
         <div class="hero-proof__tile hero-proof__tile--main">
-          <img src="../assets/gallery-5.jpg" alt="Пневмостойка в защитной упаковке перед отправкой" loading="eager" decoding="async">
+          <img src="../assets/gallery-5.jpg" alt="Пневмостойка в защитной упаковке перед отправкой" width="900" height="1200" loading="eager" decoding="async" fetchpriority="high">
         </div>
         <div class="hero-proof__tile">
-          <img src="../assets/gallery-3.jpg" alt="Зеркало с проводкой, проверка детали" loading="eager" decoding="async">
+          <img src="../assets/gallery-3.jpg" alt="Зеркало с проводкой, проверка детали" width="1200" height="900" loading="eager" decoding="async" fetchpriority="low">
         </div>
         <div class="hero-proof__tile">
-          <img src="../assets/gallery-6.jpg" alt="Упакованный заказ с запчастями для доставки" loading="eager" decoding="async">
+          <img src="../assets/gallery-6.jpg" alt="Упакованный заказ с запчастями для доставки" width="900" height="1200" loading="eager" decoding="async" fetchpriority="low">
         </div>
       </div>
       <div class="hero-proof__badge">Реальные фото заказов</div>
@@ -483,7 +483,7 @@
       <span class="brand-wordmark brand-wordmark--byd"><img src="../assets/brand-logos/byd.svg" alt="BYD"></span>
       <span class="brand-wordmark brand-wordmark--xiaomi"><img src="../assets/brand-logos/xiaomi.svg" alt="Xiaomi"></span>
       <span class="brand-wordmark brand-wordmark--lynk"><img src="../assets/brand-logos/lynk-co.svg" alt="Lynk & Co"></span>
-      <span class="brand-wordmark brand-wordmark--fang"><img src="../assets/brand-logos/fangchengbao.png" alt="Fang Cheng Bao"></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="../assets/brand-logos/fangchengbao.webp" alt="Fang Cheng Bao" width="500" height="166" loading="lazy" decoding="async"></span>
       <span class="brand-wordmark brand-wordmark--zeekr"><img src="../assets/brand-logos/zeekr.svg" alt="ZEEKR"></span>
       <span class="brand-wordmark brand-wordmark--nio"><img src="../assets/brand-logos/nio.svg" alt="NIO"></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="../assets/brand-logos/xpeng.svg" alt="XPeng"></span>
@@ -494,7 +494,7 @@
       <span class="brand-wordmark brand-wordmark--byd"><img src="../assets/brand-logos/byd.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--xiaomi"><img src="../assets/brand-logos/xiaomi.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--lynk"><img src="../assets/brand-logos/lynk-co.svg" alt=""></span>
-      <span class="brand-wordmark brand-wordmark--fang"><img src="../assets/brand-logos/fangchengbao.png" alt=""></span>
+      <span class="brand-wordmark brand-wordmark--fang"><img src="../assets/brand-logos/fangchengbao.webp" alt="" width="500" height="166" loading="lazy" decoding="async"></span>
       <span class="brand-wordmark brand-wordmark--zeekr"><img src="../assets/brand-logos/zeekr.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--nio"><img src="../assets/brand-logos/nio.svg" alt=""></span>
       <span class="brand-wordmark brand-wordmark--xpeng"><img src="../assets/brand-logos/xpeng.svg" alt=""></span>
@@ -615,23 +615,23 @@
     <span class="gal-nav prev" onclick="document.getElementById('galrow').scrollBy({left:-531,behavior:'smooth'})">‹</span>
     <span class="gal-nav next" onclick="document.getElementById('galrow').scrollBy({left:531,behavior:'smooth'})">›</span>
     <div class="gal-row" id="galrow">
-      <img class="gal" src="../assets/gallery-1.jpg" alt="Пневмостойка в заводской упаковке" loading="lazy">
-      <img class="gal" src="../assets/gallery-2.jpg" alt="Проверка детали перед отправкой" loading="lazy">
-      <img class="gal" src="../assets/gallery-3.jpg" alt="Оригинальные запчасти из Китая" loading="lazy">
-      <img class="gal" src="../assets/gallery-4.jpg" alt="Упаковка заказа клиента" loading="lazy">
-      <img class="gal" src="../assets/gallery-5.jpg" alt="Оригинальное масло и расходники" loading="lazy">
-      <img class="gal" src="../assets/gallery-6.jpg" alt="Деталь с маркировкой производителя" loading="lazy">
-      <img class="gal" src="../assets/gallery-7.jpg" alt="Подготовка заказа к отправке" loading="lazy">
-      <img class="gal" src="../assets/gallery-8.jpg" alt="Запчасти для электромобилей из Китая" loading="lazy">
-      <img class="gal" src="../assets/gallery-9.jpg" alt="Круглая крышка автозапчасти перед отправкой" loading="lazy">
-      <img class="gal" src="../assets/gallery-10.jpg" alt="Корпус крышки с маркировкой производителя" loading="lazy">
-      <img class="gal" src="../assets/gallery-11.jpg" alt="Оригинальная деталь с заводской маркировкой" loading="lazy">
-      <img class="gal" src="../assets/gallery-12.jpg" alt="Наружная крышка для кузовного узла" loading="lazy">
-      <img class="gal" src="../assets/gallery-13.jpg" alt="Пластиковая деталь салона или кузова перед упаковкой" loading="lazy">
-      <img class="gal" src="../assets/gallery-14.jpg" alt="Алюминиевый кронштейн с маркировкой производителя" loading="lazy">
-      <img class="gal" src="../assets/gallery-15.jpg" alt="Упакованные детали перед отправкой клиенту" loading="lazy">
-      <img class="gal" src="../assets/gallery-16.jpg" alt="Зеркало в сборе с проводкой и маркировкой" loading="lazy">
-      <img class="gal" src="../assets/gallery-17.jpg" alt="Корпус зеркала в сборе перед доставкой" loading="lazy">
+      <img class="gal" src="../assets/thumbs/gallery-1.webp" data-full="../assets/gallery-1.jpg" alt="Пневмостойка в заводской упаковке" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-2.webp" data-full="../assets/gallery-2.jpg" alt="Проверка детали перед отправкой" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-3.webp" data-full="../assets/gallery-3.jpg" alt="Оригинальные запчасти из Китая" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-4.webp" data-full="../assets/gallery-4.jpg" alt="Упаковка заказа клиента" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-5.webp" data-full="../assets/gallery-5.jpg" alt="Оригинальное масло и расходники" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-6.webp" data-full="../assets/gallery-6.jpg" alt="Деталь с маркировкой производителя" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-7.webp" data-full="../assets/gallery-7.jpg" alt="Подготовка заказа к отправке" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-8.webp" data-full="../assets/gallery-8.jpg" alt="Запчасти для электромобилей из Китая" width="480" height="853" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-9.webp" data-full="../assets/gallery-9.jpg" alt="Круглая крышка автозапчасти перед отправкой" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-10.webp" data-full="../assets/gallery-10.jpg" alt="Корпус крышки с маркировкой производителя" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-11.webp" data-full="../assets/gallery-11.jpg" alt="Оригинальная деталь с заводской маркировкой" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-12.webp" data-full="../assets/gallery-12.jpg" alt="Наружная крышка для кузовного узла" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-13.webp" data-full="../assets/gallery-13.jpg" alt="Пластиковая деталь салона или кузова перед упаковкой" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-14.webp" data-full="../assets/gallery-14.jpg" alt="Алюминиевый кронштейн с маркировкой производителя" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-15.webp" data-full="../assets/gallery-15.jpg" alt="Упакованные детали перед отправкой клиенту" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-16.webp" data-full="../assets/gallery-16.jpg" alt="Зеркало в сборе с проводкой и маркировкой" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-17.webp" data-full="../assets/gallery-17.jpg" alt="Корпус зеркала в сборе перед доставкой" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
     </div>
     </div>
     <div class="grid3" style="margin-top:22px">
@@ -724,9 +724,13 @@
   <div class="wrap">
     <div class="center"><span class="tag">Марки авто</span>
       <h2>Страницы подбора по брендам</h2>
-      <p class="lead">Служебная навигация для поиска запчастей по VIN для популярных китайских авто и китайских версий мировых брендов.</p>
+      <p class="lead">Выберите марку или популярную модель, чтобы увидеть особенности подбора кузовных деталей, оптики, подвески и электроники по VIN.</p>
     </div>
     <div class="brand-links">
+      <a href="zapchasti-byd/song-plus/">Бампер и фара BYD Song Plus</a>
+      <a href="zapchasti-zeekr/001/">Фара и пневмоподвеска Zeekr 001</a>
+      <a href="zapchasti-xiaomi/su7/">Кузовные детали Xiaomi SU7</a>
+      <a href="zapchasti-avatr/11/">Бампер и лидар Avatr 11</a>
       <a href="zapchasti-byd/">BYD</a>
       <a href="zapchasti-zeekr/">ZEEKR</a>
       <a href="zapchasti-xiaomi/">Xiaomi</a>
@@ -977,7 +981,7 @@ function submitLead(formId){
   document.body.appendChild(lb);
   lb.onclick=function(){lb.classList.remove('show')};
   document.querySelectorAll('.gal').forEach(function(g){
-    g.onclick=function(){lb.querySelector('img').src=g.src;lb.classList.add('show')};
+    g.onclick=function(){lb.querySelector('img').src=g.dataset.full||g.currentSrc||g.src;lb.classList.add('show')};
   });
 })();
 // закрываем меню языка при клике вне него или Esc

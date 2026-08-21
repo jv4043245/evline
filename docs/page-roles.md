@@ -16,7 +16,6 @@ These pages are part of the main site navigation and should be treated as high-v
 | Role | Ukrainian URL | Russian URL | Main use |
 | --- | --- | --- | --- |
 | BYD programming funnel | `/byd` | `/ru/byd` | Programming, diagnostics, calibration and software work for BYD |
-| Service kit funnel | `/komplekty-to/` | `/ru/komplekty-to/` | Maintenance kits with original consumables and technical cards for mechanics |
 
 ### Draft commercial sections
 
