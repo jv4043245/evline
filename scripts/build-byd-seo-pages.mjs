@@ -756,6 +756,14 @@ function jsonLd(page, lang) {
         telephone: "+380935251024",
         email: "evlineukraine@gmail.com",
         priceRange: "$$",
+        openingHoursSpecification: [
+          {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            opens: "10:00",
+            closes: "18:00",
+          },
+        ],
         address: {
           "@type": "PostalAddress",
           streetAddress: street,
@@ -999,6 +1007,7 @@ function pageHtml(page, lang) {
           <div class="origin-contact__details">
             <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
             <span>${lang === "uk" ? "м. Київ, Оболонська набережна, 1" : "г. Киев, Оболонская набережная, 1"}</span>
+            <span>Пн–Пт: 10:00–18:00</span>
             <strong>EVLine Ukraine</strong>
           </div>
         </div>

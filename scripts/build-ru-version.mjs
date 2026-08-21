@@ -365,7 +365,7 @@ const altLinks = (ukPath, ruPath, currentPath) => {
 };
 
 const headJsonIndexRu = `<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoPartsStore","name":"EVLine Украина","description":"Оригинальные и OEM запчасти для китайских авто (BYD, Zeekr, Xiaomi, NIO и др.) с доставкой из Китая в Украину. Подбор по VIN.","url":"https://evline.com.ua/ru/","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/images/og-evline-social.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$"}
+{"@context":"https://schema.org","@type":"AutoPartsStore","name":"EVLine Украина","description":"Оригинальные и OEM запчасти для китайских авто (BYD, Zeekr, Xiaomi, NIO и др.) с доставкой из Китая в Украину. Подбор по VIN.","url":"https://evline.com.ua/ru/","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/images/og-evline-social.png","openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"18:00"}],"address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_support"],"priceRange":"$$"}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
@@ -379,7 +379,7 @@ const headJsonIndexRu = `<script type="application/ld+json">
 </script>`;
 
 const headJsonBydRu = `<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
+{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine — программирование BYD","description":"Обновление и программирование всех блоков BYD через дилерский VDS-доступ. Диагностика, обновления, калибровка. Все модели и суббренды BYD.","url":"https://evline.com.ua/ru/byd","telephone":"+380935251024","email":"evlineukraine@gmail.com","image":"https://evline.com.ua/assets/digi-1.png","openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"18:00"}],"address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 1","addressLocality":"Киев","addressCountry":"UA"},"areaServed":"UA","sameAs":["https://t.me/evline_tech"],"priceRange":"$$","makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Service","name":"Диагностика всех блоков"},"price":"50","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Обновление всех блоков"},"price":"250","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Программирование"},"price":"150","priceCurrency":"USD"},{"@type":"Offer","itemOffered":{"@type":"Service","name":"Калибровка и адаптация"},"price":"100","priceCurrency":"USD"}]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
@@ -904,6 +904,14 @@ function ruJsonLd(brand) {
         telephone: "+380935251024",
         email: "evlineukraine@gmail.com",
         priceRange: "$$",
+        openingHoursSpecification: [
+          {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            opens: "10:00",
+            closes: "18:00",
+          },
+        ],
         address: {
           "@type": "PostalAddress",
           streetAddress: "Оболонская набережная, 1",
@@ -1170,6 +1178,7 @@ function brandPageRu(brand) {
           <div class="origin-contact__details">
             <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
             <span>г. Киев, Оболонская набережная, 1</span>
+            <span>Пн–Пт: 10:00–18:00</span>
             <strong>EVLine Ukraine</strong>
           </div>
         </div>
