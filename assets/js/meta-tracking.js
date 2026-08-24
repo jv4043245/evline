@@ -273,8 +273,8 @@
       ".evline-consent h2{margin:0 0 7px;font-size:18px}.evline-consent p{margin:0;color:#ced7d2}.evline-consent a{color:#8ee2b0}" +
       ".evline-consent__actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}.evline-consent button{min-height:42px;padding:0 16px;border:1px solid #3fa66a;border-radius:999px;background:#3fa66a;color:#fff;font-weight:750;cursor:pointer}" +
       ".evline-consent button[data-consent=\"necessary\"]{background:transparent;color:#fff;border-color:#6f7c75}" +
-      ".evline-consent-settings{position:fixed;z-index:2147482000;right:12px;bottom:12px;padding:8px 12px;border:1px solid #68746e;border-radius:999px;background:#111513;color:#fff;font:12px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;cursor:pointer}" +
-      "@media(max-width:560px){.evline-consent{left:10px;right:10px;bottom:10px}.evline-consent__actions{display:grid}.evline-consent button{width:100%}.evline-consent-settings{bottom:72px}}";
+      ".evline-consent-settings{position:fixed;z-index:2147482000;right:112px;bottom:16px;padding:8px 12px;border:1px solid #68746e;border-radius:999px;background:#111513;color:#fff;font:12px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;cursor:pointer}" +
+      "@media(max-width:560px){.evline-consent{left:10px;right:10px;bottom:10px}.evline-consent__actions{display:grid}.evline-consent button{width:100%}.evline-consent-settings{right:88px;bottom:18px}}";
     document.head.appendChild(style);
   }
 

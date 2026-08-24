@@ -21,4 +21,16 @@ for (const relativePage of ["index.html", "ru/index.html"]) {
       await access(path.resolve(path.dirname(path.join(root, relativePage)), full));
     }
   });
+
+  test(`${relativePage} uses right-sized WebP images in the first viewport`, async () => {
+    const source = await readFile(path.join(root, relativePage), "utf8");
+    const heroImages = Array.from(source.matchAll(/<img src="([^"]*hero-gallery-[356]\.webp)"[^>]*>/g));
+
+    assert.equal(heroImages.length, 3);
+    assert.equal((source.match(/hero-gallery-[356]\.webp"[^>]*fetchpriority="high"/g) || []).length, 1);
+
+    for (const [, image] of heroImages) {
+      await access(path.resolve(path.dirname(path.join(root, relativePage)), image));
+    }
+  });
 }

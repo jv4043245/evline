@@ -4,7 +4,6 @@ import path from "node:path";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
-const lastmod = process.env.SITEMAP_LASTMOD || new Date().toISOString().slice(0, 10);
 const inlineLanguageSwitchCss = ".language-switch{position:relative;display:inline-flex;align-items:center;z-index:60}.language-switch summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:0;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#cfd8d3;background:rgba(255,255,255,.04);cursor:pointer;user-select:none;transition:border-color .18s ease,background-color .18s ease,color .18s ease,transform .18s ease;overflow:hidden}.language-switch summary::-webkit-details-marker{display:none}.language-switch summary::before,.language-switch summary::after{content:none!important;display:none!important;width:0!important;height:0!important;background:none!important;border:0!important;box-shadow:none!important}.language-switch__icon{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.language-switch[open] summary,.language-switch summary:hover{color:#fff;border-color:var(--green);background:rgba(63,166,106,.18);transform:translateY(-1px)}.language-switch__menu{position:absolute;right:0;top:calc(100% + 8px);min-width:162px;padding:8px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#151b18;box-shadow:0 18px 44px rgba(0,0,0,.28)}.language-switch__menu a{display:block;padding:9px 11px;border-radius:10px;color:#cfd8d3;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0;text-transform:none}.language-switch__menu a:hover,.language-switch__menu a[aria-current=\"true\"]{background:rgba(63,166,106,.18);color:#fff}";
 const techChatUrl = (message) => `https://t.me/evline_tech?text=${encodeURIComponent(message)}`;
 const techTelegramLinks = {
@@ -50,8 +49,16 @@ const brands = [
     name: "BYD",
     aliases: "BYD, БИД, Build Your Dreams",
     models: ["Song Plus", "Song L", "Seal", "Han", "Tang", "Dolphin", "Yuan Plus", "Qin Plus"],
+    modelPages: [
+      ["song-plus", "BYD Song Plus"],
+      ["seal", "BYD Seal"],
+      ["dolphin", "BYD Dolphin"],
+      ["atto-3", "BYD Atto 3 / Yuan Plus"],
+      ["han", "BYD Han"],
+      ["tang", "BYD Tang"],
+    ],
     focus: "электромобили и DM-i гибриды с большим количеством электроники, оптики и различий по комплектациям",
-    popular: ["фары и фонари", "бамперы и кузовные элементы", "датчики ADAS", "фильтры, колодки и ТО", "элементы подвески"],
+    popular: ["фары и фонари", "бамперы и кузовные элементы", "датчики ADAS", "электронные блоки и зарядные модули", "элементы подвески"],
     note: "Для BYD особенно важен VIN: одна модель может иметь разные версии оптики, бамперов, датчиков и электронных блоков.",
   },
   {
@@ -61,6 +68,7 @@ const brands = [
     name: "ZEEKR",
     aliases: "ZEEKR, Zeekr, Зикр",
     models: ["001", "007", "X", "009", "7X"],
+    modelPages: [["001", "Zeekr 001"], ["7x", "Zeekr 7X"], ["x", "Zeekr X"]],
     focus: "премиальные электромобили с дорогой оптикой, кузовными деталями, электроникой и сложной подвеской",
     popular: ["передняя и задняя оптика", "кузовные детали", "элементы салона", "датчики и камеры", "ходовая и подвеска"],
     note: "По ZEEKR часто ищут детали после ДТП, поэтому мы проверяем комплектацию, цвет, версию кузова и совместимость до заказа.",
@@ -72,8 +80,9 @@ const brands = [
     name: "Xiaomi",
     aliases: "Xiaomi Auto, Xiaomi SU7",
     models: ["SU7", "SU7 Pro", "SU7 Max", "YU7"],
+    modelPages: [["su7", "Xiaomi SU7"], ["yu7", "Xiaomi YU7"]],
     focus: "новые электромобили, по которым в Украине еще мало складских остатков и важна прямая проверка в Китае",
-    popular: ["кузовные панели", "оптика", "элементы салона", "датчики", "расходные материалы"],
+    popular: ["кузовные панели", "оптика", "элементы салона", "датчики", "лидары и радары"],
     note: "Для Xiaomi Auto рынок запчастей еще формируется, поэтому мы проверяем наличие в Китае и предлагаем реальные доступные варианты.",
   },
   {
@@ -83,6 +92,7 @@ const brands = [
     name: "Li Auto",
     aliases: "Li Auto, Lixiang, Лисян",
     models: ["L6", "L7", "L8", "L9", "Mega"],
+    modelPages: [["l7", "Li Auto L7"], ["l9", "Li Auto L9"]],
     focus: "большие семейные автомобили и EREV-кроссоверы, где часто нужны кузов, оптика, салон и электроника",
     popular: ["фары и фонари", "стекло", "детали салона", "кузовные элементы", "датчики и камеры"],
     note: "У Li Auto много деталей зависят от года, комплектации и версии салона, поэтому VIN и фото детали сильно ускоряют подбор.",
@@ -127,6 +137,7 @@ const brands = [
     name: "AVATR",
     aliases: "AVATR, Avatr, Аватр",
     models: ["11", "12", "07"],
+    modelPages: [["11", "Avatr 11"], ["12", "Avatr 12"]],
     focus: "премиальные электромобили с нетипичными кузовными деталями, сложной оптикой и электроникой",
     popular: ["фары", "бамперы", "кузовные элементы", "датчики", "детали интерьера"],
     note: "Для AVATR часто критична точность комплектации: деталь с другой версии может выглядеть похоже, но не стать без доработок.",
@@ -139,7 +150,7 @@ const brands = [
     aliases: "Lynk & Co, Lynk Co, Линк энд Ко",
     models: ["01", "03", "05", "08", "09"],
     focus: "кроссоверы и гибриды Geely-группы, где важен подбор по комплектации и году выпуска",
-    popular: ["ТО и расходники", "кузов", "оптика", "подвеска", "электрика"],
+    popular: ["кузовные панели", "оптика", "подвеска", "электронные блоки", "датчики"],
     note: "У Lynk & Co много смежных платформ, но подбирать деталь нужно не наугад, а по VIN.",
   },
   {
@@ -161,7 +172,7 @@ const brands = [
     aliases: "Leapmotor, Липмотор",
     models: ["C10", "C11", "C16", "T03"],
     focus: "массовые электромобили и кроссоверы, для которых часто нужны кузовные детали, оптика и ходовая",
-    popular: ["бамперы", "фары", "ходовая", "датчики", "расходные материалы"],
+    popular: ["бамперы", "фары", "ходовая", "датчики", "электронные блоки"],
     note: "По Leapmotor мы проверяем не только наличие, но и реальную совместимость с версией автомобиля для украинского клиента.",
   },
   {
@@ -193,8 +204,8 @@ const brands = [
     name: "Geely",
     aliases: "Geely, Джили",
     models: ["Monjaro", "Galaxy E5", "Galaxy L7", "Geometry C", "Coolray"],
-    focus: "популярные кроссоверы и электрифицированные модели с большим спросом на кузов, ходовую и расходные материалы",
-    popular: ["ТО и расходники", "ходовая", "кузов", "оптика", "электрика"],
+    focus: "популярные кроссоверы и электрифицированные модели со спросом на кузов, оптику, ходовую и электронные компоненты",
+    popular: ["кузовные детали", "оптика", "ходовая", "электронные блоки", "датчики"],
     note: "У Geely много платформ и локальных версий, поэтому мы просим VIN, фото или точное название детали.",
   },
   {
@@ -205,7 +216,7 @@ const brands = [
     aliases: "Changan, Чанган",
     models: ["UNI-K", "UNI-V", "CS75 Plus", "Deepal S07", "Hunter"],
     focus: "кроссоверы и электрифицированные модели, где часто нужны кузовные детали, оптика, ходовая и электроника",
-    popular: ["бамперы", "фары", "ходовая", "датчики", "расходные материалы"],
+    popular: ["бамперы", "фары", "ходовая", "датчики", "электронные блоки"],
     note: "Для Changan важно не путать рынок и комплектацию: одна модель может иметь несколько версий деталей.",
   },
   {
@@ -237,8 +248,8 @@ const brands = [
     name: "Omoda, Jaecoo, Chery",
     aliases: "Omoda, Jaecoo, Chery, Чери",
     models: ["Omoda 5", "Omoda C5", "Jaecoo J7", "Tiggo 7", "Tiggo 8"],
-    focus: "массовые китайские кроссоверы с активным спросом на кузовные детали, оптику, ходовую и расходные материалы",
-    popular: ["ТО и расходники", "кузов", "оптика", "ходовая", "электрика"],
+    focus: "массовые китайские кроссоверы с активным спросом на кузовные детали, оптику, ходовую и электронику",
+    popular: ["кузовные детали", "оптика", "ходовая", "электронные блоки", "стекло"],
     note: "Для Omoda, Jaecoo и Chery часто можно найти несколько вариантов: оригинал, OEM или качественный аналог.",
   },
   {
@@ -249,7 +260,7 @@ const brands = [
     aliases: "Tank, Wey, Ora, Great Wall",
     models: ["Tank 300", "Tank 500", "Wey Coffee", "Ora Good Cat", "Haval H6"],
     focus: "автомобили Great Wall-группы: внедорожники, кроссоверы и электромобили со спросом на кузов, ходовую и оптику",
-    popular: ["ходовая", "кузовные детали", "оптика", "ТО и расходники", "электроника"],
+    popular: ["ходовая", "кузовные детали", "оптика", "электронные блоки", "датчики"],
     note: "Для Tank, Wey и Ora важно сверять рынок, год и комплектацию, потому что детали могут отличаться даже у похожих моделей.",
   },
   {
@@ -260,7 +271,7 @@ const brands = [
     aliases: "Volkswagen ID, VW ID, ID.3, ID.4, ID.6, ID.7",
     models: ["ID.3", "ID.4 X", "ID.4 Crozz", "ID.6 X", "ID.6 Crozz", "ID.7 Vizzion", "ID.Unyx"],
     focus: "электромобили Volkswagen для китайского рынка, где важно не смешивать европейские и китайские версии деталей",
-    popular: ["кузовные детали", "оптика", "стекло", "ходовая", "расходные материалы"],
+    popular: ["кузовные детали", "оптика", "стекло", "ходовая", "электронные блоки"],
     note: "Для Volkswagen ID из Китая важно отличать ID.4 X, ID.4 Crozz, ID.6 X и ID.6 Crozz: похожие детали могут иметь разные крепления, оптику и артикулы.",
   },
   {
@@ -282,7 +293,7 @@ const brands = [
     aliases: "Smart, Smart #1, Smart #3, Smart #5",
     models: ["#1", "#3", "#5"],
     focus: "новые электромобили Smart на платформе Geely SEA с ограниченным складским наличием деталей в Украине",
-    popular: ["бамперы", "фары", "кузовные детали", "подвеска", "расходные материалы"],
+    popular: ["бамперы", "фары", "кузовные детали", "подвеска", "электронные блоки"],
     note: "Для Smart нового поколения важно подбирать деталь по VIN: #1, #3 и #5 имеют разные кузовные элементы, оптику и комплектации.",
   },
   {
@@ -293,7 +304,7 @@ const brands = [
     aliases: "Volvo EX30, Volvo electric, Volvo China",
     models: ["EX30", "EX30 Cross Country", "EX30 Twin Motor"],
     focus: "компактные электромобили Volvo китайской сборки с общей логикой платформы Geely-группы",
-    popular: ["кузовные детали", "оптика", "стекло", "подвеска", "ТО и расходники"],
+    popular: ["кузовные детали", "оптика", "стекло", "подвеска", "электронные блоки и датчики"],
     note: "Volvo EX30 нужно подбирать осторожно по VIN и рынку поставки: детали кузова, оптики и электронных компонентов могут отличаться по версии.",
   },
   {
@@ -315,7 +326,7 @@ const brands = [
     aliases: "MG, MG4, MG ZS EV, MG Marvel R, MG Cyberster",
     models: ["MG4 EV", "ZS EV", "Marvel R", "Cyberster", "MG5 EV"],
     focus: "массовые электромобили и гибриды SAIC/MG, для которых выгодно проверять оригинальные и OEM позиции в Китае",
-    popular: ["оптика", "кузовные детали", "ходовая", "ТО и расходники", "электрика"],
+    popular: ["оптика", "кузовные детали", "ходовая", "электронные блоки", "электрика"],
     note: "По MG часто есть выбор между оригиналом, OEM и доступными аналогами, но совместимость все равно нужно подтверждать по VIN и рынку автомобиля.",
   },
 ];
@@ -329,14 +340,6 @@ const bydSeoPairs = [
   { uk: "adas-byd-kamery-datchyky/", ru: "ru/adas-byd-kamery-datchiki/" },
   { uk: "carplay-android-auto-byd/", ru: "ru/carplay-android-auto-byd/" },
   { uk: "multymedia-byd/", ru: "ru/multimedia-byd/" },
-];
-
-const sitePairs = [
-  { uk: "", ru: "ru/", priority: "1.0", changefreq: "weekly", role: "Organic home pages: direct, brand and search traffic." },
-  { uk: "byd", ru: "ru/byd", priority: "0.95", changefreq: "weekly" },
-  ...bydSeoPairs.map((pair) => ({ ...pair, priority: "0.78", changefreq: "monthly", role: "BYD programming SEO pain-point pages." })),
-  { uk: "zapchastyny-kytajskyh-avto/", ru: "ru/zapchasti-kitajskih-avto/", priority: "0.9", changefreq: "weekly" },
-  ...brands.map((brand) => ({ uk: `${brand.uaSlug}/`, ru: `ru/${brand.ruSlug}/`, priority: "0.82", changefreq: "weekly" })),
 ];
 
 const escapeHtml = (value) =>
@@ -393,8 +396,8 @@ const headJsonBydRu = `<script type="application/ld+json">
 </script>`;
 
 const mainTranslations = [
-  ["Запчастини BYD, Zeekr, Xiaomi з Китаю | EVLine Україна", "Запчасти BYD, Zeekr, Xiaomi из Китая | EVLine Украина"],
-  ["Оригінальні та OEM запчастини для китайських авто: BYD, Zeekr, Xiaomi, Lynk & Co, NIO. Підбір по VIN, перевірка перед відправкою, авіа 14 днів. Привеземо навіть один болт.", "Оригинальные и OEM запчасти для китайских авто: BYD, Zeekr, Xiaomi, Lynk & Co, NIO. Подбор по VIN, проверка перед отправкой, авиа от 14 дней. Привезем даже один болт."],
+  ["Запчастини для китайських авто з Китаю | EVLine Україна", "Запчасти для китайских авто из Китая | EVLine Украина"],
+  ["Оригінальні та OEM запчастини для китайських авто: BYD, ZEEKR, Xiaomi та інші. Підбір по VIN, перевірка в Китаї, доставка в Україну.", "Оригинальные и OEM запчасти для китайских авто: BYD, ZEEKR, Xiaomi и другие. Подбор по VIN, проверка в Китае, доставка в Украину."],
   ["EVLine Україна", "EVLine Украина"],
   ["Оригінал та OEM від офіційних дилерів. Підбір по VIN, фотозвіт перед відправкою, ціна «під ключ». Авіа 14 днів, море 60.", "Оригинал и OEM от официальных дилеров. Подбор по VIN, фотоотчет перед отправкой, цена «под ключ». Авиа от 14 дней, море от 60."],
   ["EVLine — запчастини з Китаю", "EVLine — запчасти из Китая"],
@@ -425,15 +428,31 @@ const mainTranslations = [
   ["прямі поставки з Китаю", "прямые поставки из Китая"],
   ["середній строк авіа", "средний срок авиа"],
   ["Що ми привеземо", "Что мы привезем"],
-  ["Будь-яка деталь — від витратників до кузова", "Любая деталь — от расходников до кузова"],
-  ["ТО та витратні", "ТО и расходники"],
-  ["Олива · фільтри · щітки · колодки · свічки", "Масло · фильтры · щетки · колодки · свечи"],
-  ["Кузов та оптика", "Кузов и оптика"],
-  ["Бампери · крила · двері · фари · скло", "Бамперы · крылья · двери · фары · стекло"],
+  ["Запчастини для кузова, оптики, електроніки та ходової", "Запчасти для кузова, оптики, электроники и ходовой"],
+  ["Кузовні деталі після ДТП", "Кузовные детали после ДТП"],
+  ["Бампери · крила · двері · підсилювачі", "Бамперы · крылья · двери · усилители"],
+  ["Оптика та скло", "Оптика и стекло"],
+  ["Фари · ліхтарі · скло · дзеркала", "Фары · фонари · стекло · зеркала"],
   ["Електрика та електроніка", "Электрика и электроника"],
   ["АКБ · датчики · блоки керування · проводка", "АКБ · датчики · блоки управления · проводка"],
   ["Підвіска та ходова", "Подвеска и ходовая"],
   ["Амортизатори · важелі · диски · стійки", "Амортизаторы · рычаги · диски · стойки"],
+  ["Чому з нами спокійніше", "Почему с нами спокойнее"],
+  ["Логістика, підбір і якість — до оплати, а не після", "Логистика, подбор и качество — до оплаты, а не после"],
+  ["Клієнту не треба знати артикул чи розбиратись у китайських каталогах. Ми перевіряємо сумісність, пояснюємо різницю між оригіналом та OEM і рахуємо доставку так, щоб не переплачувати за зайву вагу.", "Клиенту не нужно знать артикул или разбираться в китайских каталогах. Мы проверяем совместимость, объясняем разницу между оригиналом и OEM и считаем доставку так, чтобы не переплачивать за лишний вес."],
+  ["Пакуємо правильно без зайвої ваги", "Упаковываем правильно без лишнего веса"],
+  ["Компактне і безпечне пакування зменшує вагу, об'єм і підсумкову вартість доставки з Китаю.", "Компактная и безопасная упаковка уменьшает вес, объем и итоговую стоимость доставки из Китая."],
+  ["фіксуємо маршрут і бюджет до оплати", "фиксируем маршрут и бюджет до оплаты"],
+  ["Деталь має підійти з першого разу", "Деталь должна подойти с первого раза"],
+  ["Одна й та сама модель може мати різну оптику, бампери, датчики чи блоки. VIN прибирає більшість помилок комплектації.", "Одна и та же модель может иметь разную оптику, бамперы, датчики или блоки. VIN устраняет большинство ошибок комплектации."],
+  ["перевірка сумісності до замовлення", "проверка совместимости до заказа"],
+  ["фото деталі і маркування перед відправкою", "фото детали и маркировки перед отправкой"],
+  ["якщо помилка наша — вирішуємо за наш рахунок", "если ошибка наша — решаем за наш счет"],
+  ["Показуємо варіанти і різницю в ціні", "Показываем варианты и разницу в цене"],
+  ["Для багатьох позицій можна обрати оригінал або якісний OEM від виробника, який працює у тій самій специфікації.", "Для многих позиций можно выбрать оригинал или качественный OEM от производителя, который работает по той же спецификации."],
+  ["оригінальні запчастини від виробника", "оригинальные запчасти от производителя"],
+  ["OEM-якість за розумною ціною", "OEM-качество по разумной цене"],
+  ["остаточне рішення залишається за вами", "окончательное решение остается за вами"],
   ["Ціни", "Цены"],
   ["Орієнтовні ціни «під ключ»", "Ориентировочные цены «под ключ»"],
   ["З доставкою та розмитненням — без прихованих платежів. Точну ціну підтверджує менеджер після перевірки VIN.", "С доставкой и растаможкой — без скрытых платежей. Точную цену подтверждает менеджер после проверки VIN."],
@@ -441,7 +460,6 @@ const mainTranslations = [
   ["Приклад авто", "Пример авто"],
   ["Ціна від", "Цена от"],
   ["Комплект ТО (фільтри + олива)", "Комплект ТО (фильтры + масло)"],
-  ["Гальмівні колодки (комплект)", "Тормозные колодки (комплект)"],
   ["Фара передня", "Передняя фара"],
   ["Бампер передній", "Передний бампер"],
   ["Лобове скло", "Лобовое стекло"],
@@ -560,6 +578,11 @@ const mainTranslations = [
   ["КРОС-СЕЛЛ: програмування BYD", "КРОСС-СЕЛЛ: программирование BYD"],
   ["ФІНАЛЬНА ФОРМА", "ФИНАЛЬНАЯ ФОРМА"],
   ["Підкажіть", "Подскажите"],
+  ["Запчастини на Zeekr 001: фара і пневмопідвіска", "Запчасти на Zeekr 001: фара и пневмоподвеска"],
+  ["Запчастини на Zeekr X: кузов і оптика", "Запчасти на Zeekr X: кузов и оптика"],
+  ["Запчастини на Zeekr 7X: фари і кузов", "Запчасти на Zeekr 7X: фары и кузов"],
+  ["Запчастини на Xiaomi YU7: бампер і оптика", "Запчасти на Xiaomi YU7: бампер и оптика"],
+  ["Запчастини на BYD Tang: кузов і підвіска", "Запчасти на BYD Tang: кузов и подвеска"],
 ];
 
 const bydTranslations = [
@@ -843,10 +866,10 @@ function prepareStandaloneRu(html, kind) {
   const isByd = kind === "byd";
   const title = isByd
     ? "Программирование BYD — обновление блоков через VDS | EVLine"
-    : "Запчасти BYD, Zeekr, Xiaomi из Китая | EVLine Украина";
+    : "Запчасти для китайских авто из Китая | EVLine Украина";
   const desc = isByd
     ? "Программирование, обновление и калибровка блоков BYD через VDS. Denza, Yangwang, Fang Cheng Bao. Проверка обновлений по VIN."
-    : "Оригинальные и OEM запчасти для BYD, Zeekr, Xiaomi и других авто из Китая. Подбор по VIN, проверка, авиа от 14 дней.";
+    : "Оригинальные и OEM запчасти для китайских авто: BYD, ZEEKR, Xiaomi и другие. Подбор по VIN, проверка в Китае, доставка в Украину.";
   const ukPath = isByd ? "byd" : "";
   const ruPath = isByd ? "ru/byd" : "ru/";
 
@@ -985,6 +1008,7 @@ function ruHeader(current = "", ukHref = "../../") {
         <nav class="nav" id="site-nav" aria-label="Основная навигация">
           <a href="../"${current === "home" ? ' aria-current="page"' : ""}>Запчасти из Китая</a>
           <a href="/ru/byd"${current === "byd" ? ' aria-current="page"' : ""}>Программирование BYD</a>
+          <a href="/ru/sotrudnichestvo-sto/">Для СТО</a>
         </nav>
         <div class="header-actions">
           ${languageSwitch("          ", "ru", ukHref, "./")}
@@ -1007,6 +1031,7 @@ function ruFooter() {
           <a href="../">Запчасти из Китая</a>
           <a href="../zapchasti-kitajskih-avto/">Марки авто</a>
           <a href="/ru/byd">Программирование BYD</a>
+          <a href="/ru/sotrudnichestvo-sto/">Для СТО</a>
         </nav>
       </div>
     </footer>`;
@@ -1022,10 +1047,31 @@ function brandPageRu(brand) {
     .slice(0, 10)
     .map((item) => `<a href="../${item.ruSlug}/">${escapeHtml(item.name)}</a>`)
     .join("\n                ");
+  const modelPageLinks = brand.modelPages?.length
+    ? `<section class="brand-seo-links">
+        <div class="container">
+          <div class="brand-seo-links__panel">
+            <h2>Отдельные страницы моделей ${escapeHtml(brand.name)}</h2>
+            <div>
+              ${brand.modelPages.map(([slug, label]) => `<a href="${slug}/">Запчасти на ${escapeHtml(label)}</a>`).join("\n              ")}
+            </div>
+          </div>
+        </div>
+      </section>`
+    : "";
 
   return `<!doctype html>
 <html lang="ru-UA">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18146559745"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-18146559745');
+    </script>
+
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escapeHtml(title)}</title>
@@ -1047,9 +1093,9 @@ function brandPageRu(brand) {
     <meta name="twitter:title" content="${escapeHtml(title)}">
     <meta name="twitter:description" content="${escapeHtml(description)}">
     <meta name="twitter:image" content="${siteUrl}/assets/images/seo-photos/${brand.photo}">
-    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
     <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
-    <script src="../../assets/js/main.js?v=language-switch-close-1" defer></script>
+    <script src="../../assets/js/main.js?v=forms-integrity-20260717-2" defer></script>
     <script type="application/ld+json">${ruJsonLd(brand)}</script>
   </head>
   <body class="parts-page brand-seo-page">
@@ -1109,7 +1155,7 @@ function brandPageRu(brand) {
             </ul>
           </div>
           <div class="brand-seo-proof__media">
-            <img src="../../assets/images/seo-photos/${brand.photo}" alt="Подбор запчастей ${escapeHtml(brand.name)} по VIN">
+            <img src="../../assets/images/seo-photos/${brand.photo}" alt="Подбор запчастей ${escapeHtml(brand.name)} по VIN" loading="lazy" decoding="async">
           </div>
         </div>
       </section>
@@ -1157,6 +1203,8 @@ function brandPageRu(brand) {
         </div>
       </section>
 
+${modelPageLinks}
+
       <section class="brand-seo-links">
         <div class="container">
           <div class="brand-seo-links__panel">
@@ -1197,10 +1245,19 @@ function hubPageRu() {
   return `<!doctype html>
 <html lang="ru-UA">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18146559745"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-18146559745');
+    </script>
+
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Запчасти для китайских авто по маркам | EVLine</title>
-    <meta name="description" content="Отдельные страницы EVLine для запчастей BYD, ZEEKR, Xiaomi, Li Auto, NIO, XPENG, AITO, AVATR, Denza, Geely, Changan и других китайских авто.">
+    <title>Запчасти для китайских авто из Китая — по маркам | EVLine</title>
+    <meta name="description" content="Запчасти на современные китайские авто: BYD, ZEEKR, Xiaomi, Li Auto, AVATR и другие. Кузов, оптика, электроника, подбор по VIN и доставка в Украину.">
     <meta name="theme-color" content="#00b472">
     <link rel="canonical" href="${canonical}">
     <link rel="alternate" hreflang="uk-UA" href="${ukCanonical}">
@@ -1211,23 +1268,24 @@ function hubPageRu() {
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ru_UA">
     <meta property="og:url" content="${canonical}">
-    <meta property="og:title" content="Запчасти для китайских авто по маркам | EVLine">
-    <meta property="og:description" content="Подбор по VIN и доставка из Китая для современных китайских авто.">
+    <meta property="og:title" content="Запчасти для китайских авто из Китая — по маркам | EVLine">
+    <meta property="og:description" content="Кузовные детали, оптика, электроника и подвеска для современных китайских авто. Подбор по VIN и доставка в Украину.">
     <meta property="og:image" content="${siteUrl}/assets/images/oem-parts-visual.jpg">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-4">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
     <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
-    <script src="../../assets/js/main.js?v=language-switch-close-1" defer></script>
+    <script src="../../assets/js/main.js?v=forms-integrity-20260717-2" defer></script>
     <script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "CollectionPage",
           "@id": `${canonical}#webpage`,
-          name: "Запчасти для китайских авто по маркам",
+          name: "Запчасти для китайских авто из Китая",
           url: canonical,
           inLanguage: "ru-UA",
           about: brands.map((brand) => brand.name).join(", "),
+          description: "Подбор по VIN и доставка кузовных деталей, оптики, электроники и подвески для современных китайских автомобилей.",
         },
         {
           "@type": "ItemList",
@@ -1249,9 +1307,9 @@ function hubPageRu() {
     <main id="main">
       <section class="brand-seo-hero brand-seo-hero--hub">
         <div class="container">
-          <p class="brand-seo-kicker">SEO-карта направления запчастей</p>
-          <h1>Запчасти для китайских авто по маркам</h1>
-          <p class="brand-seo-lead">Подбираем и доставляем запчасти из Китая для современных китайских брендов: от BYD и ZEEKR до Xiaomi, Li Auto, NIO, XPENG, AITO, AVATR, Denza, Geely, Changan и других.</p>
+          <p class="brand-seo-kicker">Каталог современных авто из Китая</p>
+          <h1>Запчасти для китайских авто из Китая</h1>
+          <p class="brand-seo-lead">Подбираем запчасти на китайские авто по VIN и доставляем в Украину. Основной фокус — современные BYD, ZEEKR, Xiaomi, Li Auto, NIO, XPENG, AITO, AVATR, Denza и другие модели последних лет.</p>
           <a class="origin-pill-button" href="../">Перейти к основной заявке</a>
         </div>
       </section>
@@ -1259,9 +1317,51 @@ function hubPageRu() {
       <section class="brand-seo-section">
         <div class="container">
           <div class="parts-section-head">
+            <span>Популярные модели</span>
+            <h2>Запчасти на модели, которые заказывают чаще всего</h2>
+            <p>Страницы моделей учитывают различия оптики, кузова, подвески и электронных узлов. Для точного расчета все равно проверяем VIN.</p>
+          </div>
+          <div class="brand-hub-grid">
+            <a href="../zapchasti-byd/song-plus/"><strong>BYD Song Plus</strong><span>бамперы · фары · крылья · датчики</span></a>
+            <a href="../zapchasti-zeekr/001/"><strong>Zeekr 001</strong><span>матричные фары · пневмоподвеска · стекло</span></a>
+            <a href="../zapchasti-zeekr/x/"><strong>Zeekr X</strong><span>кузов · оптика · стекло · электроника</span></a>
+            <a href="../zapchasti-zeekr/7x/"><strong>Zeekr 7X</strong><span>фары · бамперы · крылья · датчики</span></a>
+            <a href="../zapchasti-xiaomi/su7/"><strong>Xiaomi SU7</strong><span>кузов · оптика · лидар · радары</span></a>
+            <a href="../zapchasti-xiaomi/yu7/"><strong>Xiaomi YU7</strong><span>бамперы · оптика · стекло · датчики</span></a>
+            <a href="../zapchasti-avatr/11/"><strong>Avatr 11</strong><span>бамперы · лидары · Huawei ADS · подвеска</span></a>
+            <a href="../zapchasti-byd/tang/"><strong>BYD Tang</strong><span>кузов · оптика · подвеска · электроника</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-proof">
+        <div class="container brand-seo-proof__grid">
+          <div class="brand-seo-proof__text">
+            <span>Проверка в Китае</span>
+            <h2>Не просто находим запчасть, а проверяем ее до отправки</h2>
+            <p>Сначала сверяем деталь по VIN и комплектации, затем наши специалисты в Китае осматривают ее на складе. Это снижает риск получить поврежденную или несовместимую позицию.</p>
+            <ul>
+              <li>оригинал — основной вариант; OEM предлагаем осознанно, когда он действительно оправдан;</li>
+              <li>фото, маркировка и состояние детали проверяются до отправки;</li>
+              <li>выбираем маршрут среди пяти логистических партнеров по сроку и тарифу;</li>
+              <li>не добавляем лишний вес упаковки, особенно при авиадоставке.</li>
+            </ul>
+          </div>
+          <div class="brand-seo-proof__media">
+            <picture>
+              <source srcset="../../assets/images/oem-parts-visual.webp" type="image/webp">
+              <img src="../../assets/images/oem-parts-visual.jpg" alt="Проверка оригинальных запчастей для китайских авто в Китае" loading="lazy" decoding="async">
+            </picture>
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section brand-seo-section--soft">
+        <div class="container">
+          <div class="parts-section-head">
             <span>Марки авто</span>
             <h2>Выберите бренд</h2>
-            <p>Каждая страница собирает органику по конкретной марке и ведет клиента к заявке по VIN.</p>
+            <p>На странице бренда собраны популярные модели, особенности совместимости и форма запроса по VIN.</p>
           </div>
           <div class="brand-hub-grid">
             ${brands.map((brand) => `<a href="../${brand.ruSlug}/"><strong>${escapeHtml(brand.name)}</strong><span>${escapeHtml(brand.models.slice(0, 4).join(" · "))}</span></a>`).join("\n            ")}
@@ -1349,52 +1449,24 @@ async function patchUkHub() {
   await writeFile(abs, html);
 }
 
-function sitemap() {
-  const urlNodes = sitePairs
-    .map((pair) => {
-      const ukUrl = `${siteUrl}/${pair.uk}`;
-      const ruUrl = `${siteUrl}/${pair.ru}`;
-      const roleComment = pair.role ? `  <!-- ${pair.role} -->\n` : "";
-      const alternates = `    <xhtml:link rel="alternate" hreflang="uk-UA" href="${ukUrl}" />
-    <xhtml:link rel="alternate" hreflang="ru-UA" href="${ruUrl}" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="${ukUrl}" />`;
-      return `${roleComment}  <url>
-    <loc>${ukUrl}</loc>
-${alternates}
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${pair.changefreq}</changefreq>
-    <priority>${pair.priority}</priority>
-  </url>
-  <url>
-    <loc>${ruUrl}</loc>
-${alternates}
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${pair.changefreq}</changefreq>
-    <priority>${pair.priority}</priority>
-  </url>`;
-    })
-    .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${urlNodes}
-</urlset>
-`;
-}
-
 await mkdir(path.join(root, "ru"), { recursive: true });
 
-await patchUkStandalone("index.html", "", "ru/");
-await patchUkStandalone("byd.html", "byd", "ru/byd");
-await patchUkHub();
-for (const brand of brands) {
-  await patchUkSeoPage(brand.uaSlug, brand.ruSlug);
-}
+// The standalone pages contain hand-tuned funnels that are safer to maintain
+// directly. Opt in only when intentionally rebuilding them from Ukrainian.
+const rebuildStandalonePages = process.argv.includes("--standalone");
+if (rebuildStandalonePages) {
+  await patchUkStandalone("index.html", "", "ru/");
+  await patchUkStandalone("byd.html", "byd", "ru/byd");
+  await patchUkHub();
+  for (const brand of brands) {
+    await patchUkSeoPage(brand.uaSlug, brand.ruSlug);
+  }
 
-const indexUk = await readFile(path.join(root, "index.html"), "utf8");
-const bydUk = await readFile(path.join(root, "byd.html"), "utf8");
-await writeFile(path.join(root, "ru/index.html"), prepareStandaloneRu(indexUk, "index"));
-await writeFile(path.join(root, "ru/byd.html"), prepareStandaloneRu(bydUk, "byd"));
+  const indexUk = await readFile(path.join(root, "index.html"), "utf8");
+  const bydUk = await readFile(path.join(root, "byd.html"), "utf8");
+  await writeFile(path.join(root, "ru/index.html"), prepareStandaloneRu(indexUk, "index"));
+  await writeFile(path.join(root, "ru/byd.html"), prepareStandaloneRu(bydUk, "byd"));
+}
 
 await mkdir(path.join(root, "ru/zapchasti-kitajskih-avto"), { recursive: true });
 await writeFile(path.join(root, "ru/zapchasti-kitajskih-avto/index.html"), hubPageRu());
@@ -1404,6 +1476,5 @@ for (const brand of brands) {
   await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), brandPageRu(brand));
 }
 
-await writeFile(path.join(root, "sitemap.xml"), sitemap());
-
-console.log(`Russian version generated: 2 main pages, 1 brand hub, ${brands.length} brand SEO pages.`);
+const standaloneSummary = rebuildStandalonePages ? "2 standalone pages, " : "";
+console.log(`Russian version generated: ${standaloneSummary}1 brand hub, ${brands.length} brand SEO pages. Run npm run build:sitemap after changing URLs.`);
