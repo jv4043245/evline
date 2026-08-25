@@ -103,6 +103,48 @@ async function tableColumns(env, table) {
   return new Set((rows.results || []).map((row) => row.name));
 }
 
+async function optionalTableColumns(env, table) {
+  try {
+    return await tableColumns(env, table);
+  } catch (error) {
+    if (/no such table/i.test(error.message || String(error))) return new Set();
+    throw error;
+  }
+}
+
+export async function findExistingLeadByMetaEventId(env, value) {
+  const metaEventId = text(value);
+  if (!metaEventId) return null;
+
+  const leadColumns = await tableColumns(env, "leads");
+  if (!leadColumns.has("meta_event_id")) return null;
+
+  const leadNumberSelect = leadColumns.has("lead_number") ? "leads.lead_number" : "'' AS lead_number";
+  const orderColumns = await optionalTableColumns(env, "orders");
+  const canJoinOrder = orderColumns.has("id") && orderColumns.has("lead_id");
+
+  if (!canJoinOrder) {
+    return env.DB.prepare(
+      `SELECT leads.id, ${leadNumberSelect}, '' AS order_id
+       FROM leads
+       WHERE leads.meta_event_id = ?
+       LIMIT 1`
+    )
+      .bind(metaEventId)
+      .first();
+  }
+
+  return env.DB.prepare(
+    `SELECT leads.id, ${leadNumberSelect}, orders.id AS order_id
+     FROM leads
+     LEFT JOIN orders ON orders.lead_id = leads.id
+     WHERE leads.meta_event_id = ?
+     LIMIT 1`
+  )
+    .bind(metaEventId)
+    .first();
+}
+
 async function insertKnownFields(env, table, fields) {
   const columns = await tableColumns(env, table);
   const available = fields.filter(([name]) => columns.has(name));
@@ -163,31 +205,19 @@ export async function onRequestPost({ request, env }) {
   }
 
   if (lead.meta_event_id) {
-    try {
-      const existing = await env.DB.prepare(
-        `SELECT leads.id, leads.lead_number, orders.id AS order_id
-         FROM leads
-         LEFT JOIN orders ON orders.lead_id = leads.id
-         WHERE leads.meta_event_id = ?
-         LIMIT 1`
-      )
-        .bind(lead.meta_event_id)
-        .first();
-      if (existing) {
-        return json(
-          {
-            ok: true,
-            duplicate: true,
-            lead_id: existing.id,
-            lead_number: existing.lead_number || "",
-            order_id: existing.order_id || "",
-            meta_event_id: lead.meta_event_id,
-          },
-          { headers: leadCorsHeaders(request) }
-        );
-      }
-    } catch (error) {
-      if (!/no such column:\s*(meta_event_id|lead_number)/i.test(error.message || String(error))) throw error;
+    const existing = await findExistingLeadByMetaEventId(env, lead.meta_event_id);
+    if (existing) {
+      return json(
+        {
+          ok: true,
+          duplicate: true,
+          lead_id: existing.id,
+          lead_number: existing.lead_number || "",
+          order_id: existing.order_id || "",
+          meta_event_id: lead.meta_event_id,
+        },
+        { headers: leadCorsHeaders(request) }
+      );
     }
   }
 
