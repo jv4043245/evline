@@ -11,6 +11,10 @@ const data = JSON.parse(await readFile(path.join(root, "admin/shipping-pricelist
 
 test("admin delivery section links to the shipping price list", () => {
   assert.match(adminHtml, /href="\/admin\/shipping-pricelist\/"/);
+  assert.ok(
+    adminHtml.indexOf("shipping-pricelist-entry") > adminHtml.indexOf("data-shipping-list"),
+    "price list entry should appear below the two-column delivery directory",
+  );
   assert.match(pageHtml, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(pageHtml, /data-shipping-calculator/);
   assert.match(pageHtml, /data-pricelist-rows/);

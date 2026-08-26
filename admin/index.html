@@ -604,10 +604,7 @@
                 <h2>Перевізники і тарифи</h2>
                 <p class="muted">Тут менеджер додає перевізника, ставки для авіа/моря і курс для автоматичного розрахунку доставки.</p>
               </div>
-              <div class="admin-panel__actions">
-                <a class="admin-btn admin-btn--small" href="/admin/shipping-pricelist/">Прайс доставки</a>
-                <button class="admin-btn" type="button" data-new-shipping-carrier>Новий перевізник</button>
-              </div>
+              <button class="admin-btn" type="button" data-new-shipping-carrier>Новий перевізник</button>
             </div>
             <form class="shipping-form" data-shipping-form>
               <input type="hidden" name="id">
@@ -737,6 +734,16 @@
               <p class="muted">Перевізники з'являться після збереження.</p>
             </div>
           </article>
+        </section>
+
+        <section class="admin-panel shipping-pricelist-entry">
+          <div class="admin-panel__head">
+            <div>
+              <h2>Прайс доставки деталей</h2>
+              <p class="muted">Орієнтовна вартість доставки бамперів, крил, фар та інших кузовних деталей морем.</p>
+            </div>
+            <a class="admin-btn admin-btn--primary" href="/admin/shipping-pricelist/">Відкрити прайс</a>
+          </div>
         </section>
       </section>
 
