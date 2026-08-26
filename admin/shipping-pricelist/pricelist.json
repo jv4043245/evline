@@ -1,0 +1,111 @@
+{
+  "version": "0.1",
+  "updated_at": "2026-08-26",
+  "currency": "USD",
+  "route": "Guangzhou → Chełm → Kyiv",
+  "base_rate_per_m3": 319,
+  "quote_reserve_percent": 15,
+  "quote_rate_per_m3": 367,
+  "insurance_percent": 1.5,
+  "source": {
+    "label": "Підтверджена відправка",
+    "recorded_at": "2026-06-18",
+    "packed_volume_m3": 2.53,
+    "gross_weight_kg": 120.5,
+    "freight_usd": 807,
+    "insurance_usd": 23,
+    "china_local_delivery_cny": 90,
+    "wooden_crate_cny": 150,
+    "confidence": "confirmed_shipment"
+  },
+  "profiles": [
+    {
+      "id": "bumper-shell",
+      "name": "Бампер, оболонка",
+      "packed_volume_m3": 0.95,
+      "calculated_cost_usd": 303,
+      "working_quote_usd": 350,
+      "working_range_usd": [300, 420],
+      "note": "Передній або задній бампер без великого комплекту решіток і кронштейнів."
+    },
+    {
+      "id": "bumper-kit",
+      "name": "Бамперний комплект",
+      "packed_volume_m3": 1.55,
+      "calculated_cost_usd": 494,
+      "working_quote_usd": 570,
+      "working_range_usd": [420, 600],
+      "note": "Оболонка, решітки, повітроводи, накладки та кронштейни в одній обрешітці."
+    },
+    {
+      "id": "fender",
+      "name": "Крило",
+      "packed_volume_m3": 0.5,
+      "calculated_cost_usd": 160,
+      "working_quote_usd": 185,
+      "working_range_usd": [150, 250],
+      "note": "Окреме крило із захисним зазором; вкладене в спільний ящик може коштувати дешевше."
+    },
+    {
+      "id": "headlamp",
+      "name": "Фара",
+      "packed_volume_m3": 0.12,
+      "calculated_cost_usd": 38,
+      "working_quote_usd": 45,
+      "working_range_usd": [35, 80],
+      "note": "Без урахування можливої мінімальної ставки перевізника для окремого місця."
+    },
+    {
+      "id": "tailgate",
+      "name": "Двері багажника",
+      "packed_volume_m3": 0.7,
+      "calculated_cost_usd": 223,
+      "working_quote_usd": 260,
+      "working_range_usd": [220, 380],
+      "note": "Для дверей у зборі; скло та окрема обрешітка можуть збільшити бюджет."
+    },
+    {
+      "id": "bumper-reinforcement",
+      "name": "Підсилювач бампера",
+      "packed_volume_m3": 0.15,
+      "calculated_cost_usd": 48,
+      "working_quote_usd": 55,
+      "working_range_usd": [40, 100],
+      "note": "Зазвичай вигідно вкладати в упаковку бампера або дверей."
+    },
+    {
+      "id": "spare-wheel-cover",
+      "name": "Кожух запасного колеса",
+      "packed_volume_m3": 0.23,
+      "calculated_cost_usd": 73,
+      "working_quote_usd": 85,
+      "working_range_usd": [60, 130],
+      "note": "Пластиковий кожух; фактична кубатура залежить від форми та захисної упаковки."
+    },
+    {
+      "id": "small-trim",
+      "name": "Мала накладка або кронштейн",
+      "packed_volume_m3": 0.03,
+      "calculated_cost_usd": 10,
+      "working_quote_usd": 15,
+      "working_range_usd": [0, 25],
+      "note": "Усередині основної обрешітки часто майже не додає кубатури."
+    }
+  ],
+  "vehicle_size_factors": [
+    { "id": "compact", "name": "Компактний автомобіль", "factor": 0.925 },
+    { "id": "standard", "name": "Седан / середній SUV", "factor": 1 },
+    { "id": "large", "name": "Великий SUV / MPV", "factor": 1.15 }
+  ],
+  "packing_factors": [
+    { "id": "shared", "name": "Спільна обрешітка", "factor": 1 },
+    { "id": "separate", "name": "Окрема обрешітка", "factor": 1.25 }
+  ],
+  "rules": [
+    "Страхування додається окремо: 1,5% від закупівельної вартості товару.",
+    "Внутрішня доставка по Китаю та сама обрешітка не входять у ставку $319/м³ і додаються за рахунком постачальника; у базовому прикладі це було 240 CNY.",
+    "Для кількох деталей в одному ящику не потрібно механічно складати всі нормативи: вкладеність зазвичай зменшує суму на 15–30%.",
+    "Морські й авіаційні відправлення зберігаються окремо; цей прайс стосується морського маршруту.",
+    "Після отримання фактичних розмірів упаковки розрахунок за нормативом потрібно замінити точним розрахунком за кубатурою."
+  ]
+}
