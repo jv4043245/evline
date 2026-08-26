@@ -8,7 +8,7 @@
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20260718-request-clamp">
-    <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260826-v1">
+    <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260826-v2">
     <script src="/admin/shipping-pricelist/pricelist.js?v=20260826-v1" defer></script>
   </head>
   <body class="admin-shell shipping-pricelist-page">
@@ -72,44 +72,46 @@
               <p class="muted">Робоча ціна вже містить резерв 15%. Страхування додається за вартістю товару.</p>
             </div>
           </div>
-          <form data-shipping-calculator>
-            <label>
-              Деталь
-              <select data-profile></select>
-            </label>
-            <label>
-              Клас автомобіля
-              <select data-vehicle-size></select>
-            </label>
-            <label>
-              Упаковка
-              <select data-packing></select>
-            </label>
-            <label>
-              Закупівельна ціна, USD
-              <input data-purchase-price type="number" min="0" step="0.01" value="0">
-            </label>
-          </form>
-          <div class="shipping-calculator-result" aria-live="polite">
-            <div>
-              <span>Нормативний об'єм</span>
-              <strong data-result-volume>—</strong>
+          <div class="shipping-pricelist-card-body">
+            <form data-shipping-calculator>
+              <label>
+                Деталь
+                <select data-profile></select>
+              </label>
+              <label>
+                Клас автомобіля
+                <select data-vehicle-size></select>
+              </label>
+              <label>
+                Упаковка
+                <select data-packing></select>
+              </label>
+              <label>
+                Закупівельна ціна, USD
+                <input data-purchase-price type="number" min="0" step="0.01" value="0">
+              </label>
+            </form>
+            <div class="shipping-calculator-result" aria-live="polite">
+              <div>
+                <span>Нормативний об'єм</span>
+                <strong data-result-volume>—</strong>
+              </div>
+              <div>
+                <span>Доставка з резервом</span>
+                <strong data-result-freight>—</strong>
+              </div>
+              <div>
+                <span>Страхування</span>
+                <strong data-result-insurance>—</strong>
+              </div>
+              <div class="shipping-calculator-result__total">
+                <span>Море + страхування</span>
+                <strong data-result-total>—</strong>
+              </div>
             </div>
-            <div>
-              <span>Доставка з резервом</span>
-              <strong data-result-freight>—</strong>
-            </div>
-            <div>
-              <span>Страхування</span>
-              <strong data-result-insurance>—</strong>
-            </div>
-            <div class="shipping-calculator-result__total">
-              <span>Море + страхування</span>
-              <strong data-result-total>—</strong>
-            </div>
+            <p class="shipping-calculator-exclusion">Не включено: доставка по Китаю та фактична вартість обрешітки за рахунком постачальника.</p>
+            <p class="shipping-calculator-note" data-result-note></p>
           </div>
-          <p class="shipping-calculator-exclusion">Не включено: доставка по Китаю та фактична вартість обрешітки за рахунком постачальника.</p>
-          <p class="shipping-calculator-note" data-result-note></p>
         </article>
 
         <article class="admin-panel shipping-source-card">
@@ -119,16 +121,18 @@
               <p class="muted">Підтверджена пара документів одного відправлення.</p>
             </div>
           </div>
-          <dl>
-            <div><dt>Статус джерела</dt><dd data-source-label>Підтверджена відправка</dd></div>
-            <div><dt>Об'єм</dt><dd data-source-volume>2,53 м³</dd></div>
-            <div><dt>Вага брутто</dt><dd data-source-weight>120,5 кг</dd></div>
-            <div><dt>Перевезення</dt><dd data-source-freight>$807</dd></div>
-            <div><dt>Страхування</dt><dd data-source-insurance>$23</dd></div>
-            <div><dt>Китай + обрешітка</dt><dd data-source-china-costs>240 CNY</dd></div>
-            <div><dt>Ефективна ставка</dt><dd data-source-effective-rate>$318,97/м³</dd></div>
-          </dl>
-          <p>Вага цього вантажу становила лише близько 47,6 кг/м³, тому розрахунок був об'ємним. Приклади без вказаної кубатури та авіаційні відправлення в базовий тариф не включені.</p>
+          <div class="shipping-pricelist-card-body">
+            <dl>
+              <div><dt>Статус джерела</dt><dd data-source-label>Підтверджена відправка</dd></div>
+              <div><dt>Об'єм</dt><dd data-source-volume>2,53 м³</dd></div>
+              <div><dt>Вага брутто</dt><dd data-source-weight>120,5 кг</dd></div>
+              <div><dt>Перевезення</dt><dd data-source-freight>$807</dd></div>
+              <div><dt>Страхування</dt><dd data-source-insurance>$23</dd></div>
+              <div><dt>Китай + обрешітка</dt><dd data-source-china-costs>240 CNY</dd></div>
+              <div><dt>Ефективна ставка</dt><dd data-source-effective-rate>$318,97/м³</dd></div>
+            </dl>
+            <p>Вага цього вантажу становила лише близько 47,6 кг/м³, тому розрахунок був об'ємним. Приклади без вказаної кубатури та авіаційні відправлення в базовий тариф не включені.</p>
+          </div>
         </article>
       </section>
 

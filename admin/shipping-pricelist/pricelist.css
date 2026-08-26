@@ -99,6 +99,10 @@
   gap: 18px;
 }
 
+.shipping-pricelist-card-body {
+  padding: 18px;
+}
+
 .shipping-calculator form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -211,7 +215,7 @@
   text-align: right;
 }
 
-.shipping-source-card > p {
+.shipping-source-card .shipping-pricelist-card-body > p {
   margin: 16px 0 0;
   color: var(--admin-muted, #6b7468);
   font-size: 0.84rem;
@@ -312,6 +316,10 @@
 }
 
 @media (max-width: 640px) {
+  .shipping-pricelist-card-body {
+    padding: 14px;
+  }
+
   .shipping-pricelist-hero {
     align-items: stretch;
     flex-direction: column;

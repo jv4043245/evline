@@ -7,6 +7,7 @@ import test from "node:test";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const adminHtml = await readFile(path.join(root, "admin/index.html"), "utf8");
 const pageHtml = await readFile(path.join(root, "admin/shipping-pricelist/index.html"), "utf8");
+const pageCss = await readFile(path.join(root, "admin/shipping-pricelist/pricelist.css"), "utf8");
 const data = JSON.parse(await readFile(path.join(root, "admin/shipping-pricelist/pricelist.json"), "utf8"));
 
 test("admin delivery section links to the shipping price list", () => {
@@ -19,6 +20,11 @@ test("admin delivery section links to the shipping price list", () => {
   assert.match(pageHtml, /data-shipping-calculator/);
   assert.match(pageHtml, /data-pricelist-rows/);
   assert.match(pageHtml, /Не включено: доставка по Китаю/);
+});
+
+test("shipping calculator and tariff source cards keep padded content bodies", () => {
+  assert.equal(pageHtml.match(/class="shipping-pricelist-card-body"/g)?.length, 2);
+  assert.match(pageCss, /\.shipping-pricelist-card-body\s*\{[^}]*padding:\s*18px;/s);
 });
 
 test("shipping price list keeps the confirmed shipment math consistent", () => {
