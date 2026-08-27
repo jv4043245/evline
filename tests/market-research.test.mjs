@@ -18,6 +18,7 @@ import {
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const adminJs = await readFile(path.join(root, "admin/admin.js"), "utf8");
+const adminCss = await readFile(path.join(root, "admin/admin.css"), "utf8");
 const routeJs = await readFile(path.join(root, "functions/api/admin/orders/[id]/market-research.js"), "utf8");
 const leadsRouteJs = await readFile(path.join(root, "functions/api/leads.js"), "utf8");
 
@@ -138,6 +139,13 @@ test("order card exposes the market tab and its protected admin endpoint", () =>
   assert.doesNotMatch(routeJs, /recordAuditEvent/);
   assert.match(leadsRouteJs, /context\.waitUntil/);
   assert.match(leadsRouteJs, /runMarketResearch\(env, order\)/);
+});
+
+test("market workspace fits the order card without nested tab or shipping overflow", () => {
+  assert.match(adminCss, /\.order-detail\s*{[^}]*width:\s*min\(1120px,/s);
+  assert.match(adminCss, /\.order-editor__tabs\s*{[^}]*grid-template-columns:\s*repeat\(7, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/s);
+  assert.match(adminCss, /\.market-panel\s*{[^}]*padding:\s*18px/s);
+  assert.match(adminCss, /\.shipping-estimate__controls select\s*{[^}]*width:\s*100%[^}]*min-width:\s*0/s);
 });
 
 test("research persists source-backed offers in D1 and keeps VIN out of outbound URLs", async () => {
