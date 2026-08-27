@@ -11,6 +11,9 @@ import {
   classifyMatch,
   extractLeadTime,
   parseSourceHtml,
+  attachMarketLookupToOrder,
+  listMarketLookups,
+  runMarketLookup,
   runMarketResearch,
   splitRequestedItems,
   summarizeOffers,
@@ -19,7 +22,10 @@ import {
 const root = fileURLToPath(new URL("../", import.meta.url));
 const adminJs = await readFile(path.join(root, "admin/admin.js"), "utf8");
 const adminCss = await readFile(path.join(root, "admin/admin.css"), "utf8");
+const adminHtml = await readFile(path.join(root, "admin/index.html"), "utf8");
 const routeJs = await readFile(path.join(root, "functions/api/admin/orders/[id]/market-research.js"), "utf8");
+const lookupRouteJs = await readFile(path.join(root, "functions/api/admin/market-search.js"), "utf8");
+const lookupMigration = await readFile(path.join(root, "migrations/0024_market_lookup.sql"), "utf8");
 const leadsRouteJs = await readFile(path.join(root, "functions/api/leads.js"), "utf8");
 
 class D1Statement {
@@ -148,6 +154,18 @@ test("market workspace fits the order card without nested tab or shipping overfl
   assert.match(adminCss, /\.shipping-estimate__controls select\s*{[^}]*width:\s*100%[^}]*min-width:\s*0/s);
 });
 
+test("manager can launch a market lookup without creating an order", () => {
+  assert.match(adminHtml, /data-market-lookup-open/);
+  assert.match(adminHtml, /data-market-lookup-panel/);
+  assert.match(adminJs, /\/api\/admin\/market-search/);
+  assert.match(adminJs, /data-market-lookup-create-order/);
+  assert.match(adminJs, /data-market-lookup-attach/);
+  assert.match(lookupRouteJs, /runMarketLookup/);
+  assert.match(lookupRouteJs, /attachMarketLookupToOrder/);
+  assert.match(lookupMigration, /CREATE TABLE IF NOT EXISTS market_lookup_runs/);
+  assert.match(adminCss, /\.market-lookup-detail\s*{[^}]*width:\s*min\(1120px,/s);
+});
+
 test("research persists source-backed offers in D1 and keeps VIN out of outbound URLs", async () => {
   const env = { DB: new D1Database() };
   const order = {
@@ -180,6 +198,50 @@ test("research persists source-backed offers in D1 and keeps VIN out of outbound
     const offerCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM market_research_offers").first();
     assert.equal(runCount.count, 1);
     assert.equal(offerCount.count, 11);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("standalone lookup keeps separate history and can be attached to an order", async () => {
+  const env = { DB: new D1Database() };
+  const order = {
+    id: "order-lookup-attach",
+    vin: "LCOCH4SDXR6014628",
+    car: "BYD Yuan Pro",
+    item_name: "Передній бампер",
+  };
+  await env.DB.prepare("INSERT INTO orders (id) VALUES (?)").bind(order.id).run();
+  const requestedUrls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url));
+    return new Response(`<script type="application/ld+json">{
+      "@type":"Product",
+      "name":"Передній бампер BYD Yuan Pro",
+      "sku":"11515426-00",
+      "url":"https://seller.example/11515426-00",
+      "offers":{"price":"18000","availability":"in stock"}
+    }</script>`, { status: 200, headers: { "content-type": "text/html" } });
+  };
+  try {
+    const lookup = await runMarketLookup(env, {
+      car: order.car,
+      vin: order.vin,
+      query: "Передній бампер",
+      part_number: "11515426-00",
+    });
+    assert.equal(lookup.run.status, "complete");
+    assert.equal(lookup.offers.length, 11);
+    assert.ok(requestedUrls.every((url) => !url.includes(order.vin)));
+    const history = await listMarketLookups(env, 12);
+    assert.equal(history.length, 1);
+    assert.equal(history[0].query, "Передній бампер");
+
+    const attached = await attachMarketLookupToOrder(env, lookup.run.id, order);
+    assert.equal(attached.offers.length, 11);
+    const linked = await env.DB.prepare("SELECT linked_order_id FROM market_lookup_runs WHERE id = ?").bind(lookup.run.id).first();
+    assert.equal(linked.linked_order_id, order.id);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -671,6 +671,14 @@ async function researchItem(item) {
   };
 }
 
+async function researchItems(items) {
+  const results = await Promise.all(items.map(researchItem));
+  return {
+    offers: results.flatMap((result) => result.offers),
+    sources: results.flatMap((result) => result.sources),
+  };
+}
+
 export async function runMarketResearch(env, order, overrides = {}) {
   await ensureMarketResearchTables(env);
   const allItems = splitRequestedItems(order, overrides);
@@ -690,9 +698,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
   ).bind(runId, order.id, now, now, fingerprint, items.map((item) => item.query).join(" | "), items.length).run();
 
   try {
-    const results = await Promise.all(items.map(researchItem));
-    const offers = results.flatMap((result) => result.offers);
-    const sources = results.flatMap((result) => result.sources);
+    const { offers, sources } = await researchItems(items);
     const summary = {
       ...summarizeOffers(items, offers),
       requested_item_count: allItems.length,
@@ -729,4 +735,188 @@ export async function runMarketResearch(env, order, overrides = {}) {
     throw error;
   }
   return getLatestMarketResearch(env, order, overrides);
+}
+
+async function ensureMarketLookupTables(env) {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS market_lookup_runs (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      car TEXT NOT NULL DEFAULT '',
+      vin TEXT NOT NULL DEFAULT '',
+      query TEXT NOT NULL DEFAULT '',
+      part_number TEXT NOT NULL DEFAULT '',
+      fingerprint TEXT NOT NULL DEFAULT '',
+      item_count INTEGER NOT NULL DEFAULT 0,
+      confidence TEXT NOT NULL DEFAULT 'low',
+      exact_offer_count INTEGER NOT NULL DEFAULT 0,
+      offer_count INTEGER NOT NULL DEFAULT 0,
+      summary_json TEXT NOT NULL DEFAULT '{}',
+      source_status_json TEXT NOT NULL DEFAULT '[]',
+      offers_json TEXT NOT NULL DEFAULT '[]',
+      linked_order_id TEXT NOT NULL DEFAULT '',
+      error TEXT NOT NULL DEFAULT ''
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_market_lookup_runs_created ON market_lookup_runs(created_at DESC)",
+  ];
+  for (const statement of statements) await env.DB.prepare(statement).run();
+}
+
+function lookupResult(row) {
+  if (!row) return null;
+  const summary = parseJson(row.summary_json, { items: [] });
+  const sources = parseJson(row.source_status_json, []);
+  return {
+    run: { ...row, summary, source_status: sources },
+    offers: parseJson(row.offers_json, []),
+    summary,
+    sources,
+    can_search: Boolean(text(row.query) || text(row.part_number)),
+    should_refresh: false,
+    item_limit: MAX_RESEARCH_ITEMS,
+  };
+}
+
+export async function listMarketLookups(env, limit = 12) {
+  await ensureMarketLookupTables(env);
+  const safeLimit = Math.max(1, Math.min(30, Number(limit) || 12));
+  const rows = await env.DB.prepare(
+    `SELECT id, created_at, updated_at, status, car, vin, query, part_number,
+      confidence, exact_offer_count, offer_count, summary_json, linked_order_id, error
+    FROM market_lookup_runs ORDER BY created_at DESC LIMIT ?`
+  ).bind(safeLimit).all();
+  return (rows.results || []).map((row) => ({
+    ...row,
+    summary: parseJson(row.summary_json, { items: [] }),
+  }));
+}
+
+export async function getMarketLookup(env, id) {
+  await ensureMarketLookupTables(env);
+  const row = await env.DB.prepare("SELECT * FROM market_lookup_runs WHERE id = ?").bind(text(id)).first();
+  return lookupResult(row);
+}
+
+export async function runMarketLookup(env, input = {}) {
+  await ensureMarketLookupTables(env);
+  const lookup = {
+    car: text(input.car).slice(0, 180),
+    vin: text(input.vin).toUpperCase().slice(0, 40),
+    query: text(input.query).slice(0, 300),
+    part_number: text(input.part_number).slice(0, 100),
+  };
+  const virtualOrder = {
+    id: "market-lookup",
+    car: lookup.car,
+    vin: lookup.vin,
+    item_name: lookup.query || lookup.part_number,
+    request_text: "",
+  };
+  const overrides = { query: lookup.query || lookup.part_number, part_number: lookup.part_number };
+  const allItems = splitRequestedItems(virtualOrder, overrides);
+  const items = allItems.slice(0, MAX_RESEARCH_ITEMS);
+  if (!items.length) {
+    const error = new Error("Вкажіть запчастину або артикул.");
+    error.status = 400;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const runId = crypto.randomUUID();
+  const fingerprint = fingerprintFor(virtualOrder, allItems);
+  await env.DB.prepare(
+    `INSERT INTO market_lookup_runs (
+      id, created_at, updated_at, status, car, vin, query, part_number, fingerprint, item_count
+    ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`
+  ).bind(runId, now, now, lookup.car, lookup.vin, lookup.query, lookup.part_number, fingerprint, items.length).run();
+
+  try {
+    const { offers, sources } = await researchItems(items);
+    const summary = {
+      ...summarizeOffers(items, offers),
+      requested_item_count: allItems.length,
+      ignored_item_count: Math.max(0, allItems.length - items.length),
+      manual_query: true,
+    };
+    await env.DB.prepare(
+      `UPDATE market_lookup_runs SET
+        updated_at = ?, status = 'complete', confidence = ?, exact_offer_count = ?, offer_count = ?,
+        summary_json = ?, source_status_json = ?, offers_json = ?, error = ''
+      WHERE id = ?`
+    ).bind(
+      now,
+      summary.confidence,
+      summary.exact_offer_count,
+      summary.offer_count,
+      JSON.stringify(summary),
+      JSON.stringify(sources),
+      JSON.stringify(offers),
+      runId,
+    ).run();
+    await env.DB.prepare(
+      "DELETE FROM market_lookup_runs WHERE id NOT IN (SELECT id FROM market_lookup_runs ORDER BY created_at DESC LIMIT 100)"
+    ).run();
+  } catch (error) {
+    await env.DB.prepare(
+      "UPDATE market_lookup_runs SET updated_at = ?, status = 'failed', error = ? WHERE id = ?"
+    ).bind(new Date().toISOString(), text(error?.message || error).slice(0, 500), runId).run();
+    throw error;
+  }
+  return getMarketLookup(env, runId);
+}
+
+export async function attachMarketLookupToOrder(env, lookupId, order) {
+  await ensureMarketResearchTables(env);
+  const lookup = await getMarketLookup(env, lookupId);
+  if (!lookup || lookup.run.status !== "complete") {
+    const error = new Error("Результат пошуку не знайдено або він ще не готовий.");
+    error.status = 404;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const runId = crypto.randomUUID();
+  const summary = lookup.summary || { items: [] };
+  const sources = lookup.sources || [];
+  await env.DB.prepare(
+    `INSERT INTO market_research_runs (
+      id, order_id, created_at, updated_at, status, fingerprint, query, item_count,
+      confidence, exact_offer_count, offer_count, summary_json, source_status_json, error
+    ) VALUES (?, ?, ?, ?, 'complete', ?, ?, ?, ?, ?, ?, ?, ?, '')`
+  ).bind(
+    runId,
+    order.id,
+    now,
+    now,
+    lookup.run.fingerprint || fingerprintFor(order, summary.items || []),
+    lookup.run.query || "",
+    Number(lookup.run.item_count || summary.item_count || 0),
+    summary.confidence || "low",
+    Number(summary.exact_offer_count || 0),
+    Number(summary.offer_count || 0),
+    JSON.stringify(summary),
+    JSON.stringify(sources),
+  ).run();
+
+  const statements = (lookup.offers || []).map((offer) => env.DB.prepare(
+    `INSERT INTO market_research_offers (
+      id, run_id, order_id, item_key, item_label, created_at, source_key, source_name, source_url,
+      product_url, title, price_uah, availability, availability_text, lead_time_min, lead_time_max,
+      part_type, match_type, part_number, snippet
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    crypto.randomUUID(), runId, order.id, offer.item_key || "item-1", offer.item_label || lookup.run.query || "Запчастина",
+    now, offer.source_key || "", offer.source_name || "", offer.source_url || "", offer.product_url || "",
+    offer.title || "", Number(offer.price_uah || 0), offer.availability || "unknown", offer.availability_text || "",
+    offer.lead_time_min ?? null, offer.lead_time_max ?? null, offer.part_type || "unknown", offer.match_type || "probable",
+    offer.part_number || "", offer.snippet || "",
+  ));
+  for (let index = 0; index < statements.length; index += 50) {
+    await env.DB.batch(statements.slice(index, index + 50));
+  }
+  await env.DB.prepare("UPDATE market_lookup_runs SET linked_order_id = ?, updated_at = ? WHERE id = ?")
+    .bind(order.id, now, lookup.run.id).run();
+  return getLatestMarketResearch(env, order);
 }
