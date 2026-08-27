@@ -507,7 +507,7 @@ function fingerprintFor(order, items) {
 }
 
 async function ensureMarketResearchTables(env) {
-  await env.DB.exec(
+  const statements = [
     `CREATE TABLE IF NOT EXISTS market_research_runs (
       id TEXT PRIMARY KEY,
       order_id TEXT NOT NULL,
@@ -524,8 +524,8 @@ async function ensureMarketResearchTables(env) {
       source_status_json TEXT NOT NULL DEFAULT '[]',
       error TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS market_research_offers (
+    )`,
+    `CREATE TABLE IF NOT EXISTS market_research_offers (
       id TEXT PRIMARY KEY,
       run_id TEXT NOT NULL,
       order_id TEXT NOT NULL,
@@ -548,10 +548,14 @@ async function ensureMarketResearchTables(env) {
       snippet TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (run_id) REFERENCES market_research_runs(id) ON DELETE CASCADE,
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_market_research_runs_order ON market_research_runs(order_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_market_research_offers_run ON market_research_offers(run_id, item_key);`
-  );
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_market_research_runs_order ON market_research_runs(order_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_market_research_offers_run ON market_research_offers(run_id, item_key)",
+  ];
+
+  for (const statement of statements) {
+    await env.DB.prepare(statement).run();
+  }
 }
 
 function parseJson(value, fallback) {
