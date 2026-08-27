@@ -9,6 +9,16 @@ const state = {
   selectedTrackingEvents: [],
   selectedSupplierPayments: [],
   selectedSupplierRequests: [],
+  marketResearchByOrder: {},
+  marketResearchLoading: new Set(),
+  marketResearchDrafts: {},
+  marketResearchFilters: {
+    availability: "all",
+    partType: "all",
+  },
+  shippingPricelist: null,
+  shippingPricelistPromise: null,
+  shippingEstimateSettings: {},
   chinaPreorders: [],
   chinaOrderContext: null,
   selectedChinaPreorderId: null,
@@ -324,7 +334,7 @@ const keywordLevelLabels = {
 };
 
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery"]);
-const orderEditorTabs = new Set(["main", "suppliers", "delivery", "payment", "messages", "history"]);
+const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "messages", "history"]);
 
 const money = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -333,6 +343,27 @@ const money = new Intl.NumberFormat("uk-UA", {
 });
 
 const numberFmt = new Intl.NumberFormat("uk-UA");
+
+const usdMoney = new Intl.NumberFormat("uk-UA", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+const marketAvailabilityLabels = {
+  unknown: "Статус не вказано",
+  in_stock: "У наявності",
+  order_needed: "Під замовлення",
+  out_of_stock: "Немає в наявності",
+};
+
+const marketPartTypeLabels = {
+  unknown: "Тип не вказано",
+  original: "Оригінал",
+  oem: "OEM",
+  aftermarket: "Аналог",
+  used: "Б/в",
+};
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -2425,6 +2456,362 @@ function setOrderEditorTab(tab) {
     pane.classList.toggle("is-active", selected);
     pane.hidden = !selected;
   });
+  if (active === "market" && state.selectedOrder?.id) {
+    loadMarketResearch(state.selectedOrder.id, { refreshIfNeeded: true }).catch((error) => {
+      console.warn("market research", error);
+    });
+  }
+}
+
+function marketDraft(order) {
+  if (!order?.id) return { query: "", partNumber: "" };
+  if (!state.marketResearchDrafts[order.id]) {
+    const summary = state.marketResearchByOrder[order.id]?.summary?.items?.[0];
+    state.marketResearchDrafts[order.id] = {
+      query: order.item_name || order.service_name || "",
+      partNumber: summary?.part_numbers?.[0] || "",
+    };
+  }
+  return state.marketResearchDrafts[order.id];
+}
+
+function marketConfidenceLabel(value) {
+  return {
+    high: "Висока точність",
+    medium: "Середня точність",
+    low: "Попередній орієнтир",
+  }[value] || "Попередній орієнтир";
+}
+
+function marketLeadTime(offer) {
+  const from = Number(offer.lead_time_min || 0);
+  const to = Number(offer.lead_time_max || 0);
+  if (from && to && from !== to) return `${from}–${to} днів`;
+  if (from) return `${from} днів`;
+  return offer.availability_text || marketAvailabilityLabels[offer.availability] || marketAvailabilityLabels.unknown;
+}
+
+function filteredMarketOffers(data, itemKey) {
+  return (data?.offers || []).filter((offer) => {
+    if (offer.item_key !== itemKey) return false;
+    const availability = state.marketResearchFilters.availability;
+    const partType = state.marketResearchFilters.partType;
+    return (availability === "all" || offer.availability === availability) && (partType === "all" || offer.part_type === partType);
+  });
+}
+
+function marketFilterButton(group, value, label) {
+  const active = state.marketResearchFilters[group] === value;
+  return `<button class="market-filter ${active ? "is-active" : ""}" type="button" data-market-filter-group="${escapeHtml(group)}" data-market-filter-value="${escapeHtml(value)}" aria-pressed="${active ? "true" : "false"}">${escapeHtml(label)}</button>`;
+}
+
+function renderMarketOffer(offer) {
+  const matchLabel = offer.match_type === "exact" ? "Точний збіг" : "Ймовірний збіг";
+  const partType = marketPartTypeLabels[offer.part_type] || marketPartTypeLabels.unknown;
+  const availability = marketAvailabilityLabels[offer.availability] || marketAvailabilityLabels.unknown;
+  return `
+    <article class="market-offer ${offer.match_type === "exact" ? "market-offer--exact" : ""}">
+      <div class="market-offer__seller">
+        <a href="${escapeHtml(offer.product_url || offer.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(offer.source_name)}</a>
+        <span class="market-chip market-chip--${escapeHtml(offer.match_type)}">${matchLabel}</span>
+      </div>
+      <div class="market-offer__product">
+        <strong>${escapeHtml(offer.title)}</strong>
+        ${offer.part_number ? `<span class="orders-table__mono">${escapeHtml(offer.part_number)}</span>` : ""}
+      </div>
+      <strong class="market-offer__price">${money.format(Number(offer.price_uah || 0))}</strong>
+      <div class="market-offer__terms">
+        <span>${escapeHtml(availability)}</span>
+        <small>${escapeHtml(marketLeadTime(offer))}</small>
+      </div>
+      <span class="market-chip market-chip--neutral">${escapeHtml(partType)}</span>
+    </article>
+  `;
+}
+
+function renderMarketSummaryItem(item, data) {
+  const offers = filteredMarketOffers(data, item.key);
+  const hasPrices = Number(item.median_uah || 0) > 0;
+  const reliable = Number(item.exact_offer_count || 0) >= 3;
+  return `
+    <section class="market-item">
+      <div class="market-item__head">
+        <div>
+          <span class="market-item__eyebrow">Позиція</span>
+          <h3>${escapeHtml(item.label)}</h3>
+          <p>${item.part_numbers?.length ? `Артикул: ${escapeHtml(item.part_numbers.join(", "))}` : `Пошук: ${escapeHtml(item.query || "за моделлю та назвою")}`}</p>
+        </div>
+        <span class="market-confidence market-confidence--${escapeHtml(item.confidence)}">${escapeHtml(marketConfidenceLabel(item.confidence))}</span>
+      </div>
+      ${hasPrices ? `
+        <div class="market-stats">
+          <div><span>Мінімум</span><strong>${money.format(Number(item.min_uah || 0))}</strong></div>
+          <div class="market-stats__primary"><span>Орієнтир (медіана)</span><strong>${money.format(Number(item.median_uah || 0))}</strong></div>
+          <div><span>Середня</span><strong>${money.format(Number(item.average_uah || 0))}</strong></div>
+          <div><span>Максимум</span><strong>${money.format(Number(item.max_uah || 0))}</strong></div>
+          <div><span>Знайдено</span><strong>${Number(item.offer_count || 0)}</strong><small>точних: ${Number(item.exact_offer_count || 0)}</small></div>
+        </div>
+      ` : ""}
+      ${!reliable ? `
+        <p class="market-note market-note--caution">
+          ${item.exact_offer_count ? "Точних пропозицій менше трьох." : "Точних збігів за артикулом поки немає."}
+          Показуємо робочий діапазон, а не підтверджену ринкову ціну.
+        </p>
+      ` : ""}
+      ${offers.length ? `<div class="market-offers">${offers.map(renderMarketOffer).join("")}</div>` : `<p class="market-empty">За вибраними фільтрами пропозицій немає.</p>`}
+    </section>
+  `;
+}
+
+function renderMarketSources(data) {
+  const sources = data?.sources || [];
+  if (!sources.length) return "";
+  const successful = sources.filter((source) => source.status === "ok").length;
+  const uniqueSources = new Set(sources.map((source) => source.key)).size;
+  return `
+    <details class="market-sources">
+      <summary>Перевірені джерела: ${successful}/${sources.length}${uniqueSources !== sources.length ? ` (${uniqueSources} магазинів)` : ""}</summary>
+      <div class="market-sources__list">
+        ${sources.map((source) => `
+          <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer" class="market-source market-source--${escapeHtml(source.status)}">
+            <strong>${escapeHtml(source.name)}</strong>
+            <span>${source.status === "ok" ? `релевантних: ${Number(source.count || 0)}` : "не вдалося перевірити"}</span>
+          </a>
+        `).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function marketSummaryText(data) {
+  const lines = ["Орієнтир ринку України"];
+  for (const item of data?.summary?.items || []) {
+    lines.push(`${item.label}: ${item.median_uah ? money.format(Number(item.median_uah)) : "ціни не знайдено"}`);
+    if (item.min_uah && item.max_uah) lines.push(`Діапазон: ${money.format(Number(item.min_uah))} – ${money.format(Number(item.max_uah))}`);
+    if (item.average_uah) lines.push(`Середня: ${money.format(Number(item.average_uah))}`);
+    lines.push(`Пропозицій: ${Number(item.offer_count || 0)}, точних: ${Number(item.exact_offer_count || 0)}`);
+  }
+  lines.push("Ринкова підказка, не фінальна ціна клієнту.");
+  return lines.join("\n");
+}
+
+function renderMarketResearchBody(order) {
+  const data = state.marketResearchByOrder[order.id];
+  const loading = state.marketResearchLoading.has(order.id);
+  const draft = marketDraft(order);
+  const summaryItems = data?.summary?.items || [];
+  const updatedAt = data?.run?.updated_at || data?.run?.created_at;
+  return `
+    <div class="market-panel__head">
+      <div>
+        <span class="market-panel__kicker">Орієнтир для менеджера</span>
+        <h2>Ринок України</h2>
+        <p>Публічні ціни, наявність і строки у профільних продавців. Дані не змінюють суму замовлення.</p>
+      </div>
+      ${updatedAt ? `<span class="market-panel__updated">Оновлено ${escapeHtml(shortDateTime(updatedAt))}</span>` : ""}
+    </div>
+    <div class="market-search">
+      <label>
+        Запчастина
+        <input value="${escapeHtml(draft.query)}" placeholder="Напр.: задній бампер" data-market-query>
+      </label>
+      <label>
+        Артикул / OEM
+        <input value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 11515426-00" data-market-part-number>
+      </label>
+      <button class="admin-btn admin-btn--primary" type="button" data-market-refresh ${loading ? "disabled" : ""}>${loading ? "Перевіряємо 11 джерел..." : "Оновити пошук"}</button>
+    </div>
+    ${data?.error ? `<p class="market-note market-note--error">${escapeHtml(data.error)}</p>` : ""}
+    ${loading && !summaryItems.length ? `<div class="market-loading"><span></span><strong>Збираємо ціни та наявність у 11 профільних продавців</strong><small>Карткою замовлення можна користуватися паралельно.</small></div>` : ""}
+    ${!loading && !data?.run && !summaryItems.length ? `<p class="market-empty">Вкажіть запчастину або артикул. Пошук запуститься автоматично після відкриття вкладки.</p>` : ""}
+    ${summaryItems.length ? `
+      <div class="market-toolbar">
+        <div class="market-filters" aria-label="Фільтр наявності">
+          ${marketFilterButton("availability", "all", "Усі")}
+          ${marketFilterButton("availability", "in_stock", "У наявності")}
+          ${marketFilterButton("availability", "order_needed", "Під замовлення")}
+        </div>
+        <div class="market-filters" aria-label="Фільтр типу деталі">
+          ${marketFilterButton("partType", "all", "Усі типи")}
+          ${marketFilterButton("partType", "original", "Оригінал")}
+          ${marketFilterButton("partType", "oem", "OEM")}
+        </div>
+        <button class="admin-btn admin-btn--small" type="button" data-copy-market-summary>Скопіювати орієнтир</button>
+      </div>
+      ${data.summary.ignored_item_count ? `<p class="market-note">Автоматично перевірено перші 3 позиції. Ще ${Number(data.summary.ignored_item_count)} краще шукати окремо.</p>` : ""}
+      <div class="market-items">${summaryItems.map((item) => renderMarketSummaryItem(item, data)).join("")}</div>
+      ${renderMarketSources(data)}
+    ` : ""}
+    <div class="shipping-estimate" data-shipping-estimate-root>${renderShippingEstimate(order)}</div>
+  `;
+}
+
+function renderMarketResearch(order) {
+  return `<div class="market-panel" data-market-research-root data-order-id="${escapeHtml(order.id)}">${renderMarketResearchBody(order)}</div>`;
+}
+
+function updateMarketResearchRoot(order = state.selectedOrder) {
+  const root = document.querySelector("[data-market-research-root]");
+  if (!root || !order || root.dataset.orderId !== order.id) return;
+  root.innerHTML = renderMarketResearchBody(order);
+  ensureShippingPricelist().then(() => updateShippingEstimateRoot(order)).catch((error) => {
+    const shippingRoot = root.querySelector("[data-shipping-estimate-root]");
+    if (shippingRoot) shippingRoot.innerHTML = `<p class="market-note market-note--error">${escapeHtml(error.message)}</p>`;
+  });
+}
+
+async function loadMarketResearch(orderId, options = {}) {
+  if (!orderId || state.marketResearchLoading.has(orderId)) return;
+  state.marketResearchLoading.add(orderId);
+  updateMarketResearchRoot();
+  try {
+    const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/market-research`);
+    state.marketResearchByOrder[orderId] = data;
+    updateMarketResearchRoot();
+    if (options.refreshIfNeeded && data.should_refresh && data.can_search) {
+      await refreshMarketResearch(orderId, {}, { automatic: true });
+    }
+  } catch (error) {
+    state.marketResearchByOrder[orderId] = { ...(state.marketResearchByOrder[orderId] || {}), error: error.message };
+    updateMarketResearchRoot();
+  } finally {
+    state.marketResearchLoading.delete(orderId);
+    updateMarketResearchRoot();
+  }
+}
+
+async function refreshMarketResearch(orderId, overrides = {}, options = {}) {
+  if (!orderId || (state.marketResearchLoading.has(orderId) && !options.automatic)) return;
+  if (!options.automatic) state.marketResearchLoading.add(orderId);
+  updateMarketResearchRoot();
+  try {
+    const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/market-research`, {
+      method: "POST",
+      body: JSON.stringify(overrides),
+    });
+    state.marketResearchByOrder[orderId] = data;
+  } catch (error) {
+    state.marketResearchByOrder[orderId] = { ...(state.marketResearchByOrder[orderId] || {}), error: error.message };
+    if (!options.automatic) throw error;
+  } finally {
+    if (!options.automatic) state.marketResearchLoading.delete(orderId);
+    updateMarketResearchRoot();
+  }
+}
+
+async function ensureShippingPricelist() {
+  if (state.shippingPricelist) return state.shippingPricelist;
+  if (!state.shippingPricelistPromise) {
+    state.shippingPricelistPromise = fetch("/admin/shipping-pricelist/pricelist.json", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Не вдалося завантажити прайс доставки (${response.status})`);
+        return response.json();
+      })
+      .then((data) => {
+        state.shippingPricelist = data;
+        return data;
+      })
+      .finally(() => {
+        state.shippingPricelistPromise = null;
+      });
+  }
+  return state.shippingPricelistPromise;
+}
+
+function shippingText(order) {
+  return `${order?.item_name || ""} ${order?.request_text || ""}`.toLowerCase();
+}
+
+function autoShippingProfile(order, pricelist) {
+  const haystack = shippingText(order);
+  const matches = pricelist.profiles.flatMap((profile) => (profile.keywords || [])
+    .filter((keyword) => haystack.includes(String(keyword).toLowerCase()))
+    .map((keyword) => ({ profile, length: String(keyword).length })));
+  matches.sort((left, right) => right.length - left.length);
+  return matches[0]?.profile || null;
+}
+
+function autoVehicleSize(order, pricelist) {
+  const haystack = String(order?.car || "").toLowerCase();
+  return pricelist.vehicle_size_factors.find((row) => (row.match_terms || []).some((term) => haystack.includes(String(term).toLowerCase()))) || pricelist.vehicle_size_factors.find((row) => row.id === "standard") || pricelist.vehicle_size_factors[0];
+}
+
+function shippingEstimateSettings(order, pricelist) {
+  if (!state.shippingEstimateSettings[order.id]) {
+    state.shippingEstimateSettings[order.id] = { profile: "auto", vehicle: "auto", packing: "shared" };
+  }
+  const settings = state.shippingEstimateSettings[order.id];
+  const profile = settings.profile === "auto" ? autoShippingProfile(order, pricelist) : pricelist.profiles.find((row) => row.id === settings.profile) || autoShippingProfile(order, pricelist);
+  const vehicle = settings.vehicle === "auto" ? autoVehicleSize(order, pricelist) : pricelist.vehicle_size_factors.find((row) => row.id === settings.vehicle) || autoVehicleSize(order, pricelist);
+  const packing = pricelist.packing_factors.find((row) => row.id === settings.packing) || pricelist.packing_factors[0];
+  return { settings, profile, vehicle, packing };
+}
+
+function shippingOptions(rows, selected) {
+  return rows.map((row) => `<option value="${escapeHtml(row.id)}" ${selected === row.id ? "selected" : ""}>${escapeHtml(row.name)}</option>`).join("");
+}
+
+function renderShippingEstimate(order) {
+  const pricelist = state.shippingPricelist;
+  if (!pricelist) return `<div class="market-loading market-loading--small"><span></span><strong>Завантажуємо орієнтир доставки</strong></div>`;
+  const { settings, profile, vehicle, packing } = shippingEstimateSettings(order, pricelist);
+  const controls = `
+    <div class="shipping-estimate__controls">
+      <label>Тип деталі
+        <select data-shipping-estimate-profile>
+          <option value="auto" ${settings.profile === "auto" ? "selected" : ""}>${profile ? `Автоматично: ${escapeHtml(profile.name)}` : "Автоматично: тип не визначено"}</option>
+          ${shippingOptions(pricelist.profiles, settings.profile)}
+        </select>
+      </label>
+      <label>Розмір авто
+        <select data-shipping-estimate-vehicle>
+          <option value="auto" ${settings.vehicle === "auto" ? "selected" : ""}>Автоматично: ${escapeHtml(vehicle.name)}</option>
+          ${shippingOptions(pricelist.vehicle_size_factors, settings.vehicle)}
+        </select>
+      </label>
+      <label>Пакування
+        <select data-shipping-estimate-packing>${shippingOptions(pricelist.packing_factors, settings.packing)}</select>
+      </label>
+    </div>`;
+  const head = `
+    <div class="shipping-estimate__head">
+      <div>
+        <span class="market-panel__kicker">Логістична підказка</span>
+        <h3>Орієнтовна доставка до Києва</h3>
+      </div>
+      <a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Детальний прайс</a>
+    </div>`;
+  if (!profile) {
+    return `
+      ${head}
+      ${controls}
+      <div class="shipping-estimate__empty">
+        <strong>Не знайшли зіставний тип деталі</strong>
+        <span>Оберіть найближчий профіль вручну. Поки тип не визначено, CRM не показує випадкову оцінку.</span>
+      </div>
+      <p class="shipping-estimate__caveat">Розрахунок є внутрішньою підказкою менеджеру і не змінює ціну для клієнта.</p>
+    `;
+  }
+  const factor = Number(vehicle.factor || 1) * Number(packing.factor || 1);
+  const quote = Number(profile.working_quote_usd || 0) * factor;
+  const range = (profile.working_range_usd || [quote, quote]).map((value) => Number(value || 0) * factor);
+  const volume = Number(profile.packed_volume_m3 || 0) * factor;
+  return `
+    ${head}
+    ${controls}
+    <div class="shipping-estimate__result">
+      <div><span>Робочий орієнтир</span><strong>${usdMoney.format(quote)}</strong></div>
+      <div><span>Діапазон</span><strong>${usdMoney.format(range[0])}–${usdMoney.format(range[1])}</strong></div>
+      <div><span>Розрахунковий об'єм</span><strong>${Number(volume.toFixed(2)).toLocaleString("uk-UA")} м³</strong></div>
+    </div>
+    <p>${escapeHtml(profile.note)}</p>
+    <p class="shipping-estimate__caveat">Це підказка за накопиченими відправленнями, версія ${escapeHtml(pricelist.version)}, оновлено ${escapeHtml(pricelist.updated_at)}. Консолідація кількох деталей в одному ящику може зменшити сумарну доставку на 15–30%. Страхування 1,5% і фактичні розміри пакування рахуються окремо.</p>
+  `;
+}
+
+function updateShippingEstimateRoot(order = state.selectedOrder) {
+  const root = document.querySelector("[data-shipping-estimate-root]");
+  if (root && order) root.innerHTML = renderShippingEstimate(order);
 }
 
 function messagePreview(order, status) {
@@ -2589,6 +2976,7 @@ function renderOrderEditor(order) {
 
     <div class="order-editor__tabs wide" role="tablist" aria-label="Розділи картки замовлення">
       <button class="order-editor__tab ${activeOrderEditorTab() === "main" ? "is-active" : ""}" type="button" data-order-tab="main" role="tab" aria-selected="${activeOrderEditorTab() === "main" ? "true" : "false"}">Заявка</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "market" ? "is-active" : ""}" type="button" data-order-tab="market" role="tab" aria-selected="${activeOrderEditorTab() === "market" ? "true" : "false"}">Ринок України</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "suppliers" ? "is-active" : ""}" type="button" data-order-tab="suppliers" role="tab" aria-selected="${activeOrderEditorTab() === "suppliers" ? "true" : "false"}">Постачальники</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" type="button" data-order-tab="delivery" role="tab" aria-selected="${activeOrderEditorTab() === "delivery" ? "true" : "false"}">Доставка</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" type="button" data-order-tab="payment" role="tab" aria-selected="${activeOrderEditorTab() === "payment" ? "true" : "false"}">Оплата</button>
@@ -2666,6 +3054,10 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     </label>
 
       </div>
+    </section>
+
+    <section class="order-editor__pane wide ${activeOrderEditorTab() === "market" ? "is-active" : ""}" data-order-pane="market" ${activeOrderEditorTab() === "market" ? "" : "hidden"}>
+      ${renderMarketResearch(order)}
     </section>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "suppliers" ? "is-active" : ""}" data-order-pane="suppliers" ${activeOrderEditorTab() === "suppliers" ? "" : "hidden"}>
@@ -2950,6 +3342,9 @@ async function loadOrder(id) {
   state.selectedSupplierPayments = data.supplier_payments || [];
   state.selectedSupplierRequests = data.supplier_requests || [];
   renderOrderEditor(state.selectedOrder);
+  if (activeOrderEditorTab() === "market") {
+    loadMarketResearch(id, { refreshIfNeeded: true }).catch((error) => console.warn("market research", error));
+  }
 }
 
 async function loadChinaPreorders(options = {}) {
@@ -4109,6 +4504,11 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("input", (event) => {
+  if (state.selectedOrder?.id && event.target.matches("[data-market-query], [data-market-part-number]")) {
+    const draft = marketDraft(state.selectedOrder);
+    if (event.target.matches("[data-market-query]")) draft.query = event.target.value;
+    if (event.target.matches("[data-market-part-number]")) draft.partNumber = event.target.value;
+  }
   if (event.target.matches("[data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: false });
   }
@@ -4118,6 +4518,15 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
+  if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) {
+    const settings = state.shippingEstimateSettings[state.selectedOrder.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
+    if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
+    if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
+    if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
+    state.shippingEstimateSettings[state.selectedOrder.id] = settings;
+    updateShippingEstimateRoot(state.selectedOrder);
+    return;
+  }
   if (event.target.matches("[data-supplier-payment-supplier]")) {
     syncSupplierCustomField(event.currentTarget);
   }
@@ -4133,6 +4542,45 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
   const tabButton = event.target.closest("[data-order-tab]");
   if (tabButton) {
     setOrderEditorTab(tabButton.dataset.orderTab);
+    return;
+  }
+
+  const marketRefreshButton = event.target.closest("[data-market-refresh]");
+  if (marketRefreshButton && state.selectedOrder?.id) {
+    const draft = marketDraft(state.selectedOrder);
+    marketRefreshButton.disabled = true;
+    try {
+      await refreshMarketResearch(state.selectedOrder.id, {
+        query: draft.query,
+        part_number: draft.partNumber,
+      });
+    } catch (error) {
+      alert(error.message);
+    }
+    return;
+  }
+
+  const marketFilter = event.target.closest("[data-market-filter-group]");
+  if (marketFilter) {
+    const group = marketFilter.dataset.marketFilterGroup;
+    if (group === "availability" || group === "partType") {
+      state.marketResearchFilters[group] = marketFilter.dataset.marketFilterValue || "all";
+      updateMarketResearchRoot();
+    }
+    return;
+  }
+
+  const copyMarketSummaryButton = event.target.closest("[data-copy-market-summary]");
+  if (copyMarketSummaryButton && state.selectedOrder?.id) {
+    const summary = marketSummaryText(state.marketResearchByOrder[state.selectedOrder.id]);
+    try {
+      await navigator.clipboard.writeText(summary);
+      const original = copyMarketSummaryButton.textContent;
+      copyMarketSummaryButton.textContent = "Скопійовано";
+      setTimeout(() => { copyMarketSummaryButton.textContent = original; }, 1400);
+    } catch {
+      alert(summary);
+    }
     return;
   }
 
