@@ -56,7 +56,11 @@ class D1Database {
   }
 
   async exec(sql) {
-    this.database.exec(sql);
+    // Cloudflare D1 exec() treats each newline-delimited line as a separate query.
+    // Keep the test double strict so multiline DDL cannot pass locally and fail in production.
+    for (const line of String(sql).split("\n").map((value) => value.trim()).filter(Boolean)) {
+      this.database.exec(line);
+    }
     return { count: 0, duration: 0 };
   }
 
