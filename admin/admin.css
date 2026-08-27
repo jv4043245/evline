@@ -237,6 +237,8 @@
 .manual-order-form input,
 .manual-order-form select,
 .manual-order-form textarea,
+.market-lookup-form input,
+.market-lookup-form select,
 .china-preorder-form input,
 .china-preorder-form select,
 .china-preorder-form textarea,
@@ -261,6 +263,7 @@
 .admin-header select,
 .filters select,
 .manual-order-form select,
+.market-lookup-form select,
 .china-preorder-form select,
 .order-editor select,
 .cost-form select,
@@ -277,6 +280,7 @@
 .admin-header select::-ms-expand,
 .filters select::-ms-expand,
 .manual-order-form select::-ms-expand,
+.market-lookup-form select::-ms-expand,
 .china-preorder-form select::-ms-expand,
 .order-editor select::-ms-expand,
 .cost-form select::-ms-expand,
@@ -901,6 +905,203 @@
   justify-content: flex-end;
 }
 
+.admin-btn--market-lookup {
+  gap: 7px;
+  border-color: rgba(0, 168, 107, 0.28);
+  color: var(--green-dark);
+}
+
+.market-lookup-detail__body {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 18px 32px;
+}
+
+.market-lookup-form {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(230px, 1.25fr) minmax(170px, 0.8fr) minmax(170px, 0.8fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbf9;
+}
+
+.market-lookup-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.market-lookup-form input,
+.market-lookup-form select {
+  width: 100%;
+  min-width: 0;
+}
+
+.market-lookup-form .admin-btn {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.market-lookup-content,
+.market-lookup-results {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.market-lookup-welcome {
+  display: grid;
+  gap: 5px;
+  padding: 24px;
+  border: 1px dashed rgba(0, 168, 107, 0.28);
+  border-radius: 8px;
+  background: #f7fcf9;
+}
+
+.market-lookup-welcome strong {
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.market-lookup-welcome span {
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.market-lookup-results {
+  padding: 18px;
+  border: 1px solid rgba(0, 168, 107, 0.16);
+  border-radius: 8px;
+  background: #f7fcf9;
+}
+
+.market-lookup-results__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.market-lookup-results__head h3 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.market-lookup-actions {
+  display: grid;
+  grid-template-columns: auto minmax(320px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.market-lookup-attach {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.market-lookup-attach select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 46px 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background-color: #fff;
+  color: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2366756f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 17px center;
+  background-size: 18px 18px;
+}
+
+.market-lookup-history {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.market-lookup-history > summary {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.market-lookup-history__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.market-lookup-history__item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8fbf9;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.market-lookup-history__item:hover,
+.market-lookup-history__item:focus-visible,
+.market-lookup-history__item.is-active {
+  border-color: rgba(0, 168, 107, 0.34);
+  background: #eef9f2;
+}
+
+.market-lookup-history__item span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.market-lookup-history__item strong,
+.market-lookup-history__item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-lookup-history__item small,
+.market-lookup-history__item time,
+.market-lookup-history__empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.market-lookup-history__item time {
+  flex: 0 0 auto;
+}
+
+.market-lookup-history__empty {
+  margin: 10px 0 0;
+}
+
 .mini-chart {
   display: grid;
   grid-template-columns: repeat(30, minmax(6px, 1fr));
@@ -965,6 +1166,7 @@
 }
 
 body.order-detail-open,
+body.market-lookup-open,
 body.china-request-open,
 body.china-preorder-open,
 body.audit-log-open {
@@ -972,6 +1174,7 @@ body.audit-log-open {
 }
 
 .order-detail-backdrop,
+.market-lookup-backdrop,
 .china-request-backdrop,
 .china-preorder-backdrop,
 .audit-log-backdrop {
@@ -986,6 +1189,7 @@ body.audit-log-open {
 }
 
 .order-detail,
+.market-lookup-detail,
 .china-request-detail,
 .china-preorder-detail,
 .audit-log-panel {
@@ -1008,7 +1212,12 @@ body.audit-log-open {
   width: min(1120px, calc(100vw - 24px));
 }
 
+.market-lookup-detail {
+  width: min(1120px, calc(100vw - 24px));
+}
+
 body.order-detail-open .order-detail-backdrop,
+body.market-lookup-open .market-lookup-backdrop,
 body.china-request-open .china-request-backdrop,
 body.china-preorder-open .china-preorder-backdrop,
 body.audit-log-open .audit-log-backdrop {
@@ -1017,6 +1226,7 @@ body.audit-log-open .audit-log-backdrop {
 }
 
 body.order-detail-open .order-detail,
+body.market-lookup-open .market-lookup-detail,
 body.china-request-open .china-request-detail,
 body.china-preorder-open .china-preorder-detail,
 body.audit-log-open .audit-log-panel {
@@ -1024,6 +1234,7 @@ body.audit-log-open .audit-log-panel {
 }
 
 .order-detail[aria-hidden="true"],
+.market-lookup-detail[aria-hidden="true"],
 .china-request-detail[aria-hidden="true"],
 .china-preorder-detail[aria-hidden="true"],
 .audit-log-panel[aria-hidden="true"] {
@@ -1031,6 +1242,7 @@ body.audit-log-open .audit-log-panel {
 }
 
 .order-detail .admin-panel__head,
+.market-lookup-detail .admin-panel__head,
 .china-request-detail .admin-panel__head,
 .china-preorder-detail .admin-panel__head,
 .audit-log-panel .admin-panel__head {
@@ -1043,6 +1255,7 @@ body.audit-log-open .audit-log-panel {
 }
 
 .order-detail .admin-panel__head h2,
+.market-lookup-detail .admin-panel__head h2,
 .china-request-detail .admin-panel__head h2,
 .china-preorder-detail .admin-panel__head h2,
 .audit-log-panel .admin-panel__head h2 {
@@ -1050,6 +1263,7 @@ body.audit-log-open .audit-log-panel {
 }
 
 .order-detail .admin-panel__head p,
+.market-lookup-detail .admin-panel__head p,
 .china-request-detail .admin-panel__head p,
 .china-preorder-detail .admin-panel__head p,
 .audit-log-panel .admin-panel__head p {
@@ -1058,6 +1272,7 @@ body.audit-log-open .audit-log-panel {
 }
 
 .order-detail__close,
+.market-lookup-detail__close,
 .china-request-detail__close,
 .china-preorder-detail__close,
 .audit-log-panel__close {
@@ -3809,6 +4024,7 @@ body.audit-log-open .audit-log-panel {
   .summary-grid,
   .google-ads-summary,
   .manual-order-form,
+  .market-lookup-form,
   .china-preorder-form,
   .china-preorder-card__grid,
   .order-editor,
@@ -4086,6 +4302,7 @@ body.audit-log-open .audit-log-panel {
   }
 
   .order-detail,
+  .market-lookup-detail,
   .china-request-detail,
   .china-preorder-detail,
   .audit-log-panel {
@@ -4100,6 +4317,7 @@ body.audit-log-open .audit-log-panel {
   }
 
   .order-detail .admin-panel__head,
+  .market-lookup-detail .admin-panel__head,
   .china-request-detail .admin-panel__head,
   .china-preorder-detail .admin-panel__head,
   .audit-log-panel .admin-panel__head {
@@ -4112,6 +4330,7 @@ body.audit-log-open .audit-log-panel {
   }
 
   .order-detail .admin-panel__head h2,
+  .market-lookup-detail .admin-panel__head h2,
   .china-request-detail .admin-panel__head h2,
   .china-preorder-detail .admin-panel__head h2,
   .audit-log-panel .admin-panel__head h2 {
@@ -4119,6 +4338,7 @@ body.audit-log-open .audit-log-panel {
   }
 
   .order-detail__close,
+  .market-lookup-detail__close,
   .china-request-detail__close,
   .china-preorder-detail__close,
   .audit-log-panel__close {
@@ -4137,6 +4357,46 @@ body.audit-log-open .audit-log-panel {
 
   .audit-log-panel__body {
     padding: 12px 10px 96px;
+  }
+
+  .market-lookup-detail__body {
+    padding: 12px 10px 96px;
+  }
+
+  .market-lookup-form {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .market-lookup-form .admin-btn {
+    width: 100%;
+  }
+
+  .market-lookup-results {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .market-lookup-results__head {
+    display: grid;
+    gap: 6px;
+  }
+
+  .market-lookup-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .market-lookup-attach {
+    grid-template-columns: 1fr;
+  }
+
+  .market-lookup-actions .admin-btn,
+  .market-lookup-attach .admin-btn {
+    width: 100%;
+  }
+
+  .market-lookup-history__list {
+    grid-template-columns: 1fr;
   }
 
   .order-detail .order-editor {
