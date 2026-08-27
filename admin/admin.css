@@ -1004,6 +1004,10 @@ body.audit-log-open {
   transition: transform 0.22s ease;
 }
 
+.order-detail {
+  width: min(1120px, calc(100vw - 24px));
+}
+
 body.order-detail-open .order-detail-backdrop,
 body.china-request-open .china-request-backdrop,
 body.china-preorder-open .china-preorder-backdrop,
@@ -1577,26 +1581,28 @@ body.audit-log-open .audit-log-panel {
 
 .order-editor__tabs {
   position: static;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-height: 48px;
   margin: 2px 0 10px;
   padding: 4px 0 8px;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   background: transparent;
   backdrop-filter: none;
-  scrollbar-gutter: stable;
+  box-sizing: border-box;
 }
 
 .order-editor__tab {
-  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
   min-height: 34px;
-  padding: 0 12px;
+  padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
@@ -1647,6 +1653,19 @@ body.audit-log-open .audit-log-panel {
 .market-panel {
   display: grid;
   gap: 18px;
+  width: 100%;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(0, 168, 107, 0.16);
+  border-radius: 8px;
+  background: #f7fcf9;
+  box-sizing: border-box;
+}
+
+.market-panel > *,
+.market-panel__head > *,
+.market-item__head > *,
+.shipping-estimate__head > * {
   min-width: 0;
 }
 
@@ -1664,6 +1683,7 @@ body.audit-log-open .audit-log-panel {
   margin: 2px 0 4px;
   color: var(--ink);
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .market-panel__head h2 {
@@ -1708,6 +1728,7 @@ body.audit-log-open .audit-log-panel {
 .shipping-estimate__controls label {
   display: grid;
   gap: 6px;
+  min-width: 0;
   color: var(--muted);
   font-size: 12px;
   font-weight: 900;
@@ -2044,8 +2065,12 @@ body.audit-log-open .audit-log-panel {
 }
 
 .shipping-estimate__controls select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 40px;
   background: #fff;
+  box-sizing: border-box;
 }
 
 .shipping-estimate__result {
@@ -2087,6 +2112,7 @@ body.audit-log-open .audit-log-panel {
   border-radius: 8px;
   background: #f7fbf8;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .shipping-estimate__empty strong {
@@ -3654,6 +3680,23 @@ body.audit-log-open .audit-log-panel {
   }
 }
 
+@media (max-width: 900px) {
+  .order-editor__tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: 80px;
+  }
+
+  .market-search,
+  .shipping-estimate__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .market-search .admin-btn,
+  .shipping-estimate__controls label:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 760px) {
   .admin-shell {
     background: #f4f7f5;
@@ -4104,7 +4147,8 @@ body.audit-log-open .audit-log-panel {
     position: static;
     top: auto;
     z-index: auto;
-    min-height: 44px;
+    min-height: 154px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin: -2px -10px 10px;
     padding: 8px 10px;
     background: transparent;
@@ -4123,6 +4167,7 @@ body.audit-log-open .audit-log-panel {
 
   .market-panel {
     gap: 14px;
+    padding: 12px;
   }
 
   .market-panel__head,
