@@ -26,6 +26,7 @@
       "calculated_cost_usd": 303,
       "working_quote_usd": 350,
       "working_range_usd": [300, 420],
+      "keywords": ["бампер", "bumper", "облицювання бампера", "облицовка бампера"],
       "note": "Передній або задній бампер без великого комплекту решіток і кронштейнів."
     },
     {
@@ -35,6 +36,7 @@
       "calculated_cost_usd": 494,
       "working_quote_usd": 570,
       "working_range_usd": [420, 600],
+      "keywords": ["бампер в зборі", "бампер у зборі", "комплект бампера", "bumper assembly"],
       "note": "Оболонка, решітки, повітроводи, накладки та кронштейни в одній обрешітці."
     },
     {
@@ -44,6 +46,7 @@
       "calculated_cost_usd": 160,
       "working_quote_usd": 185,
       "working_range_usd": [150, 250],
+      "keywords": ["крило", "крыло", "fender"],
       "note": "Окреме крило із захисним зазором; вкладене в спільний ящик може коштувати дешевше."
     },
     {
@@ -53,6 +56,7 @@
       "calculated_cost_usd": 38,
       "working_quote_usd": 45,
       "working_range_usd": [35, 80],
+      "keywords": ["фара", "ліхтар", "фонарь", "headlamp", "tail lamp"],
       "note": "Без урахування можливої мінімальної ставки перевізника для окремого місця."
     },
     {
@@ -62,6 +66,7 @@
       "calculated_cost_usd": 223,
       "working_quote_usd": 260,
       "working_range_usd": [220, 380],
+      "keywords": ["двері багажника", "дверь багажника", "кришка багажника", "крышка багажника", "tailgate"],
       "note": "Для дверей у зборі; скло та окрема обрешітка можуть збільшити бюджет."
     },
     {
@@ -71,6 +76,7 @@
       "calculated_cost_usd": 48,
       "working_quote_usd": 55,
       "working_range_usd": [40, 100],
+      "keywords": ["підсилювач бампера", "усилитель бампера", "bumper reinforcement"],
       "note": "Зазвичай вигідно вкладати в упаковку бампера або дверей."
     },
     {
@@ -80,6 +86,7 @@
       "calculated_cost_usd": 73,
       "working_quote_usd": 85,
       "working_range_usd": [60, 130],
+      "keywords": ["кожух запасного колеса", "чохол запасного колеса", "кожух запаски", "spare wheel cover"],
       "note": "Пластиковий кожух; фактична кубатура залежить від форми та захисної упаковки."
     },
     {
@@ -89,13 +96,14 @@
       "calculated_cost_usd": 10,
       "working_quote_usd": 15,
       "working_range_usd": [0, 25],
+      "keywords": ["накладка", "молдинг", "кронштейн", "кріплення", "крепление", "кліпса", "клипса", "trim", "bracket"],
       "note": "Усередині основної обрешітки часто майже не додає кубатури."
     }
   ],
   "vehicle_size_factors": [
-    { "id": "compact", "name": "Компактний автомобіль", "factor": 0.925 },
-    { "id": "standard", "name": "Седан / середній SUV", "factor": 1 },
-    { "id": "large", "name": "Великий SUV / MPV", "factor": 1.15 }
+    { "id": "compact", "name": "Компактний автомобіль", "factor": 0.925, "match_terms": ["dolphin", "seagull", "yuan up", "atto 2", "smart #1", "volvo ex30", "mg4"] },
+    { "id": "standard", "name": "Седан / середній SUV", "factor": 1, "match_terms": [] },
+    { "id": "large", "name": "Великий SUV / MPV", "factor": 1.15, "match_terms": ["tang", "m9", "l9", "l8", "009", "x9", "denza d9", "leopard 8", "mpv"] }
   ],
   "packing_factors": [
     { "id": "shared", "name": "Спільна обрешітка", "factor": 1 },

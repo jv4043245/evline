@@ -1,6 +1,7 @@
 import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
 import { inferAttribution } from "../_lib/attribution.js";
 import { linkContactEventsToLead } from "../_lib/contact-events.js";
+import { runMarketResearch } from "../_lib/market-research.js";
 import {
   createOrderFromLead,
   loadOrder,
@@ -196,7 +197,8 @@ async function notifyTelegram(env, lead, orderId, request) {
   }
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   const payload = await readPayload(request);
   const lead = normalizeLead(payload, request);
 
@@ -284,6 +286,14 @@ export async function onRequestPost({ request, env }) {
   await notifyTelegram(env, lead, orderId, request).catch((error) => {
     console.error("Failed to notify manager Telegram chat", error);
   });
+
+  if (orderId && lead.type === "parts" && (lead.part || lead.details) && typeof context.waitUntil === "function") {
+    context.waitUntil(
+      loadOrder(env, orderId)
+        .then((order) => (order ? runMarketResearch(env, order) : null))
+        .catch((error) => console.error("Failed to prepare market research", error))
+    );
+  }
 
   return json(
     {
