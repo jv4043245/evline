@@ -16,6 +16,18 @@ const state = {
     availability: "all",
     partType: "all",
   },
+  marketLookup: {
+    history: [],
+    result: null,
+    loading: false,
+    error: "",
+    draft: {
+      car: "",
+      vin: "",
+      query: "",
+      partNumber: "",
+    },
+  },
   shippingPricelist: null,
   shippingPricelistPromise: null,
   shippingEstimateSettings: {},
@@ -455,7 +467,10 @@ function setActiveTab(tab) {
     view.hidden = view.dataset.adminView !== nextTab;
   });
 
-  if (nextTab !== "orders") setOrderDetailOpen(false);
+  if (nextTab !== "orders") {
+    setOrderDetailOpen(false);
+    setMarketLookupOpen(false);
+  }
   if (nextTab !== "china") setChinaRequestPanelOpen(false);
   if (nextTab !== "china") setChinaPreorderPanelOpen(false);
   if (nextTab === "china") {
@@ -2363,6 +2378,16 @@ function closeOrderDetail(options = {}) {
   }
 }
 
+function setMarketLookupOpen(open) {
+  const panel = document.querySelector("[data-market-lookup-panel]");
+  document.body.classList.toggle("market-lookup-open", Boolean(open));
+  if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function closeMarketLookup() {
+  setMarketLookupOpen(false);
+}
+
 function setChinaRequestPanelOpen(open) {
   const panel = document.querySelector("[data-china-request-panel]");
   document.body.classList.toggle("china-request-open", Boolean(open));
@@ -2658,6 +2683,204 @@ function updateMarketResearchRoot(order = state.selectedOrder) {
     const shippingRoot = root.querySelector("[data-shipping-estimate-root]");
     if (shippingRoot) shippingRoot.innerHTML = `<p class="market-note market-note--error">${escapeHtml(error.message)}</p>`;
   });
+}
+
+function marketLookupOrder() {
+  const draft = state.marketLookup.draft;
+  const runId = state.marketLookup.result?.run?.id || "draft";
+  return {
+    id: `market-lookup-${runId}`,
+    car: draft.car,
+    vin: draft.vin,
+    item_name: draft.query || draft.partNumber,
+    request_text: "",
+  };
+}
+
+function marketLookupOrderOptions(selectedId = "") {
+  const options = (state.orders || []).map((order) => {
+    const number = order.order_number || "без номера";
+    const context = order.item_name || order.service_name || order.car || order.customer_phone || "без опису";
+    return `<option value="${escapeHtml(order.id)}" ${selectedId === order.id ? "selected" : ""}>${escapeHtml(`${number} · ${context}`)}</option>`;
+  });
+  return [`<option value="">Оберіть замовлення</option>`, ...options].join("");
+}
+
+function renderMarketLookupHistory() {
+  const history = state.marketLookup.history || [];
+  if (!history.length) return `<p class="market-lookup-history__empty">Історія з'явиться після першої перевірки.</p>`;
+  return `
+    <div class="market-lookup-history__list">
+      ${history.map((run) => {
+        const item = run.summary?.items?.[0];
+        const label = item?.label || run.query || run.part_number || "Пошук без назви";
+        const car = run.car || "Авто не вказано";
+        return `
+          <button class="market-lookup-history__item ${state.marketLookup.result?.run?.id === run.id ? "is-active" : ""}" type="button" data-market-lookup-history="${escapeHtml(run.id)}">
+            <span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(car)}</small></span>
+            <time>${escapeHtml(shortDateTime(run.created_at))}</time>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderMarketLookupResult() {
+  const data = state.marketLookup.result;
+  const loading = state.marketLookup.loading;
+  const summaryItems = data?.summary?.items || [];
+  if (loading && !summaryItems.length) {
+    return `<div class="market-loading"><span></span><strong>Перевіряємо 11 профільних продавців</strong><small>Пошук не створює заявку і не впливає на CRM-аналітику.</small></div>`;
+  }
+  if (state.marketLookup.error) return `<p class="market-note market-note--error">${escapeHtml(state.marketLookup.error)}</p>`;
+  if (!data?.run) {
+    return `<div class="market-lookup-welcome"><strong>Введіть запчастину або артикул</strong><span>Модель автомобіля допоможе відсіяти нерелевантні пропозиції. VIN залишається всередині CRM і не надсилається стороннім сайтам.</span></div>`;
+  }
+  const updatedAt = data.run.updated_at || data.run.created_at;
+  const linkedOrderId = data.run.linked_order_id || "";
+  return `
+    <section class="market-lookup-results">
+      <div class="market-lookup-results__head">
+        <div>
+          <span class="market-panel__kicker">Результат швидкої перевірки</span>
+          <h3>${escapeHtml(state.marketLookup.draft.query || state.marketLookup.draft.partNumber)}</h3>
+        </div>
+        ${updatedAt ? `<span class="market-panel__updated">Оновлено ${escapeHtml(shortDateTime(updatedAt))}</span>` : ""}
+      </div>
+      <div class="market-toolbar">
+        <div class="market-filters" aria-label="Фільтр наявності">
+          ${marketFilterButton("availability", "all", "Усі")}
+          ${marketFilterButton("availability", "in_stock", "У наявності")}
+          ${marketFilterButton("availability", "order_needed", "Під замовлення")}
+        </div>
+        <div class="market-filters" aria-label="Фільтр типу деталі">
+          ${marketFilterButton("partType", "all", "Усі типи")}
+          ${marketFilterButton("partType", "original", "Оригінал")}
+          ${marketFilterButton("partType", "oem", "OEM")}
+        </div>
+      </div>
+      ${data.summary?.ignored_item_count ? `<p class="market-note">Перевірено перші 3 позиції. Ще ${Number(data.summary.ignored_item_count)} краще шукати окремо.</p>` : ""}
+      <div class="market-items">${summaryItems.map((item) => renderMarketSummaryItem(item, data)).join("")}</div>
+      ${renderMarketSources(data)}
+      <div class="shipping-estimate" data-market-lookup-shipping>${renderShippingEstimate(marketLookupOrder())}</div>
+      <div class="market-lookup-actions">
+        <button class="admin-btn admin-btn--primary" type="button" data-market-lookup-create-order>Створити заявку</button>
+        <div class="market-lookup-attach">
+          <select data-market-lookup-order aria-label="Замовлення для прив'язки">
+            ${marketLookupOrderOptions(linkedOrderId)}
+          </select>
+          <button class="admin-btn" type="button" data-market-lookup-attach ${linkedOrderId ? "disabled" : ""}>${linkedOrderId ? "Прив'язано" : "Прив'язати"}</button>
+        </div>
+        <button class="admin-btn" type="button" data-market-lookup-copy>Скопіювати орієнтир</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderMarketLookup() {
+  const root = document.querySelector("[data-market-lookup-root]");
+  if (!root) return;
+  const draft = state.marketLookup.draft;
+  root.innerHTML = `
+    <form class="market-lookup-form" data-market-lookup-form>
+      <label class="market-lookup-form__car">
+        Авто / модель / рік
+        <input name="car" value="${escapeHtml(draft.car)}" placeholder="Напр.: BYD Yuan Plus 2023">
+      </label>
+      <label class="market-lookup-form__query">
+        Запчастина
+        <input name="query" value="${escapeHtml(draft.query)}" placeholder="Напр.: передній бампер">
+      </label>
+      <label>
+        Артикул / OEM
+        <input name="part_number" value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 11515426-00">
+      </label>
+      <label>
+        VIN, необов'язково
+        <input name="vin" value="${escapeHtml(draft.vin)}" placeholder="17 символів">
+      </label>
+      <button class="admin-btn admin-btn--primary" type="submit" ${state.marketLookup.loading ? "disabled" : ""}>${state.marketLookup.loading ? "Шукаємо..." : "Знайти ціни"}</button>
+    </form>
+    <div class="market-lookup-content">${renderMarketLookupResult()}</div>
+    <details class="market-lookup-history" ${state.marketLookup.history.length ? "" : "open"}>
+      <summary>Останні перевірки${state.marketLookup.history.length ? ` · ${state.marketLookup.history.length}` : ""}</summary>
+      ${renderMarketLookupHistory()}
+    </details>
+  `;
+  ensureShippingPricelist().then(updateMarketLookupShippingRoot).catch((error) => {
+    const shippingRoot = root.querySelector("[data-market-lookup-shipping]");
+    if (shippingRoot) shippingRoot.innerHTML = `<p class="market-note market-note--error">${escapeHtml(error.message)}</p>`;
+  });
+}
+
+function updateMarketLookupShippingRoot() {
+  const root = document.querySelector("[data-market-lookup-root] [data-market-lookup-shipping]");
+  if (root) root.innerHTML = renderShippingEstimate(marketLookupOrder());
+}
+
+async function loadMarketLookupHistory() {
+  const data = await api("/api/admin/market-search?limit=12");
+  state.marketLookup.history = data.history || [];
+  renderMarketLookup();
+}
+
+async function loadMarketLookup(id) {
+  state.marketLookup.loading = true;
+  state.marketLookup.error = "";
+  renderMarketLookup();
+  try {
+    const data = await api(`/api/admin/market-search?id=${encodeURIComponent(id)}`);
+    state.marketLookup.result = data;
+    state.marketLookup.draft = {
+      car: data.run?.car || "",
+      vin: data.run?.vin || "",
+      query: data.run?.query || "",
+      partNumber: data.run?.part_number || "",
+    };
+  } catch (error) {
+    state.marketLookup.error = error.message;
+  } finally {
+    state.marketLookup.loading = false;
+    renderMarketLookup();
+  }
+}
+
+async function runMarketLookup() {
+  state.marketLookup.loading = true;
+  state.marketLookup.error = "";
+  state.marketLookup.result = null;
+  renderMarketLookup();
+  try {
+    state.marketLookup.result = await api("/api/admin/market-search", {
+      method: "POST",
+      body: JSON.stringify({
+        car: state.marketLookup.draft.car,
+        vin: state.marketLookup.draft.vin,
+        query: state.marketLookup.draft.query,
+        part_number: state.marketLookup.draft.partNumber,
+      }),
+    });
+    await loadMarketLookupHistory();
+  } catch (error) {
+    state.marketLookup.error = error.message;
+  } finally {
+    state.marketLookup.loading = false;
+    renderMarketLookup();
+  }
+}
+
+async function openMarketLookup() {
+  closeOrderDetail({ clearSelection: false });
+  setMarketLookupOpen(true);
+  renderMarketLookup();
+  try {
+    await loadMarketLookupHistory();
+  } catch (error) {
+    state.marketLookup.error = error.message;
+    renderMarketLookup();
+  }
+  document.querySelector("[data-market-lookup-form] [name='query']")?.focus();
 }
 
 async function loadMarketResearch(orderId, options = {}) {
@@ -3933,6 +4156,13 @@ document.querySelector("[data-manual-order-toggle]")?.addEventListener("click", 
   setManualOrderFormOpen(Boolean(form?.hidden));
 });
 
+document.querySelector("[data-market-lookup-open]")?.addEventListener("click", () => {
+  openMarketLookup().catch((error) => {
+    state.marketLookup.error = error.message;
+    renderMarketLookup();
+  });
+});
+
 document.querySelector("[data-manual-order-cancel]")?.addEventListener("click", () => {
   const form = document.querySelector("[data-manual-order-form]");
   form?.reset();
@@ -4451,6 +4681,11 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-market-lookup-close]")) return;
+  closeMarketLookup();
+});
+
+document.addEventListener("click", (event) => {
   if (!event.target.closest("[data-china-request-close]")) return;
   setChinaRequestPanelOpen(false);
 });
@@ -4467,6 +4702,10 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  if (document.body.classList.contains("market-lookup-open")) {
+    closeMarketLookup();
+    return;
+  }
   if (document.body.classList.contains("audit-log-open")) {
     setAuditLogOpen(false);
     return;
@@ -4481,6 +4720,117 @@ document.addEventListener("keydown", (event) => {
   }
   if (document.body.classList.contains("order-detail-open")) {
     closeOrderDetail({ clearSelection: true });
+  }
+});
+
+document.querySelector("[data-market-lookup-panel]")?.addEventListener("input", (event) => {
+  const field = event.target;
+  if (!field.matches("[data-market-lookup-form] input")) return;
+  if (field.name === "car") state.marketLookup.draft.car = field.value;
+  if (field.name === "vin") state.marketLookup.draft.vin = field.value;
+  if (field.name === "query") state.marketLookup.draft.query = field.value;
+  if (field.name === "part_number") state.marketLookup.draft.partNumber = field.value;
+});
+
+document.querySelector("[data-market-lookup-panel]")?.addEventListener("submit", async (event) => {
+  if (!event.target.matches("[data-market-lookup-form]")) return;
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  state.marketLookup.draft = {
+    car: plainText(formData.get("car")),
+    vin: plainText(formData.get("vin")).toUpperCase(),
+    query: plainText(formData.get("query")),
+    partNumber: plainText(formData.get("part_number")),
+  };
+  if (!state.marketLookup.draft.query && !state.marketLookup.draft.partNumber) {
+    state.marketLookup.error = "Вкажіть запчастину або артикул.";
+    renderMarketLookup();
+    return;
+  }
+  await runMarketLookup();
+});
+
+document.querySelector("[data-market-lookup-panel]")?.addEventListener("change", (event) => {
+  if (!event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) return;
+  const order = marketLookupOrder();
+  const settings = state.shippingEstimateSettings[order.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
+  if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
+  if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
+  if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
+  state.shippingEstimateSettings[order.id] = settings;
+  updateMarketLookupShippingRoot();
+});
+
+document.querySelector("[data-market-lookup-panel]")?.addEventListener("click", async (event) => {
+  const historyButton = event.target.closest("[data-market-lookup-history]");
+  if (historyButton) {
+    await loadMarketLookup(historyButton.dataset.marketLookupHistory);
+    return;
+  }
+
+  const filterButton = event.target.closest("[data-market-filter-group]");
+  if (filterButton) {
+    const group = filterButton.dataset.marketFilterGroup;
+    if (group === "availability" || group === "partType") {
+      state.marketResearchFilters[group] = filterButton.dataset.marketFilterValue || "all";
+      renderMarketLookup();
+    }
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-market-lookup-copy]");
+  if (copyButton) {
+    const summary = marketSummaryText(state.marketLookup.result);
+    try {
+      await navigator.clipboard.writeText(summary);
+      copyButton.textContent = "Скопійовано";
+      setTimeout(() => { copyButton.textContent = "Скопіювати орієнтир"; }, 1400);
+    } catch {
+      alert(summary);
+    }
+    return;
+  }
+
+  if (event.target.closest("[data-market-lookup-create-order]")) {
+    const form = document.querySelector("[data-manual-order-form]");
+    if (!form) return;
+    form.reset();
+    if (form.elements.type) form.elements.type.value = "parts";
+    if (form.elements.medium) form.elements.medium.value = "phone";
+    if (form.elements.car) form.elements.car.value = state.marketLookup.draft.car;
+    if (form.elements.vin) form.elements.vin.value = state.marketLookup.draft.vin;
+    if (form.elements.item_name) form.elements.item_name.value = state.marketLookup.draft.query || state.marketLookup.draft.partNumber;
+    setManualOrderFormOpen(true);
+    closeMarketLookup();
+    document.querySelector("[data-manual-order-form]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    form.elements.customer_phone?.focus({ preventScroll: true });
+    return;
+  }
+
+  const attachButton = event.target.closest("[data-market-lookup-attach]");
+  if (attachButton) {
+    const lookupId = state.marketLookup.result?.run?.id;
+    const orderId = document.querySelector("[data-market-lookup-order]")?.value || "";
+    if (!lookupId || !orderId) {
+      alert("Оберіть замовлення для прив'язки.");
+      return;
+    }
+    attachButton.disabled = true;
+    try {
+      await api("/api/admin/market-search", {
+        method: "POST",
+        body: JSON.stringify({ action: "attach", lookup_id: lookupId, order_id: orderId }),
+      });
+      state.marketLookup.result.run.linked_order_id = orderId;
+      const history = state.marketLookup.history.find((run) => run.id === lookupId);
+      if (history) history.linked_order_id = orderId;
+      closeMarketLookup();
+      await openOrder(orderId, { scroll: false });
+      setOrderEditorTab("market");
+    } catch (error) {
+      alert(error.message);
+      attachButton.disabled = false;
+    }
   }
 });
 
