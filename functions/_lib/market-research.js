@@ -151,7 +151,7 @@ export function extractPartNumbers(value, excludedVin = "") {
 function cleanItemLabel(value) {
   return text(value)
     .replace(/^(?:запчастина|запчасть|деталь|послуга|услуга|запчастина\s*\/\s*послуга)\s*:\s*/iu, "")
-    .replace(/^[-–—•\d.)\s]+/, "")
+    .replace(/^(?:[-–—•]\s*|\d+[.)]\s+)/u, "")
     .trim();
 }
 
