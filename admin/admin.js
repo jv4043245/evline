@@ -2641,8 +2641,9 @@ function renderMarketResearchBody(order) {
         <input value="${escapeHtml(draft.query)}" placeholder="Напр.: задній бампер" data-market-query>
       </label>
       <label>
-        Артикул / OEM
-        <input value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 11515426-00" data-market-part-number>
+        Артикул
+        <input value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 13158405-00" data-market-part-number>
+        <small>Можна шукати без назви запчастини</small>
       </label>
       <button class="admin-btn admin-btn--primary" type="button" data-market-refresh ${loading ? "disabled" : ""}>${loading ? "Перевіряємо 11 джерел..." : "Оновити пошук"}</button>
     </div>
@@ -2793,8 +2794,9 @@ function renderMarketLookup() {
         <input name="query" value="${escapeHtml(draft.query)}" placeholder="Напр.: передній бампер">
       </label>
       <label>
-        Артикул / OEM
-        <input name="part_number" value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 11515426-00">
+        Артикул
+        <input name="part_number" value="${escapeHtml(draft.partNumber)}" placeholder="Напр.: 13158405-00">
+        <small>Точний пошук, назва запчастини необов'язкова</small>
       </label>
       <label>
         VIN, необов'язково
