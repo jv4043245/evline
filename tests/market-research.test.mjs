@@ -164,6 +164,35 @@ test("manager can launch a market lookup without creating an order", () => {
   assert.match(lookupRouteJs, /attachMarketLookupToOrder/);
   assert.match(lookupMigration, /CREATE TABLE IF NOT EXISTS market_lookup_runs/);
   assert.match(adminCss, /\.market-lookup-detail\s*{[^}]*width:\s*min\(1120px,/s);
+  assert.match(adminJs, /Артикул[\s\S]*13158405-00/);
+  assert.match(adminJs, /назва запчастини необов'язкова/);
+});
+
+test("standalone lookup can search by article without a part name", async () => {
+  const env = { DB: new D1Database() };
+  const requestedUrls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url));
+    return new Response(`<script type="application/ld+json">{
+      "@type":"Product",
+      "name":"Верхня накладка переднього бампера BYD Yuan Plus",
+      "sku":"13158405-00",
+      "url":"https://seller.example/13158405-00",
+      "offers":{"price":"4950","availability":"in stock"}
+    }</script>`, { status: 200, headers: { "content-type": "text/html" } });
+  };
+  try {
+    const lookup = await runMarketLookup(env, { part_number: "13158405-00" });
+    assert.equal(lookup.run.status, "complete");
+    assert.equal(lookup.run.query, "");
+    assert.equal(lookup.run.part_number, "13158405-00");
+    assert.equal(lookup.summary.exact_offer_count, 11);
+    assert.ok(requestedUrls.length > 0);
+    assert.ok(requestedUrls.every((url) => url.includes("13158405-00")));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("research persists source-backed offers in D1 and keeps VIN out of outbound URLs", async () => {
