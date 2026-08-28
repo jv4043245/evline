@@ -165,7 +165,7 @@ test("manager can launch a market lookup without creating an order", () => {
   assert.match(lookupMigration, /CREATE TABLE IF NOT EXISTS market_lookup_runs/);
   assert.match(adminCss, /\.market-lookup-detail\s*{[^}]*width:\s*min\(1120px,/s);
   assert.match(adminJs, /Артикул[\s\S]*13158405-00/);
-  assert.match(adminJs, /назва запчастини необов'язкова/);
+  assert.doesNotMatch(adminJs, /назва запчастини необов'язкова/);
 });
 
 test("standalone lookup can search by article without a part name", async () => {
