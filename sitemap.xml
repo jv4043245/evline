@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <!-- Organic home pages: direct, brand and search traffic. -->
   <url>
     <loc>https://evline.com.ua/</loc>
@@ -55,6 +56,33 @@
     <lastmod>2026-08-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.86</priority>
+  </url>
+  <!-- Organic landing pages for complete parts sourcing after a collision. -->
+  <url>
+    <loc>https://evline.com.ua/zapchastyny-pislya-dtp/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-pislya-dtp/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-posle-dtp/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-pislya-dtp/" />
+    <image:image>
+      <image:loc>https://evline.com.ua/assets/images/dtp/chinese-ev-parts-after-accident.webp</image:loc>
+      <image:title>Запчастини для китайського автомобіля після ДТП</image:title>
+    </image:image>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://evline.com.ua/ru/zapchasti-posle-dtp/</loc>
+    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://evline.com.ua/zapchastyny-pislya-dtp/" />
+    <xhtml:link rel="alternate" hreflang="ru-UA" href="https://evline.com.ua/ru/zapchasti-posle-dtp/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://evline.com.ua/zapchastyny-pislya-dtp/" />
+    <image:image>
+      <image:loc>https://evline.com.ua/assets/images/dtp/chinese-ev-parts-after-accident.webp</image:loc>
+      <image:title>Запчасти для китайского автомобиля после ДТП</image:title>
+    </image:image>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
   </url>
   <!-- BYD programming SEO pain-point pages. -->
   <url>
