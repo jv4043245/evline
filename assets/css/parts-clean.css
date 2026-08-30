@@ -245,7 +245,8 @@ body.parts-page {
   line-height: 1.15;
 }
 
-.brand-seo-form input {
+.brand-seo-form input,
+.brand-seo-form textarea {
   width: 100%;
   min-height: 52px;
   padding: 0 15px;
@@ -257,7 +258,16 @@ body.parts-page {
   font-weight: 650;
 }
 
-.brand-seo-form input:focus {
+.brand-seo-form textarea {
+  min-height: 112px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.brand-seo-form input:focus,
+.brand-seo-form textarea:focus {
   border-color: #00a86b;
   outline: 3px solid rgba(0, 168, 107, 0.16);
 }
