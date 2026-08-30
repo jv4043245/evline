@@ -1,0 +1,543 @@
+/* DTP landing page visual layer. Kept page-scoped to avoid changing shared SEO pages. */
+.dtp-page {
+  --dtp-ink: #0c1712;
+  --dtp-muted: #5c6962;
+  --dtp-green: #18a866;
+  --dtp-green-dark: #087447;
+  --dtp-soft: #f2f7f4;
+  --dtp-line: rgba(41, 115, 74, 0.18);
+}
+
+.dtp-page .dtp-hero {
+  padding: 30px 0 34px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(24, 168, 102, 0.1), transparent 28%),
+    linear-gradient(180deg, #f7fbf8 0%, #fff 100%);
+}
+
+.dtp-page .dtp-hero__grid {
+  width: min(100% - 48px, 1200px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.63fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.dtp-hero__visual {
+  position: relative;
+  min-height: 652px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 30px;
+  color: #fff;
+  background: #111916;
+  box-shadow: 0 26px 70px rgba(12, 23, 18, 0.19);
+  isolation: isolate;
+}
+
+.dtp-hero__visual::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 14, 11, 0.96) 0%, rgba(7, 14, 11, 0.8) 43%, rgba(7, 14, 11, 0.2) 76%, rgba(7, 14, 11, 0.08) 100%),
+    linear-gradient(0deg, rgba(7, 14, 11, 0.84) 0%, transparent 48%);
+  content: "";
+}
+
+.dtp-hero__picture,
+.dtp-hero__picture img {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dtp-hero__picture img {
+  object-fit: cover;
+  object-position: 68% center;
+}
+
+.dtp-hero__content {
+  display: flex;
+  min-height: 652px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(28px, 4vw, 52px);
+}
+
+.dtp-page .dtp-hero__content .brand-seo-breadcrumb {
+  position: absolute;
+  top: 28px;
+  left: clamp(28px, 4vw, 52px);
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dtp-page .dtp-hero__content .brand-seo-breadcrumb a {
+  color: #a7edc8;
+}
+
+.dtp-page .dtp-hero__content .brand-seo-kicker {
+  width: fit-content;
+  margin-bottom: 16px;
+  border-color: rgba(167, 237, 200, 0.28);
+  color: #b9f3d4;
+  background: rgba(8, 116, 71, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.dtp-page .dtp-hero__content h1 {
+  max-width: 670px;
+  color: #fff;
+  font-size: clamp(43px, 4.8vw, 66px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dtp-page .dtp-hero__content .brand-seo-lead {
+  max-width: 650px;
+  margin-top: 19px;
+  color: rgba(245, 250, 247, 0.88);
+  font-size: clamp(17px, 1.55vw, 21px);
+  line-height: 1.45;
+}
+
+.dtp-page .dtp-hero__content .brand-seo-tags {
+  margin-top: 19px;
+}
+
+.dtp-page .dtp-hero__content .brand-seo-tags span {
+  min-height: 32px;
+  border-color: rgba(255, 255, 255, 0.19);
+  color: #f4faf6;
+  background: rgba(10, 20, 15, 0.48);
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.dtp-hero__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.dtp-hero__facts span {
+  position: relative;
+  padding-left: 18px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dtp-hero__facts span::before {
+  position: absolute;
+  left: 0;
+  color: #7fe0aa;
+  content: "✓";
+}
+
+.dtp-page .dtp-hero .brand-seo-form {
+  gap: 11px;
+  min-height: 652px;
+  padding: 25px;
+  border-color: var(--dtp-line);
+  border-radius: 28px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.11);
+}
+
+.dtp-form__eyebrow {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--dtp-green-dark);
+  background: #e7f6ee;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.dtp-page .dtp-hero .brand-seo-form > strong {
+  margin: 2px 0 3px;
+  font-size: 25px;
+}
+
+.dtp-field {
+  display: grid;
+  gap: 6px;
+}
+
+.dtp-field > span {
+  color: #33413a;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.dtp-field em {
+  margin-left: 4px;
+  color: #718078;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.dtp-page .dtp-field input,
+.dtp-page .dtp-field textarea {
+  margin: 0;
+  background: #f8fbf9;
+}
+
+.dtp-page .dtp-field textarea {
+  min-height: 98px;
+}
+
+.dtp-page .dtp-hero .brand-seo-form small {
+  color: #68756e;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.dtp-page .dtp-categories {
+  padding: 38px 0 50px;
+}
+
+.dtp-page .dtp-categories .parts-section-head {
+  margin-bottom: 22px;
+}
+
+.dtp-categories__layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.38fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.dtp-parts-visual {
+  position: relative;
+  min-height: 620px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 26px;
+  background: #171d1a;
+  box-shadow: 0 20px 52px rgba(15, 23, 42, 0.13);
+}
+
+.dtp-parts-visual::after {
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(0deg, rgba(8, 15, 11, 0.94), rgba(8, 15, 11, 0));
+  content: "";
+}
+
+.dtp-parts-visual picture,
+.dtp-parts-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dtp-parts-visual img {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  object-position: center;
+}
+
+.dtp-parts-visual figcaption {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  gap: 7px;
+  padding: 28px;
+  color: #fff;
+}
+
+.dtp-parts-visual figcaption strong {
+  font-size: 23px;
+  line-height: 1.12;
+}
+
+.dtp-parts-visual figcaption span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.dtp-page .dtp-parts-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dtp-page .dtp-parts-grid article {
+  min-height: 0;
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.dtp-page .dtp-parts-grid h3 {
+  font-size: 17px;
+}
+
+.dtp-page .dtp-parts-grid p {
+  font-size: 13px;
+}
+
+.dtp-page .dtp-parts-grid span {
+  margin-bottom: 11px;
+}
+
+.dtp-seo-story {
+  padding: clamp(48px, 6vw, 78px) 0;
+  color: #fff;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(63, 199, 126, 0.2), transparent 26%),
+    linear-gradient(135deg, #0b1510, #17231d);
+}
+
+.dtp-seo-story__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: clamp(32px, 6vw, 84px);
+  align-items: start;
+}
+
+.dtp-section-label {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(127, 224, 170, 0.22);
+  border-radius: 999px;
+  color: #9ce9be;
+  background: rgba(127, 224, 170, 0.08);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dtp-seo-story h2 {
+  margin: 16px 0 0;
+  color: #fff;
+  font-size: clamp(32px, 3.7vw, 52px);
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.dtp-seo-story__copy p {
+  margin: 0 0 17px;
+  color: #cbd7d0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.62;
+}
+
+.dtp-seo-story__copy a {
+  color: #95e9bb;
+  font-weight: 800;
+}
+
+.dtp-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 4px;
+  text-decoration: none;
+}
+
+.dtp-text-link span {
+  font-size: 20px;
+  transition: transform 0.18s ease;
+}
+
+.dtp-text-link:hover span {
+  transform: translateX(4px);
+}
+
+.dtp-page .brand-seo-section--soft {
+  background: #fff;
+}
+
+.dtp-page .brand-seo-process {
+  background: var(--dtp-soft);
+}
+
+.dtp-page .brand-seo-process__grid article {
+  min-height: 198px;
+}
+
+.dtp-page .brand-seo-faq {
+  background: #fff;
+}
+
+@media (max-width: 1100px) {
+  .dtp-page .floating-chat {
+    display: none;
+  }
+
+  .dtp-page .dtp-hero__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.58fr);
+    gap: 20px;
+  }
+
+  .dtp-hero__visual,
+  .dtp-hero__content,
+  .dtp-page .dtp-hero .brand-seo-form {
+    min-height: 620px;
+  }
+
+  .dtp-page .dtp-hero__content h1 {
+    font-size: clamp(40px, 5vw, 56px);
+  }
+}
+
+@media (max-width: 980px) {
+  .dtp-page .dtp-hero__grid,
+  .dtp-categories__layout,
+  .dtp-seo-story__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dtp-page .dtp-hero .brand-seo-form {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+  }
+
+  .dtp-parts-visual {
+    min-height: 500px;
+  }
+
+  .dtp-page .dtp-parts-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .dtp-page .dtp-hero {
+    padding: 20px 0 28px;
+  }
+
+  .dtp-page .dtp-hero__grid {
+    width: min(100% - 28px, 1200px);
+    gap: 16px;
+  }
+
+  .dtp-hero__visual,
+  .dtp-hero__content {
+    min-height: 500px;
+  }
+
+  .dtp-hero__content {
+    padding: 24px;
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-breadcrumb {
+    top: 22px;
+    left: 24px;
+  }
+
+  .dtp-page .dtp-hero__content h1 {
+    font-size: clamp(35px, 10.5vw, 46px);
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-lead {
+    margin-top: 14px;
+    font-size: 16px;
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-tags {
+    gap: 5px;
+    margin-top: 14px;
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-tags span:nth-child(n + 5) {
+    display: none;
+  }
+
+  .dtp-hero__facts {
+    gap: 7px 13px;
+    margin-top: 14px;
+    padding-top: 13px;
+  }
+
+  .dtp-page .dtp-hero .brand-seo-form {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .dtp-page .site-header .brand img {
+    width: 168px;
+    height: auto;
+  }
+
+  .dtp-page .dtp-categories {
+    padding: 30px 0 40px;
+  }
+
+  .dtp-page .dtp-parts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dtp-parts-visual {
+    min-height: 420px;
+  }
+
+  .dtp-seo-story__copy p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .dtp-page .dtp-hero__content .brand-seo-breadcrumb {
+    display: none;
+  }
+
+  .dtp-hero__visual,
+  .dtp-hero__content {
+    min-height: 470px;
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-kicker {
+    min-height: 28px;
+    margin-bottom: 12px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .dtp-page .dtp-hero__content h1 {
+    font-size: 35px;
+  }
+
+  .dtp-page .dtp-hero__content .brand-seo-lead {
+    font-size: 15px;
+  }
+
+  .dtp-hero__facts span {
+    font-size: 12px;
+  }
+
+  .dtp-page .dtp-parts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dtp-parts-visual {
+    min-height: 360px;
+  }
+
+  .dtp-parts-visual figcaption {
+    padding: 22px;
+  }
+}
