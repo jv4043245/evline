@@ -462,7 +462,7 @@
         line-height: 1.45;
       }
       .sto-form-card .brand-seo-form {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         align-items: center;
         gap: 10px;
         padding: 12px;
@@ -476,10 +476,17 @@
       .sto-form-card .brand-seo-form input {
         min-height: 46px;
       }
+      .sto-form-card .brand-seo-form input[name="car"],
+      .sto-form-card .brand-seo-form textarea,
+      .sto-form-card .brand-seo-form button {
+        grid-column: 1 / -1;
+      }
+      .sto-form-card .brand-seo-form textarea {
+        min-height: 86px;
+      }
       .sto-form-card .brand-seo-form button {
         min-height: 46px;
         padding: 0 18px;
-        white-space: nowrap;
         font-size: 15px;
       }
       .sto-faq-list {
@@ -609,13 +616,15 @@
         font-size: 13px;
         font-weight: 800;
       }
-      .sto-contact-dialog .brand-seo-form input {
+      .sto-contact-dialog .brand-seo-form input,
+      .sto-contact-dialog .brand-seo-form textarea {
         min-height: 52px;
         border-color: rgba(255, 255, 255, 0.16);
         color: #fff;
         background: rgba(255, 255, 255, 0.08);
       }
-      .sto-contact-dialog .brand-seo-form input::placeholder {
+      .sto-contact-dialog .brand-seo-form input::placeholder,
+      .sto-contact-dialog .brand-seo-form textarea::placeholder {
         color: rgba(255, 255, 255, 0.42);
       }
       .sto-contact-dialog .brand-seo-form button {
@@ -831,7 +840,8 @@
             <input type="hidden" name="topic" value="Сотрудничество с СТО">
             <input name="name" placeholder="Название СТО или сервиса" autocomplete="organization" required>
             <input name="phone" placeholder="+380..." autocomplete="tel" required>
-            <input type="hidden" name="message" value="Запрос на партнерство от СТО">
+            <input name="car" placeholder="Какие марки и модели обслуживаете (необязательно)" autocomplete="off">
+            <textarea name="message" placeholder="Что нужно сейчас или какой объём закупок планируете (необязательно)"></textarea>
             <button type="submit">Получить условия</button>
             <a href="https://t.me/evline_support" target="_blank" rel="noopener">Или написать напрямую в Telegram</a>
           </form>
@@ -864,9 +874,10 @@
         <form class="brand-seo-form" data-lead-form data-form-name="СТО партнерство: модальная форма RU">
           <input type="hidden" name="type" value="parts">
           <input type="hidden" name="topic" value="Сотрудничество с СТО">
-          <input type="hidden" name="message" value="Запрос на партнерство от СТО">
           <label><span>Название СТО</span><input name="name" placeholder="Название СТО или сервиса" autocomplete="organization" required></label>
           <label><span>Телефон</span><input name="phone" type="tel" inputmode="tel" placeholder="+380..." autocomplete="tel" required></label>
+          <label><span>Марки и модели (необязательно)</span><input name="car" placeholder="Например, BYD и ZEEKR" autocomplete="off"></label>
+          <label><span>Текущая потребность (необязательно)</span><textarea name="message" placeholder="Какие детали или объём поставок интересуют"></textarea></label>
           <button type="submit">Получить условия</button>
         </form>
       </div>
