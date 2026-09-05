@@ -9,7 +9,7 @@ export async function onRequestPost({ request, params, env }) {
   const result = await syncOrderTracking(env, params.id, { notify_initial: notifyInitial });
   if (result.ok) {
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "tracking.sync",
       entity_type: "order",
       entity_id: params.id,
