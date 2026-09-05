@@ -1,4 +1,5 @@
 import { integer, text } from "./http.js";
+import { adminUser } from "./auth.js";
 
 const MAX_DETAILS_LENGTH = 6000;
 
@@ -70,14 +71,8 @@ function parseDetails(value) {
   }
 }
 
-export function auditActor(request) {
-  const headers = request?.headers;
-  return (
-    text(headers?.get?.("x-admin-actor")) ||
-    text(headers?.get?.("cf-access-authenticated-user-email")) ||
-    text(headers?.get?.("x-forwarded-email")) ||
-    "admin"
-  );
+export function auditActor(request, env) {
+  return adminUser(request, env)?.name || "admin";
 }
 
 export async function recordAuditEvent(env, event = {}) {

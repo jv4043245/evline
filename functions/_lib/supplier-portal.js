@@ -1295,7 +1295,7 @@ export async function createSupplierRequest(env, orderId, payload = {}, options 
     order_id: orderId,
     previous_status: order.status,
     status: order.status,
-    actor: "manager",
+    actor: options.actor || "manager",
     comment: `Створено запит постачальнику ${supplierName}: ${supplierRequest.public_number}`,
     notify_customer: false,
     notification_status: "not_queued",
@@ -2093,7 +2093,7 @@ export async function deleteSupplierRequest(env, supplierRequestId) {
   return supplierRequest;
 }
 
-export async function selectSupplierQuote(env, quoteId) {
+export async function selectSupplierQuote(env, quoteId, options = {}) {
   await assertSupplierTables(env);
 
   const quote = await env.DB.prepare("SELECT * FROM supplier_quotes WHERE id = ?")
@@ -2165,7 +2165,7 @@ export async function selectSupplierQuote(env, quoteId) {
     order_id: supplierRequest.order_id,
     previous_status: order?.status || "",
     status: order?.status || "proposal_sent",
-    actor: "manager",
+    actor: options.actor || "manager",
     comment: `Обрано пропозицію постачальника ${supplierRequest.supplier_name}: ${quote.price_cny || 0} CNY`,
     notify_customer: false,
     notification_status: "not_queued",
@@ -2245,7 +2245,7 @@ export async function listChinaPreorders(env, options = {}) {
   return bundles;
 }
 
-export async function sendSupplierRequestToPayment(env, supplierRequestId, payload = {}) {
+export async function sendSupplierRequestToPayment(env, supplierRequestId, payload = {}, options = {}) {
   await assertSupplierTables(env);
   const supplierRequest = await env.DB.prepare("SELECT * FROM supplier_requests WHERE id = ?")
     .bind(text(supplierRequestId))
@@ -2316,10 +2316,10 @@ export async function sendSupplierRequestToPayment(env, supplierRequestId, paylo
       selected.purchase_days ? `Срок: ${selected.purchase_days} дн.` : "",
       selected.comment_ru || selected.comment_translated || selected.comment_cn ? `Комментарий: ${selected.comment_ru || selected.comment_translated || selected.comment_cn}` : "",
     ].filter(Boolean).join("\n"),
-  });
+  }, options);
 
   if (selected.status !== "selected") {
-    const result = await selectSupplierQuote(env, selected.id);
+    const result = await selectSupplierQuote(env, selected.id, options);
     selected = result.quote;
   }
 
