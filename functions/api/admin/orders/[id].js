@@ -230,7 +230,7 @@ export async function onRequestPatch({ request, params, env }) {
       order_id: params.id,
       previous_status: current.status,
       status: nextStatus,
-      actor: text(payload.actor) || "manager",
+      actor: auditActor(request, env),
       comment: text(payload.status_comment),
       notify_customer: shouldNotify,
       notification_status: shouldNotify ? "queued" : "not_queued",
@@ -275,7 +275,7 @@ export async function onRequestPatch({ request, params, env }) {
   const supplierRequests = await listSupplierRequests(env, params.id);
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: statusChanged ? "order.status_update" : "order.update",
     entity_type: "order",
     entity_id: updated.id,
@@ -325,7 +325,7 @@ export async function onRequestDelete({ request, params, env }) {
   const customerId = current.customer_id || "";
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "order.delete",
     entity_type: "order",
     entity_id: current.id,

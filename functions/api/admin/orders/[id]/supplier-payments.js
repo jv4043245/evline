@@ -13,12 +13,12 @@ export async function onRequestPost({ request, params, env }) {
   try {
     const supplier = await registerSupplier(env, payload.supplier_name);
     payload.supplier_name = supplier.display_name;
-    const payment = await createSupplierPaymentRequest(env, params.id, payload);
+    const payment = await createSupplierPaymentRequest(env, params.id, payload, { actor: auditActor(request, env) });
     const order = await loadOrder(env, params.id);
     const supplierPayments = await listSupplierPayments(env, params.id);
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_payment.create",
       entity_type: "supplier_payment",
       entity_id: payment.id,

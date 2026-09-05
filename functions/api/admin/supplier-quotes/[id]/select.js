@@ -17,7 +17,7 @@ export async function onRequestPost({ request, params, env }) {
     const result = await sendSupplierRequestToPayment(env, quote.supplier_request_id, {
       quote_id: quote.id,
       client_approved: payload.client_approved === true,
-    });
+    }, { actor: auditActor(request, env) });
     const orderId = result.request?.request?.order_id || result.payment?.order_id || quote.order_id || "";
     const order = orderId ? await loadOrder(env, orderId) : null;
     const supplierRequests = orderId ? await listSupplierRequests(env, orderId) : [];
@@ -25,7 +25,7 @@ export async function onRequestPost({ request, params, env }) {
     const requestRow = result.request?.request || {};
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_quote.select",
       entity_type: "supplier_quote",
       entity_id: quote.id,

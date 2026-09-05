@@ -627,7 +627,7 @@ export async function listSupplierPayments(env, orderId) {
   }
 }
 
-export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
+export async function createSupplierPaymentRequest(env, orderId, payload = {}, options = {}) {
   const order = await loadOrder(env, orderId);
   if (!order) {
     const error = new Error("Order not found");
@@ -702,7 +702,7 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
   }
 
   const statusAdvance = await advanceOrderStatus(env, orderId, "awaiting_payment", {
-    actor: "system",
+    actor: options.actor || "system",
     comment: `Сформовано запит на оплату постачальнику ${payment.supplier_name || "без назви"}: ${formatAmount(payment.requested_amount, payment.requested_currency)}`,
     notifyCustomer: false,
   });
@@ -720,7 +720,7 @@ export async function createSupplierPaymentRequest(env, orderId, payload = {}) {
   };
 }
 
-export async function updateSupplierPayment(env, paymentId, payload = {}) {
+export async function updateSupplierPayment(env, paymentId, payload = {}, options = {}) {
   await ensureSupplierPaymentReceiptBreakdown(env);
   const current = await env.DB.prepare("SELECT * FROM supplier_payments WHERE id = ?").bind(paymentId).first();
   if (!current) {
@@ -783,7 +783,7 @@ export async function updateSupplierPayment(env, paymentId, payload = {}) {
   if (updated?.status === "paid") {
     await markSupplierRequestPaymentPaid(env, updated, now);
     await advanceOrderStatus(env, updated.order_id, "paid", {
-      actor: "manager",
+      actor: options.actor || "manager",
       comment: `Оплату постачальнику ${updated.supplier_name || "без назви"} позначено як оплачену в CRM${number(updated.paid_amount) > 0 ? `: ${formatAmount(updated.paid_amount, updated.paid_currency)}` : ""}`,
       notifyCustomer: false,
     });
