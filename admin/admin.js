@@ -168,6 +168,7 @@ const supplierAvailabilityLabels = {
 };
 
 const auditActionLabels = {
+  "admin.sign_in": "Вхід до адмінки",
   "order.create": "Создан заказ",
   "order.create_from_lead": "Создан заказ из заявки",
   "order.update": "Изменён заказ",
@@ -434,9 +435,15 @@ async function api(path, options = {}) {
     headers: headers(options.headers || {}),
   });
   if (!response.ok) {
-    const message = response.status === 401 ? "Немає доступу. Перевірте Cloudflare Access або ADMIN_TOKEN." : await response.text();
+    if (response.status === 401) {
+      setAdminUser("");
+      setAuthVisible(true);
+    }
+    const message = response.status === 401 ? "Немає доступу. Перевірте особистий токен." : await response.text();
     throw new Error(message);
   }
+  const userName = response.headers.get("x-evline-admin-name");
+  if (userName) setAdminUser(decodeURIComponent(userName));
   const type = response.headers.get("content-type") || "";
   return type.includes("application/json") ? response.json() : response.text();
 }
@@ -445,6 +452,14 @@ function setText(selector, value) {
   document.querySelectorAll(`[data-kpi="${selector}"]`).forEach((node) => {
     node.textContent = value;
   });
+}
+
+function setAdminUser(name) {
+  const label = document.querySelector("[data-admin-user]");
+  if (label) {
+    label.textContent = name;
+    label.hidden = !name;
+  }
 }
 
 function setAuthVisible(visible) {
@@ -4138,17 +4153,30 @@ function collectSupplierRequestCreatePayload(form) {
   };
 }
 
-document.querySelector("[data-token-form]")?.addEventListener("submit", (event) => {
+document.querySelector("[data-token-form]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const token = new FormData(event.currentTarget).get("token");
-  if (token) localStorage.setItem("evline_admin_token", token);
-  setAuthVisible(false);
-  refresh();
+  const form = event.currentTarget;
+  const token = String(new FormData(form).get("token") || "").trim();
+  if (!token) return;
+  const submit = form.querySelector("button[type='submit']");
+  if (submit) submit.disabled = true;
+  try {
+    const result = await api("/api/admin/session", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+    localStorage.setItem("evline_admin_token", token);
+    setAdminUser(result.user.name);
+    form.reset();
+    setAuthVisible(false);
+    await refresh();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    if (submit) submit.disabled = false;
+  }
 });
 
-document.querySelector("[data-clear-token]")?.addEventListener("click", () => {
+document.querySelector("[data-switch-user]")?.addEventListener("click", () => {
   localStorage.removeItem("evline_admin_token");
-  setAuthVisible(true);
+  window.location.reload();
 });
 
 document.querySelector("[data-manual-order-toggle]")?.addEventListener("click", () => {
@@ -5214,7 +5242,7 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
 setActiveTab(state.activeTab);
 setAuthVisible(!adminToken());
 syncFilterMenuButtons();
-refresh();
+if (adminToken()) refresh();
 
 document.addEventListener("click", (event) => {
   const inviteButton = event.target.closest("[data-copy-tg-invite], [data-copy-tg-link]");
