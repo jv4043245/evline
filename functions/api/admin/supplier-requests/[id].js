@@ -14,7 +14,7 @@ export async function onRequestPatch({ request, params, env }) {
     const requestRow = supplierRequest.request || {};
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_request.message",
       entity_type: "supplier_request",
       entity_id: requestRow.id || params.id,
@@ -45,7 +45,7 @@ export async function onRequestDelete({ request, params, env }) {
   try {
     const supplierRequest = await deleteSupplierRequest(env, params.id);
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_request.delete",
       entity_type: "supplier_request",
       entity_id: supplierRequest.id,
