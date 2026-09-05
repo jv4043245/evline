@@ -16,7 +16,7 @@ export async function onRequestPost({ request, params, env }) {
     order_id: order.id,
     previous_status: order.status,
     status: order.status,
-    actor: "system",
+    actor: auditActor(request, env),
     comment: "Заявку повторно надіслано менеджеру в Telegram",
     notify_customer: false,
     notification_status: "sent",
@@ -29,7 +29,7 @@ export async function onRequestPost({ request, params, env }) {
     .all();
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "order.notify_manager",
     entity_type: "order",
     entity_id: order.id,

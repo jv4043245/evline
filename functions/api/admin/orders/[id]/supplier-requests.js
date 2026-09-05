@@ -17,13 +17,13 @@ export async function onRequestPost({ request, params, env }) {
   try {
     const payload = await readPayload(request);
     const origin = new URL(request.url).origin;
-    const supplierRequest = await createSupplierRequest(env, params.id, payload, { origin });
+    const supplierRequest = await createSupplierRequest(env, params.id, payload, { origin, actor: auditActor(request, env) });
     const order = await loadOrder(env, params.id);
     const supplierRequests = await listSupplierRequests(env, params.id);
     const supplierRequestRow = supplierRequest.request || {};
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_request.create",
       entity_type: "supplier_request",
       entity_id: supplierRequestRow.id || supplierRequest.id,
