@@ -6,7 +6,7 @@ export async function onRequestDelete({ request, params, env }) {
   try {
     const supplier = await deleteSupplierDirectoryEntry(env, params.id);
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier.delete",
       entity_type: "supplier",
       entity_id: supplier.id,
