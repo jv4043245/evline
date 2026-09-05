@@ -1,4 +1,7 @@
 ADMIN_TOKEN=change-this-token
+# The existing ADMIN_TOKEN belongs to Andrii. Additional users have equal admin rights.
+# Store real values as a Cloudflare secret, never in this file or wrangler.toml.
+ADMIN_USERS_JSON='[{"id":"igor","name":"Ігор","token":"local-igor-token"},{"id":"owner","name":"Власник","token":"local-owner-token"}]'
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 TELEGRAM_PARTS_CHAT_ID=
