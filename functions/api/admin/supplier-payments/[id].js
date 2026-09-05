@@ -10,12 +10,12 @@ export async function onRequestPatch({ request, params, env }) {
   const payload = await readPayload(request);
 
   try {
-    const payment = await updateSupplierPayment(env, params.id, payload);
+    const payment = await updateSupplierPayment(env, params.id, payload, { actor: auditActor(request, env) });
     const order = payment?.order_id ? await loadOrder(env, payment.order_id) : null;
     const supplierPayments = payment?.order_id ? await listSupplierPayments(env, payment.order_id) : [];
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_payment.update",
       entity_type: "supplier_payment",
       entity_id: payment.id,
