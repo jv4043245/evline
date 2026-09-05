@@ -51,7 +51,7 @@ export async function onRequestPost({ request, env }) {
     .run();
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "ad_cost.create",
     entity_type: "ad_cost",
     entity_id: cost.id,

@@ -363,7 +363,7 @@ export async function onRequestPost({ request, env }) {
       id, created_at, order_id, previous_status, status, actor, comment, notify_customer, notification_status
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(crypto.randomUUID(), now, orderId, "", status, "manager", "Замовлення створено вручну", 0, "not_queued")
+    .bind(crypto.randomUUID(), now, orderId, "", status, auditActor(request, env), "Замовлення створено вручну", 0, "not_queued")
     .run();
 
   const order = await loadOrder(env, orderId);
@@ -373,7 +373,7 @@ export async function onRequestPost({ request, env }) {
     googleAdsEventTypesForStatus(order.status)
   );
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "order.create",
     entity_type: "order",
     entity_id: order.id,
@@ -403,7 +403,7 @@ export async function onRequestPut({ request, env }) {
   const orderId = await createOrderFromLead(env, lead);
   const order = await loadOrder(env, orderId);
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "order.create_from_lead",
     entity_type: "order",
     entity_id: order.id,

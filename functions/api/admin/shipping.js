@@ -144,7 +144,7 @@ export async function onRequestPost({ request, env }) {
   await insertRates(env, rates);
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "shipping_carrier.create",
     entity_type: "shipping_carrier",
     entity_id: carrier.id,
@@ -192,7 +192,7 @@ export async function onRequestPatch({ request, env }) {
   await insertRates(env, rates.map((rate) => ({ ...rate, carrier_id: text(payload.id) })));
 
   await recordAuditEvent(env, {
-    actor: auditActor(request),
+    actor: auditActor(request, env),
     action: "shipping_carrier.update",
     entity_type: "shipping_carrier",
     entity_id: text(payload.id),

@@ -12,7 +12,7 @@ export async function onRequestPost({ request, env }) {
     const payload = await readPayload(request);
     const supplier = await registerSupplier(env, payload.supplier_name || payload.display_name || payload.name);
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier.create",
       entity_type: "supplier",
       entity_id: supplier.id,
