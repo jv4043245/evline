@@ -10,7 +10,7 @@ import { auditActor, recordAuditEvent } from "../../../../_lib/audit-log.js";
 export async function onRequestPost({ request, params, env }) {
   try {
     const payload = await readPayload(request);
-    const result = await sendSupplierRequestToPayment(env, params.id, payload);
+    const result = await sendSupplierRequestToPayment(env, params.id, payload, { actor: auditActor(request, env) });
     const orderId = result.request?.request?.order_id || result.payment?.order_id || "";
     const order = orderId ? await loadOrder(env, orderId) : null;
     const supplierPayments = orderId ? await listSupplierPayments(env, orderId) : [];
@@ -19,7 +19,7 @@ export async function onRequestPost({ request, params, env }) {
     const payment = result.payment || {};
 
     await recordAuditEvent(env, {
-      actor: auditActor(request),
+      actor: auditActor(request, env),
       action: "supplier_request.send_payment",
       entity_type: "supplier_request",
       entity_id: requestRow.id || params.id,
