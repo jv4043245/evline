@@ -89,18 +89,18 @@ export function inferAttribution(payload = {}, request) {
       gbraid ||
       wbraid ||
       gadCampaignId ||
-      pickParam("gad_source", landingParams, pageParams, requestParams) ||
-      googleReferrer(referrer)
+      pickParam("gad_source", landingParams, pageParams, requestParams)
   );
+  const hasGoogleOrganicReferrer = !hasGoogleClick && googleReferrer(referrer);
 
   const explicitSource = text(payload.utm_source || payload.source).toLowerCase();
   const explicitMedium = text(payload.utm_medium || payload.medium).toLowerCase();
   const source = hasMetaClick && (!explicitSource || /^(site|direct|google)$/.test(explicitSource))
     ? "meta"
-    : explicitSource || (hasGoogleClick ? "google" : "site");
+    : explicitSource || (hasGoogleClick || hasGoogleOrganicReferrer ? "google" : "site");
   const medium = hasMetaClick && (!explicitMedium || /^(cpc|ppc|paid|ads?)$/.test(explicitMedium))
     ? "paid_social"
-    : explicitMedium || (hasGoogleClick ? "cpc" : "");
+    : explicitMedium || (hasGoogleClick ? "cpc" : hasGoogleOrganicReferrer ? "organic" : "");
 
   const attribution = {
     source,

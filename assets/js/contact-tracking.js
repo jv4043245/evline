@@ -148,11 +148,15 @@
   }
 
   function intentFromContext(href) {
-    var signal = (window.location.pathname + " " + String(href || "")).toLowerCase();
-    if (/evline_tech|\/byd|zeekr|program|programuv|програм|оновлен|diagnost|діагност/.test(signal)) return "byd";
-    if (/komplekty-to|komplekty_to|комплект.*то/.test(signal)) return "to";
-    if (/spivpratsya-sto|sotrudnichestvo-sto|для-сто/.test(signal)) return "sto";
-    if (/evline_support|zapchast|запчаст|parts/.test(signal)) return "parts";
+    var path = window.location.pathname.toLowerCase();
+    try { path = decodeURIComponent(path); } catch (_) {}
+    var destination = String(href || "").toLowerCase();
+    if (/evline_tech/.test(destination)) return "byd";
+    if (/spivpratsya-sto|sotrudnichestvo-sto|для-сто/.test(path)) return "sto";
+    if (/komplekty-to|komplekty_to|комплект.*то/.test(path)) return "to";
+    if (/zapchast|zapchastyn|запчаст|parts|dorogie-detali/.test(path)) return "parts";
+    if (/evline_support/.test(destination)) return "parts";
+    if (/\/(?:ru\/)?(?:byd|zeekr)(?:[-./]|$)|program|programuv|програм|оновлен|obnovlen|diagnost|діагност/.test(path)) return "byd";
     return "general";
   }
 
