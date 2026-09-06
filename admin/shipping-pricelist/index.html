@@ -8,7 +8,7 @@
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20260718-request-clamp">
-    <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260826-v2">
+    <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260906-usability">
     <script src="/admin/shipping-pricelist/pricelist.js?v=20260826-v1" defer></script>
   </head>
   <body class="admin-shell shipping-pricelist-page">
@@ -34,35 +34,10 @@
           <h1>Орієнтовна доставка кузовних деталей</h1>
           <p>Стартова база для швидкої оцінки. Після отримання габаритів упаковки норматив замінюється точним розрахунком.</p>
         </div>
-        <div class="shipping-pricelist-version">
-          <span>Версія</span>
-          <strong data-version>0.1</strong>
-          <small data-updated>26.08.2026</small>
-        </div>
+
       </section>
 
-      <section class="shipping-pricelist-metrics" aria-label="Базові параметри розрахунку">
-        <article>
-          <span>Підтверджений тариф</span>
-          <strong data-base-rate>$319/м³</strong>
-          <small data-route>Guangzhou → Chełm → Kyiv</small>
-        </article>
-        <article>
-          <span>Робочий тариф</span>
-          <strong data-quote-rate>$367/м³</strong>
-          <small>із резервом 15%</small>
-        </article>
-        <article>
-          <span>Страхування</span>
-          <strong data-insurance-rate>1,5%</strong>
-          <small>від закупівельної вартості</small>
-        </article>
-        <article>
-          <span>Точність версії 0.1</span>
-          <strong>±20–30%</strong>
-          <small>до фактичного заміру упаковки</small>
-        </article>
-      </section>
+
 
       <section class="shipping-pricelist-layout">
         <article class="admin-panel shipping-calculator">
@@ -114,26 +89,7 @@
           </div>
         </article>
 
-        <article class="admin-panel shipping-source-card">
-          <div class="admin-panel__head">
-            <div>
-              <h2>На чому базується тариф</h2>
-              <p class="muted">Підтверджена пара документів одного відправлення.</p>
-            </div>
-          </div>
-          <div class="shipping-pricelist-card-body">
-            <dl>
-              <div><dt>Статус джерела</dt><dd data-source-label>Підтверджена відправка</dd></div>
-              <div><dt>Об'єм</dt><dd data-source-volume>2,53 м³</dd></div>
-              <div><dt>Вага брутто</dt><dd data-source-weight>120,5 кг</dd></div>
-              <div><dt>Перевезення</dt><dd data-source-freight>$807</dd></div>
-              <div><dt>Страхування</dt><dd data-source-insurance>$23</dd></div>
-              <div><dt>Китай + обрешітка</dt><dd data-source-china-costs>240 CNY</dd></div>
-              <div><dt>Ефективна ставка</dt><dd data-source-effective-rate>$318,97/м³</dd></div>
-            </dl>
-            <p>Вага цього вантажу становила лише близько 47,6 кг/м³, тому розрахунок був об'ємним. Приклади без вказаної кубатури та авіаційні відправлення в базовий тариф не включені.</p>
-          </div>
-        </article>
+
       </section>
 
       <section class="admin-panel shipping-pricelist-table-panel">
@@ -173,6 +129,55 @@
       </section>
 
       <p class="shipping-pricelist-status" data-pricelist-status role="status"></p>
+      <details class="shipping-methodology"><summary>Методика та документи-основи</summary>
+        <div class="shipping-pricelist-version">
+          <span>Версія</span>
+          <strong data-version>0.1</strong>
+          <small data-updated>26.08.2026</small>
+        </div>
+      <section class="shipping-pricelist-metrics" aria-label="Базові параметри розрахунку">
+        <article>
+          <span>Підтверджений тариф</span>
+          <strong data-base-rate>$319/м³</strong>
+          <small data-route>Guangzhou → Chełm → Kyiv</small>
+        </article>
+        <article>
+          <span>Робочий тариф</span>
+          <strong data-quote-rate>$367/м³</strong>
+          <small>із резервом 15%</small>
+        </article>
+        <article>
+          <span>Страхування</span>
+          <strong data-insurance-rate>1,5%</strong>
+          <small>від закупівельної вартості</small>
+        </article>
+        <article>
+          <span>Точність версії 0.1</span>
+          <strong>±20–30%</strong>
+          <small>до фактичного заміру упаковки</small>
+        </article>
+      </section>
+        <article class="admin-panel shipping-source-card">
+          <div class="admin-panel__head">
+            <div>
+              <h2>На чому базується тариф</h2>
+              <p class="muted">Підтверджена пара документів одного відправлення.</p>
+            </div>
+          </div>
+          <div class="shipping-pricelist-card-body">
+            <dl>
+              <div><dt>Статус джерела</dt><dd data-source-label>Підтверджена відправка</dd></div>
+              <div><dt>Об'єм</dt><dd data-source-volume>2,53 м³</dd></div>
+              <div><dt>Вага брутто</dt><dd data-source-weight>120,5 кг</dd></div>
+              <div><dt>Перевезення</dt><dd data-source-freight>$807</dd></div>
+              <div><dt>Страхування</dt><dd data-source-insurance>$23</dd></div>
+              <div><dt>Китай + обрешітка</dt><dd data-source-china-costs>240 CNY</dd></div>
+              <div><dt>Ефективна ставка</dt><dd data-source-effective-rate>$318,97/м³</dd></div>
+            </dl>
+            <p>Вага цього вантажу становила лише близько 47,6 кг/м³, тому розрахунок був об'ємним. Приклади без вказаної кубатури та авіаційні відправлення в базовий тариф не включені.</p>
+          </div>
+        </article>
+      </details>
     </main>
   </body>
 </html>

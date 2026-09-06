@@ -1,4 +1,5 @@
 import { text } from "./http.js";
+import { compareMarketCandidate, summarizeMarketItem, reviewMarketResult } from "../../assets/js/market-comparison.js";
 
 export const MARKET_RESEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_RESEARCH_ITEMS = 3;
@@ -452,43 +453,11 @@ export function classifyPartType(value) {
 }
 
 export function classifyMatch(candidate, item) {
-  const haystack = normalizeCompact([candidate.title, candidate.article, candidate.context].join(" "));
-  const exact = item.part_numbers.some((partNumber) => haystack.includes(normalizeCompact(partNumber)));
-  if (exact) return "exact";
-  const candidateTokens = new Set(meaningfulTokens([candidate.title, candidate.article, candidate.context].join(" ")));
-  const itemMatches = item.item_tokens.filter((token) => candidateTokens.has(token)).length;
-  const carMatches = item.car_tokens.filter((token) => candidateTokens.has(token)).length;
-  if (itemMatches >= 1 && (carMatches >= 1 || item.item_tokens.length === 1)) return "probable";
-  return "irrelevant";
-}
-
-function median(values) {
-  const sorted = [...values].sort((left, right) => left - right);
-  if (!sorted.length) return 0;
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  return compareMarketCandidate(candidate, item);
 }
 
 export function summarizeOffers(items, offers) {
-  const summaries = items.map((item) => {
-    const rows = offers.filter((offer) => offer.item_key === item.key);
-    const exact = rows.filter((offer) => offer.match_type === "exact");
-    const priced = exact.length >= 3 ? exact : rows;
-    const prices = priced.map((offer) => Number(offer.price_uah)).filter((price) => price > 0);
-    return {
-      key: item.key,
-      label: item.label,
-      query: item.query,
-      part_numbers: item.part_numbers,
-      offer_count: rows.length,
-      exact_offer_count: exact.length,
-      confidence: exact.length >= 3 ? "high" : "low",
-      min_uah: prices.length ? Math.min(...prices) : 0,
-      median_uah: median(prices),
-      average_uah: prices.length ? prices.reduce((sum, price) => sum + price, 0) / prices.length : 0,
-      max_uah: prices.length ? Math.max(...prices) : 0,
-    };
-  });
+  const summaries = items.map((item) => summarizeMarketItem(item, offers));
   return {
     items: summaries,
     item_count: summaries.length,
@@ -500,6 +469,7 @@ export function summarizeOffers(items, offers) {
 
 function fingerprintFor(order, items) {
   return JSON.stringify({
+    matching_version: 2,
     car: text(order.car).toLowerCase(),
     vin_prefix: text(order.vin).slice(0, 3).toUpperCase(),
     items: items.map((item) => ({ label: item.label.toLowerCase(), part_numbers: item.part_numbers })),
@@ -579,12 +549,12 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
   const rows = await env.DB.prepare(
     "SELECT * FROM market_research_offers WHERE run_id = ? ORDER BY item_key, match_type, price_uah"
   ).bind(run.id).all();
-  const summary = parseJson(run.summary_json, { items: [] });
+  const { summary, offers } = reviewMarketResult(parseJson(run.summary_json, { items: [] }), rows.results || []);
   const updatedAt = Date.parse(run.updated_at || run.created_at || 0);
   const stale = !updatedAt || Date.now() - updatedAt > MARKET_RESEARCH_TTL_MS;
   return {
     run: { ...run, summary, source_status: parseJson(run.source_status_json, []) },
-    offers: rows.results || [],
+    offers,
     summary,
     sources: parseJson(run.source_status_json, []),
     can_search: Boolean(items.length),
@@ -766,11 +736,11 @@ async function ensureMarketLookupTables(env) {
 
 function lookupResult(row) {
   if (!row) return null;
-  const summary = parseJson(row.summary_json, { items: [] });
+  const { summary, offers } = reviewMarketResult(parseJson(row.summary_json, { items: [] }), parseJson(row.offers_json, []));
   const sources = parseJson(row.source_status_json, []);
   return {
     run: { ...row, summary, source_status: sources },
-    offers: parseJson(row.offers_json, []),
+    offers,
     summary,
     sources,
     can_search: Boolean(text(row.query) || text(row.part_number)),

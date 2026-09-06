@@ -111,7 +111,7 @@ test("exact OEM match is separated from a probable text match", () => {
 
 test("three exact offers are required for a confident price corridor", () => {
   const item = { key: "item-1", label: "Бампер", query: "11515426-00", part_numbers: ["11515426-00"] };
-  const offer = (price, matchType = "exact") => ({ item_key: item.key, price_uah: price, match_type: matchType });
+  const offer = (price, matchType = "exact") => ({ item_key: item.key, source_key: `seller-${price}`, price_uah: price, match_type: matchType });
   const low = summarizeOffers([item], [offer(1000), offer(1200)]);
   const high = summarizeOffers([item], [offer(1000), offer(1200), offer(1400), offer(900, "probable")]);
   assert.equal(low.items[0].confidence, "low");
@@ -149,7 +149,7 @@ test("order card exposes the market tab and its protected admin endpoint", () =>
 
 test("market workspace fits the order card without nested tab or shipping overflow", () => {
   assert.match(adminCss, /\.order-detail\s*{[^}]*width:\s*min\(1120px,/s);
-  assert.match(adminCss, /\.order-editor__tabs\s*{[^}]*grid-template-columns:\s*repeat\(7, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/s);
+  assert.match(adminCss, /\.order-editor__tabs\s*{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/s);
   assert.match(adminCss, /\.market-panel\s*{[^}]*padding:\s*18px/s);
   assert.match(adminCss, /\.shipping-estimate__controls select\s*{[^}]*width:\s*100%[^}]*min-width:\s*0/s);
 });

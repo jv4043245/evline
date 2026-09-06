@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260828-article-search-v2">
-    <script src="/admin/admin.js?v=20260906-personal-tokens" defer></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20260906-usability">
+    <script type="module" src="/admin/admin.js?v=20260906-usability"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -34,7 +34,8 @@
           <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові дії" aria-expanded="false">...</button>
           <div class="filters-more__panel admin-header-more__panel" data-filter-menu-panel hidden>
             <a class="admin-link-button admin-header-more__item" href="/api/admin/orders?format=csv&range=30d" data-export>CSV</a>
-            <button class="admin-link-button admin-header-more__item" type="button" data-audit-open>Журнал действий</button>
+            <button class="admin-link-button admin-header-more__item" type="button" data-admin-tab="delivery">Тарифи доставки</button>
+            <button class="admin-link-button admin-header-more__item" type="button" data-audit-open>Журнал дій</button>
             <button class="admin-link-button admin-header-more__item" type="button" data-switch-user>Змінити користувача</button>
           </div>
         </div>
@@ -42,6 +43,7 @@
     </header>
 
     <main class="admin-main">
+      <p class="market-note market-note--error" data-admin-error role="alert" hidden></p>
       <section class="auth-panel auth-panel--compact" data-auth-panel>
         <div>
           <h1>Доступ до адмінки</h1>
@@ -54,10 +56,12 @@
 
       <nav class="admin-tabs" aria-label="Розділи адмінки">
         <button class="admin-tab" type="button" data-admin-tab="orders" aria-selected="true">Замовлення</button>
-        <button class="admin-tab" type="button" data-admin-tab="contacts" aria-selected="false">Звернення</button>
         <button class="admin-tab" type="button" data-admin-tab="china" aria-selected="false">Китай</button>
         <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
-        <button class="admin-tab" type="button" data-admin-tab="delivery" aria-selected="false">Доставка</button>
+      </nav>
+      <nav class="admin-subnav" data-analytics-nav hidden aria-label="Аналітика">
+        <button class="admin-btn admin-btn--small" type="button" data-admin-tab="analytics">Результати реклами</button>
+        <button class="admin-btn admin-btn--small" type="button" data-admin-tab="contacts">Переходи до контактів</button>
       </nav>
 
       <section class="admin-view admin-view--active" data-admin-view="orders">
@@ -93,6 +97,7 @@
               </button>
             </div>
             <div class="filters">
+              <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек..." aria-label="Пошук замовлення">
               <select id="status-filter">
                 <option value="all">Усі статуси</option>
                 <option value="new">Нова заявка</option>
@@ -114,16 +119,14 @@
                 <option value="byd">BYD</option>
                 <option value="other">Інше</option>
               </select>
-              <div class="filters-more" data-filter-menu>
-                <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові фільтри" aria-expanded="false">...</button>
-                <div class="filters-more__panel" data-filter-menu-panel hidden>
-                  <label>
-                    <span>Пошук</span>
-                    <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек...">
-                  </label>
-                </div>
-              </div>
             </div>
+          </div>
+          <div class="order-work-filters" aria-label="Робочі списки">
+            <button type="button" data-work-filter="all" aria-pressed="true">Усі</button>
+            <button type="button" data-work-filter="new" aria-pressed="false">Нові</button>
+            <button type="button" data-work-filter="response" aria-pressed="false">Без пропозиції</button>
+            <button type="button" data-work-filter="overdue" aria-pressed="false">Прострочена дія</button>
+            <span data-orders-visible-count></span>
           </div>
           <form class="manual-order-form" data-manual-order-form hidden>
             <input type="hidden" name="status" value="new">
@@ -318,12 +321,12 @@
         <section class="admin-panel china-workbench">
           <div class="admin-panel__head">
             <div class="admin-panel__title-actions">
-              <h2>Запросы в Китай</h2>
-              <button class="admin-btn admin-btn--primary" type="button" data-china-request-open>+ Добавить запрос</button>
+              <h2>Запити в Китай</h2>
+              <button class="admin-btn admin-btn--primary" type="button" data-china-request-open>+ Додати запит</button>
             </div>
             <div class="filters">
               <select data-china-status>
-                <option value="active">Активные</option>
+                <option value="active">Активні</option>
                 <option value="sent">Ждём ответ</option>
                 <option value="quoted">Цена получена</option>
                 <option value="accepted">Согласовано</option>
@@ -333,7 +336,7 @@
               </select>
               <button class="admin-btn" type="button" data-refresh-china>Обновить</button>
               <div class="filters-more" data-filter-menu>
-                <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Дополнительные фильтры" aria-expanded="false">...</button>
+                <button class="admin-btn admin-btn--icon" type="button" data-filter-menu-button aria-label="Додаткові фільтри" aria-expanded="false">...</button>
                 <div class="filters-more__panel" data-filter-menu-panel hidden>
                   <label>
                     <span>Поиск</span>
@@ -346,45 +349,47 @@
           </div>
 
           <div class="china-preorders" data-china-preorders>
-            <p class="muted">Запросы загружаются...</p>
+            <p class="muted">Завантажуємо запити...</p>
           </div>
         </section>
 
-        <button class="china-request-backdrop" type="button" data-china-request-close aria-label="Закрыть запрос в Китай"></button>
-        <aside class="admin-panel china-request-detail" data-china-request-panel aria-hidden="true" aria-label="Новый запрос в Китай">
+        <button class="china-request-backdrop" type="button" data-china-request-close aria-label="Закрити запит у Китай"></button>
+        <aside class="admin-panel china-request-detail" data-china-request-panel aria-hidden="true" aria-label="Новий запит у Китай">
           <div class="admin-panel__head">
             <div>
-              <h2>Новый запрос в Китай</h2>
-              <p class="muted" data-china-request-subtitle>Создание обращения поставщику.</p>
+              <h2>Новий запит у Китай</h2>
+              <p class="muted" data-china-request-subtitle>Запит пропозиції постачальнику.</p>
             </div>
-            <button class="admin-btn admin-btn--small china-request-detail__close" type="button" data-china-request-close>Закрыть</button>
+            <button class="admin-btn admin-btn--small china-request-detail__close" type="button" data-china-request-close>Закрити</button>
           </div>
           <form class="china-preorder-form" data-china-preorder-form>
             <label>
-              Order ID из CRM
-              <input name="order_id" placeholder="если отправляем из существующей заявки">
+              Замовлення CRM, за потреби
+              <input type="search" data-china-order-search list="china-order-options" placeholder="Номер, телефон або запчастина" autocomplete="off">
+              <datalist id="china-order-options"></datalist>
+              <input type="hidden" name="order_id">
             </label>
             <label>
-              Поставщик
+              Постачальник
               <select name="supplier_name" data-china-supplier>
-                <option value="">Выберите</option>
+                <option value="">Оберіть</option>
                 <option value="Zeekr">Zeekr</option>
                 <option value="BYD">BYD</option>
                 <option value="Buble">Buble</option>
                 <option value="Toyota">Toyota</option>
-                <option value="__custom__">Другой</option>
+                <option value="__custom__">Інший</option>
               </select>
             </label>
             <label data-china-custom-supplier hidden>
-              Другой поставщик
-              <input name="supplier_name_custom" placeholder="название поставщика">
+              Інший постачальник
+              <input name="supplier_name_custom" placeholder="назва постачальника">
             </label>
             <label>
               Авто
               <input name="car" placeholder="Zeekr 001">
             </label>
             <label>
-              Год
+              Рік
               <input name="car_year" inputmode="numeric" maxlength="4" placeholder="2023">
             </label>
             <label>
@@ -396,20 +401,20 @@
               <input name="item_name" placeholder="что ищем">
             </label>
             <label>
-              Количество
+              Кількість
               <input name="quantity" type="number" min="1" step="1" value="1">
             </label>
             <div class="wide china-photo-field">
               <span class="china-field-label">Фото</span>
               <div class="china-photo-control">
-                <label class="china-upload-button" title="Загрузить фото" aria-label="Загрузить фото">
+                <label class="china-upload-button" title="Завантажити фото" aria-label="Завантажити фото">
                   <input class="visually-hidden" name="image_file" type="file" accept="image/*" data-china-photo-input>
                   <svg aria-hidden="true" viewBox="0 0 24 24">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <path d="M17 8l-5-5-5 5"></path>
                     <path d="M12 3v12"></path>
                   </svg>
-                  <span class="visually-hidden">Загрузить фото</span>
+                  <span class="visually-hidden">Завантажити фото</span>
                 </label>
               </div>
               <input name="image_url" type="hidden" data-china-photo-data>
@@ -420,28 +425,29 @@
               <textarea name="request_text" rows="4" placeholder="Без контактов клиента, цен клиента и внутренней маржи."></textarea>
             </label>
             <div class="china-preorder-form__actions">
-              <button class="admin-btn admin-btn--primary" type="submit">Запрос в Китай</button>
+              <button class="admin-btn admin-btn--primary" type="submit">Запит у Китай</button>
             </div>
             <div class="china-created-link" data-china-created-link hidden></div>
           </form>
         </aside>
 
-        <button class="china-preorder-backdrop" type="button" data-china-preorder-close aria-label="Закрыть карточку запроса"></button>
+        <button class="china-preorder-backdrop" type="button" data-china-preorder-close aria-label="Закрити картку запиту"></button>
         <aside class="admin-panel china-preorder-detail" data-china-preorder-panel aria-hidden="true" aria-label="Карточка запроса в Китай">
           <div class="admin-panel__head">
             <div>
               <h2 data-china-preorder-title>Карточка запроса</h2>
-              <p class="muted" data-china-preorder-subtitle>Выберите обращение в списке.</p>
+              <p class="muted" data-china-preorder-subtitle>Оберіть запит у списку.</p>
             </div>
-            <button class="admin-btn admin-btn--small china-preorder-detail__close" type="button" data-china-preorder-close>Закрыть</button>
+            <button class="admin-btn admin-btn--small china-preorder-detail__close" type="button" data-china-preorder-close>Закрити</button>
           </div>
           <div class="china-preorder-detail__body" data-china-preorder-detail>
-            <p class="muted">Выберите обращение в списке.</p>
+            <p class="muted">Оберіть запит у списку.</p>
           </div>
         </aside>
       </section>
 
       <section class="admin-view" data-admin-view="analytics" hidden>
+        <p class="muted analytics-scope">Зведення CRM: тестове джерело codex_qa виключено. Дані Google Ads показано окремо.</p>
         <section class="summary-grid" aria-label="Маркетингові показники">
           <article class="summary-card">
             <span>Заявки</span>
@@ -547,7 +553,8 @@
           </article>
         </section>
 
-        <section class="admin-panel google-ads-panel">
+        <details class="admin-panel google-ads-panel analytics-tools">
+          <summary>Передача конверсій і стан API</summary>
           <div class="admin-panel__head">
             <div>
               <h2>Google Ads конверсії</h2>
@@ -579,7 +586,7 @@
               </tbody>
             </table>
           </div>
-        </section>
+        </details>
 
         <section class="admin-panel google-ads-panel">
           <div class="admin-panel__head">
@@ -627,7 +634,8 @@
               </div>
               <button class="admin-btn" type="button" data-new-shipping-carrier>Новий перевізник</button>
             </div>
-            <form class="shipping-form" data-shipping-form>
+            <form class="shipping-form" data-shipping-form hidden>
+              <button class="admin-btn admin-btn--small wide" type="button" data-close-shipping-form>Закрити редагування</button>
               <input type="hidden" name="id">
               <label>
                 Назва
@@ -768,20 +776,20 @@
         </section>
       </section>
 
-      <button class="audit-log-backdrop" type="button" data-audit-close aria-label="Закрыть журнал действий"></button>
-      <aside class="admin-panel audit-log-panel" data-audit-panel aria-hidden="true" aria-label="Журнал действий">
+      <button class="audit-log-backdrop" type="button" data-audit-close aria-label="Закрити журнал дій"></button>
+      <aside class="admin-panel audit-log-panel" data-audit-panel aria-hidden="true" aria-label="Журнал дій">
         <div class="admin-panel__head">
           <div>
-            <h2>Журнал действий</h2>
+            <h2>Журнал дій</h2>
             <p class="muted">Последние изменения в админке.</p>
           </div>
           <div class="audit-log-panel__actions">
             <button class="admin-btn admin-btn--small" type="button" data-audit-refresh>Обновить</button>
-            <button class="admin-btn admin-btn--small audit-log-panel__close" type="button" data-audit-close>Закрыть</button>
+            <button class="admin-btn admin-btn--small audit-log-panel__close" type="button" data-audit-close>Закрити</button>
           </div>
         </div>
         <div class="audit-log-panel__body" data-audit-log>
-          <p class="muted">Откройте журнал, чтобы загрузить события.</p>
+          <p class="muted">Відкрийте журнал для перегляду подій.</p>
         </div>
       </aside>
     </main>

@@ -8,6 +8,11 @@ function bindForRange(start) {
   return start ? [start] : [];
 }
 
+export function businessWhere(start, field = "created_at") {
+  const range = whereForRange(start, field);
+  return `${range || "WHERE 1 = 1"} AND lower(trim(COALESCE(source, ''))) <> 'codex_qa'`;
+}
+
 const orderCostSql = `
   COALESCE(purchase_cost_uah, 0)
   + COALESCE(delivery_cost_uah, 0)
@@ -94,9 +99,9 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const range = url.searchParams.get("range") || "30d";
   const start = rangeStart(range);
-  const leadWhere = whereForRange(start);
-  const orderWhere = whereForRange(start);
-  const costWhere = whereForRange(start?.slice(0, 10), "cost_date");
+  const leadWhere = businessWhere(start);
+  const orderWhere = businessWhere(start);
+  const costWhere = businessWhere(start?.slice(0, 10), "cost_date");
 
   const leadTotals = await env.DB.prepare(
     `SELECT
@@ -223,6 +228,7 @@ export async function onRequestGet({ request, env }) {
 
   return json({
     range,
+    excluded_sources: ["codex_qa"],
     totals: {
       ...leadTotals,
       ...orderTotals,
