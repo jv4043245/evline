@@ -14,6 +14,7 @@ const state = {
   marketResearchByOrder: {},
   marketResearchLoading: new Set(),
   marketResearchDrafts: {},
+  marketFeedbackUndo: {},
   marketResearchFilters: {
     availability: "all",
     partType: "all",
@@ -2565,7 +2566,7 @@ function marketFilterButton(group, value, label) {
 }
 
 function renderMarketOffer(offer) {
-  const matchLabel = { exact: "Підтверджено", probable: "Потрібна перевірка", irrelevant: "Несумісне" }[offer.match_type] || "Потрібна перевірка";
+  const matchLabel = { exact: "Підтверджено", probable: "Потрібна перевірка" }[offer.match_type] || "Потрібна перевірка";
   const offerKey = escapeHtml(JSON.stringify([offer.item_key, offer.source_key, offer.product_url]));
   const partType = marketPartTypeLabels[offer.part_type] || marketPartTypeLabels.unknown;
   const availability = marketAvailabilityLabels[offer.availability] || marketAvailabilityLabels.unknown;
@@ -2596,12 +2597,18 @@ function renderMarketOffer(offer) {
   `;
 }
 
+function renderMarketFeedbackUndo(item, data) {
+  const offerKey = state.marketFeedbackUndo[data?.run?.id];
+  const rejected = offerKey && data.offers?.some((offer) => offer.item_key === item.key && offer.feedback?.rejected && JSON.stringify([offer.item_key, offer.source_key, offer.product_url]) === offerKey);
+  if (!rejected) return "";
+  return `<div class="market-feedback-notice" data-market-offer-key="${escapeHtml(offerKey)}"><span role="status">Пропозицію приховано.</span><button class="admin-btn admin-btn--small" type="button" data-market-feedback-undo>Скасувати</button><span role="status" class="market-feedback-status"></span></div>`;
+}
+
 function renderMarketSummaryItem(item, data) {
-  const offers = filteredMarketOffers(data, item.key);
+  const offers = filteredMarketOffers(data, item.key).filter((offer) => ["exact", "probable"].includes(offer.match_type) && !offer.feedback?.rejected);
   const summary = summarizeMarketItem(item, offers);
   const exact = offers.filter((offer) => offer.match_type === "exact");
   const similar = offers.filter((offer) => offer.match_type === "probable");
-  const rejected = offers.filter((offer) => offer.match_type === "irrelevant");
   return `
     <section class="market-item">
       <div class="market-item__head">
@@ -2610,8 +2617,9 @@ function renderMarketSummaryItem(item, data) {
           <h3>${escapeHtml(item.label)}</h3>
           ${item.part_numbers?.length ? `<p>Артикул: ${escapeHtml(item.part_numbers.join(", "))}</p>` : ""}
         </div>
-        <div class="market-trust-counts" aria-label="Групи відповідності"><span class="market-chip market-chip--exact">Підтверджені: ${exact.length}</span><span class="market-chip market-chip--probable">Перевірити: ${similar.length}</span><span class="market-chip market-chip--irrelevant">Несумісні: ${rejected.length}</span></div>
+        <div class="market-trust-counts" aria-label="Групи відповідності"><span class="market-chip market-chip--exact">Підтверджені: ${exact.length}</span><span class="market-chip market-chip--probable">Перевірити: ${similar.length}</span></div>
       </div>
+      ${renderMarketFeedbackUndo(item, data)}
       ${summary.groups.map((group) => `
         <div class="market-price-group">
           <div><span>${escapeHtml(marketGroupLabel(group))}</span>
@@ -2622,7 +2630,6 @@ function renderMarketSummaryItem(item, data) {
       ${!exact.length ? `<p class="market-note market-note--caution">${offers.length ? "Є лише схожі товари. Уточніть артикул: їхні ціни не об'єднуємо в ринковий орієнтир." : "За цими фільтрами точних пропозицій немає."}</p>` : `<p class="market-note">Збіг артикула не підтверджує комплектацію та актуальність наявності. Перевірте у продавця.</p>`}
       ${exact.length ? `<div class="market-trust-group market-trust-group--exact"><h4>Підтверджені збіги <span>${exact.length}</span></h4><div class="market-offers">${exact.slice(0, 5).map(renderMarketOffer).join("")}</div>${exact.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${exact.length - 5}</summary>${exact.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</div>` : ""}
       ${similar.length ? `<details class="market-trust-group market-trust-group--probable" ${exact.length ? "" : "open"}><summary>Потрібна перевірка <span>${similar.length}</span></summary><p class="market-group-note">Не враховано в ціновому орієнтирі.</p>${similar.map(renderMarketOffer).join("")}</details>` : ""}
-      ${rejected.length ? `<details class="market-trust-group market-trust-group--irrelevant"><summary>Несумісні <span>${rejected.length}</span></summary><p class="market-group-note">Виключено з порівняння.</p>${rejected.map(renderMarketOffer).join("")}</details>` : ""}
     </section>
   `;
 }
@@ -2671,17 +2678,21 @@ document.addEventListener("click", async (event) => {
   if (!button) return;
   const row = button.closest("[data-market-offer-key]");
   const lookup = Boolean(button.closest("[data-market-lookup-panel]"));
-  const data = lookup ? state.marketLookup.result : state.marketResearchByOrder[state.selectedOrder?.id];
+  const orderId = state.selectedOrder?.id;
+  const data = lookup ? state.marketLookup.result : state.marketResearchByOrder[orderId];
   if (!row || !data?.run) return;
+  const undo = button.hasAttribute("data-market-feedback-undo");
   button.disabled = true;
   const status = row.querySelector(".market-feedback-status");
   try {
     const result = await api("/api/admin/market-feedback", { method: "POST", body: JSON.stringify({
-      run_id: data.run.id, ...(lookup ? { lookup_id: data.run.id } : { order_id: state.selectedOrder.id }),
-      offer_key: row.dataset.marketOfferKey, reason: row.querySelector("[data-market-feedback-reason]")?.value || "other", undo: button.hasAttribute("data-market-feedback-undo"),
+      run_id: data.run.id, ...(lookup ? { lookup_id: data.run.id } : { order_id: orderId }),
+      offer_key: row.dataset.marketOfferKey, reason: row.querySelector("[data-market-feedback-reason]")?.value || "other", undo,
     }) });
-    if (lookup) { state.marketLookup.result = result; renderMarketLookup(); }
-    else { state.marketResearchByOrder[state.selectedOrder.id] = result; updateMarketResearchRoot(); }
+    if (undo) delete state.marketFeedbackUndo[data.run.id];
+    else state.marketFeedbackUndo[data.run.id] = row.dataset.marketOfferKey;
+    if (lookup && state.marketLookup.result?.run?.id === data.run.id) { state.marketLookup.result = result; renderMarketLookup(); }
+    else if (!lookup) { state.marketResearchByOrder[orderId] = result; if (state.selectedOrder?.id === orderId) updateMarketResearchRoot(); }
   } catch (error) { status.textContent = error.message; button.disabled = false; }
 });
 
