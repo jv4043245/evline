@@ -84,6 +84,9 @@ test("market research starts from all approved competitor sources", () => {
     COMPETITOR_SOURCES.map((source) => source.name),
     ["MAHINA", "NCARS", "EVOX", "Kitaec", "Auto-China", "AutoAsia", "EVparts", "Panda Auto Parts", "AsiaParts", "EMOBIL", "ZEVS PARTS"],
   );
+  const mahina = new URL(COMPETITOR_SOURCES[0].search('11515426-00'));
+  assert.equal(mahina.searchParams.get('query'), '11515426-00');
+  assert.equal(mahina.searchParams.get('filters'), '{}');
 });
 
 test("AI-cleaned request keeps a stable cache fingerprint", async () => {

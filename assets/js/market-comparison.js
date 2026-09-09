@@ -1,5 +1,5 @@
 // Shared rules for the API, cached results, filters and clipboard.
-export const MARKET_MATCH_VERSION = 3;
+export const MARKET_MATCH_VERSION = 4;
 export const compactPartNumber = value => String(value || '').normalize('NFKC').toUpperCase().replace(/[\s._\/-]/g, '');
 const words = value => String(value || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 const norm = value => words(value).join(' ');
