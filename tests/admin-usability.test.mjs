@@ -6,7 +6,7 @@ import { buildWhere } from '../functions/api/admin/orders.js';
 import { businessWhere } from '../functions/api/admin/summary.js';
 
 const item = { key: 'lamp', label: 'Фара права', part_numbers: ['13158405-00'] };
-const offer = (price, overrides = {}) => ({ item_key: 'lamp', title: 'Фара права 13158405-00', part_number: '13158405-00', match_type: 'exact', part_type: 'original', availability: 'in_stock', price_uah: price, source_key: `seller-${price}`, ...overrides });
+const offer = (price, overrides = {}) => ({ verified_product: true, currency: 'UAH', item_key: 'lamp', title: 'Фара права 13158405-00', part_number: '13158405-00', match_type: 'exact', part_type: 'original', availability: 'in_stock', price_uah: price, source_key: `seller-${price}`, ...overrides });
 
 test('headlight request rejects wrong side, rear lights, DRLs and fog lights', () => {
   for (const title of ['Фара ліва', 'Левый дневной ходовой огонь', 'Фонарь правый', 'Ліхтар задній правий', 'Фара права протитуманна', 'Фара права ДХО']) {
@@ -18,7 +18,7 @@ test('OEM must come from the product, not adjacent catalogue context or a longer
   assert.equal(compareMarketCandidate({ title: 'Фара права', context: '13158405-00' }, item), 'probable');
   assert.equal(compareMarketCandidate({ title: 'Фара права 13158405-001' }, item), 'probable');
   assert.equal(compareMarketCandidate({ title: 'Фара права 13158405-00-A' }, item), 'probable');
-  assert.equal(compareMarketCandidate({ title: 'Фара права 13158405 00' }, item), 'exact');
+  assert.equal(compareMarketCandidate({ title: 'Фара права 13158405 00', verified_product: true }, item), 'exact');
 });
 test('filters drive displayed and copied statistics, and empty groups clear prices', () => {
   const rows = [offer(100), offer(200), offer(800, { availability: 'order_needed' }), offer(20, { match_type: 'probable' })];
@@ -44,7 +44,8 @@ test('multiple listings by the same seller do not imply three independent source
 });
 test('cached unsafe summaries are reclassified without modifying the database', () => {
   const reviewed = reviewMarketResult({ manual_query: true, items: [{ ...item, median_uah: 999 }] }, [offer(100), offer(500, { title: 'Ліва фара 13158405-00' })]);
-  assert.equal(reviewed.offers.length, 1);
+  assert.equal(reviewed.offers.length, 2);
+  assert.equal(reviewed.offers[1].match_type, 'irrelevant');
   assert.equal(reviewed.summary.items[0].median_uah, 100);
   assert.equal(reviewed.summary.manual_query, true);
 });

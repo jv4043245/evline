@@ -35,8 +35,9 @@ try {
     const payment = { id: 'pay', payment_number: 'P-900001', supplier_name: 'BYD', requested_amount: 9133, requested_currency: 'CNY', paid_amount: 9133, commission_amount: 273.99, charged_total_amount: 9406.99, status: 'paid', receipt_count: 2, receipts: [{ chat_id: '-100123456', message_id: '2' }, { chat_id: '-100123456', message_id: '3' }] };
     const detail = () => ({ order, supplier_payments: [payment], events: [], notifications: [], tracking_events: [], supplier_requests: [] });
     const item = { key: 'lamp', label: 'Фара права', query: 'VW ID4 Crozz фара права', part_numbers: ['13158405-00'] };
-    const offers = [1000, 2000, 3000, 4000, 5000, 6000].map((price, i) => ({ item_key: 'lamp', title: 'Фара права 13158405-00', part_number: '13158405-00', price_uah: price, source_key: `seller-${i}`, source_name: `Продавець ${i}`, product_url: `https://example.test/product-${i}`, match_type: 'exact', availability: i < 3 ? 'in_stock' : 'order_needed', part_type: 'original', lead_time_min: i < 3 ? 0 : 90 }));
+    const offers = [1000, 2000, 3000, 4000, 5000, 6000].map((price, i) => ({ verified_product: true, currency: 'UAH', item_key: 'lamp', title: 'Фара права 13158405-00', part_number: '13158405-00', price_uah: price, source_key: `seller-${i}`, source_name: `Продавець ${i}`, product_url: `https://example.test/product-${i}`, match_type: 'exact', availability: i < 3 ? 'in_stock' : 'order_needed', part_type: 'original', lead_time_min: i < 3 ? 0 : 90 }));
     offers.push({ ...offers[0], title: 'Фара права матрична', part_number: '', match_type: 'probable', price_uah: 99000 });
+    offers.push({ ...offers[0], product_url: 'https://example.test/wrong-side', title: 'Фара ліва', match_type: 'irrelevant', match_reason: 'Інша сторона деталі', price_uah: 100 });
     const market = { run: { id: 'run', status: 'complete', updated_at: new Date().toISOString() }, offers, summary: { items: [summarizeMarketItem(item, offers)] }, sources: [], should_refresh: false, can_search: true };
     let failSave = true;
     let saved;
@@ -48,6 +49,14 @@ try {
       requests.push({ path: url.pathname, method: request.method() });
       let body = {};
       if (url.pathname.endsWith('/market-research')) body = market;
+      else if (url.pathname === '/api/admin/market-feedback') {
+        const payload = request.postDataJSON();
+        const row = market.offers.find(row => JSON.stringify([row.item_key, row.source_key, row.product_url]) === payload.offer_key);
+        row.feedback = payload.undo ? null : { rejected: true, reason: payload.reason };
+        row.match_type = payload.undo ? 'exact' : 'irrelevant';
+        market.summary.items = [summarizeMarketItem(item, market.offers)];
+        body = market;
+      }
       else if (url.pathname.endsWith('/supplier-requests') && request.method() === 'POST') {
         supplierPayload = request.postDataJSON();
         body = { order, supplier_request: { supplier_url: 'https://example.test/supplier-access' } };
@@ -96,6 +105,17 @@ try {
     assert.doesNotMatch(copied, /99\s?000|6\s?000/);
     assert.equal(await form.locator('[data-order-save-bar]').isVisible(), true);
     await page.screenshot({ path: `${output}/market-${width}.png` });
+    const colors = await form.locator('.market-trust-group > summary, .market-trust-group > h4').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
+    assert.equal(new Set(colors).size, 3, 'Three trust groups must have distinct colors and labels');
+    assert.equal(await form.locator('.market-trust-group--irrelevant').getAttribute('open'), null);
+    await form.locator('.market-trust-group--probable > summary').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/market-groups-${width}.png` });
+    await form.locator('.market-trust-group--exact .market-offer__feedback summary').first().click();
+    await form.locator('.market-trust-group--exact [data-market-feedback-save]').first().click();
+    await form.locator('.market-trust-group--irrelevant [data-market-feedback-undo]').waitFor({ state: 'attached' });
+    await form.locator('.market-trust-group--irrelevant > summary').click();
+    await form.locator('[data-market-feedback-undo]').click();
+    await page.waitForFunction(() => !document.querySelector('[data-market-feedback-undo]'));
     await form.locator('[data-market-filter-group="partType"][data-market-filter-value="oem"]').click();
     assert.equal(await form.locator('.market-price-group').count(), 0);
     page.once('dialog', (dialog) => dialog.dismiss());
@@ -141,7 +161,7 @@ try {
     await page.screenshot({ path: `${output}/supplier-${width}.png` });
     const overflow = await page.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1, panels: [...document.querySelectorAll('[aria-hidden="false"]')].filter((el) => el.getBoundingClientRect().width > 0 && el.scrollWidth > el.clientWidth + 2).map((el) => el.className) }));
     assert.deepEqual(overflow, { page: false, panels: [] });
-    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests'].includes(request.path)), false);
+    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/market-feedback'].includes(request.path)), false);
     await page.locator('[data-china-request-close]').last().click();
     await page.locator('.admin-tabs [data-admin-tab="analytics"]').click();
     assert.equal(await page.locator('[data-analytics-nav]').isVisible(), true);

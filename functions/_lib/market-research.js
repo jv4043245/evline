@@ -1,5 +1,9 @@
 import { text } from "./http.js";
-import { compareMarketCandidate, summarizeMarketItem, reviewMarketResult } from "../../assets/js/market-comparison.js";
+import { compareMarketCandidate, summarizeMarketItem, MARKET_MATCH_VERSION } from "../../assets/js/market-comparison.js";
+import { parseMarketProducts } from "./market-products.js";
+import { redactMarketText, splitMarketLabels, enrichMarketItems, reviewMarketCandidates } from "./market-query.js";
+import { researchMarketItems } from "./market-fetch.js";
+import { hydrateMarketResult, offerIdentity } from "./market-feedback.js";
 
 export const MARKET_RESEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_RESEARCH_ITEMS = 3;
@@ -93,31 +97,6 @@ const TOKEN_ALIASES = new Map([
   ["амортизатор", "shock"], ["стійка", "shock"], ["стойка", "shock"],
 ]);
 
-function decodeHtml(value) {
-  return String(value || "")
-    .replace(/&nbsp;|&#160;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;|&#34;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
-}
-
-function cleanText(value) {
-  return decodeHtml(String(value || "").replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "))
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function absoluteUrl(value, baseUrl) {
-  try {
-    return new URL(decodeHtml(value), baseUrl).toString();
-  } catch {
-    return baseUrl;
-  }
-}
-
 function normalizeCompact(value) {
   return String(value || "").toLowerCase().replace(/[^a-zа-яіїєґ0-9]/giu, "");
 }
@@ -144,7 +123,7 @@ export function extractPartNumbers(value, excludedVin = "") {
     const digits = (compact.match(/\d/g) || []).length;
     if (digits < 3 || compact.length < 6 || compact === excluded) return false;
     if (/^\+?\d{9,15}$/.test(candidate.replace(/\s/g, ""))) return false;
-    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(compact)) return false;
+    if (/^[A-Z0-9]{17}$/i.test(compact)) return false;
     return true;
   }))].slice(0, 8);
 }
@@ -160,20 +139,17 @@ function stripVinIdentifiers(value, knownVin = "") {
   const known = text(knownVin).trim();
   let result = String(value || "");
   if (known) result = result.replaceAll(known, " ");
-  return result.replace(/\b[A-HJ-NPR-Z0-9]{17}\b/giu, " ").replace(/\s+/g, " ").trim();
+  return redactMarketText(result, known).trim();
 }
 
 export function splitRequestedItems(order = {}, overrides = {}) {
   const manualQuery = stripVinIdentifiers(cleanItemLabel(overrides.query || ""), order.vin);
   const source = manualQuery || stripVinIdentifiers(cleanItemLabel(order.item_name || order.service_name || order.request_text || ""), order.vin);
   if (!source) return [];
-  let parts = source.split(/[\n;•]+/).map(cleanItemLabel).filter(Boolean);
-  if (parts.length === 1 && (source.match(/,/g) || []).length > 0 && (source.match(/,/g) || []).length <= 5) {
-    parts = source.split(/,/).map(cleanItemLabel).filter(Boolean);
-  }
-  const fullContext = [order.item_name, order.request_text, overrides.part_number].filter(Boolean).join(" ");
+  const parts = splitMarketLabels(source).map(cleanItemLabel).filter(Boolean);
+  const fullContext = redactMarketText([order.item_name, order.request_text, overrides.part_number].filter(Boolean).join(" "), order.vin);
   const allPartNumbers = extractPartNumbers(fullContext, order.vin);
-  const car = text(order.car);
+  const car = redactMarketText(text(order.car), order.vin);
   return [...new Set(parts)].map((label, index) => {
     const safeLabel = stripVinIdentifiers(label, order.vin);
     const localPartNumbers = extractPartNumbers(`${label} ${overrides.part_number || ""}`, order.vin);
@@ -182,6 +158,7 @@ export function splitRequestedItems(order = {}, overrides = {}) {
     return {
       key: `item-${index + 1}`,
       label: safeLabel,
+      car,
       query: text(query).slice(0, 180),
       part_numbers: partNumbers,
       item_tokens: meaningfulTokens(safeLabel),
@@ -190,239 +167,8 @@ export function splitRequestedItems(order = {}, overrides = {}) {
   });
 }
 
-function numericPrice(value) {
-  const normalized = String(value || "").replace(/[^\d.,]/g, "").replace(/,(?=\d{1,2}$)/, ".").replace(/\.(?=.*\.)/g, "");
-  const parsed = Number(normalized.replace(/,/g, ""));
-  return Number.isFinite(parsed) && parsed >= 10 && parsed <= 10000000 ? parsed : 0;
-}
-
-function extractPrice(value) {
-  const content = cleanText(value);
-  const currencyMatch = content.match(/(?:₴|грн|UAH)\s*([\d\s.,]{2,16})|([\d][\d\s.,]{1,15})\s*(?:₴|грн|UAH)/iu);
-  return numericPrice(currencyMatch?.[1] || currencyMatch?.[2] || "");
-}
-
-function firstMatch(value, pattern) {
-  return cleanText(String(value || "").match(pattern)?.[1] || "");
-}
-
-function segments(html, marker) {
-  return String(html || "").split(marker).slice(1).map((part) => marker + part);
-}
-
-function candidateFromSegment(segment, baseUrl, selectors = {}) {
-  const hrefMatch = segment.match(selectors.href || /<a[^>]+href=["']([^"']+)["'][^>]*>/i);
-  const title = firstMatch(segment, selectors.title || /<a[^>]+href=["'][^"']+["'][^>]*>([\s\S]*?)<\/a>/i);
-  const article = firstMatch(segment, selectors.article || /(?:Арт\.?|Артикул|Код|SKU|vendor-code)[^<:]*:?\s*(?:<[^>]+>)*\s*([^<\n]{4,40})/iu);
-  const availabilityText = firstMatch(segment, selectors.availability || /(?:status|наявност|налич)[^>]*>([\s\S]*?)<\//iu);
-  const price = extractPrice(selectors.price ? (segment.match(selectors.price)?.[1] || "") : segment);
-  if (!title || !price) return null;
-  return {
-    title,
-    article,
-    price_uah: price,
-    product_url: absoluteUrl(hrefMatch?.[1] || baseUrl, baseUrl),
-    availability_text: availabilityText,
-    context: cleanText(segment).slice(0, 900),
-  };
-}
-
-function parseHoroshop(html, baseUrl) {
-  const marker = "var products = [";
-  const start = html.indexOf(marker);
-  if (start < 0) return [];
-  const arrayStart = start + marker.length - 1;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  let end = -1;
-  for (let index = arrayStart; index < html.length; index += 1) {
-    const char = html[index];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === "[") depth += 1;
-    else if (char === "]") {
-      depth -= 1;
-      if (!depth) {
-        end = index + 1;
-        break;
-      }
-    }
-  }
-  if (end < 0) return [];
-  try {
-    const rows = JSON.parse(html.slice(arrayStart, end));
-    return rows.map((row) => ({
-      title: text(row.title),
-      article: text(row.article_for_display || row.article),
-      price_uah: numericPrice(row.price),
-      product_url: absoluteUrl(row.url || baseUrl, baseUrl),
-      availability_text: row.in_stock ? "В наявності" : "Під замовлення",
-      context: [row.title, row.article_for_display, row.brand_title].filter(Boolean).join(" "),
-    })).filter((row) => row.title && row.price_uah);
-  } catch {
-    return [];
-  }
-}
-
-function parseNcars(html, baseUrl) {
-  return segments(html, '<div class="listChargers_item')
-    .slice(0, 80)
-    .map((segment) => {
-      const block = segment.slice(0, 7000);
-      const title = decodeHtml(block.match(/data-item-name=["']([^"']+)["']/i)?.[1] || "");
-      const price = numericPrice(block.match(/data-item-price=["']([^"']+)["']/i)?.[1] || "") || extractPrice(block);
-      const href = block.match(/<a[^>]+href=["']([^"']+)["'][^>]*class=["'][^"']*(?:listChargers_thumb|listChargers_title)/i)?.[1];
-      return {
-        title: cleanText(title),
-        article: firstMatch(block, /class=["']label__sku["'][^>]*>([\s\S]*?)<\//i),
-        price_uah: price,
-        product_url: absoluteUrl(href || baseUrl, baseUrl),
-        availability_text: firstMatch(block, /class=["']label__stock[^"']*["'][^>]*>([\s\S]*?)<\//i),
-        context: cleanText(block).slice(0, 900),
-      };
-    })
-    .filter((row) => row.title && row.price_uah);
-}
-
-function parseKitaec(html, baseUrl) {
-  return segments(html, '<div class="kc__card"')
-    .slice(0, 80)
-    .map((segment) => candidateFromSegment(segment.slice(0, 16000), baseUrl, {
-      href: /<a[^>]+href=["']([^"']+)["'][^>]*(?:aria-label|title)=/i,
-      title: /<div class=["']kc__name["'][^>]*>([\s\S]*?)<\/div>/i,
-      article: /<div class=["']kc__code["'][^>]*>[\s\S]*?<span[^>]*>[^<]*<\/span>\s*([^<]+)/i,
-      availability: /<div class=["']item[^"']*["'][^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/i,
-      price: /<div class=["']base["'][^>]*>([\s\S]*?)<\/div>/i,
-    }))
-    .filter(Boolean);
-}
-
-function parseMahina(html, baseUrl) {
-  return segments(html, '<div class="product-card">')
-    .slice(0, 100)
-    .map((segment) => candidateFromSegment(segment.slice(0, 24000), baseUrl, {
-      href: /<a class=["'][^"']*product-card__name[^"']*["'][^>]*[\s\S]*?href=["']([^"']+)["']/i,
-      title: /<a class=["'][^"']*product-card__name[^"']*["'][^>]*>([\s\S]*?)<\/a>/i,
-      article: /class=["'][^"']*product-card__vendor-code[^"']*["'][^>]*[^>]*>([\s\S]*?)<\/div>/i,
-      availability: /class=["'][^"']*site-status__txt[^"']*["'][^>]*>([\s\S]*?)<\//i,
-      price: /class=["'][^"']*site-price__item[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    }))
-    .filter(Boolean);
-}
-
-function parsePanda(html, baseUrl) {
-  return segments(html, '<div class="catalog__product')
-    .slice(0, 100)
-    .map((segment) => candidateFromSegment(segment.slice(0, 18000), baseUrl, {
-      href: /<div class=["']product__title["'][^>]*>[\s\S]*?<a href=["']([^"']+)["']/i,
-      title: /<div class=["']product__title["'][^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i,
-      article: /class=["']product__vendor-code["'][^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/i,
-      availability: /class=["'][^"']*product__status[^"']*["'][^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/i,
-      price: /class=["'][^"']*product__prices-numbers[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    }))
-    .filter(Boolean);
-}
-
-function collectObjects(value, output = [], seen = new Set()) {
-  if (!value || typeof value !== "object" || seen.has(value)) return output;
-  seen.add(value);
-  if (value.name && (value.price || value.discountedPrice || value.offers?.price)) output.push(value);
-  if (Array.isArray(value)) value.forEach((entry) => collectObjects(entry, output, seen));
-  else Object.values(value).forEach((entry) => collectObjects(entry, output, seen));
-  return output;
-}
-
-function parseJsonProducts(html, baseUrl) {
-  const output = [];
-  const scripts = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-  for (const match of scripts) {
-    try {
-      for (const row of collectObjects(JSON.parse(match[1]))) {
-        const offer = Array.isArray(row.offers) ? row.offers[0] : row.offers || {};
-        output.push({
-          title: text(row.name),
-          article: text(row.sku || row.mpn),
-          price_uah: numericPrice(row.price || row.discountedPrice || offer.price),
-          product_url: absoluteUrl(row.url || offer.url || baseUrl, baseUrl),
-          availability_text: text(offer.availability || row.availability),
-          context: [row.name, row.sku, row.mpn, row.brand?.name || row.brand].filter(Boolean).join(" "),
-        });
-      }
-    } catch {
-      // A malformed optional JSON-LD block should not fail the source.
-    }
-  }
-  const apollo = html.match(/window\.ApolloCacheState\s*=\s*([\s\S]*?);\s*<\/script>/i)?.[1];
-  if (apollo) {
-    try {
-      for (const row of collectObjects(JSON.parse(apollo))) {
-        const id = text(row.id);
-        const slug = text(row.urlText);
-        output.push({
-          title: text(row.name),
-          article: text(row.sku),
-          price_uah: numericPrice(row.price || row.discountedPrice),
-          product_url: id && slug ? `https://prom.ua/ua/p${id}-${slug}.html` : baseUrl,
-          availability_text: text(row.catalogPresence?.title || row.presence?.presence),
-          context: [row.name, row.sku, row.company?.name].filter(Boolean).join(" "),
-        });
-      }
-    } catch {
-      // Prom can change the embedded state independently of the visible page.
-    }
-  }
-  return output.filter((row) => row.title && row.price_uah);
-}
-
-function parseGenericAnchors(html, baseUrl) {
-  const rows = [];
-  const anchorPattern = /<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
-  while ((match = anchorPattern.exec(html)) && rows.length < 160) {
-    const title = cleanText(match[2]);
-    if (title.length < 4 || title.length > 220) continue;
-    const context = html.slice(Math.max(0, match.index - 250), Math.min(html.length, anchorPattern.lastIndex + 1600));
-    const price = extractPrice(context);
-    if (!price) continue;
-    rows.push({
-      title,
-      article: firstMatch(context, /(?:Арт\.?|Артикул|Код|SKU)[^<:]*:?\s*(?:<[^>]+>)*\s*([^<\n]{4,40})/iu),
-      price_uah: price,
-      product_url: absoluteUrl(match[1], baseUrl),
-      availability_text: firstMatch(context, /(В наявності|В наличии|Готово до відправки|Під замовлення|Передзамовлення|Очікування[^<]{0,30}|Немає в наявності|Нет в наличии)/iu),
-      context: cleanText(context).slice(0, 900),
-    });
-  }
-  return rows;
-}
-
 export function parseSourceHtml(sourceKey, html, baseUrl) {
-  const parsers = {
-    mahina: parseMahina,
-    ncars: parseNcars,
-    evox: parseHoroshop,
-    auto_china: parseHoroshop,
-    kitaec: parseKitaec,
-    panda: parsePanda,
-  };
-  const candidates = [
-    ...(parsers[sourceKey]?.(html, baseUrl) || []),
-    ...parseJsonProducts(html, baseUrl),
-    ...parseGenericAnchors(html, baseUrl),
-  ];
-  const seen = new Set();
-  return candidates.filter((row) => {
-    const key = `${normalizeCompact(row.product_url)}|${normalizeCompact(row.title)}|${row.price_uah}`;
-    if (!row.price_uah || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return parseMarketProducts(sourceKey, html, baseUrl);
 }
 
 export function classifyAvailability(value) {
@@ -469,7 +215,7 @@ export function summarizeOffers(items, offers) {
 
 function fingerprintFor(order, items) {
   return JSON.stringify({
-    matching_version: 2,
+    matching_version: MARKET_MATCH_VERSION,
     car: text(order.car).toLowerCase(),
     vin_prefix: text(order.vin).slice(0, 3).toUpperCase(),
     items: items.map((item) => ({ label: item.label.toLowerCase(), part_numbers: item.part_numbers })),
@@ -549,7 +295,7 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
   const rows = await env.DB.prepare(
     "SELECT * FROM market_research_offers WHERE run_id = ? ORDER BY item_key, match_type, price_uah"
   ).bind(run.id).all();
-  const { summary, offers } = reviewMarketResult(parseJson(run.summary_json, { items: [] }), rows.results || []);
+  const { summary, offers } = await hydrateMarketResult(env, parseJson(run.summary_json, { items: [] }), rows.results || []);
   const updatedAt = Date.parse(run.updated_at || run.created_at || 0);
   const stale = !updatedAt || Date.now() - updatedAt > MARKET_RESEARCH_TTL_MS;
   return {
@@ -558,100 +304,16 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
     summary,
     sources: parseJson(run.source_status_json, []),
     can_search: Boolean(items.length),
-    should_refresh: Boolean(items.length) && (run.status !== "complete" || stale || (!summary.manual_query && run.fingerprint !== fingerprint)),
+    should_refresh: Boolean(items.length) && (run.status !== "complete" || stale || summary.matching_version !== MARKET_MATCH_VERSION || (!summary.manual_query && run.fingerprint !== fingerprint)),
     item_limit: MAX_RESEARCH_ITEMS,
-  };
-}
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = 9000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function fetchSource(source, query) {
-  const searchUrl = source.search(query);
-  const headers = {
-    accept: "text/html,application/xhtml+xml",
-    "accept-language": "uk-UA,uk;q=0.9,ru;q=0.7,en;q=0.5",
-    "user-agent": "Mozilla/5.0 (compatible; EVLineMarketResearch/1.0; +https://evline.com.ua/)",
-  };
-  let response = await fetchWithTimeout(searchUrl, { headers, redirect: "follow" });
-  let body = await response.text();
-  const challengeHash = body.match(/const\s+defaultHash\s*=\s*["']([^"']+)["']/i)?.[1];
-  if (challengeHash && body.includes("challenge_passed")) {
-    response = await fetchWithTimeout(searchUrl, { headers: { ...headers, cookie: `challenge_passed=${challengeHash}` }, redirect: "follow" });
-    body = await response.text();
-  }
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return { body, searchUrl, finalUrl: response.url || searchUrl };
-}
-
-async function researchItem(item) {
-  const tasks = COMPETITOR_SOURCES.map(async (source) => {
-    try {
-      const fetched = await fetchSource(source, item.query);
-      const candidates = parseSourceHtml(source.key, fetched.body, fetched.finalUrl);
-      const offers = candidates.map((candidate) => {
-        const matchType = classifyMatch(candidate, item);
-        if (matchType === "irrelevant") return null;
-        const availabilityText = candidate.availability_text || candidate.context;
-        const [leadTimeMin, leadTimeMax] = extractLeadTime(availabilityText);
-        return {
-          item_key: item.key,
-          item_label: item.label,
-          source_key: source.key,
-          source_name: source.name,
-          source_url: fetched.searchUrl,
-          product_url: candidate.product_url || fetched.searchUrl,
-          title: candidate.title,
-          price_uah: candidate.price_uah,
-          availability: classifyAvailability(availabilityText),
-          availability_text: text(candidate.availability_text).slice(0, 120),
-          lead_time_min: leadTimeMin,
-          lead_time_max: leadTimeMax,
-          part_type: classifyPartType([candidate.title, candidate.article, candidate.context].join(" ")),
-          match_type: matchType,
-          part_number: text(candidate.article).slice(0, 80),
-          snippet: text(candidate.context).slice(0, 260),
-        };
-      }).filter(Boolean).sort((left, right) => (left.match_type === right.match_type ? left.price_uah - right.price_uah : left.match_type === "exact" ? -1 : 1)).slice(0, 6);
-      return {
-        offers,
-        source: { key: source.key, name: source.name, url: fetched.searchUrl, status: "ok", count: offers.length, parsed_count: candidates.length, error: "" },
-      };
-    } catch (error) {
-      return {
-        offers: [],
-        source: { key: source.key, name: source.name, url: source.home, status: "failed", count: 0, parsed_count: 0, error: text(error?.message || error).slice(0, 180) },
-      };
-    }
-  });
-  const results = await Promise.all(tasks);
-  const offers = results.flatMap((result) => result.offers)
-    .sort((left, right) => (left.match_type === right.match_type ? left.price_uah - right.price_uah : left.match_type === "exact" ? -1 : 1))
-    .slice(0, 40);
-  return {
-    offers,
-    sources: results.map((result) => ({ ...result.source, item_key: item.key, item_label: item.label })),
-  };
-}
-
-async function researchItems(items) {
-  const results = await Promise.all(items.map(researchItem));
-  return {
-    offers: results.flatMap((result) => result.offers),
-    sources: results.flatMap((result) => result.sources),
   };
 }
 
 export async function runMarketResearch(env, order, overrides = {}) {
   await ensureMarketResearchTables(env);
-  const allItems = splitRequestedItems(order, overrides);
+  const inputItems = splitRequestedItems(order, overrides);
+  const parsed = await enrichMarketItems(env, inputItems);
+  const allItems = parsed.items;
   const items = allItems.slice(0, MAX_RESEARCH_ITEMS);
   if (!items.length) {
     const error = new Error("Вкажіть запчастину або пошуковий запит.");
@@ -660,7 +322,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
   }
   const now = new Date().toISOString();
   const runId = crypto.randomUUID();
-  const fingerprint = fingerprintFor(order, allItems);
+  const fingerprint = fingerprintFor(order, inputItems);
   await env.DB.prepare(
     `INSERT INTO market_research_runs (
       id, order_id, created_at, updated_at, status, fingerprint, query, item_count
@@ -668,9 +330,13 @@ export async function runMarketResearch(env, order, overrides = {}) {
   ).bind(runId, order.id, now, now, fingerprint, items.map((item) => item.query).join(" | "), items.length).run();
 
   try {
-    const { offers, sources } = await researchItems(items);
+    const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
+    const offers = await reviewMarketCandidates(env, items, candidates);
     const summary = {
       ...summarizeOffers(items, offers),
+      matching_version: MARKET_MATCH_VERSION,
+      ai_status: parsed.ai_status,
+      offer_details: Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer])),
       requested_item_count: allItems.length,
       ignored_item_count: Math.max(0, allItems.length - items.length),
       manual_query: Boolean(text(overrides.query) || text(overrides.part_number)),
@@ -734,9 +400,9 @@ async function ensureMarketLookupTables(env) {
   for (const statement of statements) await env.DB.prepare(statement).run();
 }
 
-function lookupResult(row) {
+async function lookupResult(env, row) {
   if (!row) return null;
-  const { summary, offers } = reviewMarketResult(parseJson(row.summary_json, { items: [] }), parseJson(row.offers_json, []));
+  const { summary, offers } = await hydrateMarketResult(env, parseJson(row.summary_json, { items: [] }), parseJson(row.offers_json, []));
   const sources = parseJson(row.source_status_json, []);
   return {
     run: { ...row, summary, source_status: sources },
@@ -766,7 +432,7 @@ export async function listMarketLookups(env, limit = 12) {
 export async function getMarketLookup(env, id) {
   await ensureMarketLookupTables(env);
   const row = await env.DB.prepare("SELECT * FROM market_lookup_runs WHERE id = ?").bind(text(id)).first();
-  return lookupResult(row);
+  return lookupResult(env, row);
 }
 
 export async function runMarketLookup(env, input = {}) {
@@ -785,7 +451,8 @@ export async function runMarketLookup(env, input = {}) {
     request_text: "",
   };
   const overrides = { query: lookup.query || lookup.part_number, part_number: lookup.part_number };
-  const allItems = splitRequestedItems(virtualOrder, overrides);
+  const parsed = await enrichMarketItems(env, splitRequestedItems(virtualOrder, overrides));
+  const allItems = parsed.items;
   const items = allItems.slice(0, MAX_RESEARCH_ITEMS);
   if (!items.length) {
     const error = new Error("Вкажіть запчастину або артикул.");
@@ -803,9 +470,13 @@ export async function runMarketLookup(env, input = {}) {
   ).bind(runId, now, now, lookup.car, lookup.vin, lookup.query, lookup.part_number, fingerprint, items.length).run();
 
   try {
-    const { offers, sources } = await researchItems(items);
+    const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
+    const offers = await reviewMarketCandidates(env, items, candidates);
     const summary = {
       ...summarizeOffers(items, offers),
+      matching_version: MARKET_MATCH_VERSION,
+      ai_status: parsed.ai_status,
+      offer_details: Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer])),
       requested_item_count: allItems.length,
       ignored_item_count: Math.max(0, allItems.length - items.length),
       manual_query: true,
