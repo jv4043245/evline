@@ -344,3 +344,13 @@
     padding-inline: 18px;
   }
 }
+.shipping-pricelist-page .shipping-pricelist-hero { padding:10px 0; background:transparent; border:0; border-radius:0; box-shadow:none; gap:8px; color:var(--ink); }
+.shipping-pricelist-page .shipping-pricelist-hero h1 { font-size:24px; letter-spacing:0; color:var(--ink); }
+.shipping-pricelist-page .shipping-pricelist-hero p { font-size:14px; color:var(--muted); }
+.shipping-pricelist-page .shipping-pricelist-kicker { color:var(--green-dark) !important; letter-spacing:0; }
+.shipping-pricelist-page .shipping-pricelist-version { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:10px 0; border:0; }
+.shipping-pricelist-page .shipping-pricelist-version > * { color:var(--muted); font-size:13px; }
+.shipping-pricelist-page .shipping-pricelist-layout { grid-template-columns:1fr; }
+.shipping-methodology > summary { cursor:pointer; padding:16px 0; font-weight:700; color:var(--muted); }
+.shipping-methodology[open] { display:block; }
+.shipping-methodology .shipping-source-card { margin-top:16px; }

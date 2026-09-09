@@ -1,3 +1,5 @@
+import { filterMarketOffers, summarizeMarketItem } from "../assets/js/market-comparison.js";
+
 const state = {
   range: "30d",
   activeTab: localStorage.getItem("evline_admin_tab") || "orders",
@@ -179,18 +181,18 @@ const auditActionLabels = {
   "supplier_request.message": "Сообщение поставщику",
   "supplier_request.delete": "Удалён запрос в Китай",
   "supplier_request.send_payment": "Запрос отправлен на оплату",
-  "supplier_quote.select": "Выбрано предложение поставщика",
+  "supplier_quote.select": "Обрано пропозицію постачальника",
   "supplier_payment.create": "Создана оплата поставщику",
   "supplier_payment.update": "Обновлена оплата поставщику",
   "tracking.sync": "Обновлён трекинг",
   "shipping_carrier.create": "Добавлен перевозчик",
   "shipping_carrier.update": "Изменён перевозчик",
-  "ad_cost.create": "Добавлен расход рекламы",
-  "supplier.quote": "Поставщик дал предложение",
-  "supplier.message": "Поставщик написал сообщение",
-  "supplier.delivery_cost": "Поставщик обновил доставку",
-  "supplier.status_update": "Поставщик изменил статус",
-  "supplier.tracking_update": "Поставщик добавил трек",
+  "ad_cost.create": "Додано витрати на рекламу",
+  "supplier.quote": "Постачальник дал предложение",
+  "supplier.message": "Постачальник написал сообщение",
+  "supplier.delivery_cost": "Постачальник обновил доставку",
+  "supplier.status_update": "Постачальник изменил статус",
+  "supplier.tracking_update": "Постачальник добавил трек",
   "supplier.create": "Добавлен поставщик",
   "supplier.delete": "Удалён поставщик",
 };
@@ -347,7 +349,37 @@ const keywordLevelLabels = {
 };
 
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery"]);
-const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "messages", "history"]);
+const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "history"]);
+
+let orderFormBaseline = "";
+let orderSaving = false;
+function orderFormSnapshot() {
+  const form = document.querySelector("[data-order-editor]");
+  return form ? JSON.stringify([...new FormData(form)]) : "";
+}
+function orderIsDirty() {
+  return Boolean(state.selectedOrder && orderFormBaseline && orderFormSnapshot() !== orderFormBaseline);
+}
+function allowDiscardOrder() {
+  if (orderSaving) return false;
+  if (!orderIsDirty()) return true;
+  if (!confirm("Є незбережені зміни замовлення. Відкинути їх?")) return false;
+  renderOrderEditor(state.selectedOrder, false);
+  return true;
+}
+function updateOrderSaveState() {
+  const dirty = orderIsDirty();
+  const footer = document.querySelector("[data-order-save-bar]");
+  if (!footer) return;
+  footer.hidden = !dirty && ["market", "history", "suppliers"].includes(activeOrderEditorTab());
+  const button = footer.querySelector("button");
+  button.disabled = !dirty || orderSaving;
+  button.textContent = orderSaving ? "Зберігаємо..." : "Зберегти зміни";
+  footer.querySelector("[data-save-state]").textContent = dirty ? "Є незбережені зміни" : "Усі зміни збережено";
+}
+window.addEventListener("beforeunload", (event) => {
+  if (orderIsDirty() || orderSaving) { event.preventDefault(); event.returnValue = ""; }
+});
 
 const money = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -439,8 +471,9 @@ async function api(path, options = {}) {
       setAdminUser("");
       setAuthVisible(true);
     }
-    const message = response.status === 401 ? "Немає доступу. Перевірте особистий токен." : await response.text();
-    throw new Error(message);
+    let message = response.status === 401 ? "Немає доступу. Перевірте особистий токен." : await response.text();
+    try { const body = JSON.parse(message); message = typeof body.error === "string" ? body.error : message; } catch { /* Non-JSON errors remain readable. */ }
+    throw Object.assign(new Error(message), { status: response.status });
   }
   const userName = response.headers.get("x-evline-admin-name");
   if (userName) setAdminUser(decodeURIComponent(userName));
@@ -469,12 +502,13 @@ function setAuthVisible(visible) {
 
 function setActiveTab(tab) {
   const nextTab = adminTabs.has(tab) ? tab : "orders";
+  if (nextTab !== state.activeTab && !allowDiscardOrder()) return false;
   state.activeTab = nextTab;
   localStorage.setItem("evline_admin_tab", nextTab);
   document.body.dataset.adminTab = nextTab;
 
   document.querySelectorAll("[data-admin-tab]").forEach((button) => {
-    const isActive = button.dataset.adminTab === nextTab;
+    const isActive = button.dataset.adminTab === nextTab || (button.closest(".admin-tabs") && button.dataset.adminTab === "analytics" && nextTab === "contacts");
     button.setAttribute("aria-selected", isActive ? "true" : "false");
   });
 
@@ -482,6 +516,8 @@ function setActiveTab(tab) {
     view.hidden = view.dataset.adminView !== nextTab;
   });
 
+  const analyticsNav = document.querySelector("[data-analytics-nav]");
+  if (analyticsNav) analyticsNav.hidden = !["analytics", "contacts"].includes(nextTab);
   if (nextTab !== "orders") {
     setOrderDetailOpen(false);
     setMarketLookupOpen(false);
@@ -495,9 +531,11 @@ function setActiveTab(tab) {
     stopChinaAutoRefresh();
   }
   if (nextTab === "delivery") renderShippingDirectory();
+  return true;
 }
 
 function renderSummary(data) {
+  state.campaignReport = data.campaigns || [];
   const totals = data.totals || {};
   setText("leads", numberFmt.format(totals.leads || 0));
   setText("new_leads", numberFmt.format(totals.new_leads || 0));
@@ -563,7 +601,7 @@ function renderContactEvents(data) {
   renderContactBreakdown(
     "[data-contact-pages]",
     data.pages || [],
-    (row) => `${shortUrl(row.page_url) || "Сторінка"}${row.cta_text ? ` · ${row.cta_text}` : ""}`,
+    (row) => `${contactPageLabel(row.page_url)}${row.cta_text ? ` · ${row.cta_text}` : ""}`,
   );
 
   const root = document.querySelector("[data-contact-events]");
@@ -581,7 +619,7 @@ function renderContactEvents(data) {
             </div>
             <div class="contact-event__context">
               <strong>${escapeHtml(event.cta_text || "Контактна кнопка")}</strong>
-              <span>${escapeHtml(shortUrl(event.page_url) || event.page_url || "-")}</span>
+              <details><summary>${escapeHtml(contactPageLabel(event.page_url))}</summary><span>${escapeHtml(event.page_url || "")}</span></details>
               <small>${escapeHtml(attributionLabels[event.attribution_type] || event.attribution_type || "Direct")}${event.campaign ? ` · ${escapeHtml(event.campaign)}` : ""}</small>
             </div>
             <div class="contact-event__result">
@@ -629,6 +667,14 @@ function renderSources(sources) {
     : "<p class=\"muted\">Поки немає джерел.</p>";
 }
 
+function contactPageLabel(value) {
+  try {
+    const pathname = decodeURIComponent(new URL(value, location.origin).pathname).replace(/^\/ru(?=\/)/, "");
+    const known = { "/": "Головна", "/index.html": "Головна", "/byd.html": "Програмування BYD", "/zeekr.html": "Програмування Zeekr", "/запчастини-з-китаю/": "Запчастини з Китаю" };
+    return known[pathname] || pathname.replace(/\/$|^\//g, "").replace(/\.html$/, "").replace(/[-_]/g, " ") || "Головна";
+  } catch { return "Сторінка"; }
+}
+
 function renderCampaigns(campaigns) {
   const root = document.querySelector("[data-campaigns]");
   if (!root) return;
@@ -640,9 +686,10 @@ function renderCampaigns(campaigns) {
           const width = Math.max(3, Math.round((value / max) * 100));
           const profitRoas = Number(campaign.profit_roas || 0).toFixed(1);
           const paidRate = Math.round((campaign.lead_to_paid_rate || 0) * 100);
+          const named = campaign.source === "google" ? state.googleAdsKeywords.keywords.find((row) => String(row.campaign_id) === String(campaign.campaign) && row.campaign_name) : null;
           return `
             <div class="source-item">
-              <strong>${textOrDash(campaign.campaign)}</strong>
+              <strong title="${escapeHtml(campaign.campaign)}">${textOrDash(named?.campaign_name || campaign.campaign)}</strong>
               <span>${textOrDash(campaign.source)} · ${numberFmt.format(campaign.leads || 0)} лідів · ${numberFmt.format(campaign.paid_orders || 0)} оплат</span>
               <span>${money.format(campaign.ad_spend_uah || 0)} витрати · ${money.format(campaign.gross_profit_uah || 0)} маржа · ${escapeHtml(profitRoas)}x</span>
               <span>${paidRate}% лід → оплата</span>
@@ -926,6 +973,7 @@ function rateFromMode(carrierId, mode) {
 function fillShippingForm(carrierId = "") {
   const form = document.querySelector("[data-shipping-form]");
   if (!form) return;
+  form.hidden = false;
   const field = (name) => form.elements.namedItem(name);
   const carrier = carrierById(carrierId) || {};
   const air = rateFromMode(carrier.id, "air");
@@ -990,9 +1038,6 @@ function renderShippingDirectory() {
         .join("")
     : `<p class="muted">Перевізників ще немає. Додайте першого, наприклад Meest.</p>`;
 
-  if (!document.querySelector("[data-shipping-form]")?.elements.namedItem("id")?.value && carriers[0]) {
-    fillShippingForm(carriers[0].id);
-  }
 }
 
 function badge(status, compact = false) {
@@ -1347,7 +1392,7 @@ function marginChip(order) {
     Number(order.processing_cost_uah || 0) +
     Number(order.ad_cost_uah || 0) +
     Number(order.other_cost_uah || 0);
-  if (revenue <= 0 || costs <= 0) return "";
+  if (revenue <= 0 || costs <= 0 || Number(order.purchase_cost_uah || 0) <= 0) return "";
 
   const profit = Number(order.gross_profit_uah || 0);
   return financeChip("Маржа", money.format(profit), profit >= 0 ? "paid" : "review");
@@ -1401,6 +1446,7 @@ function supplierPaymentAmountLines(payment = {}) {
     ${paid > 0 ? `<span>Постачальнику: <b>${supplierAmount(paid, currency)}</b></span>` : ""}
     ${commission > 0 ? `<span>Комісія: <b>${supplierAmount(commission, currency)}</b></span>` : ""}
     ${charged > 0 ? `<span>Списано: <b>${supplierAmount(charged, currency)}</b></span>` : ""}
+    ${(payment.requested_currency || "CNY") === (currency || "CNY") && payment.status !== "canceled" ? `<span>Залишок постачальнику: <b>${supplierAmount(Math.max(0, Number(payment.requested_amount || 0) - paid), currency)}</b></span>` : ""}
     ${receiptCount > 1 ? `<span>Скрини: <b>${receiptCount}</b></span>` : ""}
   `;
 }
@@ -1418,6 +1464,11 @@ function supplierPaymentAmountNotice(payment = {}) {
     text: `Залишилося сплатити постачальнику ${supplierAmount(Math.abs(delta.amount), delta.currency)}.`,
     state: "warning",
   };
+}
+
+function supplierReceiptLinks(payment) {
+  const receipts = payment.receipts?.length ? payment.receipts : [{ chat_id: payment.receipt_chat_id, message_id: payment.receipt_message_id }];
+  return receipts.filter((receipt) => /^-100\d+$/.test(String(receipt.chat_id)) && /^\d+$/.test(String(receipt.message_id))).map((receipt, index) => `<a target="_blank" rel="noopener noreferrer" href="https://t.me/c/${String(receipt.chat_id).slice(4)}/${receipt.message_id}">Квитанція ${index + 1} у Telegram</a>`).join(" ");
 }
 
 function renderSupplierPaymentNotice(payment = {}) {
@@ -1457,8 +1508,8 @@ function setSupplierDirectory(rows = []) {
   if (chinaSelect) {
     const selected = chinaSelect.value;
     chinaSelect.innerHTML = supplierDirectoryOptions(selected, {
-      placeholder: "Выберите",
-      custom: "Другой / добавить нового",
+      placeholder: "Оберіть",
+      custom: "Інший / добавить нового",
     });
   }
 }
@@ -1516,10 +1567,10 @@ function showChinaCreatedLink(form, rawLink) {
   root.hidden = false;
   root.innerHTML = `
     <div>
-      <strong>Ссылка для поставщика</strong>
+      <strong>Посилання для постачальника</strong>
       <a class="china-created-link__url" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>
     </div>
-    <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Открыть</a>
+    <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Відкрити</a>
     <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопировать</button>
   `;
 }
@@ -1571,7 +1622,7 @@ function isDuplicateChinaQuoteEvent(event = {}, quotes = []) {
 
 function supplierChatTitle(request = {}) {
   const name = plainText(request.supplier_name);
-  return name ? `Поставщик ${name}` : "Поставщик";
+  return name ? `Постачальник ${name}` : "Постачальник";
 }
 
 function chinaIsLogisticsStatus(status = "") {
@@ -1663,7 +1714,7 @@ function chinaTelegramSettingsMessage(settings = {}) {
     `Reply-мост: ${settings.reply_bridge?.configured ? "готов" : "нет таблицы"}`,
     `AI-перевод: ${settings.translation?.ai_binding ? "готов" : "нет AI binding"}`,
     "",
-    "Поставщики:",
+    "Постачальники:",
   ];
   const suppliers = settings.suppliers || [];
   if (!suppliers.length) {
@@ -1829,7 +1880,7 @@ function chinaChatMessages(bundle = {}) {
         actor: "supplier",
         title: supplierChatTitle(request),
         meta: "Нет поставки",
-        text: comment || "Поставщик отметил, что по позиции нет поставки.",
+        text: comment || "Постачальник отметил, что по позиции нет поставки.",
         attachments,
         created_at: event.created_at,
         order: 5,
@@ -1890,11 +1941,11 @@ function renderChinaThread(bundle = {}) {
       ${canReply ? `
         <label>
           <span>Сообщение поставщику</span>
-          <textarea rows="2" placeholder="Написать сообщение по этому запросу" data-china-reply-text></textarea>
+          <textarea rows="2" placeholder="Повідомлення щодо цього запиту" data-china-reply-text></textarea>
         </label>
         <div class="china-preorder-card__thread-actions">
           ${chinaReplyFileButton()}
-          <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Отправить</button>
+          <button class="admin-btn admin-btn--small" type="button" data-china-reply="${escapeHtml(request.id)}">Надіслати</button>
         </div>
       ` : ""}
     </div>
@@ -1927,10 +1978,10 @@ function renderChinaPreorderDetail(bundle = {}) {
           <button class="admin-link-button" type="button" data-open-order="${escapeHtml(request.order_id)}">${escapeHtml(order.order_number || request.order_id || "-")}</button>
         </div>
         <div><span>Авто</span><strong>${escapeHtml(request.car || order.car || "-")}</strong></div>
-        <div><span>Год</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
+        <div><span>Рік</span><strong>${escapeHtml(request.car_year || "-")}</strong></div>
         <div><span>VIN</span><strong class="orders-table__mono">${escapeHtml(request.vin || order.vin || "-")}</strong></div>
         <div class="wide"><span>Деталь</span><strong>${escapeHtml(request.item_name || order.item_name || "-")}</strong></div>
-        <div><span>Количество</span><strong>${Number(request.quantity || 1)}</strong></div>
+        <div><span>Кількість</span><strong>${Number(request.quantity || 1)}</strong></div>
         ${request.delivery_cost_cny !== null && request.delivery_cost_cny !== undefined ? `<div><span>Доставка</span><strong>${supplierAmount(request.delivery_cost_cny, "CNY")}</strong></div>` : ""}
       </div>
       ${supplierImageList(bundle.request_images || [])}
@@ -1941,7 +1992,7 @@ function renderChinaPreorderDetail(bundle = {}) {
           <div class="china-preorder-card__quote-line">
             ${supplierPaymentBadge(payment.status)}
             <span class="supplier-payment-amounts">${supplierPaymentAmountLines(payment)}</span>
-            ${receiptLink ? `<a href="${escapeHtml(receiptLink)}" target="_blank" rel="noopener">открыть скрин оплаты</a>` : `<span>скрина ещё нет</span>`}
+            ${receiptLink ? `<a href="${escapeHtml(receiptLink)}" target="_blank" rel="noopener">відкрити квитанцію</a>` : `<span>квитанції ще немає</span>`}
           </div>
           ${renderSupplierPaymentNotice(payment)}
         ` : `<p class="muted">Запрос на оплату ещё не отправляли.</p>`}
@@ -1954,11 +2005,11 @@ function renderChinaPreorderDetail(bundle = {}) {
         </div>
       ` : ""}
       <div class="china-preorder-card__actions">
-        <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Открыть карточку</a>
-        <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопировать ссылку</button>
+        <a class="admin-btn admin-btn--small" href="${escapeHtml(link)}" target="_blank" rel="noopener">Відкрити картку</a>
+        <button class="admin-btn admin-btn--small" type="button" data-copy-supplier-link="${escapeHtml(link)}">Скопіювати посилання</button>
         ${canSendPayment ? `
           <button class="admin-btn admin-btn--primary admin-btn--small" type="button" data-china-send-payment="${escapeHtml(request.id)}" data-china-quote-id="${escapeHtml(quote.id)}">
-            Отправить на оплату
+            Надіслати на оплату
           </button>
         ` : ""}
         <button class="admin-btn admin-btn--icon admin-btn--subtle-danger" type="button" data-delete-china-preorder="${escapeHtml(request.id)}" data-delete-china-preorder-number="${escapeHtml(request.public_number || request.id || "запрос")}" aria-label="Удалить запрос ${escapeHtml(request.public_number || request.id || "")}" title="Удалить запрос">
@@ -1974,7 +2025,7 @@ function renderChinaPreorders() {
   if (!root) return;
   const rows = state.chinaPreorders || [];
   if (!rows.length) {
-    root.innerHTML = `<p class="muted china-preorders__empty">Активных запросов пока нет.</p>`;
+    root.innerHTML = `<p class="muted china-preorders__empty">Активних запитів ще немає.</p>`;
     return;
   }
 
@@ -1997,14 +2048,14 @@ function renderChinaPreorders() {
       : "не отправляли";
     return `
       <article class="china-request-row china-request-row--status-${safeClass(request.status || "sent")} ${state.selectedChinaPreorderId === request.id ? "is-selected" : ""} ${needsSupplierAttention ? "has-supplier-attention" : ""} ${hasUnreadSupplier ? "has-unread-supplier" : ""} ${logisticsEvent ? "has-logistics-status" : ""}" data-china-preorder-row="${escapeHtml(request.id)}">
-        <button class="china-request-row__summary" type="button" data-china-open-preorder="${escapeHtml(request.id)}" aria-label="Открыть ${escapeHtml(request.public_number || request.id || "запрос")}">
+        <button class="china-request-row__summary" type="button" data-china-open-preorder="${escapeHtml(request.id)}" aria-label="Відкрити ${escapeHtml(request.public_number || request.id || "запрос")}">
           <span class="china-request-row__number">
             <strong>${escapeHtml(request.public_number || request.id || "Запрос")}</strong>
             <small>${escapeHtml(shortDateTime(request.created_at))}</small>
-            ${hasUnreadSupplier ? `<b class="china-request-row__attention" data-china-unread-badge>Новый ответ</b>` : needsSupplierAttention ? `<b class="china-request-row__attention china-request-row__attention--soft">Ждёт действия</b>` : logisticsEvent ? `<b class="china-request-row__attention china-request-row__attention--logistics">Ждём доставку</b>` : ""}
+            ${hasUnreadSupplier ? `<b class="china-request-row__attention" data-china-unread-badge>Нова відповідь</b>` : needsSupplierAttention ? `<b class="china-request-row__attention china-request-row__attention--soft">Потребує дії</b>` : logisticsEvent ? `<b class="china-request-row__attention china-request-row__attention--logistics">Очікуємо доставку</b>` : ""}
           </span>
           <span>
-            <small>Поставщик</small>
+            <small>Постачальник</small>
             <strong>${escapeHtml(request.supplier_name || "поставщик")}</strong>
           </span>
           <span>
@@ -2078,7 +2129,7 @@ function renderSupplierQuoteCard(quote, request) {
         ${quote.purchase_days ? `<span>Викуп: ${Number(quote.purchase_days)} дн.</span>` : ""}
         ${quote.china_delivery_days ? `<span>Китай: ${Number(quote.china_delivery_days)} дн.</span>` : ""}
         ${supplierDeliveryCostLine(request.delivery_cost_cny)}
-        <span>${escapeHtml(quote.status || "new")}</span>
+        <span>${escapeHtml({ new: "Нова пропозиція", selected: "Обрано", rejected: "Відхилено" }[quote.status] || quote.status || "Нова пропозиція")}</span>
       </div>
       ${quote.comment_cn ? `<p lang="zh-CN">${escapeHtml(quote.comment_cn)}</p>` : ""}
       ${quote.comment_translated ? `<p>${escapeHtml(quote.comment_translated)}</p>` : ""}
@@ -2099,52 +2150,11 @@ function renderSupplierRequests(order) {
       <div class="supplier-requests__head">
         <div>
           <strong>Запити постачальникам</strong>
-          <span>Magic-link для WeChat/WhatsApp і відповіді з китайського інтерфейсу.</span>
+
         </div>
       </div>
 
-      <div class="supplier-requests__create">
-        <label>
-          Постачальник
-          <select data-supplier-request-input="supplier_name" data-supplier-request-supplier>
-            ${supplierDirectoryOptions()}
-          </select>
-        </label>
-        <label data-supplier-request-custom hidden>
-          Інший постачальник
-          <input data-supplier-request-input="supplier_name_custom" placeholder="Назва постачальника">
-        </label>
-        <label>
-          Запчастина
-          <input data-supplier-request-input="item_name" value="${escapeHtml(order.item_name || order.service_name || "")}" placeholder="що шукаємо">
-        </label>
-        <label>
-          Рік
-          <input data-supplier-request-input="car_year" inputmode="numeric" maxlength="4" placeholder="2023">
-        </label>
-        <label>
-          Кількість
-          <input data-supplier-request-input="quantity" type="number" min="1" step="1" value="1">
-        </label>
-        <label class="wide">
-          Фото, URL
-          <input data-supplier-request-input="image_url" type="url" placeholder="https://...">
-        </label>
-        <label class="wide">
-          Опис для постачальника
-          <textarea data-supplier-request-input="request_text" rows="3" placeholder="Китайською або простим текстом без імені клієнта, телефону, адреси, маржі чи внутрішніх фінансів"></textarea>
-        </label>
-        <label class="wide">
-          Уточнення для постачальника
-          <textarea data-supplier-request-input="manager_comment" rows="2" placeholder="сторона, колір, комплектація, OEM номер, нова/б/у, пакування"></textarea>
-        </label>
-        <p class="supplier-request-warning wide">
-          Перед копіюванням посилання перевірте: VIN підтверджено, фото/сторона/колір вказані, у тексті немає контактів клієнта або внутрішніх сум EVLine.
-        </p>
-        <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-request="${escapeHtml(order.id)}">
-          Створити запит і посилання
-        </button>
-      </div>
+      <button class="admin-btn admin-btn--primary" type="button" data-order-to-china="${escapeHtml(order.id)}">Запросити пропозицію</button>
 
       ${rows.length ? `
         <div class="supplier-requests__list">
@@ -2206,10 +2216,72 @@ function renderSupplierPayments(order) {
       <div class="supplier-payments__head">
         <div>
           <strong>Оплата постачальнику</strong>
-          <span>Запит у Telegram-групу оплат і фіксація скрина після оплати.</span>
+
         </div>
       </div>
 
+      ${rows.length ? `
+        <div class="supplier-payments__list">
+          ${rows.map((payment) => `
+            <article class="supplier-payment-card" data-supplier-payment-card="${escapeHtml(payment.id)}">
+              <div class="supplier-payment-card__main">
+                <div>
+                  <strong>${textOrDash(payment.payment_number || payment.id)}</strong>
+                  ${supplierPaymentBadge(payment.status)}
+                  <span>${escapeHtml(shortDateTime(payment.created_at))}</span>
+                </div>
+                <div>
+                  <span class="supplier-payment-amounts">${supplierPaymentAmountLines(payment)}</span>
+                  <span>${payment.supplier_name ? escapeHtml(payment.supplier_name) : "постачальник не вказаний"}</span>
+                </div>
+              </div>
+              <details class="order-editor__details"><summary>Квитанції та розпізнавання${Number(payment.receipt_count || 0) ? ` · ${Number(payment.receipt_count)}` : ""}</summary>
+              <div class="supplier-receipt-links">${supplierReceiptLinks(payment)}</div>
+              <div class="supplier-payment-card__telegram">
+                <span>Запит: ${payment.request_message_id ? `msg ${escapeHtml(payment.request_message_id)}` : "не відправлено"}</span>
+                <span>Скрин: ${payment.receipt_message_id ? `msg ${escapeHtml(payment.receipt_message_id)}` : "ще немає"}${Number(payment.receipt_count || 0) > 1 ? ` · ${Number(payment.receipt_count || 0)} шт.` : ""}</span>
+                ${payment.matched_by ? `<span>Збіг: ${escapeHtml(payment.matched_by)} · ${escapeHtml(payment.match_confidence || "-")}</span>` : ""}
+              </div>
+              </details>
+              <details class="order-editor__details"><summary>Виправити оплату</summary>
+              <div class="supplier-payment-card__edit">
+                <label>
+                  Статус
+                  <select data-supplier-payment-field="status">
+                    ${Object.entries(supplierPaymentStatusLabels).map(([value, label]) => `<option value="${value}" ${payment.status === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                </label>
+                <label>
+                  Постачальнику
+                  <input data-supplier-payment-field="paid_amount" type="number" step="0.01" min="0" value="${Number(payment.paid_amount || 0)}">
+                </label>
+                <label>
+                  Комісія
+                  <input data-supplier-payment-field="commission_amount" type="number" step="0.01" min="0" value="${Number(payment.commission_amount || 0)}">
+                </label>
+                <label>
+                  Валюта
+                  <select data-supplier-payment-field="paid_currency">
+                    ${["CNY", "USD", "UAH"].map((currency) => `<option value="${currency}" ${(payment.paid_currency || payment.requested_currency || "CNY") === currency ? "selected" : ""}>${currency}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="wide">
+                  Коментар
+                  <textarea data-supplier-payment-field="notes" rows="2">${escapeHtml(payment.notes || "")}</textarea>
+                </label>
+                <button class="admin-btn admin-btn--small wide" type="button" data-update-supplier-payment="${escapeHtml(payment.id)}">
+                  Оновити оплату
+                </button>
+              </div>
+              </details>
+              ${Number(payment.paid_amount || 0) > 0 ? `
+                ${renderSupplierPaymentNotice(payment) || `<p class="supplier-payment-card__summary">Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}</p>`}
+              ` : `<p class="muted">Очікуємо квитанцію.</p>`}
+            </article>
+          `).join("")}
+        </div>
+      ` : `<p class="muted supplier-payments__empty">Запитів на оплату постачальнику ще немає.</p>`}
+      <details class="supplier-payment-create order-editor__details"><summary>Нова оплата постачальнику</summary>
       <div class="supplier-payments__create">
         <label>
           Постачальник
@@ -2242,62 +2314,7 @@ function renderSupplierPayments(order) {
         </button>
       </div>
 
-      ${rows.length ? `
-        <div class="supplier-payments__list">
-          ${rows.map((payment) => `
-            <article class="supplier-payment-card" data-supplier-payment-card="${escapeHtml(payment.id)}">
-              <div class="supplier-payment-card__main">
-                <div>
-                  <strong>${textOrDash(payment.payment_number || payment.id)}</strong>
-                  ${supplierPaymentBadge(payment.status)}
-                  <span>${escapeHtml(shortDateTime(payment.created_at))}</span>
-                </div>
-                <div>
-                  <span class="supplier-payment-amounts">${supplierPaymentAmountLines(payment)}</span>
-                  <span>${payment.supplier_name ? escapeHtml(payment.supplier_name) : "постачальник не вказаний"}</span>
-                </div>
-              </div>
-              <div class="supplier-payment-card__telegram">
-                <span>Запит: ${payment.request_message_id ? `msg ${escapeHtml(payment.request_message_id)}` : "не відправлено"}</span>
-                <span>Скрин: ${payment.receipt_message_id ? `msg ${escapeHtml(payment.receipt_message_id)}` : "ще немає"}${Number(payment.receipt_count || 0) > 1 ? ` · ${Number(payment.receipt_count || 0)} шт.` : ""}</span>
-                ${payment.matched_by ? `<span>Збіг: ${escapeHtml(payment.matched_by)} · ${escapeHtml(payment.match_confidence || "-")}</span>` : ""}
-              </div>
-              <div class="supplier-payment-card__edit">
-                <label>
-                  Статус
-                  <select data-supplier-payment-field="status">
-                    ${Object.entries(supplierPaymentStatusLabels).map(([value, label]) => `<option value="${value}" ${payment.status === value ? "selected" : ""}>${label}</option>`).join("")}
-                  </select>
-                </label>
-                <label>
-                  Постачальнику
-                  <input data-supplier-payment-field="paid_amount" type="number" step="0.01" min="0" value="${Number(payment.paid_amount || 0)}">
-                </label>
-                <label>
-                  Комісія
-                  <input data-supplier-payment-field="commission_amount" type="number" step="0.01" min="0" value="${Number(payment.commission_amount || 0)}">
-                </label>
-                <label>
-                  Валюта
-                  <select data-supplier-payment-field="paid_currency">
-                    ${["CNY", "USD", "UAH"].map((currency) => `<option value="${currency}" ${(payment.paid_currency || payment.requested_currency || "CNY") === currency ? "selected" : ""}>${currency}</option>`).join("")}
-                  </select>
-                </label>
-                <label class="wide">
-                  Коментар
-                  <textarea data-supplier-payment-field="notes" rows="2">${escapeHtml(payment.notes || "")}</textarea>
-                </label>
-                <button class="admin-btn admin-btn--small wide" type="button" data-update-supplier-payment="${escapeHtml(payment.id)}">
-                  Оновити оплату
-                </button>
-              </div>
-              ${Number(payment.paid_amount || 0) > 0 ? `
-                ${renderSupplierPaymentNotice(payment) || `<p class="supplier-payment-card__summary">Сплачено: ${supplierAmount(payment.paid_amount, payment.paid_currency)}</p>`}
-              ` : `<p class="muted">Після оплати надішліть скрин відповіддю на повідомлення бота. Якщо суму не буде розпізнано, її можна внести тут вручну.</p>`}
-            </article>
-          `).join("")}
-        </div>
-      ` : `<p class="muted supplier-payments__empty">Запитів на оплату постачальнику ще немає.</p>`}
+      </details>
     </section>
   `;
 }
@@ -2308,11 +2325,12 @@ function renderOrders() {
   root.innerHTML = state.orders.length
     ? state.orders
         .map((order) => {
+          const duplicate = state.orders.find((other) => other.id !== order.id && String(order.customer_phone || "").replace(/\D/g, "").slice(-9).length === 9 && String(other.customer_phone || "").replace(/\D/g, "").slice(-9) === String(order.customer_phone).replace(/\D/g, "").slice(-9) && String(other.vin || "").trim().toUpperCase() === String(order.vin || "").trim().toUpperCase() && plainText(other.item_name || other.service_name || other.request_text).toLowerCase() === plainText(order.item_name || order.service_name || order.request_text).toLowerCase() && Math.abs(Date.parse(order.created_at) - Date.parse(other.created_at)) < 86400000);
           const request = order.item_name || order.service_name || order.request_text || "";
           const customerName = plainText(order.customer_name);
           const carName = plainText(order.car);
           const deliveryMode = shippingModeLabels[order.shipping_mode] || "";
-          const deliveryLine = deliveryMode ? `${deliveryMode} · ${money.format(order.delivery_cost_uah || 0)}` : "";
+          const deliveryLine = deliveryMode && Number(order.delivery_cost_uah) > 0 ? `${deliveryMode} · ${money.format(order.delivery_cost_uah)}` : "";
           const publicNumber = order.order_number || "без номера";
           const trackingStatus = order.tracking_status_text
             ? `${order.tracking_status_text}${order.tracking_status_location ? ` · ${order.tracking_status_location}` : ""}`
@@ -2324,7 +2342,7 @@ function renderOrders() {
             : "";
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
-              <td class="orders-table__number-cell" data-label="№ / дата"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}</td>
+              <td class="orders-table__number-cell" data-label="№ / дата"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}${duplicate ? `<button class="order-duplicate" type="button" data-open-order="${escapeHtml(duplicate.id)}" title="Переглянути можливий дубль">Схоже на ${escapeHtml(duplicate.order_number)}</button>` : ""}</td>
               <td data-label="Клієнт">${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}</td>
               <td class="orders-table__request-cell" data-label="Авто / запит">${carName ? `<strong class="orders-table__primary">${escapeHtml(carName)}</strong>` : ""}${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
               <td data-label="Статус">${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
@@ -2336,9 +2354,9 @@ function renderOrders() {
                     <span aria-hidden="true">✎</span>
                   </button>
                   <div class="orders-table__china-stack">
-                    <button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запрос в Китай для ${escapeHtml(publicNumber)}" title="Запрос в Китай">
+                    ${order.type === "parts" ? `<button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запит у Китай для ${escapeHtml(publicNumber)}" title="Запит у Китай">
                       В Китай
-                    </button>
+                    </button>` : ""}
                     <button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(publicNumber)}" aria-label="Видалити заявку ${escapeHtml(publicNumber)}" title="Видалити заявку">
                       ${trashIcon()}
                     </button>
@@ -2379,6 +2397,7 @@ function highlightSelectedOrder() {
 }
 
 function closeOrderDetail(options = {}) {
+  if (!options.force && !allowDiscardOrder()) return false;
   setOrderDetailOpen(false);
   if (options.clearSelection) {
     state.selectedOrder = null;
@@ -2391,6 +2410,7 @@ function closeOrderDetail(options = {}) {
     renderOrderEditor(null);
     highlightSelectedOrder();
   }
+  return true;
 }
 
 function setMarketLookupOpen(open) {
@@ -2414,13 +2434,16 @@ function updateChinaRequestSubtitle(order = null) {
   if (!node) return;
   node.textContent = order?.id
     ? `${order.order_number || order.id}${order.item_name || order.service_name || order.car ? ` · ${order.item_name || order.service_name || order.car}` : ""}`
-    : "Создание обращения поставщику.";
+    : "Запит пропозиції постачальнику.";
 }
 
 function resetChinaPreorderForm(order = null) {
   const form = document.querySelector("[data-china-preorder-form]");
   if (!form) return;
   form.reset();
+  const search = form.querySelector("[data-china-order-search]");
+  if (search) { search.readOnly = Boolean(order); search.value = ""; search.setCustomValidity(""); }
+  renderChinaOrderOptions(state.orders);
   clearChinaPhoto(form);
   hideChinaCreatedLink(form);
   const customSupplier = document.querySelector("[data-china-custom-supplier]");
@@ -2465,9 +2488,9 @@ function renderChinaPreorderPanel() {
   if (!body) return;
   const bundle = selectedChinaPreorderBundle();
   if (!bundle) {
-    body.innerHTML = `<p class="muted">Выберите обращение в списке.</p>`;
+    body.innerHTML = `<p class="muted">Оберіть запит у списку.</p>`;
     if (title) title.textContent = "Карточка запроса";
-    if (subtitle) subtitle.textContent = "Выберите обращение в списке.";
+    if (subtitle) subtitle.textContent = "Оберіть запит у списку.";
     return;
   }
   const request = bundle.request || {};
@@ -2496,6 +2519,7 @@ function setOrderEditorTab(tab) {
     pane.classList.toggle("is-active", selected);
     pane.hidden = !selected;
   });
+  updateOrderSaveState();
   if (active === "market" && state.selectedOrder?.id) {
     loadMarketResearch(state.selectedOrder.id, { refreshIfNeeded: true }).catch((error) => {
       console.warn("market research", error);
@@ -2528,16 +2552,11 @@ function marketLeadTime(offer) {
   const to = Number(offer.lead_time_max || 0);
   if (from && to && from !== to) return `${from}–${to} днів`;
   if (from) return `${from} днів`;
-  return offer.availability_text || marketAvailabilityLabels[offer.availability] || marketAvailabilityLabels.unknown;
+  return "";
 }
 
 function filteredMarketOffers(data, itemKey) {
-  return (data?.offers || []).filter((offer) => {
-    if (offer.item_key !== itemKey) return false;
-    const availability = state.marketResearchFilters.availability;
-    const partType = state.marketResearchFilters.partType;
-    return (availability === "all" || offer.availability === availability) && (partType === "all" || offer.part_type === partType);
-  });
+  return filterMarketOffers((data?.offers || []).filter((offer) => offer.item_key === itemKey), state.marketResearchFilters);
 }
 
 function marketFilterButton(group, value, label) {
@@ -2546,11 +2565,12 @@ function marketFilterButton(group, value, label) {
 }
 
 function renderMarketOffer(offer) {
-  const matchLabel = offer.match_type === "exact" ? "Точний збіг" : "Ймовірний збіг";
+  const matchLabel = { exact: "Підтверджено", probable: "Потрібна перевірка", irrelevant: "Несумісне" }[offer.match_type] || "Потрібна перевірка";
+  const offerKey = escapeHtml(JSON.stringify([offer.item_key, offer.source_key, offer.product_url]));
   const partType = marketPartTypeLabels[offer.part_type] || marketPartTypeLabels.unknown;
   const availability = marketAvailabilityLabels[offer.availability] || marketAvailabilityLabels.unknown;
   return `
-    <article class="market-offer ${offer.match_type === "exact" ? "market-offer--exact" : ""}">
+    <article class="market-offer market-offer--${escapeHtml(offer.match_type)}" data-market-offer-key="${offerKey}">
       <div class="market-offer__seller">
         <a href="${escapeHtml(offer.product_url || offer.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(offer.source_name)}</a>
         <span class="market-chip market-chip--${escapeHtml(offer.match_type)}">${matchLabel}</span>
@@ -2558,47 +2578,51 @@ function renderMarketOffer(offer) {
       <div class="market-offer__product">
         <strong>${escapeHtml(offer.title)}</strong>
         ${offer.part_number ? `<span class="orders-table__mono">${escapeHtml(offer.part_number)}</span>` : ""}
+        <small class="market-offer__reason">${escapeHtml(offer.match_reason || (offer.match_type === "exact" ? "Артикул підтверджено" : "Перевірте застосування"))}</small>
+        ${offer.ai_review ? `<details class="market-evidence"><summary>Що перевірити</summary><span>Запит: ${escapeHtml(offer.ai_review.request_quote)}</span><span>Товар: ${escapeHtml(offer.ai_review.product_quote)}</span></details>` : ""}
       </div>
-      <strong class="market-offer__price">${money.format(Number(offer.price_uah || 0))}</strong>
+      <strong class="market-offer__price">${offer.price_uah > 0 ? money.format(Number(offer.price_uah)) : offer.original_price && offer.currency !== "unknown" ? `${Number(offer.original_price).toLocaleString("uk-UA")} ${escapeHtml(offer.currency)}` : "Ціну уточнити"}</strong>
       <div class="market-offer__terms">
         <span>${escapeHtml(availability)}</span>
-        <small>${escapeHtml(marketLeadTime(offer))}</small>
+        ${offer.availability_conflict ? `<small title="${escapeHtml(offer.availability_evidence?.visible || '')}">Суперечливі дані продавця</small>` : ""}
+        ${marketLeadTime(offer) ? `<small>${offer.availability_conflict ? "На сторінці: " : ""}${escapeHtml(marketLeadTime(offer))}</small>` : ""}
       </div>
       <span class="market-chip market-chip--neutral">${escapeHtml(partType)}</span>
+      <div class="market-offer__feedback">
+        ${offer.feedback?.rejected ? `<button type="button" class="admin-btn admin-btn--small" data-market-feedback-undo>Скасувати позначку</button>` : `<details><summary>Не та деталь</summary><div class="market-feedback-controls"><select aria-label="Причина відхилення" data-market-feedback-reason><option value="component">Інша деталь</option><option value="model">Інша модель</option><option value="side">Інша сторона</option><option value="equipment">Інша комплектація</option><option value="price">Некоректна ціна</option><option value="other">Не підходить</option></select><button class="admin-btn admin-btn--small" type="button" data-market-feedback-save>Відхилити</button></div></details>`}
+        <span role="status" class="market-feedback-status"></span>
+      </div>
     </article>
   `;
 }
 
 function renderMarketSummaryItem(item, data) {
   const offers = filteredMarketOffers(data, item.key);
-  const hasPrices = Number(item.median_uah || 0) > 0;
-  const reliable = Number(item.exact_offer_count || 0) >= 3;
+  const summary = summarizeMarketItem(item, offers);
+  const exact = offers.filter((offer) => offer.match_type === "exact");
+  const similar = offers.filter((offer) => offer.match_type === "probable");
+  const rejected = offers.filter((offer) => offer.match_type === "irrelevant");
   return `
     <section class="market-item">
       <div class="market-item__head">
         <div>
           <span class="market-item__eyebrow">Позиція</span>
           <h3>${escapeHtml(item.label)}</h3>
-          <p>${item.part_numbers?.length ? `Артикул: ${escapeHtml(item.part_numbers.join(", "))}` : `Пошук: ${escapeHtml(item.query || "за моделлю та назвою")}`}</p>
+          ${item.part_numbers?.length ? `<p>Артикул: ${escapeHtml(item.part_numbers.join(", "))}</p>` : ""}
         </div>
-        <span class="market-confidence market-confidence--${escapeHtml(item.confidence)}">${escapeHtml(marketConfidenceLabel(item.confidence))}</span>
+        <div class="market-trust-counts" aria-label="Групи відповідності"><span class="market-chip market-chip--exact">Підтверджені: ${exact.length}</span><span class="market-chip market-chip--probable">Перевірити: ${similar.length}</span><span class="market-chip market-chip--irrelevant">Несумісні: ${rejected.length}</span></div>
       </div>
-      ${hasPrices ? `
-        <div class="market-stats">
-          <div><span>Мінімум</span><strong>${money.format(Number(item.min_uah || 0))}</strong></div>
-          <div class="market-stats__primary"><span>Орієнтир (медіана)</span><strong>${money.format(Number(item.median_uah || 0))}</strong></div>
-          <div><span>Середня</span><strong>${money.format(Number(item.average_uah || 0))}</strong></div>
-          <div><span>Максимум</span><strong>${money.format(Number(item.max_uah || 0))}</strong></div>
-          <div><span>Знайдено</span><strong>${Number(item.offer_count || 0)}</strong><small>точних: ${Number(item.exact_offer_count || 0)}</small></div>
-        </div>
-      ` : ""}
-      ${!reliable ? `
-        <p class="market-note market-note--caution">
-          ${item.exact_offer_count ? "Точних пропозицій менше трьох." : "Точних збігів за артикулом поки немає."}
-          Показуємо робочий діапазон, а не підтверджену ринкову ціну.
-        </p>
-      ` : ""}
-      ${offers.length ? `<div class="market-offers">${offers.map(renderMarketOffer).join("")}</div>` : `<p class="market-empty">За вибраними фільтрами пропозицій немає.</p>`}
+      ${summary.groups.map((group) => `
+        <div class="market-price-group">
+          <div><span>${escapeHtml(marketGroupLabel(group))}</span>
+          <strong>${money.format(group.median_uah)}</strong><small>${group.offer_count > 1 ? "Медіана" : "Одна пропозиція"} · продавців: ${group.seller_count}</small></div>
+          <div><span>Діапазон</span><strong>${money.format(group.min_uah)} – ${money.format(group.max_uah)}</strong>
+          <details><summary>Середня ціна</summary>${money.format(group.average_uah)}</details></div>
+        </div>`).join("")}
+      ${!exact.length ? `<p class="market-note market-note--caution">${offers.length ? "Є лише схожі товари. Уточніть артикул: їхні ціни не об'єднуємо в ринковий орієнтир." : "За цими фільтрами точних пропозицій немає."}</p>` : `<p class="market-note">Збіг артикула не підтверджує комплектацію та актуальність наявності. Перевірте у продавця.</p>`}
+      ${exact.length ? `<div class="market-trust-group market-trust-group--exact"><h4>Підтверджені збіги <span>${exact.length}</span></h4><div class="market-offers">${exact.slice(0, 5).map(renderMarketOffer).join("")}</div>${exact.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${exact.length - 5}</summary>${exact.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</div>` : ""}
+      ${similar.length ? `<details class="market-trust-group market-trust-group--probable" ${exact.length ? "" : "open"}><summary>Потрібна перевірка <span>${similar.length}</span></summary><p class="market-group-note">Не враховано в ціновому орієнтирі.</p>${similar.map(renderMarketOffer).join("")}</details>` : ""}
+      ${rejected.length ? `<details class="market-trust-group market-trust-group--irrelevant"><summary>Несумісні <span>${rejected.length}</span></summary><p class="market-group-note">Виключено з порівняння.</p>${rejected.map(renderMarketOffer).join("")}</details>` : ""}
     </section>
   `;
 }
@@ -2606,7 +2630,7 @@ function renderMarketSummaryItem(item, data) {
 function renderMarketSources(data) {
   const sources = data?.sources || [];
   if (!sources.length) return "";
-  const successful = sources.filter((source) => source.status === "ok").length;
+  const successful = sources.filter((source) => ["ok", "empty"].includes(source.status)).length;
   const uniqueSources = new Set(sources.map((source) => source.key)).size;
   return `
     <details class="market-sources">
@@ -2615,7 +2639,7 @@ function renderMarketSources(data) {
         ${sources.map((source) => `
           <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer" class="market-source market-source--${escapeHtml(source.status)}">
             <strong>${escapeHtml(source.name)}</strong>
-            <span>${source.status === "ok" ? `релевантних: ${Number(source.count || 0)}` : "не вдалося перевірити"}</span>
+            <span>${source.status === "ok" ? `кандидатів: ${Number(source.count || 0)}` : { empty: "Нічого не знайдено", partial: "Картку не вдалося перевірити", unreadable: "Не вдалося прочитати товари", failed: "Джерело недоступне" }[source.status] || "Не вдалося перевірити"}</span>
           </a>
         `).join("")}
       </div>
@@ -2624,16 +2648,42 @@ function renderMarketSources(data) {
 }
 
 function marketSummaryText(data) {
-  const lines = ["Орієнтир ринку України"];
+  const lines = ["Орієнтир ринку України", `Фільтри: ${marketAvailabilityLabels[state.marketResearchFilters.availability] || "Уся наявність"} · ${marketPartTypeLabels[state.marketResearchFilters.partType] || "Усі типи"}`];
   for (const item of data?.summary?.items || []) {
-    lines.push(`${item.label}: ${item.median_uah ? money.format(Number(item.median_uah)) : "ціни не знайдено"}`);
-    if (item.min_uah && item.max_uah) lines.push(`Діапазон: ${money.format(Number(item.min_uah))} – ${money.format(Number(item.max_uah))}`);
-    if (item.average_uah) lines.push(`Середня: ${money.format(Number(item.average_uah))}`);
-    lines.push(`Пропозицій: ${Number(item.offer_count || 0)}, точних: ${Number(item.exact_offer_count || 0)}`);
+    const summary = summarizeMarketItem(item, data.offers || [], state.marketResearchFilters);
+    lines.push(item.label);
+    for (const group of summary.groups) {
+      lines.push(`${marketGroupLabel(group)}: ${money.format(group.median_uah)}; діапазон ${money.format(group.min_uah)} – ${money.format(group.max_uah)}; продавців: ${group.seller_count}`);
+    }
+    if (!summary.groups.length) lines.push("Точних цін немає. Схожі товари не включені в розрахунок.");
+    lines.push(`Точних пропозицій: ${summary.exact_offer_count}, схожих: ${summary.probable_offer_count}`);
   }
   lines.push("Ринкова підказка, не фінальна ціна клієнту.");
   return lines.join("\n");
 }
+
+function marketGroupLabel(group) {
+  return [marketPartTypeLabels[group.part_type] || "Тип не підтверджено", { new: "Нова", used: "Б/у", unknown: "Стан уточнити" }[group.condition], marketAvailabilityLabels[group.availability] || "Наявність уточнити", { left: "ліва", right: "права" }[group.side], { front: "передня", rear: "задня" }[group.position], { drl: "ДХО", fog: "протитуманна" }[group.lamp], group.technology?.toUpperCase()].filter(Boolean).join(" · ");
+}
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-market-feedback-save], [data-market-feedback-undo]");
+  if (!button) return;
+  const row = button.closest("[data-market-offer-key]");
+  const lookup = Boolean(button.closest("[data-market-lookup-panel]"));
+  const data = lookup ? state.marketLookup.result : state.marketResearchByOrder[state.selectedOrder?.id];
+  if (!row || !data?.run) return;
+  button.disabled = true;
+  const status = row.querySelector(".market-feedback-status");
+  try {
+    const result = await api("/api/admin/market-feedback", { method: "POST", body: JSON.stringify({
+      run_id: data.run.id, ...(lookup ? { lookup_id: data.run.id } : { order_id: state.selectedOrder.id }),
+      offer_key: row.dataset.marketOfferKey, reason: row.querySelector("[data-market-feedback-reason]")?.value || "other", undo: button.hasAttribute("data-market-feedback-undo"),
+    }) });
+    if (lookup) { state.marketLookup.result = result; renderMarketLookup(); }
+    else { state.marketResearchByOrder[state.selectedOrder.id] = result; updateMarketResearchRoot(); }
+  } catch (error) { status.textContent = error.message; button.disabled = false; }
+});
 
 function renderMarketResearchBody(order) {
   const data = state.marketResearchByOrder[order.id];
@@ -2644,12 +2694,11 @@ function renderMarketResearchBody(order) {
   return `
     <div class="market-panel__head">
       <div>
-        <span class="market-panel__kicker">Орієнтир для менеджера</span>
         <h2>Ринок України</h2>
-        <p>Публічні ціни, наявність і строки у профільних продавців. Дані не змінюють суму замовлення.</p>
       </div>
       ${updatedAt ? `<span class="market-panel__updated">Оновлено ${escapeHtml(shortDateTime(updatedAt))}</span>` : ""}
     </div>
+    <details class="market-search-details" ${summaryItems.length ? "" : "open"}><summary>Уточнити запчастину / артикул</summary>
     <div class="market-search">
       <label>
         Запчастина
@@ -2661,6 +2710,7 @@ function renderMarketResearchBody(order) {
       </label>
       <button class="admin-btn admin-btn--primary" type="button" data-market-refresh ${loading ? "disabled" : ""}>${loading ? "Перевіряємо 11 джерел..." : "Оновити пошук"}</button>
     </div>
+    </details>
     ${data?.error ? `<p class="market-note market-note--error">${escapeHtml(data.error)}</p>` : ""}
     ${loading && !summaryItems.length ? `<div class="market-loading"><span></span><strong>Збираємо ціни та наявність у 11 профільних продавців</strong><small>Карткою замовлення можна користуватися паралельно.</small></div>` : ""}
     ${!loading && !data?.run && !summaryItems.length ? `<p class="market-empty">Вкажіть запчастину або артикул. Пошук запуститься автоматично після відкриття вкладки.</p>` : ""}
@@ -3014,21 +3064,13 @@ function renderShippingEstimate(order) {
   const head = `
     <div class="shipping-estimate__head">
       <div>
-        <span class="market-panel__kicker">Логістична підказка</span>
-        <h3>Орієнтовна доставка до Києва</h3>
+        <h3>Море · Китай → Київ</h3>
       </div>
       <a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Детальний прайс</a>
     </div>`;
   if (!profile) {
-    return `
-      ${head}
-      ${controls}
-      <div class="shipping-estimate__empty">
-        <strong>Не знайшли зіставний тип деталі</strong>
-        <span>Оберіть найближчий профіль вручну. Поки тип не визначено, CRM не показує випадкову оцінку.</span>
-      </div>
-      <p class="shipping-estimate__caveat">Розрахунок є внутрішньою підказкою менеджеру і не змінює ціну для клієнта.</p>
-    `;
+    return `${head}<p class="muted">Тип деталі не визначено. Оцінка доставки недоступна.</p>
+      <details class="order-editor__details" data-shipping-options><summary>Обрати деталь і пакування</summary>${controls}</details>`;
   }
   const factor = Number(vehicle.factor || 1) * Number(packing.factor || 1);
   const quote = Number(profile.working_quote_usd || 0) * factor;
@@ -3036,20 +3078,27 @@ function renderShippingEstimate(order) {
   const volume = Number(profile.packed_volume_m3 || 0) * factor;
   return `
     ${head}
-    ${controls}
     <div class="shipping-estimate__result">
       <div><span>Робочий орієнтир</span><strong>${usdMoney.format(quote)}</strong></div>
       <div><span>Діапазон</span><strong>${usdMoney.format(range[0])}–${usdMoney.format(range[1])}</strong></div>
-      <div><span>Розрахунковий об'єм</span><strong>${Number(volume.toFixed(2)).toLocaleString("uk-UA")} м³</strong></div>
+
     </div>
-    <p>${escapeHtml(profile.note)}</p>
+    <p class="shipping-estimate__caveat">Попередня оцінка. Не включено: доставка по Китаю, обрешітка за рахунком постачальника та страхування 1,5%.</p>
+    <details class="order-editor__details" data-shipping-options><summary>Параметри й методика розрахунку</summary>
+    ${controls}
+    <p>${escapeHtml(profile.note)} · ${Number(volume.toFixed(2)).toLocaleString("uk-UA")} м³</p>
     <p class="shipping-estimate__caveat">Це підказка за накопиченими відправленнями, версія ${escapeHtml(pricelist.version)}, оновлено ${escapeHtml(pricelist.updated_at)}. Консолідація кількох деталей в одному ящику може зменшити сумарну доставку на 15–30%. Страхування 1,5% і фактичні розміри пакування рахуються окремо.</p>
+    </details>
   `;
 }
 
 function updateShippingEstimateRoot(order = state.selectedOrder) {
   const root = document.querySelector("[data-shipping-estimate-root]");
-  if (root && order) root.innerHTML = renderShippingEstimate(order);
+  if (root && order) {
+    const open = root.querySelector("[data-shipping-options]")?.open;
+    root.innerHTML = renderShippingEstimate(order);
+    if (open && root.querySelector("[data-shipping-options]")) root.querySelector("[data-shipping-options]").open = true;
+  }
 }
 
 function messagePreview(order, status) {
@@ -3132,9 +3181,12 @@ function applyShippingSelection(form, options = {}) {
   }
 }
 
-function renderOrderEditor(order) {
+function renderOrderEditor(order, preserveDraft = true) {
   const form = document.querySelector("[data-order-editor]");
   if (!form) return;
+  const baseline = Object.fromEntries(JSON.parse(orderFormBaseline || "[]"));
+  const draft = preserveDraft && form.elements.id?.value === order?.id && orderIsDirty()
+    ? [...form.elements].filter((field) => field.name && !field.readOnly && String(field.type === "checkbox" ? (field.checked ? field.value : undefined) : field.value) !== String(baseline[field.name])).map((field) => ({ name: field.name, value: field.value, checked: field.checked, type: field.type })) : [];
   updateOrderDetailSubtitle(order);
   if (!order) {
     form.innerHTML = `<p class="muted">Оберіть замовлення в таблиці.</p>`;
@@ -3177,37 +3229,23 @@ function renderOrderEditor(order) {
   form.innerHTML = `
     <div class="order-editor__meta">
       <div class="order-editor__meta-head">
-        <div>
-          <span class="order-editor__meta-kicker">Клієнт</span>
-          ${customerName ? `<strong class="order-editor__meta-title">${escapeHtml(customerName)}</strong>` : ""}
-          <div class="order-editor__meta-contact">${customerContact ? contactLine(order) : `<span class="muted">контакт не вказано</span>`}</div>
+        <div class="order-editor__identity">
+          ${customerName ? `<strong>${escapeHtml(customerName)}</strong>` : ""}
+          ${customerContact ? contactLine(order) : ""}
+          ${badge(order.status || "new", true)}
         </div>
-        <span class="order-editor__meta-manager" title="Менеджер">
-          <span>Менеджер</span>
-          <strong>${textOrDash(managerContact)}</strong>
-        </span>
+        <button class="admin-btn admin-btn--small" type="button" data-order-tab="history">Історія</button>
       </div>
-      <div class="order-editor__meta-grid">
-        <div class="order-editor__meta-field">
-          <span>VIN</span>
-          <strong class="orders-table__mono">${textOrDash(order.vin)}</strong>
+      ${carName || order.vin ? `<p class="order-editor__vehicle">${escapeHtml(carName)} ${order.vin ? `<span class="orders-table__mono">${escapeHtml(order.vin)}</span>` : ""}</p>` : ""}
+      <p class="order-editor__request">${escapeHtml(primaryRequest)}</p>
+      <details class="order-editor__details">
+        <summary>Додаткові дії</summary>
+        <span>${escapeHtml(managerContact)} · ${escapeHtml(serviceIds)}</span>
+        <div class="order-editor__actions">
+          <button class="admin-btn admin-btn--small" type="button" data-notify-manager="${escapeHtml(order.id)}">Повторити повідомлення менеджеру</button>
+          <button class="admin-btn admin-btn--icon admin-btn--subtle-danger" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}" aria-label="Видалити заявку" title="Видалити заявку">${trashIcon()}</button>
         </div>
-        <div class="order-editor__meta-field">
-          <span>Авто</span>
-          ${carName ? `<strong>${escapeHtml(carName)}</strong>` : ""}
-        </div>
-        <div class="order-editor__meta-field order-editor__meta-field--wide">
-          <span>Запчастина / послуга</span>
-          <strong>${textOrDash(primaryRequest)}</strong>
-        </div>
-      </div>
-      <div class="order-editor__actions">
-        <button class="admin-btn" type="button" data-notify-manager="${escapeHtml(order.id)}">Надіслати менеджеру в Telegram</button>
-        <button class="admin-btn admin-btn--icon admin-btn--subtle-danger order-editor__delete" type="button" data-delete-order="${escapeHtml(order.id)}" data-delete-order-number="${escapeHtml(orderNumber)}" aria-label="Видалити заявку ${escapeHtml(orderNumber)}" title="Видалити заявку">
-          ${trashIcon()}
-        </button>
-      </div>
-      <p class="order-editor__meta-ids">${escapeHtml(serviceIds)}</p>
+      </details>
     </div>
 
     <input type="hidden" name="id" value="${escapeHtml(order.id)}">
@@ -3216,10 +3254,8 @@ function renderOrderEditor(order) {
       <button class="order-editor__tab ${activeOrderEditorTab() === "main" ? "is-active" : ""}" type="button" data-order-tab="main" role="tab" aria-selected="${activeOrderEditorTab() === "main" ? "true" : "false"}">Заявка</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "market" ? "is-active" : ""}" type="button" data-order-tab="market" role="tab" aria-selected="${activeOrderEditorTab() === "market" ? "true" : "false"}">Ринок України</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "suppliers" ? "is-active" : ""}" type="button" data-order-tab="suppliers" role="tab" aria-selected="${activeOrderEditorTab() === "suppliers" ? "true" : "false"}">Постачальники</button>
-      <button class="order-editor__tab ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" type="button" data-order-tab="delivery" role="tab" aria-selected="${activeOrderEditorTab() === "delivery" ? "true" : "false"}">Доставка</button>
       <button class="order-editor__tab ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" type="button" data-order-tab="payment" role="tab" aria-selected="${activeOrderEditorTab() === "payment" ? "true" : "false"}">Оплата</button>
-      <button class="order-editor__tab ${activeOrderEditorTab() === "messages" ? "is-active" : ""}" type="button" data-order-tab="messages" role="tab" aria-selected="${activeOrderEditorTab() === "messages" ? "true" : "false"}">Повідомлення</button>
-      <button class="order-editor__tab ${activeOrderEditorTab() === "history" ? "is-active" : ""}" type="button" data-order-tab="history" role="tab" aria-selected="${activeOrderEditorTab() === "history" ? "true" : "false"}">Історія</button>
+      <button class="order-editor__tab ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" type="button" data-order-tab="delivery" role="tab" aria-selected="${activeOrderEditorTab() === "delivery" ? "true" : "false"}">Доставка</button>
     </div>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "main" ? "is-active" : ""}" data-order-pane="main" ${activeOrderEditorTab() === "main" ? "" : "hidden"}>
@@ -3231,11 +3267,35 @@ function renderOrderEditor(order) {
         ${Object.entries(statusLabels).map(([value, label]) => `<option value="${value}" ${order.status === value ? "selected" : ""}>${label}</option>`).join("")}
       </select>
     </label>
+    <div class="wide order-status-message" data-status-message hidden>
+      <p class="muted">${order.telegram_chat_id || order.customer_telegram_chat_id ? `Одержувач: клієнт ${escapeHtml(order.customer_telegram || order.customer_name || "цього замовлення")} у Telegram.` : "Клієнт ще не підключив Telegram-статуси. Повідомлення не може бути доставлене без підключення."}</p>
+    <label class="wide order-editor__notify">
+      <input name="notify_customer" type="checkbox" value="1" checked>
+      <span>Надіслати клієнту Telegram-повідомлення після збереження</span>
+    </label>
+    <label class="wide">
+      Текст повідомлення клієнту
+      <textarea name="customer_message" rows="5" data-message-preview>${escapeHtml(messagePreview(order, order.status || "new"))}</textarea>
+    </label>
+    <label class="wide">
+      Коментар до зміни статусу
+      <input name="status_comment" placeholder="коротка внутрішня нотатка для історії">
+    </label>
+
+    </div>
     <label>
       Тип
       <select name="type">
         ${Object.entries(typeLabels).map(([value, label]) => `<option value="${value}" ${order.type === value ? "selected" : ""}>${label}</option>`).join("")}
       </select>
+    </label>
+    <label>
+      Наступна дія
+      <input name="next_action_at" type="date" value="${escapeHtml(order.next_action_at ? String(order.next_action_at).slice(0, 10) : "")}">
+    </label>
+    <label class="wide">
+      Коментар менеджера
+      <textarea name="manager_notes" rows="2">${escapeHtml(order.manager_notes || "")}</textarea>
     </label>
     <label>
       Менеджер напряму
@@ -3254,6 +3314,7 @@ function renderOrderEditor(order) {
       Telegram клієнта
       <input name="customer_telegram" value="${escapeHtml(order.customer_telegram || "")}" placeholder="@username">
     </label>
+    <details class="wide order-editor__details"><summary>Telegram-статуси клієнта${order.telegram_chat_id || order.customer_telegram_chat_id ? " · підключено" : " · не підключено"}</summary>
     <label>
       Telegram chat_id
       <input name="telegram_chat_id" value="${escapeHtml(order.telegram_chat_id || order.customer_telegram_chat_id || "")}" placeholder="з'явиться після прив'язки бота">
@@ -3269,6 +3330,9 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
         <button type="button" class="ghost" data-copy-tg-link>Скопіювати лише посилання</button>
       </div>`}
     </div>
+
+
+    </details>
 
     <label>
       Авто / модель
@@ -3384,11 +3448,14 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     ${renderSupplierPayments(order)}
 
     <div class="order-editor__section wide">
-      <strong>Фінанси</strong>
-      <span>Витрати: ${money.format(costs)} · маржа: ${money.format(profit)}</span>
+      <strong>Фінанси замовлення · грн</strong>
+      <span>${Number(order.revenue_uah) > 0 && Number(order.purchase_cost_uah) > 0 ? `Витрати внесено: ${money.format(costs)} · попередня маржа: ${money.format(profit)}` : "Маржа не розрахована: потрібні сума клієнту й закупівельна вартість у грн."}</span>
     </div>
+    <label>Оплата від клієнта
+      <select name="payment_status">${Object.entries(paymentLabels).map(([key, label]) => `<option value="${key}" ${key === (order.payment_status || "unknown") ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select>
+    </label>
     <label>
-      Виручка, грн
+      Сума клієнту, грн
       <input name="revenue_uah" type="number" step="0.01" min="0" value="${Number(order.revenue_uah || 0)}">
     </label>
     <label>
@@ -3415,33 +3482,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       </div>
     </section>
 
-    <section class="order-editor__pane wide ${activeOrderEditorTab() === "messages" ? "is-active" : ""}" data-order-pane="messages" ${activeOrderEditorTab() === "messages" ? "" : "hidden"}>
-      <div class="order-editor__grid">
 
-    <label>
-      Наступна дія
-      <input name="next_action_at" type="date" value="${escapeHtml(order.next_action_at ? String(order.next_action_at).slice(0, 10) : "")}">
-    </label>
-
-    <label class="wide order-editor__notify">
-      <input name="notify_customer" type="checkbox" value="1" checked>
-      <span>Підготувати повідомлення клієнту при зміні статусу</span>
-    </label>
-    <label class="wide">
-      Текст повідомлення клієнту
-      <textarea name="customer_message" rows="5" data-message-preview>${escapeHtml(messagePreview(order, order.status || "new"))}</textarea>
-    </label>
-    <label class="wide">
-      Коментар до зміни статусу
-      <input name="status_comment" placeholder="коротка внутрішня нотатка для історії">
-    </label>
-    <label class="wide">
-      Коментар менеджера
-      <textarea name="manager_notes" rows="4">${escapeHtml(order.manager_notes || "")}</textarea>
-    </label>
-
-      </div>
-    </section>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "history" ? "is-active" : ""}" data-order-pane="history" ${activeOrderEditorTab() === "history" ? "" : "hidden"}>
       <div class="order-editor__grid">
@@ -3462,15 +3503,32 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       </div>
     </section>
 
-    <button class="admin-btn admin-btn--primary wide order-editor__save" type="submit">Зберегти замовлення</button>
+    <div class="wide order-save-bar" data-order-save-bar>
+      <span data-save-state role="status"></span>
+      <button class="admin-btn admin-btn--primary" type="submit">Зберегти зміни</button>
+      <p data-order-save-error role="alert" hidden></p>
+    </div>
   `;
 
   form.querySelector("[data-status-input]")?.addEventListener("change", (event) => {
     const preview = form.querySelector("[data-message-preview]");
     if (preview) preview.value = messagePreview(order, event.target.value);
+    form.querySelector("[data-status-message]").hidden = event.target.value === (order.status || "new");
+    updateOrderSaveState();
   });
 
   applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
+  orderFormBaseline = orderFormSnapshot();
+  for (const entry of draft) {
+    const field = form.elements.namedItem(entry.name);
+    if (field) { field.value = entry.value; if (entry.type === "checkbox") field.checked = entry.checked; }
+  }
+  form.querySelector("[data-status-message]").hidden = form.elements.status.value === (order.status || "new");
+  updateOrderSaveState();
+}
+
+function notificationLabel(status) {
+  return { pending: "У черзі", sent: "Надіслано", failed: "Помилка", skipped: "Пропущено", not_queued: "Не надсилалося" }[status] || status || "Не надсилалося";
 }
 
 function renderNotifications() {
@@ -3483,7 +3541,7 @@ function renderNotifications() {
         .map(
           (notification) => `
             <li>
-              <strong class="notification-status notification-status--${safeClass(notification.status)}">${escapeHtml(notification.status || "pending")}</strong>
+              <strong class="notification-status notification-status--${safeClass(notification.status)}">${escapeHtml(notificationLabel(notification.status))}</strong>
               <span>${escapeHtml(shortDateTime(notification.created_at))} · ${textOrDash(notification.recipient_contact)} · спроб: ${Number(notification.attempts || 0)}</span>
               ${notification.error ? `<p>${escapeHtml(notification.error)}</p>` : ""}
               ${notification.status !== "sent" ? `<button class="admin-btn admin-btn--small" type="button" data-retry-notification="${escapeHtml(notification.id)}">Повторити відправку</button>` : ""}
@@ -3525,7 +3583,7 @@ function renderEvents() {
           (event) => `
             <li>
               <strong>${escapeHtml(statusLabels[event.status] || event.status)}</strong>
-              <span>${escapeHtml(shortDateTime(event.created_at))} · ${textOrDash(event.actor)} · повідомлення: ${textOrDash(event.notification_status)}</span>
+              <span>${escapeHtml(shortDateTime(event.created_at))} · ${textOrDash(event.actor)} · повідомлення: ${escapeHtml(notificationLabel(event.notification_status))}</span>
               ${event.comment ? `<p>${escapeHtml(event.comment)}</p>` : ""}
             </li>
           `
@@ -3543,6 +3601,7 @@ async function loadSummary() {
 async function loadOrders() {
   const params = new URLSearchParams({
     range: state.range,
+    work: document.querySelector("[data-work-filter][aria-pressed='true']")?.dataset.workFilter || "all",
     status: document.querySelector("#status-filter")?.value || "all",
     type: document.querySelector("#type-filter")?.value || "all",
     q: document.querySelector("#search")?.value || "",
@@ -3550,6 +3609,8 @@ async function loadOrders() {
   });
   const data = await api(`/api/admin/orders?${params}`);
   state.orders = data.orders || [];
+  const count = document.querySelector("[data-orders-visible-count]");
+  if (count) count.textContent = `${state.orders.length} з ${Number(data.total || state.orders.length)}`;
   renderOrders();
 }
 
@@ -3641,6 +3702,7 @@ function closeFilterMenus(except = null) {
 }
 
 async function openOrder(id, options = {}) {
+  if (state.selectedOrder?.id !== id && !allowDiscardOrder()) return;
   if (state.selectedOrder?.id !== id) state.orderEditorTab = "main";
   await loadOrder(id);
   highlightSelectedOrder();
@@ -3687,7 +3749,7 @@ async function deleteChinaPreorder(id, requestNumber = "запрос") {
     await loadOrder(state.selectedOrder.id);
   }
   await refreshAuditLogIfOpen();
-  alert("Запрос в Китай удалён.");
+  alert("Запит у Китай удалён.");
   return true;
 }
 
@@ -3776,9 +3838,12 @@ async function loadGoogleAdsKeywords() {
     };
   }
   renderGoogleAdsKeywords(state.googleAdsKeywords);
+  renderCampaigns(state.campaignReport || []);
 }
 
 async function refresh() {
+  const errorBox = document.querySelector("[data-admin-error]");
+  if (errorBox) errorBox.hidden = true;
   try {
     state.range = document.querySelector("#range")?.value || "30d";
     const exportLink = document.querySelector("[data-export]");
@@ -3797,8 +3862,8 @@ async function refresh() {
     }
     setAuthVisible(false);
   } catch (error) {
-    setAuthVisible(true);
-    alert(error.message);
+    if (error.status === 401) setAuthVisible(true);
+    if (errorBox) { errorBox.textContent = `Не вдалося оновити дані: ${error.message}`; errorBox.hidden = false; }
   }
 }
 
@@ -3890,7 +3955,7 @@ function loadImage(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Не удалось открыть фото."));
+    image.onerror = () => reject(new Error("Не вдалося відкрити фото."));
     image.src = dataUrl;
   });
 }
@@ -3903,7 +3968,7 @@ function canvasToBlob(canvas, quality) {
 
 async function compressChinaPhoto(file) {
   if (!file) return "";
-  if (!file.type.startsWith("image/")) throw new Error("Выберите файл изображения.");
+  if (!file.type.startsWith("image/")) throw new Error("Оберіть файл зображення.");
 
   const source = await readFileDataUrl(file);
   const image = await loadImage(source);
@@ -3924,7 +3989,7 @@ async function compressChinaPhoto(file) {
     if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
   }
 
-  throw new Error("Фото слишком большое. Выберите изображение поменьше.");
+  throw new Error("Фото завелике. Оберіть менше зображення.");
 }
 
 const CHAT_ATTACHMENT_MAX_DATA_URL = 7_000_000;
@@ -3962,7 +4027,7 @@ async function compressChatImage(file) {
     if (dataUrl.length <= CHAT_ATTACHMENT_MAX_DATA_URL) return dataUrl;
   }
 
-  throw new Error("Файл слишком большой. Выберите изображение поменьше.");
+  throw new Error("Файл завеликий. Оберіть менше зображення.");
 }
 
 async function prepareChatAttachment(input) {
@@ -4072,7 +4137,7 @@ async function createChinaPreorder(payload) {
         vin: payload.vin,
         item_name: payload.item_name,
         request_text: payload.request_text,
-        manager_notes: "Создано из мини-CRM Запросы в Китай",
+        manager_notes: "Создано из мини-CRM Запити в Китай",
       }),
     });
     orderId = orderResult.order?.id || "";
@@ -4117,6 +4182,8 @@ function fillChinaPreorderFormFromOrder(form, order) {
   };
 
   setValue("order_id", order.id);
+  const search = form.querySelector("[data-china-order-search]");
+  if (search) search.value = chinaOrderLabel(order);
   setValue("car", order.car || "");
   setValue("car_year", order.car_year || "");
   setValue("vin", order.vin || "");
@@ -4126,14 +4193,44 @@ function fillChinaPreorderFormFromOrder(form, order) {
   if (quantity && !quantity.value) quantity.value = "1";
 }
 
+let chinaOrderSearchResults = [];
+let chinaOrderSearchTimer;
+let chinaOrderSearchVersion = 0;
+function chinaOrderLabel(order) {
+  return [order.order_number, order.customer_phone, order.item_name || order.service_name || order.car].filter(Boolean).join(" · ");
+}
+function renderChinaOrderOptions(rows = []) {
+  chinaOrderSearchResults = rows;
+  const list = document.querySelector("#china-order-options");
+  if (list) list.innerHTML = rows.map((order) => `<option value="${escapeHtml(chinaOrderLabel(order))}"></option>`).join("");
+}
+document.querySelector("[data-china-order-search]")?.addEventListener("input", (event) => {
+  const field = event.target;
+  const form = field.form;
+  const match = chinaOrderSearchResults.find((order) => chinaOrderLabel(order) === field.value);
+  form.elements.order_id.value = match?.id || "";
+  field.setCustomValidity(field.value && !match ? "Оберіть замовлення зі списку або очистіть поле." : "");
+  clearTimeout(chinaOrderSearchTimer);
+  const version = ++chinaOrderSearchVersion;
+  if (match) { fillChinaPreorderFormFromOrder(form, match); setChinaOrderContext(match); return; }
+  setChinaOrderContext(null);
+  if (!field.value.trim()) { renderChinaOrderOptions(state.orders); return; }
+  chinaOrderSearchTimer = setTimeout(async () => {
+    try {
+      const data = await api(`/api/admin/orders?range=all&limit=30&q=${encodeURIComponent(field.value)}`);
+      if (version === chinaOrderSearchVersion) renderChinaOrderOptions(data.orders || []);
+    } catch (error) { console.warn("order search", error); }
+  }, 250);
+});
+
 function startChinaPreorderFromOrder(orderId) {
-  const order = (state.orders || []).find((item) => item.id === orderId);
+  const order = state.selectedOrder?.id === orderId ? state.selectedOrder : (state.orders || []).find((item) => item.id === orderId);
   if (!order) {
-    alert("Заказ не найден в текущем списке.");
+    alert("Замовлення не знайдено в поточному списку.");
     return;
   }
 
-  setActiveTab("china");
+  if (!setActiveTab("china")) return;
   setChinaListFilters({ status: "active", q: "" });
   openChinaRequestPanel(order);
   loadChinaPreorders().catch((error) => alert(error.message));
@@ -4247,7 +4344,13 @@ document.querySelector("[data-audit-refresh]")?.addEventListener("click", () => 
   loadAuditLog().catch((error) => alert(error.message));
 });
 document.querySelectorAll("[data-admin-tab]").forEach((button) => {
-  button.addEventListener("click", () => setActiveTab(button.dataset.adminTab));
+  button.addEventListener("click", () => { setActiveTab(button.dataset.adminTab); closeFilterMenus(); });
+});
+document.querySelectorAll("[data-work-filter]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    document.querySelectorAll("[data-work-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    try { await loadOrders(); } catch (error) { alert(error.message); }
+  });
 });
 document.querySelector("[data-contact-channel]")?.addEventListener("change", loadContactEvents);
 document.querySelector("[data-contact-intent]")?.addEventListener("change", loadContactEvents);
@@ -4352,7 +4455,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
   }
   const payload = chinaPreorderPayload(form);
   if (!plainText(payload.supplier_name)) {
-    alert("Выберите поставщика.");
+    alert("Оберіть постачальника.");
     return;
   }
   if (!plainText(payload.item_name) && !plainText(payload.request_text)) {
@@ -4379,13 +4482,13 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
       navigator.clipboard?.writeText(link).catch(() => null);
       showChinaCreatedLink(form, link);
     } else {
-      alert("Запрос в Китай создан.");
+      alert("Запит у Китай создан.");
     }
   } catch (error) {
     alert(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Запрос в Китай";
+    button.textContent = "Запит у Китай";
   }
 });
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {
@@ -4661,7 +4764,7 @@ async function handleChinaPreorderClick(event) {
     } catch (error) {
       alert(error.message);
       replyButton.disabled = false;
-      replyButton.textContent = "Отправить";
+      replyButton.textContent = "Надіслати";
     }
     return;
   }
@@ -4675,7 +4778,7 @@ async function handleChinaPreorderClick(event) {
   const confirmText = [
     "Клиент согласовал цену?",
     "",
-    `Поставщик: ${request.supplier_name || "-"}`,
+    `Постачальник: ${request.supplier_name || "-"}`,
     `Сумма: ${supplierAmount(quote.price_cny, "CNY")}`,
     "После подтверждения запрос на оплату уйдёт в Telegram.",
   ].join("\n");
@@ -4696,7 +4799,7 @@ async function handleChinaPreorderClick(event) {
   } catch (error) {
     alert(error.message);
     paymentButton.disabled = false;
-    paymentButton.textContent = "Отправить на оплату";
+    paymentButton.textContent = "Надіслати на оплату";
   }
 }
 
@@ -4864,24 +4967,41 @@ document.querySelector("[data-market-lookup-panel]")?.addEventListener("click", 
 
 document.querySelector("[data-order-editor]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget));
+  if (orderSaving || !orderIsDirty()) return;
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form));
   if (!data.id) return;
-  if (!event.currentTarget.querySelector("[name='notify_customer']")?.checked) data.notify_customer = "0";
-  const result = await api(`/api/admin/orders/${encodeURIComponent(data.id)}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
-  state.selectedOrder = result.order;
-  state.selectedEvents = result.events || [];
-  state.selectedNotifications = result.notifications || state.selectedNotifications;
-  state.selectedTrackingEvents = result.tracking_events || state.selectedTrackingEvents;
-  state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
-  state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
-  renderOrderEditor(result.order);
-  await refresh();
+  if (!form.querySelector("[name='notify_customer']")?.checked) data.notify_customer = "0";
+  const errorBox = form.querySelector("[data-order-save-error]");
+  errorBox.hidden = true;
+  orderSaving = true;
+  form.inert = true;
+  updateOrderSaveState();
+  try {
+    const result = await api(`/api/admin/orders/${encodeURIComponent(data.id)}`, {
+      method: "PATCH", body: JSON.stringify(data),
+    });
+    state.selectedOrder = result.order;
+    state.selectedEvents = result.events || [];
+    state.selectedNotifications = result.notifications || state.selectedNotifications;
+    state.selectedTrackingEvents = result.tracking_events || state.selectedTrackingEvents;
+    state.selectedSupplierPayments = result.supplier_payments || state.selectedSupplierPayments;
+    state.selectedSupplierRequests = result.supplier_requests || state.selectedSupplierRequests;
+    renderOrderEditor(result.order, false);
+    await refresh();
+  } catch (error) {
+    const box = form.querySelector("[data-order-save-error]");
+    box.textContent = `Не вдалося завершити збереження: ${error.message}`;
+    box.hidden = false;
+  } finally {
+    orderSaving = false;
+    form.inert = false;
+    updateOrderSaveState();
+  }
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("input", (event) => {
+  queueMicrotask(updateOrderSaveState);
   if (state.selectedOrder?.id && event.target.matches("[data-market-query], [data-market-part-number]")) {
     const draft = marketDraft(state.selectedOrder);
     if (event.target.matches("[data-market-query]")) draft.query = event.target.value;
@@ -4896,6 +5016,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
+  queueMicrotask(updateOrderSaveState);
   if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) {
     const settings = state.shippingEstimateSettings[state.selectedOrder.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
     if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
@@ -4917,6 +5038,8 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  const supplierButton = event.target.closest("[data-order-to-china]");
+  if (supplierButton) { startChinaPreorderFromOrder(supplierButton.dataset.orderToChina); return; }
   const tabButton = event.target.closest("[data-order-tab]");
   if (tabButton) {
     setOrderEditorTab(tabButton.dataset.orderTab);
@@ -5201,6 +5324,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
 
 document.querySelector("[data-new-shipping-carrier]")?.addEventListener("click", () => {
   fillShippingForm("");
+});
+document.querySelector("[data-close-shipping-form]")?.addEventListener("click", () => {
+  document.querySelector("[data-shipping-form]").hidden = true;
 });
 
 document.querySelector("[data-shipping-list]")?.addEventListener("click", (event) => {

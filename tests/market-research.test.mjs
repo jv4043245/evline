@@ -86,6 +86,20 @@ test("market research starts from all approved competitor sources", () => {
   );
 });
 
+test("AI-cleaned request keeps a stable cache fingerprint", async () => {
+  const DB = new D1Database();
+  DB.database.exec("INSERT INTO orders (id) VALUES ('qa-cache')");
+  const order = { id: 'qa-cache', car: 'BYD Yuan Pro', item_name: 'Добрий день, підкажіть будь ласка ціну і наявність на запчастину: передній бампер для мого автомобіля' };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('<p>Нічого не знайдено</p>');
+  try {
+    const AI = { run: async () => ({ response: JSON.stringify({ items: [{ key: 'item-1', spans: ['передній бампер'] }] }) }) };
+    const result = await runMarketResearch({ DB, AI }, order);
+    assert.equal(result.summary.items[0].label, 'передній бампер');
+    assert.equal(result.should_refresh, false);
+  } finally { globalThis.fetch = originalFetch; DB.database.close(); }
+});
+
 test("search items are separated and VIN identifiers never leave the CRM", () => {
   const vin = "LCOCH4SDXR6014628";
   const items = splitRequestedItems({
@@ -104,14 +118,14 @@ test("exact OEM match is separated from a probable text match", () => {
     item_tokens: ["bumper"],
     car_tokens: ["byd", "yuan", "pro"],
   };
-  assert.equal(classifyMatch({ title: "Бампер BYD Yuan Pro", article: "11515426-00", context: "" }, item), "exact");
+  assert.equal(classifyMatch({ title: "Бампер BYD Yuan Pro", article: "11515426-00", context: "", verified_product: true }, item), "exact");
   assert.equal(classifyMatch({ title: "Бампер BYD Yuan Pro", article: "", context: "" }, item), "probable");
   assert.equal(classifyMatch({ title: "Фара Zeekr 001", article: "", context: "" }, item), "irrelevant");
 });
 
 test("three exact offers are required for a confident price corridor", () => {
   const item = { key: "item-1", label: "Бампер", query: "11515426-00", part_numbers: ["11515426-00"] };
-  const offer = (price, matchType = "exact") => ({ item_key: item.key, price_uah: price, match_type: matchType });
+  const offer = (price, matchType = "exact") => ({ verified_product: true, currency: "UAH", item_key: item.key, source_key: `seller-${price}`, price_uah: price, match_type: matchType });
   const low = summarizeOffers([item], [offer(1000), offer(1200)]);
   const high = summarizeOffers([item], [offer(1000), offer(1200), offer(1400), offer(900, "probable")]);
   assert.equal(low.items[0].confidence, "low");
@@ -127,7 +141,7 @@ test("availability and promised delivery terms are normalized", () => {
 
 test("structured competitor payloads yield source-backed offers", () => {
   const html = `
-    <script>var products = [{"title":"Бампер BYD Yuan Pro","article_for_display":"11515426-00","price":"18400","url":"/bumper","in_stock":true}];</script>
+    <meta itemprop="priceCurrency" content="UAH"><script>var products = [{"title":"Бампер BYD Yuan Pro","article_for_display":"11515426-00","price":"18400","url":"/bumper","in_stock":true}];</script>
   `;
   const offers = parseSourceHtml("evox", html, "https://evox.com.ua/search/");
   assert.equal(offers.length, 1);
@@ -149,7 +163,7 @@ test("order card exposes the market tab and its protected admin endpoint", () =>
 
 test("market workspace fits the order card without nested tab or shipping overflow", () => {
   assert.match(adminCss, /\.order-detail\s*{[^}]*width:\s*min\(1120px,/s);
-  assert.match(adminCss, /\.order-editor__tabs\s*{[^}]*grid-template-columns:\s*repeat\(7, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/s);
+  assert.match(adminCss, /\.order-editor__tabs\s*{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)[^}]*overflow:\s*visible/s);
   assert.match(adminCss, /\.market-panel\s*{[^}]*padding:\s*18px/s);
   assert.match(adminCss, /\.shipping-estimate__controls select\s*{[^}]*width:\s*100%[^}]*min-width:\s*0/s);
 });
@@ -174,12 +188,12 @@ test("standalone lookup can search by article without a part name", async () => 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     requestedUrls.push(String(url));
-    return new Response(`<script type="application/ld+json">{
+    return new Response(`<div data-company-id="4149823"></div><script type="application/ld+json">{
       "@type":"Product",
       "name":"Верхня накладка переднього бампера BYD Yuan Plus",
       "sku":"13158405-00",
-      "url":"https://seller.example/13158405-00",
-      "offers":{"price":"4950","availability":"in stock"}
+      "url":"${new URL('/13158405-00', url).href}",
+      "offers":{"price":"4950","priceCurrency":"UAH","availability":"https://schema.org/InStock"}
     }</script>`, { status: 200, headers: { "content-type": "text/html" } });
   };
   try {
@@ -208,12 +222,12 @@ test("research persists source-backed offers in D1 and keeps VIN out of outbound
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     requestedUrls.push(String(url));
-    return new Response(`<script type="application/ld+json">{
+    return new Response(`<div data-company-id="4149823"></div><script type="application/ld+json">{
       "@type":"Product",
       "name":"Бампер BYD Yuan Pro",
       "sku":"11515426-00",
-      "url":"https://seller.example/11515426-00",
-      "offers":{"price":"18000","availability":"in stock"}
+      "url":"${new URL('/11515426-00', url).href}",
+      "offers":{"price":"18000","priceCurrency":"UAH","availability":"https://schema.org/InStock"}
     }</script>`, { status: 200, headers: { "content-type": "text/html" } });
   };
   try {
@@ -245,12 +259,12 @@ test("standalone lookup keeps separate history and can be attached to an order",
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     requestedUrls.push(String(url));
-    return new Response(`<script type="application/ld+json">{
+    return new Response(`<div data-company-id="4149823"></div><script type="application/ld+json">{
       "@type":"Product",
       "name":"Передній бампер BYD Yuan Pro",
       "sku":"11515426-00",
-      "url":"https://seller.example/11515426-00",
-      "offers":{"price":"18000","availability":"in stock"}
+      "url":"${new URL('/11515426-00', url).href}",
+      "offers":{"price":"18000","priceCurrency":"UAH","availability":"https://schema.org/InStock"}
     }</script>`, { status: 200, headers: { "content-type": "text/html" } });
   };
   try {

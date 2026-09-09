@@ -89,7 +89,7 @@ async function insertKnownFields(env, table, fields) {
     .run();
 }
 
-function buildWhere(url, options = {}) {
+export function buildWhere(url, options = {}) {
   const clauses = [];
   const binds = [];
   const start = rangeStart(url.searchParams.get("range") || "30d");
@@ -97,6 +97,13 @@ function buildWhere(url, options = {}) {
   const type = url.searchParams.get("type");
   const source = url.searchParams.get("source");
   const q = url.searchParams.get("q");
+  const work = url.searchParams.get("work");
+  if (work === "new") clauses.push("orders.status = 'new'");
+  if (work === "response") clauses.push("orders.status IN ('new', 'accepted')");
+  if (work === "overdue") {
+    clauses.push("orders.status NOT IN ('completed', 'canceled') AND NULLIF(orders.next_action_at, '') IS NOT NULL AND substr(orders.next_action_at, 1, 10) < ?");
+    binds.push(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Kyiv", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()));
+  }
 
   if (start) {
     clauses.push("orders.created_at >= ?");
