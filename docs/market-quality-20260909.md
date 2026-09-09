@@ -16,7 +16,7 @@ Structured HTML parsing binds each price to its own card. Detail-page verificati
 
 Statistics use only verified exact UAH offers, grouped by comparable type, condition, stock and component traits. Each seller contributes its minimum comparable offer once. Stock is not inferred from missing data. Conflicts between visible delivery terms and structured stock are shown as uncertain, retaining the visible lead time.
 
-The eleven approved sources remain the starting set. Fetching has HTTPS same-host redirect checks, time/byte/request limits and no challenge bypass. A protected or unreadable source is not reported as a successful empty search. At most three requested items and one detail candidate per source/item are checked per run; incomplete coverage is an explicit limitation.
+The eleven approved sources remain the starting set. MAHINA requires the explicit empty `filters={}` query argument used by its own search form; without it the page repeats the query in its heading but returns unrelated catalogue items. Fetching has HTTPS same-host redirect checks, time/byte/request limits and no challenge bypass. A protected or unreadable source is not reported as a successful empty search. At most three requested items and one detail candidate per source/item are checked per run; incomplete coverage is an explicit limitation.
 
 ## AI and privacy
 
@@ -26,7 +26,9 @@ AI can extract verbatim spans from long requests and downgrade a candidate to ma
 
 ## Storage and verification
 
-`0025_market_feedback.sql` adds an independent feedback table; runtime initialization is idempotent. Existing order/payment data is untouched. Product evidence is retained in existing research JSON. Matching version 3 invalidates old classification caches.
+`0025_market_feedback.sql` adds an independent feedback table; runtime initialization is idempotent. Existing order/payment data is untouched. Product evidence is retained in existing research JSON. Matching version 4 invalidates old classification/source-query caches.
+
+Cloudflare Pages must run `npm ci --ignore-scripts --omit=dev` as its build command. An empty command skips dependency installation; Functions then cannot resolve the HTML parser. This command was configured on the existing production Pages project without changing bindings or secrets.
 
 Local verification: automated Node tests; D1-compatible SQLite round trips; four Playwright widths (1440, 1024, 768, 390); public form/link audits; Cloudflare Functions compilation. Public read-only probes verify MAHINA cross-number/price and the schema-versus-visible-stock conflict, and retain failures for protected/unreadable sources. Browser tests mock every admin API: they create no live orders, payments or Telegram messages.
 

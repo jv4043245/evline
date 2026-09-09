@@ -13,7 +13,7 @@ export const COMPETITOR_SOURCES = [
     key: "mahina",
     name: "MAHINA",
     home: "https://mahina.in.ua/catalog/byd/",
-    search: (query) => `https://mahina.in.ua/search/?query=${encodeURIComponent(query)}`,
+    search: (query) => `https://mahina.in.ua/search/?query=${encodeURIComponent(query)}&filters=%7B%7D`,
   },
   {
     key: "ncars",
