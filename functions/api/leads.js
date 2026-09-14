@@ -290,7 +290,7 @@ export async function onRequestPost(context) {
   if (orderId && lead.type === "parts" && (lead.part || lead.details) && typeof context.waitUntil === "function") {
     context.waitUntil(
       loadOrder(env, orderId)
-        .then((order) => (order ? runMarketResearch(env, order) : null))
+        .then((order) => (order ? runMarketResearch(env, order, { incremental: true }) : null))
         .catch((error) => console.error("Failed to prepare market research", error))
     );
   }

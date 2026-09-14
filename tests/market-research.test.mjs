@@ -17,6 +17,8 @@ import {
   runMarketResearch,
   splitRequestedItems,
   summarizeOffers,
+  continueMarketResearch,
+  continueMarketLookup,
 } from "../functions/_lib/market-research.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -87,6 +89,76 @@ test("market research starts from all approved competitor sources", () => {
   const mahina = new URL(COMPETITOR_SOURCES[0].search('11515426-00'));
   assert.equal(mahina.searchParams.get('query'), '11515426-00');
   assert.equal(mahina.searchParams.get('filters'), '{}');
+});
+
+test('incremental research persists one source per step, resumes, and does not change the order', async () => {
+  const DB = new D1Database();
+  DB.database.exec("INSERT INTO orders (id) VALUES ('steps'), ('unrelated')");
+  const order = { id: 'steps', item_name: 'Передні праві двері і переднє праве крило' };
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls += 1; return new Response('<p>Нічого не знайдено</p>'); };
+  try {
+    let result = await runMarketResearch({ DB }, order, { incremental: true });
+    assert.equal(calls, 0, 'Lead preparation must not parse competitors inside the form request');
+    assert.equal(result.run.status, 'pending');
+    assert.equal(result.summary.work.total, 22);
+    const runId = result.run.id;
+    await assert.rejects(continueMarketResearch({ DB }, { ...order, id: 'unrelated' }, runId), { status: 404 });
+    for (let i = 0; i < 22; i++) {
+      result = await continueMarketResearch({ DB }, order, runId);
+      assert.equal(calls, i + 1);
+      assert.equal(result.summary.work.next, i + 1);
+      assert.equal(result.sources.length, i + 1);
+    }
+    result = await continueMarketResearch({ DB }, order, runId);
+    assert.equal(result.run.status, 'complete');
+    assert.equal(result.should_refresh, false);
+    await continueMarketResearch({ DB }, order, runId);
+    assert.equal(calls, 22, 'Completed retries must not fetch again');
+    assert.equal(DB.database.prepare('SELECT count(*) AS n FROM orders').get().n, 2);
+  } finally { globalThis.fetch = originalFetch; DB.database.close(); }
+});
+
+test('interrupted source is marked failed after its lease, while other sources continue', async () => {
+  const DB = new D1Database();
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response('<p>Нічого не знайдено</p>'); };
+  try {
+    let result = await runMarketLookup({ DB }, { query: 'Крило', incremental: true });
+    const summary = JSON.parse(result.run.summary_json);
+    summary.work.lease = { id: 'killed-worker', until: Date.now() - 1000 };
+    DB.database.prepare('UPDATE market_lookup_runs SET summary_json = ? WHERE id = ?').run(JSON.stringify(summary), result.run.id);
+    result = await continueMarketLookup({ DB }, result.run.id);
+    assert.equal(calls, 0);
+    assert.equal(result.sources[0].status, 'failed');
+    assert.equal(result.summary.work.next, 1);
+    result = await continueMarketLookup({ DB }, result.run.id);
+    assert.equal(calls, 1);
+    assert.equal(result.sources[1].status, 'empty');
+  } finally { globalThis.fetch = originalFetch; DB.database.close(); }
+});
+
+test('overlapping browser tabs cannot process the same market step twice', async () => {
+  const DB = new D1Database();
+  const originalFetch = globalThis.fetch;
+  let release, entered;
+  const waiting = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; entered(); await waiting; return new Response('<p>Нічого не знайдено</p>'); };
+  try {
+    const initial = await runMarketLookup({ DB }, { query: 'Крило', incremental: true });
+    const first = continueMarketLookup({ DB }, initial.run.id);
+    await started;
+    const overlapping = await continueMarketLookup({ DB }, initial.run.id);
+    assert.equal(overlapping.summary.work.next, 0);
+    release();
+    const result = await first;
+    assert.equal(calls, 1);
+    assert.equal(result.summary.work.next, 1);
+  } finally { release(); globalThis.fetch = originalFetch; DB.database.close(); }
 });
 
 test("AI-cleaned request keeps a stable cache fingerprint", async () => {
@@ -161,7 +233,7 @@ test("order card exposes the market tab and its protected admin endpoint", () =>
   assert.match(routeJs, /loadOrder/);
   assert.doesNotMatch(routeJs, /recordAuditEvent/);
   assert.match(leadsRouteJs, /context\.waitUntil/);
-  assert.match(leadsRouteJs, /runMarketResearch\(env, order\)/);
+  assert.match(leadsRouteJs, /runMarketResearch\(env, order, \{ incremental: true \}\)/);
 });
 
 test("market workspace fits the order card without nested tab or shipping overflow", () => {
@@ -200,7 +272,8 @@ test("standalone lookup can search by article without a part name", async () => 
     }</script>`, { status: 200, headers: { "content-type": "text/html" } });
   };
   try {
-    const lookup = await runMarketLookup(env, { part_number: "13158405-00" });
+    let lookup = await runMarketLookup(env, { part_number: "13158405-00", incremental: true });
+    for (let step = 0; step < 12; step++) lookup = await continueMarketLookup(env, lookup.run.id);
     assert.equal(lookup.run.status, "complete");
     assert.equal(lookup.run.query, "");
     assert.equal(lookup.run.part_number, "13158405-00");
@@ -271,12 +344,15 @@ test("standalone lookup keeps separate history and can be attached to an order",
     }</script>`, { status: 200, headers: { "content-type": "text/html" } });
   };
   try {
-    const lookup = await runMarketLookup(env, {
+    let lookup = await runMarketLookup(env, {
       car: order.car,
       vin: order.vin,
       query: "Передній бампер",
       part_number: "11515426-00",
+      incremental: true,
     });
+    await assert.rejects(attachMarketLookupToOrder(env, lookup.run.id, order), { status: 404 });
+    for (let step = 0; step < 12; step++) lookup = await continueMarketLookup(env, lookup.run.id);
     assert.equal(lookup.run.status, "complete");
     assert.equal(lookup.offers.length, 11);
     assert.ok(requestedUrls.every((url) => !url.includes(order.vin)));
@@ -286,6 +362,8 @@ test("standalone lookup keeps separate history and can be attached to an order",
 
     const attached = await attachMarketLookupToOrder(env, lookup.run.id, order);
     assert.equal(attached.offers.length, 11);
+    assert.equal(attached.summary.exact_offer_count, lookup.summary.exact_offer_count);
+    assert.equal(attached.offers[0].price_uah, 18000);
     const linked = await env.DB.prepare("SELECT linked_order_id FROM market_lookup_runs WHERE id = ?").bind(lookup.run.id).first();
     assert.equal(linked.linked_order_id, order.id);
   } finally {

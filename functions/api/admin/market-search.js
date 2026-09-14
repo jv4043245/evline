@@ -5,6 +5,7 @@ import {
   getMarketLookup,
   listMarketLookups,
   runMarketLookup,
+  continueMarketLookup,
 } from "../../_lib/market-research.js";
 
 export async function onRequestGet({ request, env }) {
@@ -20,11 +21,12 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   const payload = await readPayload(request);
+  if (payload.action === 'continue') return json(await continueMarketLookup(env, text(payload.run_id)));
   if (text(payload.action) === "attach") {
     const order = await loadOrder(env, text(payload.order_id));
     if (!order) return json({ error: "Замовлення не знайдено" }, { status: 404 });
     const result = await attachMarketLookupToOrder(env, text(payload.lookup_id), order);
     return json({ order_id: order.id, market_research: result });
   }
-  return json(await runMarketLookup(env, payload));
+  return json(await runMarketLookup(env, { ...payload, incremental: true }));
 }
