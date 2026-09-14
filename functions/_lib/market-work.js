@@ -1,11 +1,12 @@
 import { researchMarketItems } from './market-fetch.js';
 import { reviewMarketCandidates } from './market-query.js';
-import { summarizeMarketItem } from '../../assets/js/market-comparison.js';
+import { summarizeMarketItem, hasMarketIdentity } from '../../assets/js/market-comparison.js';
 import { offerIdentity } from './market-feedback.js';
 
 export function initialMarketWork(items, sources, metadata) {
+  const searchable = items.filter(hasMarketIdentity);
   return { ...metadata, items: items.map(item => summarizeMarketItem(item, [])), offer_details: {},
-    work: { version: 1, items, next: 0, total: items.length * sources.length, lease: null } };
+    work: { version: 1, items: searchable, next: 0, total: searchable.length * sources.length, lease: null } };
 }
 
 // A single HTTP request checks one item at one source. The compare-and-swap
@@ -48,7 +49,7 @@ export async function advanceMarketWork(env, kind, runId, orderId, sources) {
   }
   work.lease = null;
   summary.offer_details = Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer]));
-  summary.items = work.items.map(item => summarizeMarketItem(item, offers));
+  summary.items = summary.items.map(item => summarizeMarketItem(item, offers));
   summary.offer_count = offers.length;
   summary.exact_offer_count = offers.filter(offer => offer.match_type === 'exact').length;
   summary.confidence = summary.items.every(item => item.confidence === 'high') ? 'high' : 'low';

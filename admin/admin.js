@@ -1,6 +1,6 @@
-import { filterMarketOffers, summarizeMarketItem } from "../assets/js/market-comparison.js";
+import { filterMarketOffers, summarizeMarketItem, hasMarketIdentity } from "../assets/js/market-comparison.js?v=20260914-relevance";
 import { adminApiError } from "../assets/js/admin-api-errors.js";
-import { renderAirFreight, updateAirFreightOutput } from "../assets/js/shipping-air-estimate.js?v=20260914-progress";
+import { renderAirGuide } from "../assets/js/shipping-air-guide.js?v=20260914-guide";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js";
 
 const state = {
@@ -35,6 +35,7 @@ const state = {
     },
   },
   shippingPricelist: null,
+  shippingAirGuide: null,
   shippingPricelistPromise: null,
   shippingEstimateSettings: {},
   chinaPreorders: [],
@@ -2531,12 +2532,13 @@ function setOrderEditorTab(tab) {
 }
 
 function marketDraft(order) {
-  if (!order?.id) return { query: "", partNumber: "" };
+  if (!order?.id) return { query: "", partNumber: "", car: "" };
   if (!state.marketResearchDrafts[order.id]) {
     const summary = state.marketResearchByOrder[order.id]?.summary?.items?.[0];
     state.marketResearchDrafts[order.id] = {
       query: order.item_name || order.service_name || "",
       partNumber: summary?.part_numbers?.[0] || "",
+      car: summary?.car || order.car || "",
     };
   }
   return state.marketResearchDrafts[order.id];
@@ -2607,6 +2609,7 @@ function renderMarketFeedbackUndo(item, data) {
 }
 
 function renderMarketSummaryItem(item, data) {
+  if (!hasMarketIdentity(item)) return `<section class="market-item"><h3>${escapeHtml(item.label)}</h3><p class="market-note market-note--caution">Уточніть модель авто або артикул. Ціни деталей для різних автомобілів не порівнюємо.</p></section>`;
   const offers = filteredMarketOffers(data, item.key).filter((offer) => ["exact", "probable"].includes(offer.match_type) && !offer.feedback?.rejected);
   const summary = summarizeMarketItem(item, offers);
   const exact = offers.filter((offer) => offer.match_type === "exact");
@@ -2631,7 +2634,7 @@ function renderMarketSummaryItem(item, data) {
         </div>`).join("")}
       ${!exact.length ? `<p class="market-note market-note--caution">${offers.length ? "Є лише схожі товари. Уточніть артикул: їхні ціни не об'єднуємо в ринковий орієнтир." : "За цими фільтрами точних пропозицій немає."}</p>` : `<p class="market-note">Збіг артикула не підтверджує комплектацію та актуальність наявності. Перевірте у продавця.</p>`}
       ${exact.length ? `<div class="market-trust-group market-trust-group--exact"><h4>Підтверджені збіги <span>${exact.length}</span></h4><div class="market-offers">${exact.slice(0, 5).map(renderMarketOffer).join("")}</div>${exact.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${exact.length - 5}</summary>${exact.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</div>` : ""}
-      ${similar.length ? `<details class="market-trust-group market-trust-group--probable" ${exact.length ? "" : "open"}><summary>Потрібна перевірка <span>${similar.length}</span></summary><p class="market-group-note">Не враховано в ціновому орієнтирі.</p>${similar.map(renderMarketOffer).join("")}</details>` : ""}
+      ${similar.length ? `<details class="market-trust-group market-trust-group--probable" ${exact.length ? "" : "open"}><summary>Потрібна перевірка <span>${similar.length}</span></summary><p class="market-group-note">Не враховано в ціновому орієнтирі.</p>${similar.slice(0, 5).map(renderMarketOffer).join("")}${similar.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${similar.length - 5}</summary>${similar.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</details>` : ""}
     </section>
   `;
 }
@@ -2711,8 +2714,9 @@ function renderMarketResearchBody(order) {
       </div>
       ${updatedAt ? `<span class="market-panel__updated">Оновлено ${escapeHtml(shortDateTime(updatedAt))}</span>` : ""}
     </div>
-    <details class="market-search-details" ${summaryItems.length ? "" : "open"}><summary>Уточнити запчастину / артикул</summary>
+    <details class="market-search-details" ${summaryItems.length && summaryItems.every(hasMarketIdentity) ? "" : "open"}><summary>Уточнити авто / запчастину / артикул</summary>
     <div class="market-search">
+      <label>Авто / модель<input value="${escapeHtml(draft.car)}" placeholder="Напр.: BYD Yuan Plus" data-market-car></label>
       <label>
         Запчастина
         <input value="${escapeHtml(draft.query)}" placeholder="Напр.: задній бампер" data-market-query>
@@ -3034,6 +3038,7 @@ function drainMarketLookup(data) {
 }
 
 async function ensureShippingPricelist() {
+  if (state.shippingPricelistPromise) return state.shippingPricelistPromise;
   if (state.shippingPricelist) return state.shippingPricelist;
   if (!state.shippingPricelistPromise) {
     state.shippingPricelistPromise = fetch("/admin/shipping-pricelist/pricelist.json", { cache: "no-store" })
@@ -3043,6 +3048,13 @@ async function ensureShippingPricelist() {
       })
       .then((data) => {
         state.shippingPricelist = data;
+        return data;
+      })
+      .then(async data => {
+        try {
+          const response = await fetch('/admin/shipping-pricelist/air-guide.json', { cache: 'no-store' });
+          if (response.ok) state.shippingAirGuide = await response.json();
+        } catch { /* Sea estimates remain available if the air reference is offline. */ }
         return data;
       })
       .finally(() => {
@@ -3075,10 +3087,11 @@ function shippingEstimateSettings(order, pricelist) {
     state.shippingEstimateSettings[order.id] = { profile: "auto", vehicle: "auto", packing: "shared" };
   }
   const settings = state.shippingEstimateSettings[order.id];
-  const profile = settings.profile === "auto" ? autoShippingProfile(order, pricelist) : pricelist.profiles.find((row) => row.id === settings.profile) || autoShippingProfile(order, pricelist);
+  const profiles = settings.mode === 'air' && state.shippingAirGuide ? [...pricelist.profiles, ...state.shippingAirGuide.profiles.filter(row => !pricelist.profiles.some(p => p.id === row.id)).map(row => ({ ...row, keywords: row.id === 'door' ? ['двері', 'дверь', 'door'] : [] }))] : pricelist.profiles;
+  const profile = settings.profile === "auto" ? autoShippingProfile(order, { profiles }) : profiles.find((row) => row.id === settings.profile) || autoShippingProfile(order, { profiles });
   const vehicle = settings.vehicle === "auto" ? autoVehicleSize(order, pricelist) : pricelist.vehicle_size_factors.find((row) => row.id === settings.vehicle) || autoVehicleSize(order, pricelist);
   const packing = pricelist.packing_factors.find((row) => row.id === settings.packing) || pricelist.packing_factors[0];
-  return { settings, profile, vehicle, packing };
+  return { settings, profile, vehicle, packing, profiles };
 }
 
 function shippingOptions(rows, selected) {
@@ -3088,13 +3101,13 @@ function shippingOptions(rows, selected) {
 function renderShippingEstimate(order) {
   const pricelist = state.shippingPricelist;
   if (!pricelist) return `<div class="market-loading market-loading--small"><span></span><strong>Завантажуємо орієнтир доставки</strong></div>`;
-  const { settings, profile, vehicle, packing } = shippingEstimateSettings(order, pricelist);
+  const { settings, profile, vehicle, packing, profiles } = shippingEstimateSettings(order, pricelist);
   const controls = `
     <div class="shipping-estimate__controls">
       <label>Тип деталі
         <select data-shipping-estimate-profile>
           <option value="auto" ${settings.profile === "auto" ? "selected" : ""}>${profile ? `Автоматично: ${escapeHtml(profile.name)}` : "Автоматично: тип не визначено"}</option>
-          ${shippingOptions(pricelist.profiles, settings.profile)}
+          ${shippingOptions(profiles, settings.profile)}
         </select>
       </label>
       <label>Розмір авто
@@ -3118,7 +3131,7 @@ function renderShippingEstimate(order) {
       <button type="button" data-estimate-mode="sea" aria-pressed="${settings.mode !== "air"}">Море</button>
       <button type="button" data-estimate-mode="air" aria-pressed="${settings.mode === "air"}">Авіа</button>
     </div>`;
-  if (settings.mode === "air") return head + renderAirFreight(state.shipping, settings);
+  if (settings.mode === "air") return `${head}${renderAirGuide(state.shippingAirGuide, profile?.id, vehicle.id, packing.id)}<details class="order-editor__details" data-shipping-options ${profile ? '' : 'open'}><summary>Деталь і пакування</summary>${controls}</details>`;
   if (!profile) {
     return `${head}<p class="muted">Тип деталі не визначено. Оцінка доставки недоступна.</p>
       <details class="order-editor__details" data-shipping-options><summary>Обрати деталь і пакування</summary>${controls}</details>`;
@@ -4937,14 +4950,12 @@ document.querySelector("[data-market-lookup-panel]")?.addEventListener("submit",
 });
 
 document.querySelector("[data-market-lookup-panel]")?.addEventListener("change", (event) => {
-  if (!event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing], [data-air-rate], [data-air-weight]")) return;
+  if (!event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) return;
   const order = marketLookupOrder();
   const settings = state.shippingEstimateSettings[order.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
   if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
   if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
   if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
-  if (event.target.matches("[data-air-rate]")) settings.airRate = event.target.value;
-  if (event.target.matches("[data-air-weight]")) settings.airWeight = event.target.value;
   state.shippingEstimateSettings[order.id] = settings;
   updateMarketLookupShippingRoot();
 });
@@ -5059,8 +5070,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
 
 document.querySelector("[data-order-editor]")?.addEventListener("input", (event) => {
   queueMicrotask(updateOrderSaveState);
-  if (state.selectedOrder?.id && event.target.matches("[data-market-query], [data-market-part-number]")) {
+  if (state.selectedOrder?.id && event.target.matches("[data-market-query], [data-market-part-number], [data-market-car]")) {
     const draft = marketDraft(state.selectedOrder);
+    if (event.target.matches("[data-market-car]")) draft.car = event.target.value;
     if (event.target.matches("[data-market-query]")) draft.query = event.target.value;
     if (event.target.matches("[data-market-part-number]")) draft.partNumber = event.target.value;
   }
@@ -5074,13 +5086,11 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
   queueMicrotask(updateOrderSaveState);
-  if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing], [data-air-rate], [data-air-weight]")) {
+  if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) {
     const settings = state.shippingEstimateSettings[state.selectedOrder.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
     if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
     if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
     if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
-    if (event.target.matches("[data-air-rate]")) settings.airRate = event.target.value;
-    if (event.target.matches("[data-air-weight]")) settings.airWeight = event.target.value;
     state.shippingEstimateSettings[state.selectedOrder.id] = settings;
     updateShippingEstimateRoot(state.selectedOrder);
     return;
@@ -5094,16 +5104,6 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
   if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number'], [data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
-});
-
-document.addEventListener("input", event => {
-  if (!event.target.matches('[data-air-weight]')) return;
-  const lookup = event.target.closest('[data-market-lookup-panel]');
-  const order = lookup ? marketLookupOrder() : state.selectedOrder;
-  if (!order || !state.shippingPricelist) return;
-  const settings = shippingEstimateSettings(order, state.shippingPricelist).settings;
-  settings.airWeight = event.target.value;
-  updateAirFreightOutput(event.target.closest('.shipping-estimate'), state.shipping, settings);
 });
 
 document.addEventListener("click", event => {
@@ -5134,6 +5134,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       await refreshMarketResearch(state.selectedOrder.id, {
         query: draft.query,
         part_number: draft.partNumber,
+        car: draft.car,
       });
     } catch (error) {
       alert(error.message);

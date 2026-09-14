@@ -1931,7 +1931,7 @@ body.audit-log-open .audit-log-panel {
 
 .market-search {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr) auto;
   align-items: end;
   gap: 10px;
   padding: 14px;

@@ -19,6 +19,7 @@ import {
   summarizeOffers,
   continueMarketResearch,
   continueMarketLookup,
+  getLatestMarketResearch,
 } from "../functions/_lib/market-research.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -91,10 +92,39 @@ test("market research starts from all approved competitor sources", () => {
   assert.equal(mahina.searchParams.get('filters'), '{}');
 });
 
+test('unqualified requests preserve their items but perform no competitor requests', async () => {
+  const DB = new D1Database();
+  DB.database.exec("INSERT INTO orders (id) VALUES ('unqualified')");
+  const order = { id: 'unqualified', item_name: 'Передні праві двері і переднє праве крило' };
+  const original = structuredClone(order);
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response('<p>Нічого не знайдено</p>'); };
+  try {
+    const empty = await getLatestMarketResearch({ DB }, order);
+    assert.equal(empty.can_search, false); assert.equal(empty.should_refresh, false);
+    assert.equal(empty.summary.items.length, 2);
+    let result = await runMarketResearch({ DB }, order, { incremental: true });
+    assert.equal(result.summary.work.total, 0);
+    result = await continueMarketResearch({ DB }, order, result.run.id);
+    assert.equal(result.run.status, 'complete');
+    assert.equal(result.summary.items.length, 2);
+    assert.deepEqual(result.sources, []); assert.equal(calls, 0);
+    const qualified = await runMarketResearch({ DB }, order, { incremental: true, car: 'BYD Yuan Plus' });
+    assert.equal(qualified.summary.work.total, 22);
+    assert.equal(qualified.summary.manual_query, true);
+    assert.ok(qualified.summary.items.every(row => row.car === 'BYD Yuan Plus'));
+    await continueMarketResearch({ DB }, order, qualified.run.id);
+    assert.equal(calls, 1);
+    assert.deepEqual(order, original);
+    assert.match(routeJs, /car: text\(payload\.car\)/);
+  } finally { globalThis.fetch = originalFetch; DB.database.close(); }
+});
+
 test('incremental research persists one source per step, resumes, and does not change the order', async () => {
   const DB = new D1Database();
   DB.database.exec("INSERT INTO orders (id) VALUES ('steps'), ('unrelated')");
-  const order = { id: 'steps', item_name: 'Передні праві двері і переднє праве крило' };
+  const order = { id: 'steps', car: 'BYD Yuan Plus', item_name: 'Передні праві двері і переднє праве крило' };
   const originalFetch = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async () => { calls += 1; return new Response('<p>Нічого не знайдено</p>'); };
@@ -126,7 +156,7 @@ test('interrupted source is marked failed after its lease, while other sources c
   let calls = 0;
   globalThis.fetch = async () => { calls++; return new Response('<p>Нічого не знайдено</p>'); };
   try {
-    let result = await runMarketLookup({ DB }, { query: 'Крило', incremental: true });
+    let result = await runMarketLookup({ DB }, { car: 'BYD Yuan Plus', query: 'Крило', incremental: true });
     const summary = JSON.parse(result.run.summary_json);
     summary.work.lease = { id: 'killed-worker', until: Date.now() - 1000 };
     DB.database.prepare('UPDATE market_lookup_runs SET summary_json = ? WHERE id = ?').run(JSON.stringify(summary), result.run.id);
@@ -149,7 +179,7 @@ test('overlapping browser tabs cannot process the same market step twice', async
   let calls = 0;
   globalThis.fetch = async () => { calls++; entered(); await waiting; return new Response('<p>Нічого не знайдено</p>'); };
   try {
-    const initial = await runMarketLookup({ DB }, { query: 'Крило', incremental: true });
+    const initial = await runMarketLookup({ DB }, { car: 'BYD Yuan Plus', query: 'Крило', incremental: true });
     const first = continueMarketLookup({ DB }, initial.run.id);
     await started;
     const overlapping = await continueMarketLookup({ DB }, initial.run.id);

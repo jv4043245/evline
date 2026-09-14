@@ -17,6 +17,7 @@ export async function onRequestPost({ request, params, env }) {
     incremental: true,
     query: text(payload.query).slice(0, 300),
     part_number: text(payload.part_number).slice(0, 100),
+    ...(typeof payload.car === 'string' ? { car: text(payload.car).slice(0, 150) } : {}),
   };
   const result = await runMarketResearch(env, order, overrides);
   return json(result);

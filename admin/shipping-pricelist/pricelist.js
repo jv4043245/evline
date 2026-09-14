@@ -1,5 +1,6 @@
 import { adminApiError } from "../../assets/js/admin-api-errors.js";
 import { renderAirFreight, updateAirFreightOutput } from "../../assets/js/shipping-air-estimate.js?v=20260914-progress";
+import { renderAirGuide } from "../../assets/js/shipping-air-guide.js?v=20260914-guide";
 
 const usd = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -20,6 +21,8 @@ const date = new Intl.DateTimeFormat("uk-UA", {
 });
 
 let pricelist;
+let airGuide;
+let freightMode = location.hash === '#air' ? 'air' : 'sea';
 let shipping;
 let airLoading;
 let airError = "";
@@ -53,12 +56,20 @@ async function loadAirRates() {
 }
 
 function setFreightMode(mode) {
+  freightMode = mode;
   const air = mode === "air";
   document.querySelectorAll("[data-freight-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.freightMode === mode)));
   document.querySelectorAll("[data-sea-only]").forEach(node => { node.hidden = air; });
-  document.querySelector("[data-air-calculator]").hidden = !air;
-  if (air) loadAirRates();
+  document.querySelector("[data-air-guide]").hidden = !air;
+  document.querySelector("[data-air-advanced]").hidden = !air;
+  if (pricelist) {
+    const selected = document.querySelector('[data-profile]').value;
+    appendOptions(document.querySelector('[data-profile]'), air && airGuide ? airGuide.profiles : pricelist.profiles);
+    if ([...document.querySelector('[data-profile]').options].some(o => o.value === selected)) document.querySelector('[data-profile]').value = selected;
+    renderCalculator();
+  }
 }
+document.querySelector('[data-air-advanced]').addEventListener('toggle', event => { if (event.target.open) loadAirRates(); });
 
 document.querySelectorAll("[data-freight-mode]").forEach(button => button.addEventListener("click", () => setFreightMode(button.dataset.freightMode)));
 document.querySelector("[data-air-calculator]")?.addEventListener("change", event => {
@@ -157,6 +168,10 @@ function selectedRow(rows, selector) {
 
 function renderCalculator() {
   if (!pricelist) return;
+  if (freightMode === 'air') {
+    document.querySelector('[data-air-guide]').innerHTML = renderAirGuide(airGuide, document.querySelector('[data-profile]').value, document.querySelector('[data-vehicle-size]').value, document.querySelector('[data-packing]').value);
+    return;
+  }
   const profile = selectedRow(pricelist.profiles, "[data-profile]");
   const vehicle = selectedRow(pricelist.vehicle_size_factors, "[data-vehicle-size]");
   const packing = selectedRow(pricelist.packing_factors, "[data-packing]");
@@ -176,6 +191,10 @@ async function loadPricelist() {
   const response = await fetch("/admin/shipping-pricelist/pricelist.json", { cache: "no-store" });
   if (!response.ok) throw new Error(`Не вдалося завантажити прайс (${response.status})`);
   pricelist = await response.json();
+  try {
+    const airResponse = await fetch('/admin/shipping-pricelist/air-guide.json', { cache: 'no-store' });
+    if (airResponse.ok) airGuide = await airResponse.json();
+  } catch { /* The sea reference is independent of the air guide. */ }
   renderMetadata(pricelist);
   renderProfiles(pricelist);
   renderRules(pricelist);
@@ -184,7 +203,7 @@ async function loadPricelist() {
   appendOptions(document.querySelector("[data-packing]"), pricelist.packing_factors);
   document.querySelector("[data-vehicle-size]").value = "standard";
   document.querySelector("[data-packing]").value = "shared";
-  renderCalculator();
+  setFreightMode(freightMode);
 }
 
 document.querySelector("[data-shipping-calculator]")?.addEventListener("input", renderCalculator);
