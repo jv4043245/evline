@@ -1,0 +1,29 @@
+{
+  "version": "planning-1",
+  "updated_at": "2026-09-14",
+  "basis": "planning_assumptions_not_shipment_history",
+  "rate_usd_per_kg": [11.3, 14.125],
+  "volume_kg_per_m3": [167, 200],
+  "reserve_percent": 15,
+  "vehicle_factors": { "compact": 0.9, "standard": 1, "large": 1.2 },
+  "packing_factors": { "shared": 1, "separate": 1.25 },
+  "sources": [
+    { "label": "Meest: авіатариф від 11,3 USD/кг", "url": "https://meest.cn/ru/aviadostavka-gruzov-iz-kitaja/" },
+    { "label": "Meest: об'ємна вага та індивідуальний розрахунок", "url": "https://meest.cn/ru/tarify-i-uslugi/" },
+    { "label": "Meest: габарити / 5000", "url": "https://meest.cn/ru/news/kak-rasschitat-stoimost-dostavki-iz-za-granicy/" },
+    { "label": "GDST: приклад фари 8,5 кг, 50×40×20 см", "url": "https://cncarpartsupplier.com/product/gdst-byd-song-plus-right-combination-headlight-sa3f-4121020c/" },
+    { "label": "Jiecheng: приклад фари 10 кг, 100×40×30 см", "url": "https://jiechengauto.en.made-in-china.com/product/cgtYMDuCYTVi/China-High-Quality-LED-Headlamp-Assembly-for-Byd-Yuan-Plus-Car-New-Condition-Body-Parts-Front-Headlights-Accessory.html" }
+  ],
+  "assumptions": "All category ranges below are EVLine planning assumptions, not verified measurements for a VIN. Gross weight includes protective packaging; volume includes clearance and packaging. Packaging service budgets are separate assumed USD costs, not the price of basic parcel wrapping. The rate ceiling is a 25% planning allowance over the public starting cargo rate. No parcel-specific 2.2 adjustment is applied to commercial cargo. No claimed statistical confidence interval.",
+  "profiles": [
+    { "id": "bumper-shell", "name": "Бампер, оболонка", "gross_weight_kg": [8, 18], "packed_volume_m3": [0.4, 0.95], "packaging_cost_usd": [20, 50] },
+    { "id": "bumper-kit", "name": "Бамперний комплект", "gross_weight_kg": [18, 35], "packed_volume_m3": [0.7, 1.3], "packaging_cost_usd": [30, 65] },
+    { "id": "fender", "name": "Крило", "gross_weight_kg": [5, 15], "packed_volume_m3": [0.12, 0.35], "packaging_cost_usd": [15, 40] },
+    { "id": "headlamp", "name": "Фара", "gross_weight_kg": [7, 14], "packed_volume_m3": [0.06, 0.18], "packaging_cost_usd": [10, 25] },
+    { "id": "door", "name": "Бічні двері", "gross_weight_kg": [20, 40], "packed_volume_m3": [0.25, 0.6], "packaging_cost_usd": [25, 60] },
+    { "id": "tailgate", "name": "Двері багажника", "gross_weight_kg": [25, 50], "packed_volume_m3": [0.4, 0.9], "packaging_cost_usd": [30, 65] },
+    { "id": "bumper-reinforcement", "name": "Підсилювач бампера", "gross_weight_kg": [5, 12], "packed_volume_m3": [0.06, 0.18], "packaging_cost_usd": [10, 30] },
+    { "id": "spare-wheel-cover", "name": "Кожух запасного колеса", "gross_weight_kg": [4, 10], "packed_volume_m3": [0.15, 0.35], "packaging_cost_usd": [15, 35] },
+    { "id": "small-trim", "name": "Мала накладка або кронштейн", "gross_weight_kg": [1, 4], "packed_volume_m3": [0.01, 0.05], "packaging_cost_usd": [5, 15] }
+  ]
+}

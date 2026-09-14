@@ -1,27 +1,38 @@
 // Shared rules for the API, cached results, filters and clipboard.
-export const MARKET_MATCH_VERSION = 4;
+export const MARKET_MATCH_VERSION = 5;
 export const compactPartNumber = value => String(value || '').normalize('NFKC').toUpperCase().replace(/[\s._\/-]/g, '');
 const words = value => String(value || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 const norm = value => words(value).join(' ');
 
 export function partTraits(value) {
   const s = norm(value);
+  const component = s.split(/\s+(?:(?:з|із|зі|с|with)\s+|(?:у|в)\s+(?:зборі|сборе)(?:\s|$)|assembly\b)/u)[0];
   const sides = [/лів|лев|\bleft\b|\blh\b/u.test(s) && 'left', /прав|\bright\b|\brh\b/u.test(s) && 'right'].filter(Boolean);
   const ends = [/передн|headlight|headlamp|\bfront\b/u.test(s) && 'front', /задн|taillight|\brear\b|\btail\b/u.test(s) && 'rear'].filter(Boolean);
   let category = '';
   // Child components precede their parent assemblies.
-  if (/скл.{0,20}фар|стекл.{0,20}фар|headl(?:ight|amp)\s*(?:glass|lens)/u.test(s)) category = 'lamp_glass';
-  else if (/кроншт|креплен|кріплен|bracket|mounting/u.test(s)) category = 'bracket';
-  else if (/блок.{0,20}(?:фар|розпал|розжиг)|баласт|ballast|headlight module/u.test(s)) category = 'lamp_module';
-  else if (/наклад|молдинг|trim|moulding|molding/u.test(s)) category = 'trim';
-  else if (/підсилювач|усилител|reinforcement/u.test(s)) category = 'reinforcement';
-  else if (/протитуман|противотуман|\bfog\b/u.test(s)) category = 'fog';
-  else if (/дхо|денн.{0,15}(?:світ|ход)|дневн.{0,15}(?:свет|ход)|\bdrl\b|daytime/u.test(s)) category = 'drl';
-  else if (/фар|headlight|headlamp/u.test(s)) category = 'headlamp';
-  else if (/ліхтар|фонар|taillight|\btail\s*lamp\b/u.test(s)) category = 'tail_lamp';
+  if (/ручк|\bhandle\b/u.test(component)) category = 'handle';
+  else if (/замок|замк|защ[её]лк|засувк|\block\b|\blatch\b/u.test(component)) category = 'lock';
+  else if (/датчик|\bsensor\b/u.test(component)) category = 'sensor';
+  else if (/склоп[іi]д[ій]ом|стеклопод[ъь]?ем|window regulator/u.test(component)) category = 'window_regulator';
+  else if (/петл|завіс|\bhinge\b/u.test(component)) category = 'hinge';
+  else if (/обмежувач|ограничител|door (?:check|stop)/u.test(component)) category = 'door_stop';
+  else if (/ущільнювач|уплотнител|weatherstrip|\bseal (?:for|of) (?:the )?door\b|\bdoor(?:\s+(?:front|rear|left|right))*\s+seal\b/u.test(component)) category = 'seal';
+  else if (/трос|\bcable\b/u.test(component)) category = 'cable';
+  else if (/підкрил|подкрыл|локер|fender liner|wheel arch liner/u.test(component)) category = 'fender_liner';
+  else if (/обшивк|карта двер|door (?:card|panel trim)/u.test(component)) category = 'door_trim';
+  else if (/скл.{0,20}фар|стекл.{0,20}фар|headl(?:ight|amp)\s*(?:glass|lens)/u.test(component)) category = 'lamp_glass';
+  else if (/кроншт|креплен|кріплен|bracket|mounting/u.test(component)) category = 'bracket';
+  else if (/блок.{0,20}(?:фар|розпал|розжиг)|баласт|ballast|headlight module/u.test(component)) category = 'lamp_module';
+  else if (/наклад|молдинг|trim|moulding|molding/u.test(component)) category = 'trim';
+  else if (/підсилювач|усилител|reinforcement/u.test(component)) category = 'reinforcement';
+  else if (/протитуман|противотуман|\bfog\b/u.test(component)) category = 'fog';
+  else if (/дхо|денн.{0,15}(?:світ|ход)|дневн.{0,15}(?:свет|ход)|\bdrl\b|daytime/u.test(component)) category = 'drl';
+  else if (/фар|headlight|headlamp/u.test(component)) category = 'headlamp';
+  else if (/ліхтар|фонар|taillight|\btail\s*lamp\b/u.test(component)) category = 'tail_lamp';
   else {
     const groups = [['bumper', /бампер|bumper/u], ['fender', /крил|крыл|fender/u], ['glass', /скл|стекл|glass/u], ['door', /двер|door/u], ['hood', /капот|hood/u], ['mirror', /дзерк|зерк|mirror/u], ['shock', /амортиз|стійк|стойк|shock/u], ['grille', /решіт|решет|grille/u]];
-    category = groups.find(([, re]) => re.test(s))?.[0] || '';
+    category = groups.find(([, re]) => re.test(component))?.[0] || '';
   }
   const technology = /матрич|\bmatrix\b/u.test(s) ? 'matrix' : /галоген|halogen/u.test(s) ? 'halogen' : /ксенон|xenon/u.test(s) ? 'xenon' : /\bled\b|світлодіод|светодиод/u.test(s) ? 'led' : '';
   const position = ends.length === 1 ? ends[0] : ends.length ? 'both' : category === 'headlamp' ? 'front' : category === 'tail_lamp' ? 'rear' : '';
@@ -43,6 +54,13 @@ export function vehicleTraits(value) {
   return { brands: brands.filter(b => new RegExp(`\\b${b}\\b`, 'u').test(s)), models: models.filter(([, re]) => re.test(s)).map(([name]) => name), years: [...s.matchAll(/\b(20\d{2})\b/g)].map(m => Number(m[1])), text: s };
 }
 const reasonLabels = { side: 'Інша сторона деталі', position: 'Інше розташування', category: 'Інший вузол або складова', technology: 'Інша технологія світла', brand: 'Інша марка автомобіля', model: 'Інша модель автомобіля', year: 'Інший рік застосування', condition: 'Інший стан деталі', quantity: 'Комплект замість окремої деталі' };
+export function hasMarketIdentity(item = {}) {
+  if (item.part_numbers?.some(code => String(code).trim())) return true;
+  if (vehicleTraits(`${item.car || ''} ${item.label || ''}`).models.length) return true;
+  const car = words(item.car).filter(word => !brands.includes(word) && !/^(?:20\d{2}|авто|автомобіль|автомобиль|не|вказано|указано|невідомо|unknown|car|model|модель)$/u.test(word));
+  return car.some(word => /\p{L}/u.test(word));
+}
+
 function titleHasNumber(title, number) {
   const parts = String(number).match(/[\p{L}\p{N}]+/gu) || [];
   return parts.length > 0 && new RegExp(`(?<![\\p{L}\\p{N}/-])${parts.join('[\\s._/-]*')}(?![\\p{L}\\p{N}/-])`, 'iu').test(title);
@@ -51,8 +69,9 @@ export function assessMarketCandidate(candidate, item = {}) {
   const label = item.label || (item.item_tokens || []).join(' ');
   const desired = partTraits(label);
   const actual = partTraits([candidate.title, candidate.attributes_text].filter(Boolean).join(' '));
+  actual.category = partTraits(candidate.title).category || actual.category;
   if (['new', 'used'].includes(candidate.condition)) actual.condition = candidate.condition;
-  const wantedCar = vehicleTraits(item.car || (item.car_tokens || []).join(' '));
+  const wantedCar = vehicleTraits([item.car || (item.car_tokens || []).join(' '), label].join(' '));
   const offeredCar = vehicleTraits([candidate.title, candidate.fitment].filter(Boolean).join(' '));
   const conflicts = [];
   for (const key of ['category', 'side', 'position', 'technology', 'condition']) if (desired[key] && actual[key] && desired[key] !== actual[key]) conflicts.push(key);
@@ -63,6 +82,7 @@ export function assessMarketCandidate(candidate, item = {}) {
   if (wantedCar.years.length === 1 && fitYears.length && !wantedCar.years.every(y => y >= Math.min(...fitYears) && y <= Math.max(...fitYears))) conflicts.push('year');
   if (candidate.feedback?.rejected) return { match_type: 'irrelevant', match_reason: `Відхилено менеджером: ${candidate.feedback.reason_label || 'не та деталь'}`, match_basis: 'manager', conflicts };
   if (conflicts.length) return { match_type: 'irrelevant', match_reason: conflicts.map(key => reasonLabels[key]).join(' · '), match_basis: 'conflict', conflicts };
+  if (!hasMarketIdentity(item)) return { match_type: 'irrelevant', match_reason: 'Уточніть модель авто або артикул', match_basis: 'insufficient_data', conflicts: [] };
   const wanted = item.part_numbers || [];
   const codes = [candidate.article || candidate.part_number, ...(candidate.cross_numbers || [])].filter(Boolean).map(compactPartNumber);
   const matchedNumber = wanted.find(number => codes.includes(compactPartNumber(number)) || titleHasNumber(candidate.title || '', number));

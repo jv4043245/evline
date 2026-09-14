@@ -354,3 +354,6 @@
 .shipping-methodology > summary { cursor:pointer; padding:16px 0; font-weight:700; color:var(--muted); }
 .shipping-methodology[open] { display:block; }
 .shipping-methodology .shipping-source-card { margin-top:16px; }
+.shipping-pricelist-page [data-air-guide] {
+  margin-top: 16px;
+}

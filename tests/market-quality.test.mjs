@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { assessMarketCandidate, summarizeMarketItem, reviewMarketResult } from '../assets/js/market-comparison.js';
+import { assessMarketCandidate, summarizeMarketItem, reviewMarketResult, partTraits, hasMarketIdentity } from '../assets/js/market-comparison.js';
 import { splitRequestedItems } from '../functions/_lib/market-research.js';
 import { parseMarketProducts, safeProductUrl, parseMarketPrice } from '../functions/_lib/market-products.js';
 import { redactMarketText, enrichMarketItems, reviewMarketCandidates } from '../functions/_lib/market-query.js';
@@ -10,6 +10,41 @@ import { saveMarketFeedback, hydrateMarketResult, offerIdentity } from '../funct
 
 const item = { key: 'one', label: 'Фара передня права', car: 'BYD Yuan Pro 2023', part_numbers: ['13158405-00'] };
 const product = extra => ({ item_key: item.key, title: 'Фара передня права BYD Yuan Pro', article: '13158405-00', part_number: '13158405-00', source_key: 'seller', product_url: 'https://shop.example/part', verified_product: true, currency: 'UAH', price_uah: 10000, part_type: 'original', availability: 'in_stock', ...extra });
+test('door accessories never match a complete door, even with an identical article', () => {
+  const door = { ...item, label: 'Двері передні праві', car: 'BYD Yuan Plus' };
+  for (const title of ['Ручка дверей', 'Замок дверей', 'Датчик відкриття дверей', 'Склопідйомник дверей', 'Стеклоподъемник двери', 'Петля дверей', 'Обмежувач дверей', 'Ущільнювач дверей', 'Трос дверей', 'Обшивка дверей', 'Скло дверей']) {
+    const result = assessMarketCandidate(product({ title: `${title} передніх правих BYD Yuan Plus` }), door);
+    assert.equal(result.match_type, 'irrelevant', title);
+    assert.ok(result.conflicts.includes('category'), title);
+  }
+  const handle = { ...door, label: 'Ручка дверей передня права' };
+  assert.equal(assessMarketCandidate(product({ title: 'Ручка дверей передня права BYD Yuan Plus' }), handle).match_type, 'exact');
+  assert.equal(assessMarketCandidate(product({ title: 'Двері передні праві BYD Yuan Plus' }), handle).match_type, 'irrelevant');
+});
+test('assembly contents do not change the primary component or confuse BYD Seal with a seal', () => {
+  for (const title of ['Двері передні праві з ручкою та склом', 'Дверь передняя правая в сборе с ручкой', 'Front right door with handle', 'Front right door assembly glass handle', 'BYD Seal front right door']) assert.equal(partTraits(title).category, 'door', title);
+  assert.equal(partTraits('Front right door seal BYD Yuan Plus').category, 'seal');
+  assert.equal(partTraits('Підкрилок передній правий BYD Yuan Plus').category, 'fender_liner');
+  assert.equal(assessMarketCandidate(product({ title: 'Двері передні праві BYD Yuan Plus', attributes_text: 'У комплекті ручка та замок' }), { ...item, label: 'Двері передні праві', car: 'BYD Yuan Plus' }).match_type, 'exact');
+});
+test('identity is required and a model in the request still constrains fitment', () => {
+  for (const car of ['', 'BYD', '2023', 'Авто не вказано']) assert.equal(hasMarketIdentity({ car, label: 'Передні праві двері' }), false, car);
+  assert.equal(hasMarketIdentity({ label: 'Двері BYD Yuan Plus' }), true);
+  assert.equal(hasMarketIdentity({ label: 'Двері', car: 'Volkswagen ID.4' }), true);
+  assert.equal(hasMarketIdentity({ part_numbers: ['13158405-00'] }), true);
+  const result = assessMarketCandidate(product({ title: 'Двері BYD Tang' }), { label: 'Двері BYD Yuan Plus' });
+  assert.equal(result.match_type, 'irrelevant'); assert.ok(result.conflicts.includes('model'));
+});
+test('cached door prices are reclassified before display and statistics', () => {
+  const door = { ...item, label: 'Двері передні праві', car: 'BYD Yuan Plus' };
+  const offers = [product({ title: 'Ручка дверей передня права BYD Yuan Plus', match_type: 'exact', price_uah: 1 }), product({ title: 'Двері передні праві BYD Yuan Plus', match_type: 'exact', price_uah: 20000 })];
+  const result = reviewMarketResult({ items: [door] }, offers);
+  assert.deepEqual(result.offers.map(row => row.match_type), ['irrelevant', 'exact']);
+  assert.equal(result.summary.items[0].median_uah, 20000);
+  const unqualified = reviewMarketResult({ items: [{ ...door, car: '', part_numbers: [] }] }, offers);
+  assert.equal(unqualified.summary.items[0].median_uah, 0);
+  assert.ok(unqualified.offers.every(row => row.match_type === 'irrelevant'));
+});
 for (const [label, title, field] of [
   ['wrong side', 'Фара передня ліва BYD Yuan Pro', 'side'], ['same brand wrong model', 'Фара права BYD Song Plus', 'model'],
   ['wrong brand', 'Фара права BMW X5', 'brand'], ['rear light', 'Ліхтар задній правий BYD Yuan Pro', 'category'],

@@ -1,5 +1,5 @@
 import { parseMarketProducts, safeProductUrl, marketAvailability } from './market-products.js';
-import { assessMarketCandidate, partTraits, compactPartNumber } from '../../assets/js/market-comparison.js';
+import { assessMarketCandidate, partTraits, compactPartNumber, hasMarketIdentity } from '../../assets/js/market-comparison.js';
 
 export async function fetchMarketPage(url, source, budget) {
   let current = safeProductUrl(url, source.home);
@@ -45,7 +45,7 @@ function offerFromCandidate(candidate, item, source, searchUrl) {
 export async function researchMarketItems(items, sources) {
   const budget = { requests: 0, deadline: Date.now() + 18000 };
   // Reserve capacity for every source's initial query before optional detail reads.
-  const searches = await Promise.all(items.flatMap(item => sources.map(async source => {
+  const searches = await Promise.all(items.filter(hasMarketIdentity).flatMap(item => sources.map(async source => {
     const searchUrl = source.search(item.query);
     try {
       let page = await fetchMarketPage(searchUrl, source, budget);

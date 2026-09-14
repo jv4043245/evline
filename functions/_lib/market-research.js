@@ -1,5 +1,5 @@
 import { text } from "./http.js";
-import { compareMarketCandidate, summarizeMarketItem, MARKET_MATCH_VERSION } from "../../assets/js/market-comparison.js";
+import { compareMarketCandidate, summarizeMarketItem, MARKET_MATCH_VERSION, hasMarketIdentity } from "../../assets/js/market-comparison.js";
 import { parseMarketProducts } from "./market-products.js";
 import { redactMarketText, splitMarketLabels, enrichMarketItems, reviewMarketCandidates } from "./market-query.js";
 import { researchMarketItems } from "./market-fetch.js";
@@ -150,7 +150,7 @@ export function splitRequestedItems(order = {}, overrides = {}) {
   const parts = splitMarketLabels(source).map(cleanItemLabel).filter(Boolean);
   const fullContext = redactMarketText([order.item_name, order.request_text, overrides.part_number].filter(Boolean).join(" "), order.vin);
   const allPartNumbers = extractPartNumbers(fullContext, order.vin);
-  const car = redactMarketText(text(order.car), order.vin);
+  const car = redactMarketText(text(overrides.car ?? order.car), order.vin);
   return [...new Set(parts)].map((label, index) => {
     const safeLabel = stripVinIdentifiers(label, order.vin);
     const localPartNumbers = extractPartNumbers(`${label} ${overrides.part_number || ""}`, order.vin);
@@ -293,7 +293,7 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
     "SELECT * FROM market_research_runs WHERE order_id = ? ORDER BY created_at DESC LIMIT 1"
   ).bind(order.id).first();
   if (!run) {
-    return { run: null, offers: [], summary: { items: [] }, sources: [], can_search: Boolean(items.length), should_refresh: Boolean(items.length), item_limit: MAX_RESEARCH_ITEMS };
+    return { run: null, offers: [], summary: { items: items.map(item => summarizeMarketItem(item, [])) }, sources: [], can_search: items.some(hasMarketIdentity), should_refresh: items.some(hasMarketIdentity), item_limit: MAX_RESEARCH_ITEMS };
   }
   const rows = await env.DB.prepare(
     "SELECT * FROM market_research_offers WHERE run_id = ? ORDER BY item_key, match_type, price_uah"
@@ -307,8 +307,8 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
     offers,
     summary,
     sources: parseJson(run.source_status_json, []),
-    can_search: Boolean(items.length),
-    should_refresh: Boolean(items.length) && (run.status !== "complete" || stale || summary.matching_version !== MARKET_MATCH_VERSION || (!summary.manual_query && run.fingerprint !== fingerprint)),
+    can_search: items.some(hasMarketIdentity),
+    should_refresh: items.some(hasMarketIdentity) && (run.status !== "complete" || stale || summary.matching_version !== MARKET_MATCH_VERSION || (!summary.manual_query && run.fingerprint !== fingerprint)),
     item_limit: MAX_RESEARCH_ITEMS,
   };
 }
@@ -337,7 +337,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
     const summary = initialMarketWork(items, COMPETITOR_SOURCES, {
       matching_version: MARKET_MATCH_VERSION, ai_status: parsed.ai_status,
       requested_item_count: allItems.length, ignored_item_count: Math.max(0, allItems.length - items.length),
-      manual_query: Boolean(text(overrides.query) || text(overrides.part_number)),
+      manual_query: Boolean(text(overrides.query) || text(overrides.part_number) || text(overrides.car)),
     });
     await env.DB.prepare('UPDATE market_research_runs SET summary_json = ? WHERE id = ?').bind(JSON.stringify(summary), runId).run();
     return getLatestMarketResearch(env, order, { ...overrides, run_id: runId });
@@ -353,7 +353,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
       offer_details: Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer])),
       requested_item_count: allItems.length,
       ignored_item_count: Math.max(0, allItems.length - items.length),
-      manual_query: Boolean(text(overrides.query) || text(overrides.part_number)),
+      manual_query: Boolean(text(overrides.query) || text(overrides.part_number) || text(overrides.car)),
     };
     if (offers.length) {
       const statements = offers.map((offer) => env.DB.prepare(
