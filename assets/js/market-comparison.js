@@ -1,5 +1,5 @@
 // Shared rules for the API, cached results, filters and clipboard.
-export const MARKET_MATCH_VERSION = 5;
+export const MARKET_MATCH_VERSION = 6;
 export const compactPartNumber = value => String(value || '').normalize('NFKC').toUpperCase().replace(/[\s._\/-]/g, '');
 const words = value => String(value || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 const norm = value => words(value).join(' ');
@@ -8,7 +8,7 @@ export function partTraits(value) {
   const s = norm(value);
   const component = s.split(/\s+(?:(?:з|із|зі|с|with)\s+|(?:у|в)\s+(?:зборі|сборе)(?:\s|$)|assembly\b)/u)[0];
   const sides = [/лів|лев|\bleft\b|\blh\b/u.test(s) && 'left', /прав|\bright\b|\brh\b/u.test(s) && 'right'].filter(Boolean);
-  const ends = [/передн|headlight|headlamp|\bfront\b/u.test(s) && 'front', /задн|taillight|\brear\b|\btail\b/u.test(s) && 'rear'].filter(Boolean);
+  const ends = [/передн|(?:^|\s)перед(?:\s|$)|headlight|headlamp|\bfront\b/u.test(s) && 'front', /задн|taillight|\brear\b|\btail\b/u.test(s) && 'rear'].filter(Boolean);
   let category = '';
   // Child components precede their parent assemblies.
   if (/ручк|\bhandle\b/u.test(component)) category = 'handle';
@@ -37,7 +37,7 @@ export function partTraits(value) {
   const technology = /матрич|\bmatrix\b/u.test(s) ? 'matrix' : /галоген|halogen/u.test(s) ? 'halogen' : /ксенон|xenon/u.test(s) ? 'xenon' : /\bled\b|світлодіод|светодиод/u.test(s) ? 'led' : '';
   const position = ends.length === 1 ? ends[0] : ends.length ? 'both' : category === 'headlamp' ? 'front' : category === 'tail_lamp' ? 'rear' : '';
   const condition = /(?:^|\s)б\s*у(?:\s|$)|вживан|бывш|\bused\b/u.test(s) ? 'used' : /нов(?:ий|ая|ый|а)(?:\s|$)|\bnew\b/u.test(s) ? 'new' : '';
-  const quantity = /комплект|пара|дві|две|\btwo\b|\bpair\b|\bset\b/u.test(s) ? 'set' : '';
+  const quantity = /комплект|пара|дві|две|два|\b2\s*шт|\btwo\b|\bpair\b|\bset\b/u.test(s) ? 'set' : '';
   return { category, side: sides.length === 1 ? sides[0] : sides.length ? 'both' : '', position, lamp: category, technology, condition, quantity };
 }
 
@@ -57,8 +57,12 @@ const reasonLabels = { side: 'Інша сторона деталі', position: '
 export function hasMarketIdentity(item = {}) {
   if (item.part_numbers?.some(code => String(code).trim())) return true;
   if (vehicleTraits(`${item.car || ''} ${item.label || ''}`).models.length) return true;
-  const car = words(item.car).filter(word => !brands.includes(word) && !/^(?:20\d{2}|авто|автомобіль|автомобиль|не|вказано|указано|невідомо|unknown|car|model|модель)$/u.test(word));
+  const car = words(vehicleTraits(item.car).text).filter(word => !brands.includes(word) && !/^(?:20\d{2}|авто|автомобіль|автомобиль|не|вказано|указано|невідомо|unknown|car|model|модель)$/u.test(word));
   return car.some(word => /\p{L}/u.test(word));
+}
+
+export function canSearchMarketItem(item = {}) {
+  return hasMarketIdentity(item) || Boolean(vehicleTraits(`${item.car || ''} ${item.label || ''}`).brands.length && partTraits(item.label).category);
 }
 
 function titleHasNumber(title, number) {
@@ -82,7 +86,10 @@ export function assessMarketCandidate(candidate, item = {}) {
   if (wantedCar.years.length === 1 && fitYears.length && !wantedCar.years.every(y => y >= Math.min(...fitYears) && y <= Math.max(...fitYears))) conflicts.push('year');
   if (candidate.feedback?.rejected) return { match_type: 'irrelevant', match_reason: `Відхилено менеджером: ${candidate.feedback.reason_label || 'не та деталь'}`, match_basis: 'manager', conflicts };
   if (conflicts.length) return { match_type: 'irrelevant', match_reason: conflicts.map(key => reasonLabels[key]).join(' · '), match_basis: 'conflict', conflicts };
-  if (!hasMarketIdentity(item)) return { match_type: 'irrelevant', match_reason: 'Уточніть модель авто або артикул', match_basis: 'insufficient_data', conflicts: [] };
+  if (!hasMarketIdentity(item)) {
+    if (canSearchMarketItem(item) && offeredCar.models.length && wantedCar.brands.some(brand => offeredCar.brands.includes(brand)) && desired.category === actual.category) return { match_type: 'probable', match_reason: 'Пошук лише за маркою: модель авто не підтверджено', match_basis: 'brand_only', conflicts: [] };
+    return { match_type: 'irrelevant', match_reason: 'Уточніть модель авто або артикул', match_basis: 'insufficient_data', conflicts: [] };
+  }
   const wanted = item.part_numbers || [];
   const codes = [candidate.article || candidate.part_number, ...(candidate.cross_numbers || [])].filter(Boolean).map(compactPartNumber);
   const matchedNumber = wanted.find(number => codes.includes(compactPartNumber(number)) || titleHasNumber(candidate.title || '', number));

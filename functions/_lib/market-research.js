@@ -1,10 +1,11 @@
 import { text } from "./http.js";
-import { compareMarketCandidate, summarizeMarketItem, MARKET_MATCH_VERSION, hasMarketIdentity } from "../../assets/js/market-comparison.js";
+import { compareMarketCandidate, summarizeMarketItem, MARKET_MATCH_VERSION, canSearchMarketItem } from "../../assets/js/market-comparison.js";
 import { parseMarketProducts } from "./market-products.js";
 import { redactMarketText, splitMarketLabels, enrichMarketItems, reviewMarketCandidates } from "./market-query.js";
 import { researchMarketItems } from "./market-fetch.js";
 import { hydrateMarketResult, offerIdentity } from "./market-feedback.js";
 import { initialMarketWork, advanceMarketWork } from "./market-work.js";
+import { planVinLookup, resolveMarketVin, applyVinModel, marketVinKey } from "./market-vin.js";
 
 export const MARKET_RESEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_RESEARCH_ITEMS = 3;
@@ -214,11 +215,11 @@ export function summarizeOffers(items, offers) {
   };
 }
 
-function fingerprintFor(order, items) {
+async function fingerprintFor(order, items) {
   return JSON.stringify({
     matching_version: MARKET_MATCH_VERSION,
     car: text(order.car).toLowerCase(),
-    vin_prefix: text(order.vin).slice(0, 3).toUpperCase(),
+    vin_key: await marketVinKey(order.vin),
     items: items.map((item) => ({ label: item.label.toLowerCase(), part_numbers: item.part_numbers })),
   });
 }
@@ -286,14 +287,16 @@ function parseJson(value, fallback) {
 export async function getLatestMarketResearch(env, order, overrides = {}) {
   await ensureMarketResearchTables(env);
   const items = splitRequestedItems(order, overrides);
-  const fingerprint = fingerprintFor(order, items);
+  const fingerprint = await fingerprintFor(order, items);
+  const vehicleLookup = planVinLookup(env, { ...order, car: overrides.car ?? order.car }, items);
+  const canSearch = items.some(canSearchMarketItem) || vehicleLookup.status === 'pending';
   const run = overrides.run_id ? await env.DB.prepare(
     "SELECT * FROM market_research_runs WHERE order_id = ? AND id = ?"
   ).bind(order.id, overrides.run_id).first() : await env.DB.prepare(
     "SELECT * FROM market_research_runs WHERE order_id = ? ORDER BY created_at DESC LIMIT 1"
   ).bind(order.id).first();
   if (!run) {
-    return { run: null, offers: [], summary: { items: items.map(item => summarizeMarketItem(item, [])) }, sources: [], can_search: items.some(hasMarketIdentity), should_refresh: items.some(hasMarketIdentity), item_limit: MAX_RESEARCH_ITEMS };
+    return { run: null, offers: [], summary: { items: items.map(item => summarizeMarketItem(item, [])), vehicle_lookup: vehicleLookup }, sources: [], can_search: canSearch, should_refresh: canSearch, item_limit: MAX_RESEARCH_ITEMS };
   }
   const rows = await env.DB.prepare(
     "SELECT * FROM market_research_offers WHERE run_id = ? ORDER BY item_key, match_type, price_uah"
@@ -307,8 +310,10 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
     offers,
     summary,
     sources: parseJson(run.source_status_json, []),
-    can_search: items.some(hasMarketIdentity),
-    should_refresh: items.some(hasMarketIdentity) && (run.status !== "complete" || stale || summary.matching_version !== MARKET_MATCH_VERSION || (!summary.manual_query && run.fingerprint !== fingerprint)),
+    can_search: canSearch,
+    should_refresh: canSearch && (run.status !== "complete" || stale || summary.matching_version !== MARKET_MATCH_VERSION ||
+      (vehicleLookup.status === 'pending' && summary.vehicle_lookup?.status === 'not_configured') ||
+      parseJson(run.fingerprint, {}).vin_key !== parseJson(fingerprint, {}).vin_key || (!summary.manual_query && run.fingerprint !== fingerprint)),
     item_limit: MAX_RESEARCH_ITEMS,
   };
 }
@@ -318,7 +323,8 @@ export async function runMarketResearch(env, order, overrides = {}) {
   const inputItems = splitRequestedItems(order, overrides);
   const parsed = await enrichMarketItems(env, inputItems);
   const allItems = parsed.items;
-  const items = allItems.slice(0, MAX_RESEARCH_ITEMS);
+  let items = allItems.slice(0, MAX_RESEARCH_ITEMS);
+  let vehicleLookup = planVinLookup(env, { ...order, car: overrides.car ?? order.car }, items);
   if (!items.length) {
     const error = new Error("Вкажіть запчастину або пошуковий запит.");
     error.status = 400;
@@ -326,7 +332,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
   }
   const now = new Date().toISOString();
   const runId = crypto.randomUUID();
-  const fingerprint = fingerprintFor(order, inputItems);
+  const fingerprint = await fingerprintFor(order, inputItems);
   await env.DB.prepare(
     `INSERT INTO market_research_runs (
       id, order_id, created_at, updated_at, status, fingerprint, query, item_count
@@ -336,6 +342,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
   if (overrides.incremental) {
     const summary = initialMarketWork(items, COMPETITOR_SOURCES, {
       matching_version: MARKET_MATCH_VERSION, ai_status: parsed.ai_status,
+      vehicle_lookup: vehicleLookup,
       requested_item_count: allItems.length, ignored_item_count: Math.max(0, allItems.length - items.length),
       manual_query: Boolean(text(overrides.query) || text(overrides.part_number) || text(overrides.car)),
     });
@@ -344,11 +351,14 @@ export async function runMarketResearch(env, order, overrides = {}) {
   }
 
   try {
+    if (vehicleLookup.status === 'pending') vehicleLookup = await resolveMarketVin(env, order.vin, vehicleLookup.requested_car);
+    items = applyVinModel(items, vehicleLookup);
     const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
     const offers = await reviewMarketCandidates(env, items, candidates);
     const summary = {
       ...summarizeOffers(items, offers),
       matching_version: MARKET_MATCH_VERSION,
+      vehicle_lookup: vehicleLookup,
       ai_status: parsed.ai_status,
       offer_details: Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer])),
       requested_item_count: allItems.length,
@@ -468,7 +478,8 @@ export async function runMarketLookup(env, input = {}) {
   const overrides = { query: lookup.query || lookup.part_number, part_number: lookup.part_number };
   const parsed = await enrichMarketItems(env, splitRequestedItems(virtualOrder, overrides));
   const allItems = parsed.items;
-  const items = allItems.slice(0, MAX_RESEARCH_ITEMS);
+  let items = allItems.slice(0, MAX_RESEARCH_ITEMS);
+  let vehicleLookup = planVinLookup(env, virtualOrder, items);
   if (!items.length) {
     const error = new Error("Вкажіть запчастину або артикул.");
     error.status = 400;
@@ -477,7 +488,7 @@ export async function runMarketLookup(env, input = {}) {
 
   const now = new Date().toISOString();
   const runId = crypto.randomUUID();
-  const fingerprint = fingerprintFor(virtualOrder, allItems);
+  const fingerprint = await fingerprintFor(virtualOrder, allItems);
   await env.DB.prepare(
     `INSERT INTO market_lookup_runs (
       id, created_at, updated_at, status, car, vin, query, part_number, fingerprint, item_count
@@ -487,6 +498,7 @@ export async function runMarketLookup(env, input = {}) {
   if (input.incremental) {
     const summary = initialMarketWork(items, COMPETITOR_SOURCES, {
       matching_version: MARKET_MATCH_VERSION, ai_status: parsed.ai_status,
+      vehicle_lookup: vehicleLookup,
       requested_item_count: allItems.length, ignored_item_count: Math.max(0, allItems.length - items.length), manual_query: true,
     });
     await env.DB.prepare('UPDATE market_lookup_runs SET summary_json = ? WHERE id = ?').bind(JSON.stringify(summary), runId).run();
@@ -495,11 +507,14 @@ export async function runMarketLookup(env, input = {}) {
   }
 
   try {
+    if (vehicleLookup.status === 'pending') vehicleLookup = await resolveMarketVin(env, lookup.vin, vehicleLookup.requested_car);
+    items = applyVinModel(items, vehicleLookup);
     const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
     const offers = await reviewMarketCandidates(env, items, candidates);
     const summary = {
       ...summarizeOffers(items, offers),
       matching_version: MARKET_MATCH_VERSION,
+      vehicle_lookup: vehicleLookup,
       ai_status: parsed.ai_status,
       offer_details: Object.fromEntries(offers.map(offer => [offerIdentity(offer), offer])),
       requested_item_count: allItems.length,
@@ -535,7 +550,7 @@ export async function runMarketLookup(env, input = {}) {
 
 export async function continueMarketResearch(env, order, runId) {
   await ensureMarketResearchTables(env);
-  await advanceMarketWork(env, 'order', text(runId), order.id, COMPETITOR_SOURCES);
+  await advanceMarketWork(env, 'order', text(runId), order.id, COMPETITOR_SOURCES, { vin: order.vin });
   return getLatestMarketResearch(env, order, { run_id: text(runId) });
 }
 
@@ -568,7 +583,7 @@ export async function attachMarketLookupToOrder(env, lookupId, order) {
     order.id,
     now,
     now,
-    lookup.run.fingerprint || fingerprintFor(order, summary.items || []),
+    await fingerprintFor(order, summary.items || []),
     lookup.run.query || "",
     Number(lookup.run.item_count || summary.item_count || 0),
     summary.confidence || "low",
