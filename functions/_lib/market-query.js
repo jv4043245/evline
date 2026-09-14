@@ -6,8 +6,9 @@ export function redactMarketText(value, knownVin = '') {
   return s.replace(/\b[A-Z0-9]{17}\b/giu, ' ').replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/giu, ' ').replace(/\+\d(?:[ ()-]*\d){8,14}\b|\b380(?:[ ()-]*\d){9}\b|\b0\d{2}(?:[ ()-]*\d){7}\b/g, ' ').replace(/https?:\/\/\S+|@[\w_]+/g, ' ').trim();
 }
 export function splitMarketLabels(value) {
-  return String(value || '').split(/[\n;•]+|\s+(?:і|та|и|and)\s+(?=(?:(?:дві|два|две|two|\d+|передн[\p{L}]*|задн[\p{L}]*|лів[\p{L}]*|лев[\p{L}]*|прав[\p{L}]*)\s+){0,3}(?:фар|бампер|крил|крыл|двер|капот|скл|стекл|дзерк|зерк|ліхтар|фонар|наклад|амортиз|кроншт))/iu)
-    .flatMap(label => label.split(/,\s*(?=(?:фар|бампер|крил|крыл|двер|капот|скл|стекл|дзерк|зерк|ліхтар|фонар|наклад|амортиз|кроншт))/iu)).map(s => s.trim()).filter(Boolean);
+  const part = '(?:фар|бампер|підкрил|подкрыл|локер|крил|крыл|двер|капот|скл|стекл|дзерк|зерк|ліхтар|фонар|наклад|амортиз|кроншт|ручк|замок|датчик|fender|bumper|headlamp|headlight|door|handle|lock)';
+  const modifiers = '(?:(?:дві|два|две|two|\\d+|передн[\\p{L}]*|задн[\\p{L}]*|лів[\\p{L}]*|лев[\\p{L}]*|прав[\\p{L}]*|front|rear|left|right)\\s+){0,3}';
+  return String(value || '').split(new RegExp(`[\\n;•]+|(?:,\\s*|\\s+(?:і|та|и|and)\\s+)(?=${modifiers}${part})`, 'iu')).map(s => s.trim()).filter(Boolean);
 }
 
 // AI extracts verbatim spans only. It cannot invent a car, OEM or compatible item.

@@ -1,17 +1,18 @@
 import { researchMarketItems } from './market-fetch.js';
 import { reviewMarketCandidates } from './market-query.js';
-import { summarizeMarketItem, hasMarketIdentity } from '../../assets/js/market-comparison.js';
+import { summarizeMarketItem, canSearchMarketItem } from '../../assets/js/market-comparison.js';
 import { offerIdentity } from './market-feedback.js';
+import { resolveMarketVin, applyVinModel, marketVinKey } from './market-vin.js';
 
 export function initialMarketWork(items, sources, metadata) {
-  const searchable = items.filter(hasMarketIdentity);
+  const searchable = items.filter(canSearchMarketItem);
   return { ...metadata, items: items.map(item => summarizeMarketItem(item, [])), offer_details: {},
     work: { version: 1, items: searchable, next: 0, total: searchable.length * sources.length, lease: null } };
 }
 
 // A single HTTP request checks one item at one source. The compare-and-swap
 // lease prevents overlapping tabs/retries from losing another step's results.
-export async function advanceMarketWork(env, kind, runId, orderId, sources) {
+export async function advanceMarketWork(env, kind, runId, orderId, sources, context = {}) {
   const table = kind === 'order' ? 'market_research_runs' : 'market_lookup_runs';
   const condition = kind === 'order' ? 'id = ? AND order_id = ?' : 'id = ?';
   const ids = kind === 'order' ? [runId, orderId] : [runId];
@@ -32,7 +33,15 @@ export async function advanceMarketWork(env, kind, runId, orderId, sources) {
   if (Number(result.meta?.changes ?? result.changes) !== 1) return;
   let offers = Object.values(summary.offer_details || {});
   let complete = false;
-  if (work.next >= work.total) {
+  if (summary.vehicle_lookup?.status === 'pending') {
+    const vin = kind === 'lookup' ? row.vin : context.vin;
+    const sameVin = (await marketVinKey(vin)) === JSON.parse(row.fingerprint).vin_key;
+    const lookup = sameVin ? await resolveMarketVin(env, vin, summary.vehicle_lookup.requested_car) : { status: 'input_changed' };
+    summary.vehicle_lookup = { ...summary.vehicle_lookup, ...lookup };
+    summary.items = applyVinModel(summary.items, lookup);
+    work.items = summary.items.filter(canSearchMarketItem);
+    work.total = work.items.length * sources.length;
+  } else if (work.next >= work.total) {
     offers = await reviewMarketCandidates(env, work.items, offers);
     complete = true;
   } else {

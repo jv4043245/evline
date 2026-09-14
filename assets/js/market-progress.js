@@ -1,4 +1,5 @@
 export function marketProgressText(data) {
+  if (data?.summary?.vehicle_lookup?.status === 'pending') return 'Визначаємо модель за VIN…';
   const work = data?.summary?.work;
   if (!work) return 'Готуємо пошук…';
   return work.next >= work.total ? 'Завершуємо перевірку пропозицій…' : `Перевірки джерел: ${work.next} / ${work.total}`;
@@ -15,6 +16,7 @@ export async function finishMarketWork(data, requestStep, onProgress, { sleep = 
       data = await requestStep(data.run.id);
       failures = 0;
       onProgress(data);
+      if (data.summary?.vehicle_lookup?.status === 'pending') await sleep(1000);
     } catch (error) {
       // A killed Worker cannot catch its own CPU exception. Its persisted lease
       // expires and the next step records that source as failed, then continues.

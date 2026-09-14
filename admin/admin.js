@@ -1,7 +1,7 @@
-import { filterMarketOffers, summarizeMarketItem, hasMarketIdentity } from "../assets/js/market-comparison.js?v=20260914-relevance";
+import { filterMarketOffers, summarizeMarketItem, hasMarketIdentity, canSearchMarketItem } from "../assets/js/market-comparison.js?v=20260914-vin";
 import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { renderAirGuide } from "../assets/js/shipping-air-guide.js?v=20260914-guide";
-import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js";
+import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 
 const state = {
   range: "30d",
@@ -2609,7 +2609,7 @@ function renderMarketFeedbackUndo(item, data) {
 }
 
 function renderMarketSummaryItem(item, data) {
-  if (!hasMarketIdentity(item)) return `<section class="market-item"><h3>${escapeHtml(item.label)}</h3><p class="market-note market-note--caution">Уточніть модель авто або артикул. Ціни деталей для різних автомобілів не порівнюємо.</p></section>`;
+  if (!canSearchMarketItem(item)) return `<section class="market-item"><h3>${escapeHtml(item.label)}</h3><p class="market-note market-note--caution">Уточніть модель авто або артикул. Ціни деталей для різних автомобілів не порівнюємо.</p></section>`;
   const offers = filteredMarketOffers(data, item.key).filter((offer) => ["exact", "probable"].includes(offer.match_type) && !offer.feedback?.rejected);
   const summary = summarizeMarketItem(item, offers);
   const exact = offers.filter((offer) => offer.match_type === "exact");
@@ -2624,6 +2624,7 @@ function renderMarketSummaryItem(item, data) {
         </div>
         <div class="market-trust-counts" aria-label="Групи відповідності"><span class="market-chip market-chip--exact">Підтверджені: ${exact.length}</span><span class="market-chip market-chip--probable">Перевірити: ${similar.length}</span></div>
       </div>
+      ${!hasMarketIdentity(item) ? `<p class="market-note market-note--caution">Пошук за маркою ${escapeHtml(item.car)}. Модель не підтверджено: перевірте застосування кожної деталі.</p>` : ""}
       ${renderMarketFeedbackUndo(item, data)}
       ${summary.groups.map((group) => `
         <div class="market-price-group">
@@ -2632,7 +2633,7 @@ function renderMarketSummaryItem(item, data) {
           <div><span>Діапазон</span><strong>${money.format(group.min_uah)} – ${money.format(group.max_uah)}</strong>
           <details><summary>Середня ціна</summary>${money.format(group.average_uah)}</details></div>
         </div>`).join("")}
-      ${!exact.length ? `<p class="market-note market-note--caution">${offers.length ? "Є лише схожі товари. Уточніть артикул: їхні ціни не об'єднуємо в ринковий орієнтир." : "За цими фільтрами точних пропозицій немає."}</p>` : `<p class="market-note">Збіг артикула не підтверджує комплектацію та актуальність наявності. Перевірте у продавця.</p>`}
+      ${!hasMarketIdentity(item) ? '' : !exact.length ? `<p class="market-note market-note--caution">${offers.length ? "Є лише схожі товари. Уточніть артикул: їхні ціни не об'єднуємо в ринковий орієнтир." : "За цими фільтрами точних пропозицій немає."}</p>` : `<p class="market-note">Збіг артикула не підтверджує комплектацію та актуальність наявності. Перевірте у продавця.</p>`}
       ${exact.length ? `<div class="market-trust-group market-trust-group--exact"><h4>Підтверджені збіги <span>${exact.length}</span></h4><div class="market-offers">${exact.slice(0, 5).map(renderMarketOffer).join("")}</div>${exact.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${exact.length - 5}</summary>${exact.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</div>` : ""}
       ${similar.length ? `<details class="market-trust-group market-trust-group--probable" ${exact.length ? "" : "open"}><summary>Потрібна перевірка <span>${similar.length}</span></summary><p class="market-group-note">Не враховано в ціновому орієнтирі.</p>${similar.slice(0, 5).map(renderMarketOffer).join("")}${similar.length > 5 ? `<details class="market-more"><summary>Ще пропозиції: ${similar.length - 5}</summary>${similar.slice(5).map(renderMarketOffer).join("")}</details>` : ""}</details>` : ""}
     </section>
@@ -2701,6 +2702,22 @@ document.addEventListener("click", async (event) => {
   } catch (error) { status.textContent = error.message; button.disabled = false; }
 });
 
+function renderMarketVehicle(data) {
+  const lookup = data?.summary?.vehicle_lookup;
+  if (!lookup || ['not_needed', 'missing_vin', 'pending'].includes(lookup.status)) return '';
+  if (lookup.status === 'resolved') return `<p class="market-note" data-market-vehicle>Авто за VIN: <strong>${escapeHtml(lookup.car)}</strong> · 17VIN</p>`;
+  const messages = {
+    not_configured: 'Автовизначення за VIN ще не підключено. Модель можна вказати вручну.',
+    invalid_vin: 'Перевірте VIN: потрібно 17 латинських літер і цифр, без I, O та Q.',
+    ambiguous: 'VIN-каталог не підтвердив єдину модель. Уточніть авто вручну.',
+    conflict: 'Модель за VIN суперечить указаній марці. Перевірте VIN та авто.',
+    input_changed: 'VIN у заявці змінився. Оновіть пошук.',
+    not_found: 'Модель за VIN не знайдено. Уточніть авто вручну.',
+    provider_error: 'VIN-каталог тимчасово недоступний. Модель можна вказати вручну.',
+  };
+  return messages[lookup.status] ? `<p class="market-note market-note--caution" data-market-vehicle>${escapeHtml(messages[lookup.status])}</p>` : '';
+}
+
 function renderMarketResearchBody(order) {
   const data = state.marketResearchByOrder[order.id];
   const loading = state.marketResearchLoading.has(order.id);
@@ -2714,6 +2731,7 @@ function renderMarketResearchBody(order) {
       </div>
       ${updatedAt ? `<span class="market-panel__updated">Оновлено ${escapeHtml(shortDateTime(updatedAt))}</span>` : ""}
     </div>
+    ${renderMarketVehicle(data)}
     <details class="market-search-details" ${summaryItems.length && summaryItems.every(hasMarketIdentity) ? "" : "open"}><summary>Уточнити авто / запчастину / артикул</summary>
     <div class="market-search">
       <label>Авто / модель<input value="${escapeHtml(draft.car)}" placeholder="Напр.: BYD Yuan Plus" data-market-car></label>
@@ -2818,12 +2836,13 @@ function renderMarketLookupResult() {
   }
   if (state.marketLookup.error) return `<p class="market-note market-note--error">${escapeHtml(state.marketLookup.error)}</p>`;
   if (!data?.run) {
-    return `<div class="market-lookup-welcome"><strong>Введіть запчастину або артикул</strong><span>Модель автомобіля допоможе відсіяти нерелевантні пропозиції. VIN залишається всередині CRM і не надсилається стороннім сайтам.</span></div>`;
+    return `<div class="market-lookup-welcome"><strong>Введіть запчастину або артикул</strong><span>За підключеного VIN-каталогу код передається лише 17VIN для визначення авто. Конкурентам VIN не надсилаємо.</span></div>`;
   }
   const updatedAt = data.run.updated_at || data.run.created_at;
   const linkedOrderId = data.run.linked_order_id || "";
   return `
     <section class="market-lookup-results">
+      ${renderMarketVehicle(data)}
       <div class="market-lookup-results__head">
         <div>
           <span class="market-panel__kicker">Результат швидкої перевірки</span>
