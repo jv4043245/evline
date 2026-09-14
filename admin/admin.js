@@ -1,4 +1,6 @@
 import { filterMarketOffers, summarizeMarketItem } from "../assets/js/market-comparison.js";
+import { adminApiError } from "../assets/js/admin-api-errors.js";
+import { renderAirFreight } from "../assets/js/shipping-air-estimate.js";
 
 const state = {
   range: "30d",
@@ -472,8 +474,7 @@ async function api(path, options = {}) {
       setAdminUser("");
       setAuthVisible(true);
     }
-    let message = response.status === 401 ? "Немає доступу. Перевірте особистий токен." : await response.text();
-    try { const body = JSON.parse(message); message = typeof body.error === "string" ? body.error : message; } catch { /* Non-JSON errors remain readable. */ }
+    const message = await adminApiError(response);
     throw Object.assign(new Error(message), { status: response.status });
   }
   const userName = response.headers.get("x-evline-admin-name");
@@ -3075,10 +3076,15 @@ function renderShippingEstimate(order) {
   const head = `
     <div class="shipping-estimate__head">
       <div>
-        <h3>Море · Китай → Київ</h3>
+        <h3>Доставка · Китай → Київ</h3>
       </div>
-      <a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Детальний прайс</a>
+      <a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Калькулятор і прайс</a>
+    </div>
+    <div class="shipping-mode-switch" role="group" aria-label="Спосіб доставки">
+      <button type="button" data-estimate-mode="sea" aria-pressed="${settings.mode !== "air"}">Море</button>
+      <button type="button" data-estimate-mode="air" aria-pressed="${settings.mode === "air"}">Авіа</button>
     </div>`;
+  if (settings.mode === "air") return head + renderAirFreight(state.shipping, settings);
   if (!profile) {
     return `${head}<p class="muted">Тип деталі не визначено. Оцінка доставки недоступна.</p>
       <details class="order-editor__details" data-shipping-options><summary>Обрати деталь і пакування</summary>${controls}</details>`;
@@ -3382,6 +3388,10 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     </section>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "delivery" ? "is-active" : ""}" data-order-pane="delivery" ${activeOrderEditorTab() === "delivery" ? "" : "hidden"}>
+      <div class="order-editor__section">
+        <strong>Попередній розрахунок</strong>
+        <a class="admin-btn admin-btn--small" href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Калькулятор: море / авіа</a>
+      </div>
       <div class="order-editor__grid">
 
     <label>
@@ -4893,12 +4903,14 @@ document.querySelector("[data-market-lookup-panel]")?.addEventListener("submit",
 });
 
 document.querySelector("[data-market-lookup-panel]")?.addEventListener("change", (event) => {
-  if (!event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) return;
+  if (!event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing], [data-air-rate], [data-air-weight]")) return;
   const order = marketLookupOrder();
   const settings = state.shippingEstimateSettings[order.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
   if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
   if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
   if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
+  if (event.target.matches("[data-air-rate]")) settings.airRate = event.target.value;
+  if (event.target.matches("[data-air-weight]")) settings.airWeight = event.target.value;
   state.shippingEstimateSettings[order.id] = settings;
   updateMarketLookupShippingRoot();
 });
@@ -5028,11 +5040,13 @@ document.querySelector("[data-order-editor]")?.addEventListener("input", (event)
 
 document.querySelector("[data-order-editor]")?.addEventListener("change", (event) => {
   queueMicrotask(updateOrderSaveState);
-  if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing]")) {
+  if (state.selectedOrder?.id && event.target.matches("[data-shipping-estimate-profile], [data-shipping-estimate-vehicle], [data-shipping-estimate-packing], [data-air-rate], [data-air-weight]")) {
     const settings = state.shippingEstimateSettings[state.selectedOrder.id] || { profile: "auto", vehicle: "auto", packing: "shared" };
     if (event.target.matches("[data-shipping-estimate-profile]")) settings.profile = event.target.value;
     if (event.target.matches("[data-shipping-estimate-vehicle]")) settings.vehicle = event.target.value;
     if (event.target.matches("[data-shipping-estimate-packing]")) settings.packing = event.target.value;
+    if (event.target.matches("[data-air-rate]")) settings.airRate = event.target.value;
+    if (event.target.matches("[data-air-weight]")) settings.airWeight = event.target.value;
     state.shippingEstimateSettings[state.selectedOrder.id] = settings;
     updateShippingEstimateRoot(state.selectedOrder);
     return;
@@ -5046,6 +5060,17 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
   if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number'], [data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
+});
+
+document.addEventListener("click", event => {
+  const button = event.target.closest("[data-estimate-mode]");
+  if (!button || !state.shippingPricelist) return;
+  const lookup = button.closest("[data-market-lookup-panel]");
+  const order = lookup ? marketLookupOrder() : state.selectedOrder;
+  if (!order) return;
+  shippingEstimateSettings(order, state.shippingPricelist).settings.mode = button.dataset.estimateMode;
+  if (lookup) updateMarketLookupShippingRoot();
+  else updateShippingEstimateRoot(order);
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {

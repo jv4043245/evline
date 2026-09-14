@@ -17,6 +17,54 @@ const date = new Intl.DateTimeFormat("uk-UA", {
 });
 
 let pricelist;
+let shipping;
+let airLoading;
+let airError = "";
+const airSettings = {};
+
+function renderAirCalculator() {
+  const root = document.querySelector("[data-air-calculator]");
+  if (!root) return;
+  if (shipping) root.innerHTML = renderAirFreight(shipping, airSettings);
+  else root.textContent = airError || "Завантажуємо авіатарифи…";
+}
+
+async function loadAirRates() {
+  if (shipping || airLoading) return airLoading;
+  airError = "";
+  renderAirCalculator();
+  airLoading = (async () => {
+    try {
+      const token = localStorage.getItem("evline_admin_token") || "";
+      const response = await fetch("/api/admin/shipping", { headers: token ? { authorization: `Bearer ${token}` } : {}, cache: "no-store" });
+      if (!response.ok) throw new Error(await adminApiError(response));
+      shipping = await response.json();
+    } catch (error) {
+      airError = error.message;
+    } finally {
+      airLoading = null;
+      renderAirCalculator();
+    }
+  })();
+  return airLoading;
+}
+
+function setFreightMode(mode) {
+  const air = mode === "air";
+  document.querySelectorAll("[data-freight-mode]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.freightMode === mode)));
+  document.querySelectorAll("[data-sea-only]").forEach(node => { node.hidden = air; });
+  document.querySelector("[data-air-calculator]").hidden = !air;
+  if (air) loadAirRates();
+}
+
+document.querySelectorAll("[data-freight-mode]").forEach(button => button.addEventListener("click", () => setFreightMode(button.dataset.freightMode)));
+document.querySelector("[data-air-calculator]")?.addEventListener("change", event => {
+  if (event.target.matches("[data-air-rate]")) airSettings.airRate = event.target.value;
+  else if (event.target.matches("[data-air-weight]")) airSettings.airWeight = event.target.value;
+  else return;
+  renderAirCalculator();
+});
+if (location.hash === "#air") setFreightMode("air");
 
 function setText(selector, value) {
   const node = document.querySelector(selector);
@@ -137,3 +185,5 @@ document.querySelector("[data-shipping-calculator]")?.addEventListener("change",
 loadPricelist().catch((error) => {
   setText("[data-pricelist-status]", error.message);
 });
+import { adminApiError } from "../../assets/js/admin-api-errors.js";
+import { renderAirFreight } from "../../assets/js/shipping-air-estimate.js";

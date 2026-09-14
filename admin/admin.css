@@ -2280,6 +2280,7 @@ body.audit-log-open .audit-log-panel {
   gap: 8px;
 }
 
+.shipping-estimate__controls input,
 .shipping-estimate__controls select {
   width: 100%;
   max-width: 100%;
@@ -2288,6 +2289,14 @@ body.audit-log-open .audit-log-panel {
   background: #fff;
   box-sizing: border-box;
 }
+
+.shipping-mode-switch { display: flex; gap: 4px; flex-wrap: wrap; margin-block: 4px 12px; }
+.shipping-mode-switch button { min-width: 76px; min-height: 40px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; }
+.shipping-mode-switch button[aria-pressed="true"] { background: #eaf7f0; color: var(--green-dark); border-color: #a8d8bd; }
+.shipping-mode-switch button:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+.shipping-estimate__controls.shipping-air-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.shipping-air-controls label { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .shipping-estimate__controls.shipping-air-controls { grid-template-columns: 1fr; } }
 
 .shipping-estimate__result {
   display: grid;
