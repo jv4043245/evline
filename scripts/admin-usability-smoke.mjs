@@ -42,13 +42,17 @@ try {
     let failSave = true;
     let saved;
     let supplierPayload;
+    let failMarket = false;
     const requests = [];
     await page.route('**/api/**', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
       requests.push({ path: url.pathname, method: request.method() });
       let body = {};
-      if (url.pathname.endsWith('/market-research')) body = market;
+      if (url.pathname.endsWith('/market-research')) {
+        if (failMarket && request.method() === 'POST') return route.fulfill({ status: 500, contentType: 'text/html', body: '<!DOCTYPE html><html><title>Worker exceeded resource limits</title><body>1102</body></html>' });
+        body = market;
+      }
       else if (url.pathname === '/api/admin/market-feedback') {
         const payload = request.postDataJSON();
         const row = market.offers.find(row => JSON.stringify([row.item_key, row.source_key, row.product_url]) === payload.offer_key);
@@ -71,6 +75,7 @@ try {
       else if (url.pathname === '/api/admin/summary') body = { totals: {}, sources: [], campaigns: [], daily: [] };
       else if (url.pathname === '/api/admin/market-search') body = { history: [], ...market };
       else if (url.pathname === '/api/admin/suppliers') body = { suppliers: [{ id: 'byd', name: 'BYD', active: 1 }] };
+      else if (url.pathname === '/api/admin/shipping') body = { carriers: [{ id: 'air-test', name: 'Test Air', active: 1 }], rates: [{ id: 'air-test-rate', carrier_id: 'air-test', mode: 'air', active: 1, rate: 11.3, currency: 'USD', unit: 'kg', min_weight_kg: 30, estimated_days_min: 12, estimated_days_max: 15, updated_at: '2026-06-08' }] };
       return route.fulfill({ json: body });
     });
     await page.goto(`${origin}/admin/`);
@@ -124,6 +129,21 @@ try {
     assert.equal(await form.locator('.market-offer').count(), 0);
     assert.match(await form.locator('.market-items').innerText(), /За цими фільтрами точних пропозицій немає/);
     assert.doesNotMatch(await form.locator('.market-items').innerText(), /Є лише схожі товари|Несумісн/);
+    failMarket = true;
+    await form.locator('.market-search-details > summary').click();
+    await form.locator('[data-market-refresh]').click();
+    await form.getByText(/Пошук перевищив ліміт ресурсів/).waitFor();
+    assert.doesNotMatch(await form.innerText(), /<!DOCTYPE|<html>|cf-wrapper/);
+    const estimate = form.locator('[data-shipping-estimate-root]');
+    await estimate.locator('[data-estimate-mode="air"]').click();
+    await estimate.locator('[data-air-weight]').fill('40.5');
+    await estimate.locator('[data-air-weight]').press('Tab');
+    assert.match(await estimate.locator('[data-air-total]').innerText(), /457,65/);
+    await estimate.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/market-air-${width}.png` });
+    await estimate.locator('[data-estimate-mode="sea"]').click();
+    assert.equal(await estimate.locator('[data-air-total]').count(), 0);
+    failMarket = false;
     page.once('dialog', (dialog) => dialog.dismiss());
     await page.locator('[data-close-order]').last().click();
     assert.equal(await page.locator('[data-order-detail-panel]').getAttribute('aria-hidden'), 'false');
@@ -167,7 +187,7 @@ try {
     await page.screenshot({ path: `${output}/supplier-${width}.png` });
     const overflow = await page.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1, panels: [...document.querySelectorAll('[aria-hidden="false"]')].filter((el) => el.getBoundingClientRect().width > 0 && el.scrollWidth > el.clientWidth + 2).map((el) => el.className) }));
     assert.deepEqual(overflow, { page: false, panels: [] });
-    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/market-feedback'].includes(request.path)), false);
+    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/market-feedback', '/api/admin/orders/smoke-order/market-research'].includes(request.path)), false);
     await page.locator('[data-china-request-close]').last().click();
     await page.locator('.admin-tabs [data-admin-tab="analytics"]').click();
     assert.equal(await page.locator('[data-analytics-nav]').isVisible(), true);
@@ -204,6 +224,19 @@ try {
     assert.ok(calculatorBox.y < 550, 'Calculator must come before methodology');
     assert.equal(await page.locator('.shipping-source-card').isVisible(), false);
     await page.screenshot({ path: `${output}/shipping-calculator-${width}.png` });
+    await page.locator('[data-freight-mode="air"]').click();
+    await page.locator('[data-air-weight]').fill('20');
+    await page.locator('[data-air-weight]').press('Tab');
+    assert.match(await page.locator('[data-air-total]').innerText(), /339/);
+    assert.equal(await page.locator('[data-shipping-calculator]').isVisible(), false);
+    await page.locator('[data-air-weight]').fill('40.5');
+    await page.locator('[data-air-weight]').press('Tab');
+    assert.match(await page.locator('[data-air-total]').innerText(), /457,65/);
+    const airOverflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
+    assert.equal(airOverflow, false);
+    await page.screenshot({ path: `${output}/air-calculator-${width}.png`, fullPage: true });
+    await page.locator('[data-freight-mode="sea"]').click();
+    assert.equal(await page.locator('[data-shipping-calculator]').isVisible(), true);
     await context.close();
     console.log(`PASS ${width}px: navigation, market filters/copy, dirty guard, failed/successful save, payments, supplier link, overflow`);
   }

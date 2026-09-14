@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260718-request-clamp">
+    <link rel="stylesheet" href="/admin/admin.css?v=20260914-air">
     <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260906-usability">
-    <script src="/admin/shipping-pricelist/pricelist.js?v=20260826-v1" defer></script>
+    <script type="module" src="/admin/shipping-pricelist/pricelist.js?v=20260914-air"></script>
   </head>
   <body class="admin-shell shipping-pricelist-page">
     <header class="admin-header">
@@ -30,8 +30,8 @@
     <main class="admin-main shipping-pricelist-main">
       <section class="shipping-pricelist-hero">
         <div>
-          <p class="shipping-pricelist-kicker">Море · Китай → Київ</p>
-          <h1>Орієнтовна доставка кузовних деталей</h1>
+          <p class="shipping-pricelist-kicker">Море / Авіа · Китай → Київ</p>
+          <h1>Калькулятор доставки</h1>
           <p>Стартова база для швидкої оцінки. Після отримання габаритів упаковки норматив замінюється точним розрахунком.</p>
         </div>
 
@@ -44,10 +44,15 @@
           <div class="admin-panel__head">
             <div>
               <h2>Швидкий розрахунок</h2>
-              <p class="muted">Робоча ціна вже містить резерв 15%. Страхування додається за вартістю товару.</p>
+              <p class="muted" data-sea-only>Море: робоча ціна містить резерв 15%. Страхування додається за вартістю товару.</p>
             </div>
           </div>
           <div class="shipping-pricelist-card-body">
+            <div class="shipping-mode-switch" role="group" aria-label="Спосіб доставки">
+              <button type="button" data-freight-mode="sea" aria-pressed="true">Море</button>
+              <button type="button" data-freight-mode="air" aria-pressed="false">Авіа</button>
+            </div>
+            <div data-sea-only>
             <form data-shipping-calculator>
               <label>
                 Деталь
@@ -86,16 +91,18 @@
             </div>
             <p class="shipping-calculator-exclusion">Не включено: доставка по Китаю та фактична вартість обрешітки за рахунком постачальника.</p>
             <p class="shipping-calculator-note" data-result-note></p>
+            </div>
+            <div data-air-calculator hidden></div>
           </div>
         </article>
 
 
       </section>
 
-      <section class="admin-panel shipping-pricelist-table-panel">
+      <section class="admin-panel shipping-pricelist-table-panel" data-sea-only>
         <div class="admin-panel__head">
           <div>
-            <h2>Стартовий прайс по категоріях</h2>
+            <h2>Море: прайс по категоріях</h2>
             <p class="muted">Робоча ціна підходить для попередньої пропозиції; діапазон враховує невизначеність упаковки.</p>
           </div>
         </div>
@@ -118,7 +125,7 @@
         </div>
       </section>
 
-      <section class="admin-panel shipping-pricelist-rules">
+      <section class="admin-panel shipping-pricelist-rules" data-sea-only>
         <div class="admin-panel__head">
           <div>
             <h2>Правила використання</h2>
@@ -129,7 +136,7 @@
       </section>
 
       <p class="shipping-pricelist-status" data-pricelist-status role="status"></p>
-      <details class="shipping-methodology"><summary>Методика та документи-основи</summary>
+      <details class="shipping-methodology" data-sea-only><summary>Методика та документи-основи</summary>
         <div class="shipping-pricelist-version">
           <span>Версія</span>
           <strong data-version>0.1</strong>

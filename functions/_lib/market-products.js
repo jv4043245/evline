@@ -85,7 +85,9 @@ function fromCard(card, base, productPage = false) {
 }
 
 export function parseMarketProducts(sourceKey, html, base, { productPage = false } = {}) {
-  const root = parse(html, { comment: false, blockTextElements: { script: true, style: true, pre: false } });
+  // Keep unclosed containers: repairing large malformed catalogues reparents
+  // thousands of children repeatedly and exhausts the Worker's CPU budget.
+  const root = parse(html, { comment: false, parseNoneClosedTags: true, blockTextElements: { script: true, style: true, pre: false } });
   if (sourceKey === 'zevs' && !root.querySelector('[data-company-id="4149823"], a[href*="/c4149823-"]')) return [];
   const out = [];
   const pageCurrency = value(root, '[itemprop="priceCurrency"], meta[property="product:price:currency"]');
