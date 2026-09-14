@@ -4,6 +4,7 @@ import { parseMarketProducts } from "./market-products.js";
 import { redactMarketText, splitMarketLabels, enrichMarketItems, reviewMarketCandidates } from "./market-query.js";
 import { researchMarketItems } from "./market-fetch.js";
 import { hydrateMarketResult, offerIdentity } from "./market-feedback.js";
+import { initialMarketWork, advanceMarketWork } from "./market-work.js";
 
 export const MARKET_RESEARCH_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_RESEARCH_ITEMS = 3;
@@ -286,7 +287,9 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
   await ensureMarketResearchTables(env);
   const items = splitRequestedItems(order, overrides);
   const fingerprint = fingerprintFor(order, items);
-  const run = await env.DB.prepare(
+  const run = overrides.run_id ? await env.DB.prepare(
+    "SELECT * FROM market_research_runs WHERE order_id = ? AND id = ?"
+  ).bind(order.id, overrides.run_id).first() : await env.DB.prepare(
     "SELECT * FROM market_research_runs WHERE order_id = ? ORDER BY created_at DESC LIMIT 1"
   ).bind(order.id).first();
   if (!run) {
@@ -295,7 +298,8 @@ export async function getLatestMarketResearch(env, order, overrides = {}) {
   const rows = await env.DB.prepare(
     "SELECT * FROM market_research_offers WHERE run_id = ? ORDER BY item_key, match_type, price_uah"
   ).bind(run.id).all();
-  const { summary, offers } = await hydrateMarketResult(env, parseJson(run.summary_json, { items: [] }), rows.results || []);
+  const storedSummary = parseJson(run.summary_json, { items: [] });
+  const { summary, offers } = await hydrateMarketResult(env, storedSummary, storedSummary.work?.version === 1 ? Object.values(storedSummary.offer_details || {}) : rows.results || []);
   const updatedAt = Date.parse(run.updated_at || run.created_at || 0);
   const stale = !updatedAt || Date.now() - updatedAt > MARKET_RESEARCH_TTL_MS;
   return {
@@ -328,6 +332,16 @@ export async function runMarketResearch(env, order, overrides = {}) {
       id, order_id, created_at, updated_at, status, fingerprint, query, item_count
     ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`
   ).bind(runId, order.id, now, now, fingerprint, items.map((item) => item.query).join(" | "), items.length).run();
+
+  if (overrides.incremental) {
+    const summary = initialMarketWork(items, COMPETITOR_SOURCES, {
+      matching_version: MARKET_MATCH_VERSION, ai_status: parsed.ai_status,
+      requested_item_count: allItems.length, ignored_item_count: Math.max(0, allItems.length - items.length),
+      manual_query: Boolean(text(overrides.query) || text(overrides.part_number)),
+    });
+    await env.DB.prepare('UPDATE market_research_runs SET summary_json = ? WHERE id = ?').bind(JSON.stringify(summary), runId).run();
+    return getLatestMarketResearch(env, order, { ...overrides, run_id: runId });
+  }
 
   try {
     const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
@@ -370,7 +384,7 @@ export async function runMarketResearch(env, order, overrides = {}) {
     ).bind(new Date().toISOString(), text(error?.message || error).slice(0, 500), runId).run();
     throw error;
   }
-  return getLatestMarketResearch(env, order, overrides);
+  return getLatestMarketResearch(env, order, { ...overrides, run_id: runId });
 }
 
 async function ensureMarketLookupTables(env) {
@@ -402,7 +416,8 @@ async function ensureMarketLookupTables(env) {
 
 async function lookupResult(env, row) {
   if (!row) return null;
-  const { summary, offers } = await hydrateMarketResult(env, parseJson(row.summary_json, { items: [] }), parseJson(row.offers_json, []));
+  const storedSummary = parseJson(row.summary_json, { items: [] });
+  const { summary, offers } = await hydrateMarketResult(env, storedSummary, storedSummary.work?.version === 1 ? Object.values(storedSummary.offer_details || {}) : parseJson(row.offers_json, []));
   const sources = parseJson(row.source_status_json, []);
   return {
     run: { ...row, summary, source_status: sources },
@@ -469,6 +484,16 @@ export async function runMarketLookup(env, input = {}) {
     ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`
   ).bind(runId, now, now, lookup.car, lookup.vin, lookup.query, lookup.part_number, fingerprint, items.length).run();
 
+  if (input.incremental) {
+    const summary = initialMarketWork(items, COMPETITOR_SOURCES, {
+      matching_version: MARKET_MATCH_VERSION, ai_status: parsed.ai_status,
+      requested_item_count: allItems.length, ignored_item_count: Math.max(0, allItems.length - items.length), manual_query: true,
+    });
+    await env.DB.prepare('UPDATE market_lookup_runs SET summary_json = ? WHERE id = ?').bind(JSON.stringify(summary), runId).run();
+    await env.DB.prepare("DELETE FROM market_lookup_runs WHERE id NOT IN (SELECT id FROM market_lookup_runs ORDER BY created_at DESC LIMIT 100)").run();
+    return getMarketLookup(env, runId);
+  }
+
   try {
     const { offers: candidates, sources } = await researchMarketItems(items, COMPETITOR_SOURCES);
     const offers = await reviewMarketCandidates(env, items, candidates);
@@ -505,6 +530,18 @@ export async function runMarketLookup(env, input = {}) {
     ).bind(new Date().toISOString(), text(error?.message || error).slice(0, 500), runId).run();
     throw error;
   }
+  return getMarketLookup(env, runId);
+}
+
+export async function continueMarketResearch(env, order, runId) {
+  await ensureMarketResearchTables(env);
+  await advanceMarketWork(env, 'order', text(runId), order.id, COMPETITOR_SOURCES);
+  return getLatestMarketResearch(env, order, { run_id: text(runId) });
+}
+
+export async function continueMarketLookup(env, runId) {
+  await ensureMarketLookupTables(env);
+  await advanceMarketWork(env, 'lookup', text(runId), '', COMPETITOR_SOURCES);
   return getMarketLookup(env, runId);
 }
 

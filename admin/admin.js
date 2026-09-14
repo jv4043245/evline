@@ -1,6 +1,7 @@
 import { filterMarketOffers, summarizeMarketItem } from "../assets/js/market-comparison.js";
 import { adminApiError } from "../assets/js/admin-api-errors.js";
-import { renderAirFreight } from "../assets/js/shipping-air-estimate.js";
+import { renderAirFreight, updateAirFreightOutput } from "../assets/js/shipping-air-estimate.js?v=20260914-progress";
+import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js";
 
 const state = {
   range: "30d",
@@ -2723,10 +2724,11 @@ function renderMarketResearchBody(order) {
       <button class="admin-btn admin-btn--primary" type="button" data-market-refresh ${loading ? "disabled" : ""}>${loading ? "Перевіряємо 11 джерел..." : "Оновити пошук"}</button>
     </div>
     </details>
+    <p class="market-note" data-market-progress ${loading ? "" : "hidden"}>${escapeHtml(marketProgressText(data))}</p>
     ${data?.error ? `<p class="market-note market-note--error">${escapeHtml(data.error)}</p>` : ""}
     ${loading && !summaryItems.length ? `<div class="market-loading"><span></span><strong>Збираємо ціни та наявність у 11 профільних продавців</strong><small>Карткою замовлення можна користуватися паралельно.</small></div>` : ""}
     ${!loading && !data?.run && !summaryItems.length ? `<p class="market-empty">Вкажіть запчастину або артикул. Пошук запуститься автоматично після відкриття вкладки.</p>` : ""}
-    ${summaryItems.length ? `
+    ${summaryItems.length && (!loading || data?.offers?.length) ? `
       <div class="market-toolbar">
         <div class="market-filters" aria-label="Фільтр наявності">
           ${marketFilterButton("availability", "all", "Усі")}
@@ -2838,7 +2840,7 @@ function renderMarketLookupResult() {
         </div>
       </div>
       ${data.summary?.ignored_item_count ? `<p class="market-note">Перевірено перші 3 позиції. Ще ${Number(data.summary.ignored_item_count)} краще шукати окремо.</p>` : ""}
-      <div class="market-items">${summaryItems.map((item) => renderMarketSummaryItem(item, data)).join("")}</div>
+      <div class="market-items">${loading && !data.offers?.length ? "" : summaryItems.map((item) => renderMarketSummaryItem(item, data)).join("")}</div>
       ${renderMarketSources(data)}
       <div class="shipping-estimate" data-market-lookup-shipping>${renderShippingEstimate(marketLookupOrder())}</div>
       <div class="market-lookup-actions">
@@ -2847,7 +2849,7 @@ function renderMarketLookupResult() {
           <select data-market-lookup-order aria-label="Замовлення для прив'язки">
             ${marketLookupOrderOptions(linkedOrderId)}
           </select>
-          <button class="admin-btn" type="button" data-market-lookup-attach ${linkedOrderId ? "disabled" : ""}>${linkedOrderId ? "Прив'язано" : "Прив'язати"}</button>
+          <button class="admin-btn" type="button" data-market-lookup-attach ${linkedOrderId || data.run.status !== "complete" ? "disabled" : ""}>${linkedOrderId ? "Прив'язано" : "Прив'язати"}</button>
         </div>
         <button class="admin-btn" type="button" data-market-lookup-copy>Скопіювати орієнтир</button>
       </div>
@@ -2879,6 +2881,7 @@ function renderMarketLookup() {
       </label>
       <button class="admin-btn admin-btn--primary" type="submit" ${state.marketLookup.loading ? "disabled" : ""}>${state.marketLookup.loading ? "Шукаємо..." : "Знайти ціни"}</button>
     </form>
+    <p class="market-note" data-market-progress ${state.marketLookup.loading ? "" : "hidden"}>${escapeHtml(marketProgressText(state.marketLookup.result))}</p>
     <div class="market-lookup-content">${renderMarketLookupResult()}</div>
     <details class="market-lookup-history" ${state.marketLookup.history.length ? "" : "open"}>
       <summary>Останні перевірки${state.marketLookup.history.length ? ` · ${state.marketLookup.history.length}` : ""}</summary>
@@ -2915,6 +2918,8 @@ async function loadMarketLookup(id) {
       query: data.run?.query || "",
       partNumber: data.run?.part_number || "",
     };
+    renderMarketLookup();
+    state.marketLookup.result = await drainMarketLookup(data);
   } catch (error) {
     state.marketLookup.error = error.message;
   } finally {
@@ -2938,6 +2943,8 @@ async function runMarketLookup() {
         part_number: state.marketLookup.draft.partNumber,
       }),
     });
+    renderMarketLookup();
+    state.marketLookup.result = await drainMarketLookup(state.marketLookup.result);
     await loadMarketLookupHistory();
   } catch (error) {
     state.marketLookup.error = error.message;
@@ -2968,7 +2975,9 @@ async function loadMarketResearch(orderId, options = {}) {
     const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/market-research`);
     state.marketResearchByOrder[orderId] = data;
     updateMarketResearchRoot();
-    if (options.refreshIfNeeded && data.should_refresh && data.can_search) {
+    if (data.run?.status === 'pending' && data.summary?.work?.version === 1) {
+      state.marketResearchByOrder[orderId] = await drainOrderMarket(orderId, data);
+    } else if (options.refreshIfNeeded && data.should_refresh && data.can_search) {
       await refreshMarketResearch(orderId, {}, { automatic: true });
     }
   } catch (error) {
@@ -2990,6 +2999,8 @@ async function refreshMarketResearch(orderId, overrides = {}, options = {}) {
       body: JSON.stringify(overrides),
     });
     state.marketResearchByOrder[orderId] = data;
+    updateMarketResearchRoot();
+    state.marketResearchByOrder[orderId] = await drainOrderMarket(orderId, data);
   } catch (error) {
     state.marketResearchByOrder[orderId] = { ...(state.marketResearchByOrder[orderId] || {}), error: error.message };
     if (!options.automatic) throw error;
@@ -2997,6 +3008,29 @@ async function refreshMarketResearch(orderId, overrides = {}, options = {}) {
     if (!options.automatic) state.marketResearchLoading.delete(orderId);
     updateMarketResearchRoot();
   }
+}
+
+function updateMarketProgress(root, data) {
+  const node = root?.querySelector('[data-market-progress]');
+  if (node) node.textContent = marketProgressText(data);
+}
+
+function drainOrderMarket(orderId, data) {
+  return finishMarketWork(data, runId => api(`/api/admin/orders/${encodeURIComponent(orderId)}/market-research`, {
+    method: 'POST', body: JSON.stringify({ action: 'continue', run_id: runId }),
+  }), next => {
+    state.marketResearchByOrder[orderId] = next;
+    if (state.selectedOrder?.id === orderId) updateMarketProgress(document.querySelector('[data-order-editor]'), next);
+  });
+}
+
+function drainMarketLookup(data) {
+  return finishMarketWork(data, runId => api('/api/admin/market-search', {
+    method: 'POST', body: JSON.stringify({ action: 'continue', run_id: runId }),
+  }), next => {
+    state.marketLookup.result = next;
+    updateMarketProgress(document.querySelector('[data-market-lookup-panel]'), next);
+  });
 }
 
 async function ensureShippingPricelist() {
@@ -5060,6 +5094,16 @@ document.querySelector("[data-order-editor]")?.addEventListener("change", (event
   if (event.target.matches("[data-shipping-carrier], [data-shipping-mode], [name='tracking_number'], [data-shipping-carrier-custom-input]")) {
     applyShippingSelection(event.currentTarget, { overwriteCost: true });
   }
+});
+
+document.addEventListener("input", event => {
+  if (!event.target.matches('[data-air-weight]')) return;
+  const lookup = event.target.closest('[data-market-lookup-panel]');
+  const order = lookup ? marketLookupOrder() : state.selectedOrder;
+  if (!order || !state.shippingPricelist) return;
+  const settings = shippingEstimateSettings(order, state.shippingPricelist).settings;
+  settings.airWeight = event.target.value;
+  updateAirFreightOutput(event.target.closest('.shipping-estimate'), state.shipping, settings);
 });
 
 document.addEventListener("click", event => {

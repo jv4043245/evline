@@ -30,7 +30,7 @@ export function renderAirFreight(shipping, settings = {}) {
     <label>Перевізник / тариф<select data-air-rate>${rates.map(row => `<option value="${escape(row.id)}" ${row === rate ? "selected" : ""}>${escape(label(row))}</option>`).join("")}</select></label>
     <label>Оплачувана вага відправлення, кг<input data-air-weight type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" value="${escape(settings.airWeight || "")}" placeholder="Вага для тарифікації"></label>
   </div>
-  <div class="shipping-estimate__result" aria-live="polite">
+  <div data-air-output><div class="shipping-estimate__result" aria-live="polite">
     <div><span>Авіаперевезення</span><strong data-air-total>${result ? escape(money(result.freight, result.currency)) : "—"}</strong></div>
     <div><span>Строк за довідником</span><strong>${escape(days)}</strong></div>
   </div>
@@ -38,5 +38,12 @@ export function renderAirFreight(shipping, settings = {}) {
     ${Number(rate.min_weight_kg) > 0 ? `Мінімум за тарифом: ${number(rate.min_weight_kg)} кг на відправлення, не на кожну деталь.` : ""}
     ${Number(rate.min_charge) > 0 ? `Мінімальна сума: ${number(rate.min_charge)} ${escape(rate.currency)}.` : ""}
     ${result?.minimumApplied ? `Застосовано мінімум тарифу; розрахункова вага ${number(result.billedKg)} кг.` : ""}</p>
-  <p class="shipping-estimate__caveat">Орієнтир за тарифом довідника${rate.updated_at ? ` від ${escape(String(rate.updated_at).slice(0, 10))}` : ""}; актуальну ставку й строк підтверджує перевізник. Без страхування, обрешітки, доставки по Китаю та інших зборів. Морські нормативи деталей тут не використовуються.</p>`;
+  <p class="shipping-estimate__caveat">Орієнтир за тарифом довідника${rate.updated_at ? ` від ${escape(String(rate.updated_at).slice(0, 10))}` : ""}; актуальну ставку й строк підтверджує перевізник. Без страхування, обрешітки, доставки по Китаю та інших зборів. Морські нормативи деталей тут не використовуються.</p></div>`;
+}
+
+export function updateAirFreightOutput(root, shipping, settings) {
+  const template = document.createElement('template');
+  template.innerHTML = renderAirFreight(shipping, settings);
+  const output = template.content.querySelector('[data-air-output]');
+  if (output) root.querySelector('[data-air-output]')?.replaceWith(output);
 }

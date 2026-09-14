@@ -4,6 +4,32 @@ import { readFile } from 'node:fs/promises';
 import { adminApiError } from '../assets/js/admin-api-errors.js';
 import { calculateAirFreight, airFreightRates, renderAirFreight } from '../assets/js/shipping-air-estimate.js';
 import { parseMarketProducts } from '../functions/_lib/market-products.js';
+import { finishMarketWork, marketProgressText } from '../assets/js/market-progress.js';
+
+test('browser resumes persisted work after a killed Worker and reports source progress', async () => {
+  let calls = 0, elapsed = 0;
+  const initial = { run: { id: 'run', status: 'pending' }, summary: { work: { version: 1, next: 0, total: 2 } } };
+  assert.match(marketProgressText(initial), /0 \/ 2/);
+  const result = await finishMarketWork(initial, async id => {
+    assert.equal(id, 'run');
+    if (++calls === 1) throw Object.assign(new Error('CPU'), { status: 503 });
+    if (calls === 2) return { ...initial, summary: { work: { ...initial.summary.work, lease: { until: 3000 } } } };
+    return { ...initial, run: { id, status: 'complete' } };
+  }, () => {}, { now: () => elapsed, sleep: async ms => { elapsed += ms; } });
+  assert.equal(result.run.status, 'complete');
+  assert.equal(calls, 3);
+  assert.ok(elapsed >= 3000);
+});
+
+test('browser does not retry authorization errors or unbounded failing requests', async () => {
+  const data = { run: { id: 'run', status: 'pending' }, summary: { work: { version: 1 } } };
+  let calls = 0;
+  await assert.rejects(finishMarketWork(data, async () => { calls++; throw Object.assign(new Error('Denied'), { status: 401 }); }, () => {}), /Denied/);
+  assert.equal(calls, 1);
+  calls = 0;
+  await assert.rejects(finishMarketWork(data, async () => { calls++; throw Object.assign(new Error('Busy'), { status: 503 }); }, () => {}, { sleep: async () => {} }), /Busy/);
+  assert.equal(calls, 3);
+});
 
 test('Cloudflare 1102 becomes a short actionable error without HTML or visitor data', async () => {
   const response = new Response('<!DOCTYPE html><html><title>Worker exceeded resource limits</title><body>Ray ID: abcdef0123456789-VIE Your IP: 192.0.2.1</body></html>', { status: 500 });

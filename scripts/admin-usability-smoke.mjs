@@ -43,6 +43,9 @@ try {
     let saved;
     let supplierPayload;
     let failMarket = false;
+    let orderSteps = 0;
+    let lookupSteps = 0;
+    const pendingMarket = next => ({ ...market, run: { ...market.run, status: 'pending' }, summary: { ...market.summary, work: { version: 1, next, total: 2 } } });
     const requests = [];
     await page.route('**/api/**', async (route) => {
       const request = route.request();
@@ -51,7 +54,8 @@ try {
       let body = {};
       if (url.pathname.endsWith('/market-research')) {
         if (failMarket && request.method() === 'POST') return route.fulfill({ status: 500, contentType: 'text/html', body: '<!DOCTYPE html><html><title>Worker exceeded resource limits</title><body>1102</body></html>' });
-        body = market;
+        if (request.method() === 'POST' && request.postDataJSON()?.action === 'continue') orderSteps++;
+        body = orderSteps < 2 ? pendingMarket(orderSteps) : market;
       }
       else if (url.pathname === '/api/admin/market-feedback') {
         const payload = request.postDataJSON();
@@ -73,7 +77,10 @@ try {
         body = detail();
       } else if (url.pathname === '/api/admin/orders') body = { orders: [order, { ...order, id: 'duplicate', order_number: 'O-900002' }], total: 2 };
       else if (url.pathname === '/api/admin/summary') body = { totals: {}, sources: [], campaigns: [], daily: [] };
-      else if (url.pathname === '/api/admin/market-search') body = { history: [], ...market };
+      else if (url.pathname === '/api/admin/market-search') {
+        if (request.method() === 'POST' && request.postDataJSON()?.action === 'continue') lookupSteps++;
+        body = { history: [], ...(request.method() === 'POST' && lookupSteps < 2 ? pendingMarket(lookupSteps) : market) };
+      }
       else if (url.pathname === '/api/admin/suppliers') body = { suppliers: [{ id: 'byd', name: 'BYD', active: 1 }] };
       else if (url.pathname === '/api/admin/shipping') body = { carriers: [{ id: 'air-test', name: 'Test Air', active: 1 }], rates: [{ id: 'air-test-rate', carrier_id: 'air-test', mode: 'air', active: 1, rate: 11.3, currency: 'USD', unit: 'kg', min_weight_kg: 30, estimated_days_min: 12, estimated_days_max: 15, updated_at: '2026-06-08' }] };
       return route.fulfill({ json: body });
@@ -101,6 +108,8 @@ try {
     await form.locator('[name="manager_notes"]').fill('Незбережена нотатка');
     await form.locator('[data-order-tab="market"]').click();
     await form.locator('.market-price-group').first().waitFor();
+    await form.locator('[data-market-progress]').waitFor({ state: 'hidden' });
+    assert.equal(orderSteps, 2);
     await form.locator('[data-market-filter-group="availability"][data-market-filter-value="in_stock"]').click();
     assert.equal(await form.locator('.market-price-group').count(), 1);
     assert.match(await form.locator('.market-price-group').innerText(), /2\s?000/);
@@ -137,6 +146,7 @@ try {
     const estimate = form.locator('[data-shipping-estimate-root]');
     await estimate.locator('[data-estimate-mode="air"]').click();
     await estimate.locator('[data-air-weight]').fill('40.5');
+    assert.match(await estimate.locator('[data-air-total]').innerText(), /457,65/);
     await estimate.locator('[data-air-weight]').press('Tab');
     assert.match(await estimate.locator('[data-air-total]').innerText(), /457,65/);
     await estimate.scrollIntoViewIfNeeded();
@@ -207,6 +217,8 @@ try {
     await lookup.locator('[name="part_number"]').fill('13158405-00');
     await lookup.locator('[data-market-lookup-form] [type="submit"]').click();
     await lookup.locator('.market-item').waitFor();
+    await lookup.locator('[data-market-progress]').waitFor({ state: 'hidden' });
+    assert.equal(lookupSteps, 2);
     await lookup.locator('[data-market-filter-group="partType"][data-market-filter-value="all"]').click();
     assert.equal(await lookup.locator('.market-offer--exact').count(), 3);
     assert.doesNotMatch(await lookup.locator('.market-items').innerText(), /Несумісн|Фара ліва/);
@@ -226,6 +238,7 @@ try {
     await page.screenshot({ path: `${output}/shipping-calculator-${width}.png` });
     await page.locator('[data-freight-mode="air"]').click();
     await page.locator('[data-air-weight]').fill('20');
+    assert.match(await page.locator('[data-air-total]').innerText(), /339/);
     await page.locator('[data-air-weight]').press('Tab');
     assert.match(await page.locator('[data-air-total]').innerText(), /339/);
     assert.equal(await page.locator('[data-shipping-calculator]').isVisible(), false);

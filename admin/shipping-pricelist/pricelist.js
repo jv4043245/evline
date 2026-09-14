@@ -1,3 +1,6 @@
+import { adminApiError } from "../../assets/js/admin-api-errors.js";
+import { renderAirFreight, updateAirFreightOutput } from "../../assets/js/shipping-air-estimate.js?v=20260914-progress";
+
 const usd = new Intl.NumberFormat("uk-UA", {
   style: "currency",
   currency: "USD",
@@ -63,6 +66,11 @@ document.querySelector("[data-air-calculator]")?.addEventListener("change", even
   else if (event.target.matches("[data-air-weight]")) airSettings.airWeight = event.target.value;
   else return;
   renderAirCalculator();
+});
+document.querySelector("[data-air-calculator]")?.addEventListener("input", event => {
+  if (!event.target.matches('[data-air-weight]')) return;
+  airSettings.airWeight = event.target.value;
+  updateAirFreightOutput(event.currentTarget, shipping, airSettings);
 });
 if (location.hash === "#air") setFreightMode("air");
 
@@ -185,5 +193,3 @@ document.querySelector("[data-shipping-calculator]")?.addEventListener("change",
 loadPricelist().catch((error) => {
   setText("[data-pricelist-status]", error.message);
 });
-import { adminApiError } from "../../assets/js/admin-api-errors.js";
-import { renderAirFreight } from "../../assets/js/shipping-air-estimate.js";
