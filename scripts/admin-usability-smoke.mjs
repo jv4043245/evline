@@ -33,7 +33,10 @@ try {
     await page.addInitScript(() => localStorage.setItem('evline_admin_token', 'isolated-ui-test'));
     let order = { id: 'smoke-order', order_number: 'O-900001', customer_phone: '+380000000001', customer_name: 'Тест', type: 'parts', status: 'new', car: 'VW ID4 Crozz', vin: 'TESTVIN0000000001', item_name: 'Фара права', request_text: 'Фара права', created_at: new Date().toISOString(), manager_notes: '', telegram_chat_id: '123', payment_status: 'unpaid' };
     const payment = { id: 'pay', payment_number: 'P-900001', supplier_name: 'BYD', requested_amount: 9133, requested_currency: 'CNY', paid_amount: 9133, commission_amount: 273.99, charged_total_amount: 9406.99, status: 'paid', receipt_count: 2, receipts: [{ chat_id: '-100123456', message_id: '2' }, { chat_id: '-100123456', message_id: '3' }] };
-    const detail = () => ({ order, supplier_payments: [payment], events: [], notifications: [], tracking_events: [], supplier_requests: [] });
+    let supplierPayments = [payment];
+    const detail = () => ({ order, supplier_payments: supplierPayments, events: [], notifications: [], tracking_events: [], supplier_requests: [] });
+    const paymentAttempts = [];
+    let failNextPayment = true;
     const item = { key: 'lamp', label: 'Фара права', query: 'VW ID4 Crozz фара права', part_numbers: ['13158405-00'] };
     const offers = [1000, 2000, 3000, 4000, 5000, 6000].map((price, i) => ({ verified_product: true, currency: 'UAH', item_key: 'lamp', title: 'Фара права 13158405-00', part_number: '13158405-00', price_uah: price, source_key: `seller-${i}`, source_name: `Продавець ${i}`, product_url: `https://example.test/product-${i}`, match_type: 'exact', availability: i < 3 ? 'in_stock' : 'order_needed', part_type: 'original', lead_time_min: i < 3 ? 0 : 90 }));
     offers.push({ ...offers[0], title: 'Фара права матрична', part_number: '', match_type: 'probable', price_uah: 99000 });
@@ -66,6 +69,15 @@ try {
         row.match_type = payload.undo ? 'exact' : 'irrelevant';
         market.summary.items = [summarizeMarketItem(item, market.offers)];
         body = market;
+      }
+      else if (url.pathname.endsWith('/supplier-payments') && request.method() === 'POST') {
+        const payload = request.postDataJSON();
+        paymentAttempts.push(payload);
+        if (failNextPayment) { failNextPayment = false; return route.fulfill({ status: 503, json: { error: 'Тестова помилка Telegram' } }); }
+        const created = { id: 'pay-new', payment_number: 'P-900002', supplier_name: payload.supplier_name, requested_amount: Number(payload.requested_amount), requested_currency: payload.requested_currency, status: 'requested', request_message_id: '101', request_chat_id: '-100123456', qr_photo_sent: true };
+        supplierPayments = [created, ...supplierPayments];
+        order = { ...order, status: 'awaiting_payment' };
+        body = { ok: true, order, supplier_payment: created, supplier_payments: supplierPayments };
       }
       else if (url.pathname.endsWith('/supplier-requests') && request.method() === 'POST') {
         supplierPayload = request.postDataJSON();
@@ -174,7 +186,12 @@ try {
     assert.equal(saved.notify_customer, '0');
     assert.equal(saved.manager_notes, 'Незбережена нотатка');
     await form.locator('[data-order-tab="payment"]').click();
-    assert.equal(await form.locator('.supplier-payments__create').isVisible(), false);
+    assert.equal(await form.locator('.supplier-payments__create').isVisible(), true);
+    assert.equal(await form.locator('[data-create-supplier-payment]').isVisible(), true);
+    assert.equal(await form.locator('[data-create-supplier-payment]').evaluate(el => Boolean(el.closest('details:not([open])'))), false);
+    const createBox = await form.locator('.supplier-payments__create').boundingBox();
+    const pastPaymentBox = await form.locator('.supplier-payment-card').boundingBox();
+    assert.ok(createBox.y + createBox.height <= pastPaymentBox.y, 'Sending payment must precede payment history');
     assert.equal(await form.locator('.supplier-payment-card__edit').isVisible(), false);
     assert.match(await form.locator('.supplier-payment-card__main').innerText(), /9\s?133/);
     await form.locator('summary').filter({ hasText: 'Квитанції' }).click();
@@ -182,6 +199,55 @@ try {
     await page.screenshot({ path: `${output}/payment-${width}.png` });
     await form.locator('[data-order-tab="history"]').click();
     assert.equal(await form.locator('[data-order-save-bar]').isVisible(), false);
+    await form.locator('[data-order-tab="suppliers"]').click();
+    await form.locator('[data-open-supplier-payment]').click();
+    assert.equal(await form.locator('[data-order-pane="payment"]').isVisible(), true);
+    assert.equal(await form.locator('[data-supplier-payment-supplier]').evaluate(el => document.activeElement === el), true);
+    const sendPayment = form.locator('[data-create-supplier-payment]');
+    const paymentSupplier = form.locator('[data-supplier-payment-supplier]');
+    const paymentAmount = form.locator('[data-supplier-payment-input="requested_amount"]');
+    page.once('dialog', dialog => { assert.match(dialog.message(), /Оберіть постачальника/); return dialog.accept(); });
+    await sendPayment.click();
+    await paymentSupplier.selectOption('BYD');
+    for (const invalid of ['', '0', '-1']) {
+      await paymentAmount.fill(invalid);
+      page.once('dialog', dialog => { assert.match(dialog.message(), /Вкажіть суму/); return dialog.accept(); });
+      await sendPayment.click();
+    }
+    assert.equal(paymentAttempts.length, 0);
+    await paymentSupplier.selectOption('__custom__');
+    assert.equal(await form.locator('[data-supplier-payment-custom]').isVisible(), true);
+    await form.locator('[data-supplier-payment-input="supplier_name_custom"]').fill('Тестовий постачальник');
+    for (const supplier of ['Zeekr', 'Toyota', 'Buble', 'BYD']) {
+      await paymentSupplier.selectOption(supplier);
+      assert.equal(await form.locator('[data-supplier-payment-custom]').isVisible(), false);
+    }
+    await paymentAmount.fill('1234.56');
+    await form.locator('[data-order-tab="main"]').click();
+    await form.locator('[data-order-tab="payment"]').click();
+    assert.equal(await paymentAmount.inputValue(), '1234.56');
+    page.once('dialog', dialog => { assert.match(dialog.message(), /Тестова помилка Telegram/); return dialog.accept(); });
+    await sendPayment.click();
+    await page.waitForFunction(() => document.querySelector('[data-create-supplier-payment]')?.disabled === false);
+    assert.equal(paymentAttempts.length, 1);
+    assert.equal(await paymentAmount.inputValue(), '1234.56');
+    assert.equal(await paymentSupplier.inputValue(), 'BYD');
+    page.once('dialog', dialog => { assert.match(dialog.message(), /надіслано в Telegram/); return dialog.accept(); });
+    await sendPayment.evaluate(el => { el.click(); el.click(); });
+    await form.locator('[data-supplier-payment-card="pay-new"]').waitFor();
+    assert.equal(paymentAttempts.length, 2, 'Double click must send only one request');
+    assert.deepEqual(paymentAttempts[1], { supplier_name: 'BYD', requested_amount: '1234.56', requested_currency: 'CNY', notes: '' });
+    assert.equal(await form.locator('[name="status"]').inputValue(), 'awaiting_payment');
+    assert.equal(await form.locator('.supplier-payments__create').isVisible(), true);
+    assert.equal(await paymentAmount.inputValue(), '', 'Successful send clears the payment fields');
+    await page.screenshot({ path: `${output}/payment-sent-${width}.png` });
+    supplierPayments = [];
+    await page.goto(`${origin}/admin/`);
+    await page.locator('[data-open-order="smoke-order"]').first().click();
+    await form.locator('[data-order-tab="payment"]').click();
+    assert.equal(await sendPayment.isVisible(), true);
+    assert.equal(await form.locator('.supplier-payment-card').count(), 0);
+    await page.screenshot({ path: `${output}/payment-first-${width}.png` });
     await form.locator('[data-order-tab="suppliers"]').click();
     await form.locator('[data-order-to-china]').click();
     const china = page.locator('[data-china-preorder-form]');
@@ -201,7 +267,7 @@ try {
     await page.screenshot({ path: `${output}/supplier-${width}.png` });
     const overflow = await page.evaluate(() => ({ page: document.documentElement.scrollWidth > innerWidth + 1, panels: [...document.querySelectorAll('[aria-hidden="false"]')].filter((el) => el.getBoundingClientRect().width > 0 && el.scrollWidth > el.clientWidth + 2).map((el) => el.className) }));
     assert.deepEqual(overflow, { page: false, panels: [] });
-    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/market-feedback', '/api/admin/orders/smoke-order/market-research'].includes(request.path)), false);
+    assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/orders/smoke-order/supplier-payments', '/api/admin/market-feedback', '/api/admin/orders/smoke-order/market-research'].includes(request.path)), false);
     await page.locator('[data-china-request-close]').last().click();
     await page.locator('.admin-tabs [data-admin-tab="analytics"]').click();
     assert.equal(await page.locator('[data-analytics-nav]').isVisible(), true);
@@ -223,6 +289,7 @@ try {
     await lookup.locator('.market-item').waitFor();
     await lookup.locator('[data-market-progress]').waitFor({ state: 'hidden' });
     assert.equal(lookupSteps, 2);
+    await lookup.locator('[data-market-filter-group="availability"][data-market-filter-value="in_stock"]').click();
     await lookup.locator('[data-market-filter-group="partType"][data-market-filter-value="all"]').click();
     assert.equal(await lookup.locator('.market-offer--exact').count(), 3);
     assert.doesNotMatch(await lookup.locator('.market-items').innerText(), /Несумісн|Фара ліва/);
