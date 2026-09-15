@@ -2158,7 +2158,10 @@ function renderSupplierRequests(order) {
         </div>
       </div>
 
-      <button class="admin-btn admin-btn--primary" type="button" data-order-to-china="${escapeHtml(order.id)}">Запросити пропозицію</button>
+      <div class="supplier-request-card__actions">
+        <button class="admin-btn admin-btn--primary" type="button" data-order-to-china="${escapeHtml(order.id)}">Запросити пропозицію</button>
+        <button class="admin-btn" type="button" data-open-supplier-payment>Надіслати на оплату</button>
+      </div>
 
       ${rows.length ? `
         <div class="supplier-requests__list">
@@ -2224,6 +2227,38 @@ function renderSupplierPayments(order) {
         </div>
       </div>
 
+      <div class="supplier-payments__create" data-supplier-payment-create>
+        <label>
+          Постачальник
+          <select data-supplier-payment-input="supplier_name" data-supplier-payment-supplier>
+            ${supplierDirectoryOptions()}
+          </select>
+        </label>
+        <label data-supplier-payment-custom hidden>
+          Інший постачальник
+          <input data-supplier-payment-input="supplier_name_custom" placeholder="${escapeHtml(requestedPlaceholder)}">
+        </label>
+        <label>
+          Сума
+          <input data-supplier-payment-input="requested_amount" type="number" step="0.01" min="0" placeholder="1000">
+        </label>
+        <label>
+          Валюта
+          <select data-supplier-payment-input="requested_currency">
+            <option value="CNY">CNY</option>
+            <option value="USD">USD</option>
+            <option value="UAH">UAH</option>
+          </select>
+        </label>
+        <label class="wide">
+          Коментар до оплати, необов'язково
+          <textarea data-supplier-payment-input="notes" rows="2"></textarea>
+        </label>
+        <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-payment="${escapeHtml(order.id)}">
+          Надіслати запит на оплату в Telegram
+        </button>
+      </div>
+
       ${rows.length ? `
         <div class="supplier-payments__list">
           ${rows.map((payment) => `
@@ -2285,40 +2320,6 @@ function renderSupplierPayments(order) {
           `).join("")}
         </div>
       ` : `<p class="muted supplier-payments__empty">Запитів на оплату постачальнику ще немає.</p>`}
-      <details class="supplier-payment-create order-editor__details"><summary>Нова оплата постачальнику</summary>
-      <div class="supplier-payments__create">
-        <label>
-          Постачальник
-          <select data-supplier-payment-input="supplier_name" data-supplier-payment-supplier>
-            ${supplierDirectoryOptions()}
-          </select>
-        </label>
-        <label data-supplier-payment-custom hidden>
-          Інший постачальник
-          <input data-supplier-payment-input="supplier_name_custom" placeholder="${escapeHtml(requestedPlaceholder)}">
-        </label>
-        <label>
-          Сума
-          <input data-supplier-payment-input="requested_amount" type="number" step="0.01" min="0" placeholder="1000">
-        </label>
-        <label>
-          Валюта
-          <select data-supplier-payment-input="requested_currency">
-            <option value="CNY">CNY</option>
-            <option value="USD">USD</option>
-            <option value="UAH">UAH</option>
-          </select>
-        </label>
-        <label class="wide">
-          Коментар до оплати
-          <textarea data-supplier-payment-input="notes" rows="2" placeholder="Що саме оплачуємо, посилання, примітка по QR або постачальнику"></textarea>
-        </label>
-        <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-payment="${escapeHtml(order.id)}">
-          Надіслати запит на оплату в Telegram
-        </button>
-      </div>
-
-      </details>
     </section>
   `;
 }
@@ -5137,6 +5138,11 @@ document.addEventListener("click", event => {
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  if (event.target.closest("[data-open-supplier-payment]")) {
+    setOrderEditorTab("payment");
+    event.currentTarget.querySelector("[data-supplier-payment-supplier]")?.focus();
+    return;
+  }
   const supplierButton = event.target.closest("[data-order-to-china]");
   if (supplierButton) { startChinaPreorderFromOrder(supplierButton.dataset.orderToChina); return; }
   const tabButton = event.target.closest("[data-order-tab]");
@@ -5322,7 +5328,7 @@ document.querySelector("[data-order-editor]")?.addEventListener("click", async (
       alert("Оберіть постачальника.");
       return;
     }
-    if (!Number(payload.requested_amount || 0)) {
+    if (!Number.isFinite(Number(payload.requested_amount)) || Number(payload.requested_amount) <= 0) {
       alert("Вкажіть суму оплати постачальнику.");
       return;
     }

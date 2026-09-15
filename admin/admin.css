@@ -4624,8 +4624,6 @@ body.audit-log-open .audit-log-panel {
 .supplier-payment-status { align-self:start; justify-self:start; }
 .supplier-payment-amounts { gap:4px; }
 .supplier-receipt-links { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; }
-.supplier-payment-create { border-top:1px solid var(--line); }
-.supplier-payment-create summary { color:var(--green-dark); }
 .supplier-requests > .admin-btn { justify-self:start; }
 .supplier-payments__create { padding-block:10px; }
 .tg-connect { border:0; border-radius:0; padding:8px 0; background:transparent; }
