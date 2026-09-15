@@ -151,7 +151,7 @@
     var path = window.location.pathname.toLowerCase();
     try { path = decodeURIComponent(path); } catch (_) {}
     var destination = String(href || "").toLowerCase();
-    if (/evline_tech/.test(destination)) return "byd";
+    if (/evline_tech/.test(destination) || /^tel:\+?380630630304$/.test(destination.replace(/[\s()-]/g, ""))) return "byd";
     if (/spivpratsya-sto|sotrudnichestvo-sto|для-сто/.test(path)) return "sto";
     if (/komplekty-to|komplekty_to|комплект.*то/.test(path)) return "to";
     if (/zapchast|zapchastyn|запчаст|parts|dorogie-detali/.test(path)) return "parts";

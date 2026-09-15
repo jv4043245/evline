@@ -688,7 +688,7 @@ function header(page, lang) {
 
   return `<div class="topbar">
       <div class="container topbar__inner topbar__inner--center">
-        <div><span aria-hidden="true">📞</span> <a href="tel:+380935251024">+38 (093) 525-10-24</a> <span aria-hidden="true">✉️</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
+        <div><span aria-hidden="true">📞</span> <a href="tel:+380630630304">+38 (063) 063-03-04</a> <span aria-hidden="true">✉️</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
       </div>
     </div>
 
@@ -754,7 +754,7 @@ function jsonLd(page, lang) {
         url: parent,
         logo: `${siteUrl}/assets/images/logo.png`,
         image: `${siteUrl}/assets/${page.image}`,
-        telephone: "+380935251024",
+        telephone: "+380630630304",
         email: "evlineukraine@gmail.com",
         priceRange: "$$",
         openingHoursSpecification: [
@@ -824,7 +824,7 @@ function pageHtml(page, lang) {
           issue: "Що турбує: помилка, симптом або функція",
           contact: "+380",
           button: "Надіслати майстру",
-          call: "Або подзвонити: +38 (093) 525-10-24",
+          call: "Або подзвонити: +38 (063) 063-03-04",
           common: "Поширені запити",
           result: "Результат",
           process: "Як працюємо",
@@ -838,7 +838,7 @@ function pageHtml(page, lang) {
           issue: "Что беспокоит: ошибка, симптом или функция",
           contact: "+380",
           button: "Отправить мастеру",
-          call: "Или позвонить: +38 (093) 525-10-24",
+          call: "Или позвонить: +38 (063) 063-03-04",
           common: "Частые запросы",
           result: "Результат",
           process: "Как работаем",
@@ -908,7 +908,7 @@ function pageHtml(page, lang) {
             <input name="issue" placeholder="${formLabels.issue}" required>
             <input name="contact" placeholder="${formLabels.contact}" required>
             <button type="submit">${formLabels.button}</button>
-            <a href="tel:+380935251024">${formLabels.call}</a>
+            <a href="tel:+380630630304">${formLabels.call}</a>
           </form>
         </div>
       </section>
@@ -1002,7 +1002,7 @@ function pageHtml(page, lang) {
         <div class="container origin-contact__card">
           <div>
             <p>${formLabels.contactTitle}</p>
-            <a class="origin-contact__phone" href="tel:+380935251024">+38 (093) 525-10-24</a>
+            <a class="origin-contact__phone" href="tel:+380630630304">+38 (063) 063-03-04</a>
             <a class="origin-pill-button" href="https://t.me/evline_tech" target="_blank" rel="noopener">${formLabels.contactCta}</a>
           </div>
           <div class="origin-contact__details">
