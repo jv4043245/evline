@@ -66,6 +66,17 @@ test('explicit destination and caller intent retain priority', () => {
   assert.equal(contact('https://evline.com.ua/ru/zapchasti-zeekr/', undefined, { intent_type: 'other' }).intent_type, 'other');
 });
 
+test('programming phone keeps technical intent across service and cross-sell pages', () => {
+  for (const pathname of ['/', '/ru/', '/zapchastyny-byd/', '/ru/zapchasti-iz-kitaya/', '/kalibruvannya-byd/', '/onovlennya-byd/', '/ru/multimedia-byd/']) {
+    const event = contact(`https://evline.com.ua${pathname}?gclid=phone-test`, 'tel:+380630630304');
+    assert.equal(event.intent_type, 'byd');
+    assert.equal(event.destination, 'tel:+380630630304');
+    assert.equal(event.gclid, 'phone-test');
+  }
+  assert.equal(contact('https://evline.com.ua/byd', 'tel:+38 (063) 063-03-04').intent_type, 'byd');
+  assert.equal(contact('https://evline.com.ua/zapchastyny-byd/', 'tel:+380935251024').intent_type, 'parts');
+});
+
 test('fresh paid click replaces saved keyword and ad-group attribution', () => {
   const saved = { evline_attribution_v1: {
     utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'old-campaign',

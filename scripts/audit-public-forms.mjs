@@ -45,7 +45,7 @@ let pagesWithContactLinks = 0;
 
 const allowedContacts = {
   email: new Set(["evlineukraine@gmail.com"]),
-  phone: new Set(["+380935251024"]),
+  phone: new Set(["+380935251024", "+380630630304"]),
   telegram: new Set(["evline_support", "evline_tech"]),
 };
 
