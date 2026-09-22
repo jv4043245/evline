@@ -37,8 +37,8 @@ export async function onRequestPost({ request, env }) {
     messages.push({ message_id: 2, role: 'manager', body: 'Уточните сторону' }, { message_id: 3, role: 'customer', body: 'Ошибся, нужна левая дверь' });
     const second = await analyzeTelegramMessages(env, messages, first.fields);
     return json({ checks: [
-      { name: 'Нова заявка', passed: first.intent === 'parts' && !first.review && /правая дверь/iu.test(first.fields.item_name || '') && first.fields.customer_phone === '+380000000001' },
-      { name: 'Уточнення сторони', passed: second.intent === 'parts' && !second.review && /левая дверь/iu.test(second.fields.item_name || '') && !/правая/iu.test(second.fields.item_name || '') },
+      { name: 'Нова заявка', passed: first.intent === 'parts' && !first.review && /правая дверь/iu.test(first.fields.item_name || '') && first.fields.customer_phone === '+380000000001', sample: first },
+      { name: 'Уточнення сторони', passed: second.intent === 'parts' && !second.review && /левая дверь/iu.test(second.fields.item_name || '') && !/правая/iu.test(second.fields.item_name || ''), sample: second },
     ] });
   }
   if (payload.action === 'prepare_webhook') {
