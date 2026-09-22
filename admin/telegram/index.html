@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Telegram-вхідні | EVLine CRM</title>
+  <link rel="icon" href="/assets/images/favicon.png">
+  <link rel="stylesheet" href="/admin/telegram/intake.css?v=20260922">
+  <script type="module" src="/admin/telegram/intake.js?v=20260922"></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/admin/"><img src="/assets/images/logo.png" alt="EVLine" width="100" height="40"><span>CRM</span></a>
+    <a href="/admin/">Замовлення</a>
+    <button type="button" data-refresh>Оновити</button>
+  </header>
+  <main>
+    <h1>Telegram-вхідні</h1>
+    <p role="alert" class="notice error" data-error hidden></p>
+    <p class="notice" data-auth hidden>Потрібен <a href="/admin/">вхід до адмінки</a>.</p>
+    <details class="settings">
+      <summary>Підключення <span data-connection-count></span></summary>
+      <div class="settings-content">
+        <div class="toolbar"><button type="button" data-check>Перевірити бота</button><button type="button" data-prepare>Підготувати webhook</button><button type="button" data-ai-test>Перевірити AI</button></div>
+        <p data-setup role="status"></p>
+        <div data-connections></div>
+      </div>
+    </details>
+    <div class="workspace">
+      <aside>
+        <input type="search" aria-label="Пошук діалогу" placeholder="Ім'я, Telegram, № замовлення" data-search>
+        <div data-chats role="list" aria-label="Діалоги"></div>
+      </aside>
+      <section data-detail aria-label="Діалог"><p class="empty">Оберіть діалог</p></section>
+    </div>
+  </main>
+</body>
+</html>

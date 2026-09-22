@@ -175,6 +175,10 @@ const supplierAvailabilityLabels = {
 };
 
 const auditActionLabels = {
+  "telegram.intake.apply": "Заявку оновлено з Telegram",
+  "telegram.intake.undo": "Скасовано зміну з Telegram",
+  "telegram.approve_connection": "Підключено Telegram-помічника",
+  "telegram.pause_connection": "Призупинено Telegram-помічника",
   "admin.sign_in": "Вхід до адмінки",
   "order.create": "Создан заказ",
   "order.create_from_lead": "Создан заказ из заявки",
@@ -3949,6 +3953,13 @@ async function refresh() {
       await loadAuditLog();
     }
     setAuthVisible(false);
+    const requestedOrder = new URL(location.href).searchParams.get("order");
+    if (requestedOrder && /^[0-9a-f-]{36}$/i.test(requestedOrder)) {
+      const url = new URL(location.href);
+      url.searchParams.delete("order");
+      history.replaceState(null, "", url);
+      await openOrder(requestedOrder);
+    }
   } catch (error) {
     if (error.status === 401) setAuthVisible(true);
     if (errorBox) { errorBox.textContent = `Не вдалося оновити дані: ${error.message}`; errorBox.hidden = false; }

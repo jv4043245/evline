@@ -2,6 +2,7 @@ import { json, readPayload, text } from "../../_lib/http.js";
 import { loadOrder, retryLatestOrderNotification } from "../../_lib/crm.js";
 import { handleSupplierPaymentTelegramUpdate } from "../../_lib/supplier-payments.js";
 import { handleSupplierTelegramUpdate } from "../../_lib/supplier-portal.js";
+import { isBusinessUpdate, receiveBusinessUpdate } from "../../_lib/telegram-intake.js";
 
 function extractOrderId(value) {
   const input = text(value);
@@ -61,6 +62,14 @@ export async function onRequestPost({ request, env }) {
   }
 
   const update = await readPayload(request);
+  // Business conversations must never enter the payment or ordinary bot reply paths.
+  if (isBusinessUpdate(update)) {
+    try {
+      return json({ ok: true, ...await receiveBusinessUpdate(env, update) });
+    } catch {
+      return json({ error: "Telegram intake temporarily unavailable" }, { status: 503 });
+    }
+  }
   const message = update.message || update.edited_message || update.callback_query?.message || {};
   const chatId = text(message.chat?.id);
   const incomingText = text(update.message?.text || update.message?.caption || update.callback_query?.data);
