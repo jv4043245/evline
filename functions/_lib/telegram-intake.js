@@ -124,14 +124,16 @@ Preserve side/front/rear/quantity/part number and all still requested parts. ite
 If customer explicitly corrects a detail, use the corrected detail and evidence from original request AND correction.
 Do not interpret manager suggestions, forwarded text, or hypothetical parts as a confirmed request.
 Customer saying only yes/no may be ambiguous: set ambiguous true when standalone customer evidence is insufficient.
-For unrelated topics/greetings set intent none. For multiple vehicles/orders or a separate new enquiry set new_request true.
+For unrelated topics/greetings set intent none. Multiple vehicles/orders are ambiguous: set ambiguous true.
+new_request means a SECOND separate order only if current.item_name is already filled. The first enquiry is not a second order.
 If unclear whether replacement/addition/cancellation, set ambiguous true. Never erase a field. Do not translate; use customer words.
 Never infer content of media: you receive text/captions only. Maximum 8 evidence spans per field.`;
 
-export function validateTelegramProposal(data, messages, truncated = false) {
+export function validateTelegramProposal(data, messages, truncated = false, hasCurrentRequest = false) {
   if (!data || !['parts', 'none', 'uncertain'].includes(data.intent) || !data.fields || typeof data.fields !== 'object') throw fail('invalid_ai_response', 503);
   const fields = {}, evidence = {};
-  let review = truncated || data.ambiguous !== false || data.new_request === true || data.intent === 'uncertain';
+  const newRequest = hasCurrentRequest && data.new_request === true;
+  let review = truncated || data.ambiguous !== false || newRequest || data.intent === 'uncertain';
   for (const [key, max] of Object.entries(FIELDS)) {
     const entry = data.fields[key];
     if (!entry) continue;
@@ -154,7 +156,7 @@ export function validateTelegramProposal(data, messages, truncated = false) {
     fields[key] = key === 'vin' ? value.toUpperCase() : value;
     evidence[key] = spans;
   }
-  return { intent: data.intent, fields, evidence, review, new_request: data.new_request === true };
+  return { intent: data.intent, fields, evidence, review, new_request: newRequest };
 }
 
 async function editableOrder(env, id) {
@@ -182,7 +184,7 @@ export async function analyzeTelegramMessages(env, messages, current = {}, trunc
       new Promise((_, reject) => { timer = setTimeout(() => reject(fail('ai_timeout', 503)), 15000); }),
     ]);
     const data = typeof result.response === 'object' ? result.response : JSON.parse(result.response || '{}');
-    return validateTelegramProposal(data, messages, truncated);
+    return validateTelegramProposal(data, messages, truncated, Boolean(current.item_name));
   } finally { clearTimeout(timer); }
 }
 

@@ -277,3 +277,11 @@ test('empty model slots are unknown values, not unverified edits', () => {
     [{ message_id: 1, role: 'customer', body: requestText }]);
   assert.equal(result.review, false); assert.deepEqual(result.fields, { item_name: 'правая дверь' });
 });
+
+test('first enquiry is not confused with a second order, while multiple vehicles remain review-only', () => {
+  const data = output({ item_name: field('правая дверь') }, { new_request: true }).response;
+  const messages = [{ message_id: 1, role: 'customer', body: requestText }];
+  assert.equal(validateTelegramProposal(data, messages, false, false).review, false);
+  assert.equal(validateTelegramProposal(data, messages, false, true).review, true);
+  assert.equal(validateTelegramProposal({ ...data, ambiguous: true }, messages, false, false).review, true);
+});
