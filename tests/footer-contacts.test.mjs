@@ -20,7 +20,7 @@ test('all public footers contain localized static parts messenger links', async 
     const ru = document.querySelector('html').getAttribute('lang').startsWith('ru');
     assert.equal(footer.querySelector('strong').textContent, ru ? 'Менеджер по запчастям' : 'Менеджер із запчастин', file);
     const links = footer.querySelectorAll('a');
-    assert.deepEqual(links.map(a => a.getAttribute('href')), ['https://wa.me/380935251024', 'viber://chat?number=%2B380935251024'], file);
+    assert.deepEqual(links.map(a => a.getAttribute('href')), ['https://t.me/evline_support', 'https://wa.me/380935251024', 'viber://chat?number=%2B380935251024'], file);
     for (const link of links) {
       assert.equal(link.getAttribute('data-contact-intent'), 'parts', file);
       assert.ok(link.getAttribute('aria-label'), file);

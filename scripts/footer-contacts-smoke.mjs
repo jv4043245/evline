@@ -50,34 +50,38 @@ try {
       const footer = page.locator('[data-footer-contacts]');
       await footer.scrollIntoViewIfNeeded();
       const links = footer.locator('a');
-      assert.equal(await links.count(), 2);
+      assert.equal(await links.count(), 3);
       const bounds = [];
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 3; i++) {
         const link = links.nth(i);
         const rect = await link.boundingBox();
         assert.ok(rect.height >= 44 && rect.x >= 0 && rect.x + rect.width <= width + 1, `${pathname}: button outside ${width}px viewport`);
+        assert.ok(await link.evaluate(a => a.scrollWidth <= a.clientWidth), `${pathname}: label overflows its button`);
         bounds.push(rect);
         assert.ok(await link.locator('img').evaluate(img => img.complete && img.naturalWidth > 0), `${pathname}: missing icon`);
         const before = events.length;
         await link.click();
         for (let attempt = 0; attempt < 20 && events.length === before; attempt++) await new Promise(resolve => setTimeout(resolve, 25));
         assert.equal(events.length, before + 1, pathname);
-        assert.equal(events.at(-1).channel, i ? 'viber' : 'whatsapp');
+        assert.equal(events.at(-1).channel, ['telegram', 'whatsapp', 'viber'][i]);
         assert.equal(events.at(-1).intent_type, 'parts');
         assert.equal(events.at(-1).gclid, 'synthetic-footer-test');
-        assert.equal(events.at(-1).destination, await link.getAttribute('href'));
+        assert.equal(events.at(-1).destination, i === 0 ? '@evline_support' : await link.getAttribute('href'));
       }
-      assert.ok(bounds[0].x + bounds[0].width <= bounds[1].x || bounds[0].y + bounds[0].height <= bounds[1].y, `${pathname}: buttons overlap`);
+      for (let i = 1; i < bounds.length; i++) {
+        assert.ok(bounds[i - 1].x + bounds[i - 1].width <= bounds[i].x || bounds[i - 1].y + bounds[i - 1].height <= bounds[i].y, `${pathname}: buttons overlap`);
+        if (width <= 520) assert.ok(Math.abs(bounds[i].y - bounds[0].y) < 1, `${pathname}: mobile buttons must share one row`);
+      }
       if (['/', '/ru/zeekr.html', '/privacy/'].includes(pathname)) await page.screenshot({ path: path.join(output, `${pathname.replaceAll('/', '_')}-${width}.png`) });
     }
     assert.deepEqual(errors, [], `Unexpected browser errors at ${width}px`);
     await context.close();
-    console.log(`PASS ${width}px: eight pages, visible icons, 16 tracked clicks, no overlap or real submissions`);
+    console.log(`PASS ${width}px: eight pages, visible icons, 24 tracked clicks, no overlap or real submissions`);
   }
   const noScript = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 900 } });
   const page = await noScript.newPage();
   await page.goto(origin);
-  assert.equal(await page.locator('[data-footer-contacts] a').count(), 2);
+  assert.equal(await page.locator('[data-footer-contacts] a').count(), 3);
   await noScript.close();
 } finally {
   await browser.close();
