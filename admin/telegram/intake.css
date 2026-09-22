@@ -18,6 +18,7 @@ h1 { font-size: 24px; margin: 0 0 20px; }
 h2 { font-size: 19px; margin: 0; overflow-wrap: anywhere; }
 h3 { font-size: 16px; margin: 24px 0 12px; }
 p { line-height: 1.5; }
+[data-setup] { overflow-wrap: anywhere; }
 .settings { border-block: 1px solid #dce5e1; padding: 14px 0; margin-bottom: 24px; }
 summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 .settings-content { padding: 12px 0 0; }

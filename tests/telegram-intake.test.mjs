@@ -271,3 +271,9 @@ test('connection revocation during inference prevents the queued write', async t
   await receiveBusinessUpdate(env, message());
   assert.equal(db.prepare('SELECT count(*) n FROM orders').get().n, 0);
 });
+
+test('empty model slots are unknown values, not unverified edits', () => {
+  const result = validateTelegramProposal(output({ item_name: field('правая дверь'), vin: { value: '', evidence: [] }, customer_name: { value: null, evidence: [] } }).response,
+    [{ message_id: 1, role: 'customer', body: requestText }]);
+  assert.equal(result.review, false); assert.deepEqual(result.fields, { item_name: 'правая дверь' });
+});

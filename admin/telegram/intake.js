@@ -79,7 +79,7 @@ document.addEventListener('click', async e => {
     else if (b.hasAttribute('data-ai-test')) {
       $('[data-setup]').textContent = 'Перевірка AI на тестовому діалозі…';
       const result = await api('', { action: 'test_analysis' });
-      $('[data-setup]').textContent = result.checks.map(c => `${c.name}: ${c.passed ? 'OK' : 'потрібна перевірка'}`).join(' · ');
+      $('[data-setup]').textContent = result.checks.map(c => `${c.name}: ${c.passed ? 'OK' : `потрібна перевірка (${JSON.stringify(c.sample)})`}`).join(' · ');
     } else if (b.hasAttribute('data-check') || b.hasAttribute('data-prepare')) {
       if (b.hasAttribute('data-prepare')) await api('', { action: 'prepare_webhook' });
       const s = await api('?setup=1');

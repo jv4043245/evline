@@ -135,6 +135,8 @@ export function validateTelegramProposal(data, messages, truncated = false) {
   for (const [key, max] of Object.entries(FIELDS)) {
     const entry = data.fields[key];
     if (!entry) continue;
+    // Some models emit explicit empty slots for unknown fields; those are not edits.
+    if (!clean(entry.value, max) && !entry.evidence?.length) continue;
     const value = clean(entry.value, max);
     if (!value || entry.value.length > max || !Array.isArray(entry.evidence) || !entry.evidence.length || entry.evidence.length > 8) { review = true; continue; }
     const spans = entry.evidence.map(e => {
