@@ -9,6 +9,8 @@
     "audit:links": "node scripts/audit-internal-links.mjs",
     "sync:seller": "node scripts/sync-seller-identity.mjs",
     "audit:seller": "node scripts/sync-seller-identity.mjs --check",
+    "sync:footer": "node scripts/sync-footer-contacts.mjs",
+    "audit:footer": "node scripts/sync-footer-contacts.mjs --check",
     "test": "node --test tests/*.test.mjs",
     "test:meta": "node --test tests/meta-tracking.test.mjs"
   },

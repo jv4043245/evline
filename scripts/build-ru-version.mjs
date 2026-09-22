@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
+import { syncFooterContacts } from "./lib/footer-contacts.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
@@ -1477,4 +1478,5 @@ for (const brand of brands) {
 
 const standaloneSummary = rebuildStandalonePages ? "2 standalone pages, " : "";
 await syncSellerIdentity(root);
+await syncFooterContacts(root);
 console.log(`Russian version generated: ${standaloneSummary}1 brand hub, ${brands.length} brand SEO pages. Run npm run build:sitemap after changing URLs.`);

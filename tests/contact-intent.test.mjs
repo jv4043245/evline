@@ -95,3 +95,30 @@ test('fresh paid click replaces saved keyword and ad-group attribution', () => {
   assert.equal(idOnly.utm_term, '');
   assert.equal(idOnly.utm_content, '');
 });
+
+test('parts footer messenger clicks keep explicit intent, destination and attribution', () => {
+  const element = {
+    dataset: { contactIntent: 'parts', contactId: 'footer-parts-chat' },
+    getAttribute: () => null, textContent: 'Chat',
+  };
+  for (const pathname of ['/', '/byd.html', '/ru/zeekr.html', '/spivpratsya-sto/']) {
+    for (const [channel, href] of [['whatsapp', 'https://wa.me/380935251024'], ['viber', 'viber://chat?number=%2B380935251024']]) {
+      const event = contact(`https://evline.com.ua${pathname}?gclid=footer-test`, href, { channel, element });
+      assert.equal(event.intent_type, 'parts');
+      assert.equal(event.destination, href);
+      assert.equal(event.event_type, 'contact_click');
+      assert.equal(event.gclid, 'footer-test');
+      assert.equal(event.cta_id, 'footer-parts-chat');
+      assert.equal(event.element, undefined);
+    }
+  }
+  assert.equal(contact('https://evline.com.ua/byd.html', undefined, { element, intent_type: 'other' }).intent_type, 'other');
+  assert.equal(contact('https://evline.com.ua/byd.html', undefined, { element: { ...element, dataset: { contactIntent: 'invalid' } } }).intent_type, 'byd');
+});
+
+test('Viber destination retains only a valid phone, not message text or other queries', () => {
+  const event = contact('https://evline.com.ua/', 'viber://chat?number=%2B380935251024&text=private-message', { channel: 'viber' });
+  assert.equal(event.destination, 'viber://chat?number=%2B380935251024');
+  const invalid = contact('https://evline.com.ua/', 'viber://chat?number=not-a-phone&text=private-message', { channel: 'viber' });
+  assert.equal(invalid.destination, 'viber://chat');
+});
