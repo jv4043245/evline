@@ -10,6 +10,7 @@ import {
 import { listSupplierPayments } from "../../../_lib/supplier-payments.js";
 import { listSupplierRequests } from "../../../_lib/supplier-portal.js";
 import { auditActor, recordAuditEvent } from "../../../_lib/audit-log.js";
+import { lockTelegramOrder } from "../../../_lib/telegram-intake.js";
 import {
   googleAdsEventTypesForStatus,
   queueGoogleAdsConversionsForOrder,
@@ -118,6 +119,9 @@ export async function onRequestPatch({ request, params, env }) {
   const financeBefore = financeFingerprint(current);
   const now = new Date().toISOString();
   const dates = statusChanged ? statusDates(nextStatus) : {};
+
+  // Once a manager saves a card, AI may only propose further edits.
+  await lockTelegramOrder(env, params.id);
 
   await env.DB.prepare(
     `UPDATE orders SET
