@@ -52,7 +52,9 @@ footer .footer-contacts__link {
   transition: background-color 150ms ease;
 }
 
+footer .footer-contacts__link--telegram { color: #17638c; }
 footer .footer-contacts__link--viber { color: #644397; }
+footer .footer-contacts__link--telegram:hover { background: #edf7fc; color: #17638c; }
 footer .footer-contacts__link--whatsapp:hover { background: #eaf7ef; color: #193c2d; }
 footer .footer-contacts__link--viber:hover { background: #f1edf8; color: #644397; }
 footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outline-offset: 4px; }
@@ -67,6 +69,6 @@ footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outlin
 
 @media (max-width: 520px) {
   footer .footer-contacts { gap: 14px; }
-  .footer-contacts__links { width: 100%; }
-  footer .footer-contacts__link { flex: 1 1 120px; min-width: 0; }
+  .footer-contacts__links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  footer .footer-contacts__link { flex-direction: column; gap: 6px; min-width: 0; min-height: 70px; padding: 10px 6px; font-size: 14px; }
 }

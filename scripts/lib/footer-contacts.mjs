@@ -3,7 +3,7 @@ import path from 'node:path';
 import { parse } from 'node-html-parser';
 import { publicHtmlFiles } from './seller-identity.mjs';
 
-export const footerContactsVersion = '20260922-footer-contacts-1';
+export const footerContactsVersion = '20260922-footer-contacts-2';
 
 export function footerContactsMarkup(language = 'uk') {
   const ru = language.startsWith('ru');
@@ -11,6 +11,7 @@ export function footerContactsMarkup(language = 'uk') {
   return `<section class="footer-contacts" data-footer-contacts aria-label="${label}">
   <div class="footer-contacts__heading"><strong>${label}</strong><span>+38 (093) 525-10-24</span></div>
   <div class="footer-contacts__links">
+    <a class="footer-contacts__link footer-contacts__link--telegram" href="https://t.me/evline_support" target="_blank" rel="noopener noreferrer" data-contact-intent="parts" data-contact-id="footer-parts-telegram" aria-label="Telegram: ${label.toLowerCase()}"><img src="/assets/icons/telegram.svg" width="22" height="22" alt="" aria-hidden="true">Telegram</a>
     <a class="footer-contacts__link footer-contacts__link--whatsapp" href="https://wa.me/380935251024" target="_blank" rel="noopener noreferrer" data-contact-intent="parts" data-contact-id="footer-parts-whatsapp" aria-label="WhatsApp: ${label.toLowerCase()}"><img src="/assets/icons/whatsapp.svg" width="22" height="22" alt="" aria-hidden="true">WhatsApp</a>
     <a class="footer-contacts__link footer-contacts__link--viber" href="viber://chat?number=%2B380935251024" data-contact-intent="parts" data-contact-id="footer-parts-viber" aria-label="Viber: ${label.toLowerCase()}"><img src="/assets/icons/viber.svg" width="22" height="22" alt="" aria-hidden="true">Viber</a>
   </div>

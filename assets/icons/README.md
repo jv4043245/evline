@@ -1,5 +1,6 @@
-WhatsApp and Viber SVG icons are unmodified assets from Simple Icons 16.0.0:
+Telegram, WhatsApp and Viber SVG icons are unmodified assets from Simple Icons 16.0.0:
 
+- https://cdn.jsdelivr.net/npm/simple-icons@16.0.0/icons/telegram.svg
 - https://cdn.jsdelivr.net/npm/simple-icons@16.0.0/icons/whatsapp.svg
 - https://cdn.jsdelivr.net/npm/simple-icons@16.0.0/icons/viber.svg
 
