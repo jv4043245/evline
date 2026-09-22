@@ -166,6 +166,10 @@
       var match = value.match(/(?:t\.me\/|telegram\.me\/)([^/?#]+)/i);
       return match ? "@" + match[1].replace(/^@/, "") : "telegram";
     }
+    if (channel === "viber") {
+      var number = new URLSearchParams(value.split("?")[1] || "").get("number") || "";
+      if (/^\+?\d{7,15}$/.test(number)) return "viber://chat?number=" + encodeURIComponent(number);
+    }
     return value.split("?")[0].slice(0, 240);
   }
 
@@ -197,11 +201,13 @@
     if (!channel) return;
     var href = options.href || options.destination || "";
     var details = elementDetails(options.element, channel);
+    var elementIntent = options.element && options.element.dataset.contactIntent;
+    if (["parts", "byd", "sto", "to", "general", "other"].indexOf(elementIntent) === -1) elementIntent = "";
     var payload = Object.assign({}, attribution(), identity, details, options, {
       id: options.id || uuid(),
       event_type: "contact_click",
       channel: channel,
-      intent_type: options.intent_type || intentFromContext(href),
+      intent_type: options.intent_type || elementIntent || intentFromContext(href),
       destination: options.destination || cleanDestination(href, channel),
       language: document.documentElement.lang || "",
     });

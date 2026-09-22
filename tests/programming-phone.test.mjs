@@ -27,7 +27,10 @@ test('every programming landing page uses the technical phone in calls, visible 
     assert.ok(links.length >= 3, file);
     for (const link of links) assert.equal(link.getAttribute('href'), `tel:${phone}`, file);
     assert.match(dom.textContent, /\+38 \(063\) 063-03-04/, file);
-    assert.ok(!html.includes(partsPhone) && !html.includes('525-10-24'), file);
+    const serviceContent = parse(html);
+    // The clearly labeled parts messenger block is shared across public footers.
+    serviceContent.querySelector('[data-footer-contacts]')?.remove();
+    assert.ok(!serviceContent.toString().includes(partsPhone) && !serviceContent.toString().includes('525-10-24'), file);
     const schemas = dom.querySelectorAll('script[type="application/ld+json"]').flatMap(script => {
       const json = JSON.parse(script.textContent);
       return json['@graph'] || [json];

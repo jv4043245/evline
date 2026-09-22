@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
+import { syncFooterContacts } from "./lib/footer-contacts.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
@@ -1125,5 +1126,6 @@ await patchMainBydPage("byd.html", "uk");
 await patchMainBydPage("ru/byd.html", "ru");
 await writeFile(path.join(root, "sitemap.xml"), sitemap());
 await syncSellerIdentity(root);
+await syncFooterContacts(root);
 
 console.log(`BYD SEO pages generated: ${pages.length * 2} pages.`);
