@@ -2,6 +2,7 @@ import { filterMarketOffers, summarizeMarketItem, hasMarketIdentity, canSearchMa
 import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { renderAirGuide } from "../assets/js/shipping-air-guide.js?v=20260914-guide";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
+import { icon as documentIcon } from "./documents/icons.js";
 
 const state = {
   range: "30d",
@@ -175,6 +176,9 @@ const supplierAvailabilityLabels = {
 };
 
 const auditActionLabels = {
+  "document.save": "Збережено документи клієнта",
+  "document.send": "Документи надіслано клієнту",
+  "document.seller_update": "Оновлено реквізити продавця",
   "telegram.intake.apply": "Заявку оновлено з Telegram",
   "telegram.intake.undo": "Скасовано зміну з Telegram",
   "telegram.approve_connection": "Підключено Telegram-помічника",
@@ -3322,7 +3326,10 @@ function renderOrderEditor(order, preserveDraft = true) {
           ${customerContact ? contactLine(order) : ""}
           ${badge(order.status || "new", true)}
         </div>
-        <button class="admin-btn admin-btn--small" type="button" data-order-tab="history">Історія</button>
+        <div class="order-editor__tools">
+          ${order.type === 'parts' ? `<button class="admin-btn admin-btn--small" type="button" data-order-documents>${documentIcon('FileText')}Документи</button>` : ''}
+          <button class="admin-btn admin-btn--small" type="button" data-order-tab="history">Історія</button>
+        </div>
       </div>
       ${carName || order.vin ? `<p class="order-editor__vehicle">${escapeHtml(carName)} ${order.vin ? `<span class="orders-table__mono">${escapeHtml(order.vin)}</span>` : ""}</p>` : ""}
       <p class="order-editor__request">${escapeHtml(primaryRequest)}</p>
@@ -3805,7 +3812,7 @@ async function openOrder(id, options = {}) {
 }
 
 async function deleteOrder(id, orderNumber = "це замовлення") {
-  if (!confirm(`Видалити ${orderNumber}?\n\nБуде видалено замовлення, пов'язаний лід і технічну історію. Дію не можна скасувати.`)) return false;
+  if (!confirm(`Видалити ${orderNumber}?\n\nБуде видалено замовлення, пов'язаний лід, документи клієнта й технічну історію. Дію не можна скасувати.`)) return false;
   await api(`/api/admin/orders/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
@@ -5149,6 +5156,11 @@ document.addEventListener("click", event => {
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
+  if (event.target.closest("[data-order-documents]")) {
+    if (orderIsDirty()) { alert("Спочатку збережіть зміни замовлення, щоб вони потрапили в документи."); return; }
+    if (state.selectedOrder?.id) location.href = `/admin/documents/?order=${encodeURIComponent(state.selectedOrder.id)}`;
+    return;
+  }
   if (event.target.closest("[data-open-supplier-payment]")) {
     setOrderEditorTab("payment");
     event.currentTarget.querySelector("[data-supplier-payment-supplier]")?.focus();

@@ -4654,3 +4654,11 @@ body.audit-log-open .audit-log-panel {
 }
 .analytics-tools > summary { padding:16px; cursor:pointer; font-weight:700; color:var(--muted); }
 .analytics-scope { font-size:12px; }
+.order-editor__tools { display:flex; flex:none; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; }
+.order-editor__tools .admin-btn { display:inline-flex; align-items:center; gap:6px; width:auto; min-height:40px; }
+.order-editor__tools svg { flex:none; }
+@media(max-width:650px) {
+  .order-editor__meta-head { flex-wrap:wrap; }
+  .order-editor__tools { width:100%; justify-content:flex-start; }
+  .order-editor__tools .admin-btn { font-size:13px; padding:8px 12px; }
+}

@@ -1,0 +1,86 @@
+# Customer Documents in CRM
+
+Entry: a parts order card, **Документи**, next to **Історія**. Existing order
+tabs, supplier payment requests, logistics, and notifications are unchanged.
+The editor is at `/admin/documents/?order=<order-id>` and returns to that order.
+Unsaved changes in the order must be saved first. The supplied agreement is for
+auto parts, so this action is intentionally not offered on programming services.
+
+## Workflow
+
+1. Buyer name/contact, car, VIN, saved order items and customer price seed a draft.
+   Without item rows, one editable position uses the order title and customer
+   price. The manager must split a multi-part request into agreed line items.
+2. Review the buyer, specification, prices, agreed payment and delivery terms.
+   Supplier costs, commission, profit, internal notes and market estimates are
+   never copied into customer documents. No delivery deadlines, tax treatment,
+   originality, or actual received payment are guessed.
+3. Enter the seller's tax ID, address, IBAN and bank privately in the editor.
+   **Зберегти реквізити для наступних документів** stores them behind admin auth
+   in D1. Do not place these details in source control. Older snapshots retain
+   their original seller information.
+4. **Перегляд** displays the contract, specification and optional payment
+   acknowledgment. Standard terms from the supplied 2026-09-23 DOCX are editable
+   per document. OEM/analogue lines qualify the originality wording explicitly;
+   an all-original specification retains the original wording. Custom edited
+   clauses are never overwritten by a type change.
+5. **Зберегти** saves a draft. **PDF** requires the manager's review and all
+   necessary fields, then stores a prepared snapshot and downloads a real PDF.
+   It does not claim the contract is signed. Incomplete documents can be saved
+   as a watermarked **PDF чернетки** from preview.
+6. Print opens the PDF viewer with a print action. **Надіслати** offers download,
+   native file sharing where supported, and the existing customer Telegram bot
+   connection. Telegram requires an explicit recipient check. No public document
+   URL is created, and no document is sent automatically.
+
+## Payment And Legal Boundaries
+
+- The agreed prepayment is a contractual term, not proof of funds received.
+- Payment acknowledgment is off by default, even on orders marked paid. It
+  requires amount, date, payment method, reference and explicit confirmation
+  that the CUSTOMER's incoming payment was checked. Supplier receipts are never
+  used for this purpose. It is explicitly not a fiscal receipt.
+- The supplied delay provisions, no additional contractual delay fines, and
+  mandatory statutory rights remain in the agreement. War alone is not represented
+  as automatic cancellation of obligations. Qualified Ukrainian legal/accounting
+  review is recommended before using the template for signed transactions.
+- Official fiscal-receipt reference:
+  https://od.tax.gov.ua/media-ark/news-ark/705812.html
+
+## Persistence And Access
+
+Additive migration: `0027_order_documents.sql`. The module also creates these
+tables idempotently with individual prepared statements on first authorized use,
+so publication does not depend on a manual dashboard migration step.
+
+`order_documents` stores immutable snapshots with monotonically increasing
+per-order versions, status, actor and timestamp. Atomic expected-version checks
+reject stale saves. Request IDs make uncertain save retries idempotent. At most
+100 recent versions are listed; older rows are not overwritten or deleted.
+
+`document_seller_settings` stores private shared defaults with revision checks.
+`document_deliveries` records each version's Telegram send attempt. A confirmed
+success is never resent; ambiguous network outcomes are not blindly retried.
+Definitively rejected Telegram requests can be manually retried. Recipient must
+still match the order's connected positive/private chat ID at send time.
+
+All endpoints use the existing `/api/admin` authorization and no-store response
+policy, with same-origin mutation checks. Customer records, statuses, prices,
+conversion events and supplier payments are not changed by document operations.
+Deleting an order cascades its document snapshots and delivery records; the
+existing destructive-action confirmation now explicitly mentions documents.
+
+PDF rendering and bundled Cyrillic fonts run locally in the manager's browser.
+The PDF runtime is loaded only on demand; no external CDN or PDF service receives
+customer data. Original DOCX and real client fixtures are not published.
+
+## Verification
+
+`node --test tests/order-documents.test.mjs`
+
+`PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node scripts/order-documents-smoke.mjs`
+
+The smoke script uses a disposable SQLite database and an isolated local server,
+tests 1440/1024/768/390/320px, saves real PDFs and a long specification to `/tmp`.
+It never creates live orders or sends client messages. Also run the existing
+admin usability smoke test, full test suite, form audit and link audit.

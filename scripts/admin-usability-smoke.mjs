@@ -118,8 +118,13 @@ try {
     if (width <= 760) for (const cell of await emptyCells.all()) assert.equal(await cell.isVisible(), false);
     assert.equal(await form.locator('.order-editor__tabs [data-order-tab]').count(), 5);
     assert.equal(await form.locator('[data-order-pane="messages"]').count(), 0);
+    assert.equal(await form.locator('[data-order-documents]').isVisible(), true);
     await page.screenshot({ path: `${output}/order-${width}.png` });
     await form.locator('[name="manager_notes"]').fill('Незбережена нотатка');
+    page.once('dialog', dialog => { assert.match(dialog.message(), /Спочатку збережіть/); return dialog.accept(); });
+    await form.locator('[data-order-documents]').click();
+    assert.equal(new URL(page.url()).pathname, '/admin/');
+    assert.equal(await form.locator('[name="manager_notes"]').inputValue(), 'Незбережена нотатка');
     await form.locator('[data-order-tab="market"]').click();
     await form.locator('.market-price-group').first().waitFor();
     await form.locator('[data-market-progress]').waitFor({ state: 'hidden' });
