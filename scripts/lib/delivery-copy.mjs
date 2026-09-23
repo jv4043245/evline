@@ -4,6 +4,7 @@ export function currentDeliveryCopy(source) {
   return source
     .replaceAll('<b>14,5 днів</b><span>середній строк авіа</span>', '<b>Від 20 днів</b><span>доставка авіа</span>')
     .replaceAll('<b>14,5 дней</b><span>средний срок авиа</span>', '<b>От 20 дней</b><span>доставка авиа</span>')
+    .replaceAll('<b>14,5 днів</b><span>средний срок авиа</span>', '<b>От 20 дней</b><span>доставка авиа</span>')
     .replaceAll('через 18–20 днів авіа', 'від 20 днів авіа')
     .replaceAll('через 18–20 дней авиа', 'от 20 дней авиа')
     .replaceAll('орієнтовно 18–20 днів', 'від 20 днів; точний строк підтвердить менеджер')
