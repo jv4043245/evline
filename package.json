@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "serve": "node scripts/serve-static.mjs",
+    "build:demand-pages": "node scripts/build-parts-demand-pages.mjs",
     "build:sitemap": "node scripts/build-sitemap.mjs",
     "audit:forms": "node scripts/audit-public-forms.mjs",
     "audit:links": "node scripts/audit-internal-links.mjs",

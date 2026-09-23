@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="{{HTML_LANG}}">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18146559745"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-18146559745');
+    </script>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{TITLE}}</title>
+    <meta name="description" content="{{DESCRIPTION}}">
+    <meta name="theme-color" content="#00b472">
+    <link rel="canonical" href="{{CANONICAL}}">
+    <link rel="alternate" hreflang="uk-UA" href="{{UA_URL}}">
+    <link rel="alternate" hreflang="ru-UA" href="{{RU_URL}}">
+    <link rel="alternate" hreflang="x-default" href="{{UA_URL}}">
+    <link rel="icon" href="/assets/images/favicon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="{{OG_LOCALE}}">
+    <meta property="og:url" content="{{CANONICAL}}">
+    <meta property="og:title" content="{{TITLE}}">
+    <meta property="og:description" content="{{DESCRIPTION}}">
+    <meta property="og:image" content="{{ABSOLUTE_IMAGE}}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{TITLE}}">
+    <meta name="twitter:description" content="{{DESCRIPTION}}">
+    <meta name="twitter:image" content="{{ABSOLUTE_IMAGE}}">
+    <link rel="stylesheet" href="/assets/css/styles.css?v=layout-5">
+    <link rel="stylesheet" href="/assets/css/parts-clean.css?v=language-switch-3">
+    <link rel="stylesheet" href="/assets/css/footer-contacts.css?v=20260922-footer-contacts-2" data-footer-contacts-style>
+    <script src="/assets/js/main.js?v=20260922-footer-contacts-2" defer></script>
+    <script type="application/ld+json">{{JSON_LD}}</script>
+  </head>
+  <body class="parts-page brand-seo-page">
+    <a class="skip-link" href="#main">{{SKIP_LINK}}</a>
+    <div class="topbar">
+      <div class="container topbar__inner topbar__inner--center">
+        <div><span aria-hidden="true">Tel:</span> <a href="tel:+380935251024">+38 (093) 525-10-24</a> <span aria-hidden="true">Email:</span> <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a></div>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="{{HOME_URL}}" aria-label="EVLine">
+          <img src="/assets/images/logo.png" alt="EVLine" width="245" height="100">
+        </a>
+        <nav class="nav" id="site-nav" aria-label="{{NAV_ARIA}}">
+          <a href="{{HOME_URL}}">{{NAV_PARTS}}</a>
+          <a href="{{PROGRAMMING_URL}}">{{NAV_PROGRAMMING}}</a>
+          <a href="{{STO_URL}}">{{NAV_STO}}</a>
+        </nav>
+        <div class="header-actions">
+          <details class="language-switch">
+            <summary aria-label="{{LANGUAGE_ARIA}}"><svg class="language-switch__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.4 2.5 3.6 5.5 3.6 9s-1.2 6.5-3.6 9"></path><path d="M12 3c-2.4 2.5-3.6 5.5-3.6 9s1.2 6.5 3.6 9"></path></svg></summary>
+            <div class="language-switch__menu">
+              <a href="{{UA_PATH}}" lang="uk"{{UK_CURRENT}}>Українська</a>
+              <a href="{{RU_PATH}}" lang="ru"{{RU_CURRENT}}>Русский</a>
+            </div>
+          </details>
+          <a class="btn btn--primary" href="https://t.me/evline_support" target="_blank" rel="noopener">{{TELEGRAM_CTA}}</a>
+          <button class="nav-toggle" type="button" aria-label="{{MENU_ARIA}}" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="brand-seo-hero">
+        <div class="container brand-seo-hero__grid">
+          <div>
+            <nav class="brand-seo-breadcrumb" aria-label="{{BREADCRUMB_ARIA}}">
+              <a href="{{HOME_URL}}">EVLine</a><span>/</span><a href="{{BYD_HUB_PATH}}">{{BYD_HUB_LABEL}}</a><span>/</span><strong>{{PAGE_LABEL}}</strong>
+            </nav>
+            <p class="brand-seo-kicker">{{KICKER}}</p>
+            <h1>{{H1}}</h1>
+            <p class="brand-seo-lead">{{LEAD}}</p>
+            <div class="brand-seo-tags">
+              {{TAG_ITEMS}}
+            </div>
+          </div>
+          <form class="brand-seo-form" data-telegram-parts-form>
+            <strong>{{FORM_TITLE}}</strong>
+            {{CAR_INPUT}}
+            <input name="vin" placeholder="{{VIN_PLACEHOLDER}}" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <input name="part" placeholder="{{PART_PLACEHOLDER}}" required>
+            <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="{{PHONE_PLACEHOLDER}}" required>
+            <button type="submit">{{FORM_BUTTON}}</button>
+            <a href="tel:+380935251024">{{CALL_LABEL}} +38 (093) 525-10-24</a>
+          </form>
+        </div>
+      </section>
+
+      <section class="brand-seo-proof">
+        <div class="container brand-seo-proof__grid">
+          <div class="brand-seo-proof__text">
+            <span>{{PROOF_LABEL}}</span>
+            <h2>{{PROOF_TITLE}}</h2>
+            <p>{{PROOF_TEXT}}</p>
+            <ul>
+              {{PROOF_ITEMS}}
+            </ul>
+          </div>
+          <div class="brand-seo-proof__media">
+            <img src="{{IMAGE}}" alt="{{IMAGE_ALT}}" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>{{PRIMARY_LABEL}}</span>
+            <h2>{{PRIMARY_TITLE}}</h2>
+            <p>{{PRIMARY_INTRO}}</p>
+          </div>
+          <div class="brand-seo-cards">
+            {{PRIMARY_CARDS}}
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-section brand-seo-section--soft">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>{{SECONDARY_LABEL}}</span>
+            <h2>{{SECONDARY_TITLE}}</h2>
+            <p>{{SECONDARY_INTRO}}</p>
+          </div>
+          <div class="brand-seo-cards">
+            {{SECONDARY_CARDS}}
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-process">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>{{PROCESS_LABEL}}</span>
+            <h2>{{PROCESS_TITLE}}</h2>
+          </div>
+          <div class="brand-seo-process__grid">
+            {{PROCESS_CARDS}}
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-faq" aria-label="FAQ">
+        <div class="container">
+          <div class="parts-section-head">
+            <span>FAQ</span>
+            <h2>{{FAQ_TITLE}}</h2>
+          </div>
+          <div class="parts-faq__grid">
+            {{FAQ_CARDS}}
+          </div>
+        </div>
+      </section>
+
+      <section class="brand-seo-links">
+        <div class="container">
+          <div class="brand-seo-links__panel">
+            <h2>{{RELATED_TITLE}}</h2>
+            <div>
+              {{RELATED_LINKS}}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="origin-contact" id="contacts">
+        <div class="container origin-contact__card">
+          <div>
+            <p>{{CONTACT_PROMPT}}</p>
+            <a class="origin-contact__phone" href="tel:+380935251024">+38 (093) 525-10-24</a>
+            <a class="origin-pill-button" href="https://t.me/evline_support" target="_blank" rel="noopener">{{CONTACT_BUTTON}}</a>
+          </div>
+          <div class="origin-contact__details">
+            <a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a>
+            <span>{{ADDRESS}}</span>
+            <span>{{HOURS}}</span>
+            <strong>EVLine Ukraine</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <a class="floating-chat" href="https://t.me/evline_support" target="_blank" rel="noopener" aria-label="Telegram"></a>
+
+    <footer class="site-footer">
+      <section class="footer-contacts" data-footer-contacts aria-label="Менеджер із запчастин">
+  <div class="footer-contacts__heading"><strong>Менеджер із запчастин</strong><span>+38 (093) 525-10-24</span></div>
+  <div class="footer-contacts__links">
+    <a class="footer-contacts__link footer-contacts__link--telegram" href="https://t.me/evline_support" target="_blank" rel="noopener noreferrer" data-contact-intent="parts" data-contact-id="footer-parts-telegram" aria-label="Telegram: менеджер із запчастин"><img src="/assets/icons/telegram.svg" width="22" height="22" alt="" aria-hidden="true">Telegram</a>
+    <a class="footer-contacts__link footer-contacts__link--whatsapp" href="https://wa.me/380935251024" target="_blank" rel="noopener noreferrer" data-contact-intent="parts" data-contact-id="footer-parts-whatsapp" aria-label="WhatsApp: менеджер із запчастин"><img src="/assets/icons/whatsapp.svg" width="22" height="22" alt="" aria-hidden="true">WhatsApp</a>
+    <a class="footer-contacts__link footer-contacts__link--viber" href="viber://chat?number=%2B380935251024" data-contact-intent="parts" data-contact-id="footer-parts-viber" aria-label="Viber: менеджер із запчастин"><img src="/assets/icons/viber.svg" width="22" height="22" alt="" aria-hidden="true">Viber</a>
+  </div>
+</section>
+      <div class="container site-footer__inner site-footer__inner--links">
+        <div>©2021-<span data-year>2026</span> EVLine - {{RIGHTS}}.</div>
+        <nav aria-label="{{FOOTER_ARIA}}">
+          <a href="{{HOME_URL}}">{{NAV_PARTS}}</a>
+          <a href="{{BRANDS_URL}}">{{BRANDS_LABEL}}</a>
+          <a href="{{PROGRAMMING_URL}}">{{NAV_PROGRAMMING}}</a>
+          <a href="{{STO_URL}}">{{NAV_STO}}</a>
+        </nav>
+      </div>
+      <div data-seller-identity style="width:min(1140px,calc(100% - 40px));margin:18px auto 0;font-size:13px;line-height:1.6">EVLine — торгове найменування діяльності ФОП Ванюшин Євген Анатолійович, власника сайту та продавця запчастин. <a href="/privacy/#seller" style="color:inherit;text-decoration:underline">Про продавця та контакти</a></div>
+    </footer>
+  </body>
+</html>

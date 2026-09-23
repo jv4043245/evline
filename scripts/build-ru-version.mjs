@@ -52,12 +52,18 @@ const brands = [
     aliases: "BYD, БИД, Build Your Dreams",
     models: ["Song Plus", "Song L", "Seal", "Han", "Tang", "Dolphin", "Yuan Plus", "Qin Plus"],
     modelPages: [
-      ["song-plus", "BYD Song Plus"],
-      ["seal", "BYD Seal"],
-      ["dolphin", "BYD Dolphin"],
-      ["atto-3", "BYD Atto 3 / Yuan Plus"],
-      ["han", "BYD Han"],
-      ["tang", "BYD Tang"],
+      ["song-plus", "Запчасти BYD Song Plus"],
+      ["song-l", "Запчасти BYD Song L"],
+      ["seal", "Запчасти BYD Seal"],
+      ["dolphin", "Запчасти BYD Dolphin"],
+      ["atto-3", "Запчасти BYD Atto 3 / Yuan Plus"],
+      ["han", "Запчасти BYD Han"],
+      ["tang", "Запчасти BYD Tang"],
+    ],
+    categoryPages: [
+      ["kuzovnye-detali", "Кузовные детали BYD"],
+      ["podveska-rulevoe", "Подвеска и рулевое BYD"],
+      ["fary-steklo", "Фары, фонари и стекло BYD"],
     ],
     focus: "электромобили и DM-i гибриды с большим количеством электроники, оптики и различий по комплектациям",
     popular: ["фары и фонари", "бамперы и кузовные элементы", "датчики ADAS", "электронные блоки и зарядные модули", "элементы подвески"],
@@ -70,7 +76,7 @@ const brands = [
     name: "ZEEKR",
     aliases: "ZEEKR, Zeekr, Зикр",
     models: ["001", "007", "X", "009", "7X"],
-    modelPages: [["001", "Zeekr 001"], ["7x", "Zeekr 7X"], ["x", "Zeekr X"]],
+    modelPages: [["001", "Запчасти на Zeekr 001"], ["7x", "Запчасти на Zeekr 7X"], ["x", "Запчасти на Zeekr X"]],
     focus: "премиальные электромобили с дорогой оптикой, кузовными деталями, электроникой и сложной подвеской",
     popular: ["передняя и задняя оптика", "кузовные детали", "элементы салона", "датчики и камеры", "ходовая и подвеска"],
     note: "По ZEEKR часто ищут детали после ДТП, поэтому мы проверяем комплектацию, цвет, версию кузова и совместимость до заказа.",
@@ -82,7 +88,7 @@ const brands = [
     name: "Xiaomi",
     aliases: "Xiaomi Auto, Xiaomi SU7",
     models: ["SU7", "SU7 Pro", "SU7 Max", "YU7"],
-    modelPages: [["su7", "Xiaomi SU7"], ["yu7", "Xiaomi YU7"]],
+    modelPages: [["su7", "Запчасти на Xiaomi SU7"], ["yu7", "Запчасти на Xiaomi YU7"]],
     focus: "новые электромобили, по которым в Украине еще мало складских остатков и важна прямая проверка в Китае",
     popular: ["кузовные панели", "оптика", "элементы салона", "датчики", "лидары и радары"],
     note: "Для Xiaomi Auto рынок запчастей еще формируется, поэтому мы проверяем наличие в Китае и предлагаем реальные доступные варианты.",
@@ -94,7 +100,7 @@ const brands = [
     name: "Li Auto",
     aliases: "Li Auto, Lixiang, Лисян",
     models: ["L6", "L7", "L8", "L9", "Mega"],
-    modelPages: [["l7", "Li Auto L7"], ["l9", "Li Auto L9"]],
+    modelPages: [["l7", "Запчасти на Li Auto L7"], ["l9", "Запчасти на Li Auto L9"]],
     focus: "большие семейные автомобили и EREV-кроссоверы, где часто нужны кузов, оптика, салон и электроника",
     popular: ["фары и фонари", "стекло", "детали салона", "кузовные элементы", "датчики и камеры"],
     note: "У Li Auto много деталей зависят от года, комплектации и версии салона, поэтому VIN и фото детали сильно ускоряют подбор.",
@@ -139,7 +145,7 @@ const brands = [
     name: "AVATR",
     aliases: "AVATR, Avatr, Аватр",
     models: ["11", "12", "07"],
-    modelPages: [["11", "Avatr 11"], ["12", "Avatr 12"]],
+    modelPages: [["11", "Запчасти на Avatr 11"], ["12", "Запчасти на Avatr 12"]],
     focus: "премиальные электромобили с нетипичными кузовными деталями, сложной оптикой и электроникой",
     popular: ["фары", "бамперы", "кузовные элементы", "датчики", "детали интерьера"],
     note: "Для AVATR часто критична точность комплектации: деталь с другой версии может выглядеть похоже, но не стать без доработок.",
@@ -272,9 +278,9 @@ const brands = [
     name: "Volkswagen ID",
     aliases: "Volkswagen ID, VW ID, ID.3, ID.4, ID.6, ID.7",
     models: ["ID.3", "ID.4 X", "ID.4 Crozz", "ID.6 X", "ID.6 Crozz", "ID.7 Vizzion", "ID.Unyx"],
-    focus: "электромобили Volkswagen для китайского рынка, где важно не смешивать европейские и китайские версии деталей",
+    focus: "электромобили Volkswagen китайского производства, где важно не смешивать европейские и китайские версии деталей",
     popular: ["кузовные детали", "оптика", "стекло", "ходовая", "электронные блоки"],
-    note: "Для Volkswagen ID из Китая важно отличать ID.4 X, ID.4 Crozz, ID.6 X и ID.6 Crozz: похожие детали могут иметь разные крепления, оптику и артикулы.",
+    note: "Работаем именно с Volkswagen ID китайского производства: ID.4 X/Crozz, ID.6 X/Crozz, ID.7 Vizzion и ID.Unyx. Touareg и другие модели европейского производства не относятся к этому направлению.",
   },
   {
     uaSlug: "zapchastyny-polestar",
@@ -1030,6 +1036,7 @@ function ruFooter() {
         <nav aria-label="Нижняя навигация">
           <a href="../">Запчасти из Китая</a>
           <a href="../zapchasti-kitajskih-avto/">Марки авто</a>
+          <a href="/ru/zapchasti-posle-dtp/">Запчасти после ДТП</a>
           <a href="/ru/byd">Программирование BYD</a>
           <a href="/ru/sotrudnichestvo-sto/">Для СТО</a>
         </nav>
@@ -1047,13 +1054,17 @@ function brandPageRu(brand) {
     .slice(0, 10)
     .map((item) => `<a href="../${item.ruSlug}/">${escapeHtml(item.name)}</a>`)
     .join("\n                ");
-  const modelPageLinks = brand.modelPages?.length
+  const detailPages = [...(brand.modelPages || []), ...(brand.categoryPages || [])];
+  const detailPagesTitle = brand.categoryPages?.length
+    ? `Модели и категории запчастей ${escapeHtml(brand.name)}`
+    : `Отдельные страницы моделей ${escapeHtml(brand.name)}`;
+  const modelPageLinks = detailPages.length
     ? `<section class="brand-seo-links">
         <div class="container">
           <div class="brand-seo-links__panel">
-            <h2>Отдельные страницы моделей ${escapeHtml(brand.name)}</h2>
+            <h2>${detailPagesTitle}</h2>
             <div>
-              ${brand.modelPages.map(([slug, label]) => `<a href="${slug}/">Запчасти на ${escapeHtml(label)}</a>`).join("\n              ")}
+              ${detailPages.map(([slug, label]) => `<a href="${slug}/">${escapeHtml(label)}</a>`).join("\n              ")}
             </div>
           </div>
         </div>
@@ -1309,7 +1320,7 @@ function hubPageRu() {
         <div class="container">
           <p class="brand-seo-kicker">Каталог современных авто из Китая</p>
           <h1>Запчасти для китайских авто из Китая</h1>
-          <p class="brand-seo-lead">Подбираем запчасти на китайские авто по VIN и доставляем в Украину. Основной фокус — современные BYD, ZEEKR, Xiaomi, Li Auto, NIO, XPENG, AITO, AVATR, Denza и другие модели последних лет.</p>
+          <p class="brand-seo-lead">Подбираем запчасти для современных автомобилей, произведенных в Китае, и доставляем в Украину. Это не только китайские бренды BYD, ZEEKR, Xiaomi, Li Auto или AVATR, но и китайские версии Volkswagen ID, Smart, Volvo EX30, Audi Q5 e-tron и MG. Совместимость подтверждаем по VIN.</p>
           <a class="origin-pill-button" href="../">Перейти к основной заявке</a>
         </div>
       </section>
@@ -1323,13 +1334,14 @@ function hubPageRu() {
           </div>
           <div class="brand-hub-grid">
             <a href="../zapchasti-byd/song-plus/"><strong>BYD Song Plus</strong><span>бамперы · фары · крылья · датчики</span></a>
+            <a href="../zapchasti-byd/song-l/"><strong>BYD Song L</strong><span>бамперы · оптика · кузов · подвеска</span></a>
             <a href="../zapchasti-zeekr/001/"><strong>Zeekr 001</strong><span>матричные фары · пневмоподвеска · стекло</span></a>
             <a href="../zapchasti-zeekr/x/"><strong>Zeekr X</strong><span>кузов · оптика · стекло · электроника</span></a>
             <a href="../zapchasti-zeekr/7x/"><strong>Zeekr 7X</strong><span>фары · бамперы · крылья · датчики</span></a>
             <a href="../zapchasti-xiaomi/su7/"><strong>Xiaomi SU7</strong><span>кузов · оптика · лидар · радары</span></a>
             <a href="../zapchasti-xiaomi/yu7/"><strong>Xiaomi YU7</strong><span>бамперы · оптика · стекло · датчики</span></a>
             <a href="../zapchasti-avatr/11/"><strong>Avatr 11</strong><span>бамперы · лидары · Huawei ADS · подвеска</span></a>
-            <a href="../zapchasti-byd/tang/"><strong>BYD Tang</strong><span>кузов · оптика · подвеска · электроника</span></a>
+            <a href="../zapchasti-byd/kuzovnye-detali/"><strong>Кузовные детали BYD</strong><span>бамперы · крылья · двери · крепления</span></a>
           </div>
         </div>
       </section>
