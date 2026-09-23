@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
 import { syncFooterContacts } from "./lib/footer-contacts.mjs";
+import { currentDeliveryCopy } from "./lib/delivery-copy.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const source = path.resolve(root, "../evline/public/запчастини-з-китаю/index.html");
@@ -305,8 +306,8 @@ ruHtml = bumpAdLandingCss(ruHtml);
 
 await mkdir(path.join(root, "запчастини-з-китаю"), { recursive: true });
 await mkdir(path.join(root, "ru/zapchasti-iz-kitaya"), { recursive: true });
-await writeFile(path.join(root, "запчастини-з-китаю/index.html"), ukHtml);
-await writeFile(path.join(root, "ru/zapchasti-iz-kitaya/index.html"), ruHtml);
+await writeFile(path.join(root, "запчастини-з-китаю/index.html"), currentDeliveryCopy(ukHtml));
+await writeFile(path.join(root, "ru/zapchasti-iz-kitaya/index.html"), currentDeliveryCopy(ruHtml));
 await syncSellerIdentity(root);
 await syncFooterContacts(root);
 

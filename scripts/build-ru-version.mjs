@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
 import { syncFooterContacts } from "./lib/footer-contacts.mjs";
+import { currentDeliveryCopy } from "./lib/delivery-copy.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
@@ -1476,16 +1477,16 @@ if (rebuildStandalonePages) {
 
   const indexUk = await readFile(path.join(root, "index.html"), "utf8");
   const bydUk = await readFile(path.join(root, "byd.html"), "utf8");
-  await writeFile(path.join(root, "ru/index.html"), prepareStandaloneRu(indexUk, "index"));
-  await writeFile(path.join(root, "ru/byd.html"), prepareStandaloneRu(bydUk, "byd"));
+  await writeFile(path.join(root, "ru/index.html"), currentDeliveryCopy(prepareStandaloneRu(indexUk, "index")));
+  await writeFile(path.join(root, "ru/byd.html"), currentDeliveryCopy(prepareStandaloneRu(bydUk, "byd")));
 }
 
 await mkdir(path.join(root, "ru/zapchasti-kitajskih-avto"), { recursive: true });
-await writeFile(path.join(root, "ru/zapchasti-kitajskih-avto/index.html"), hubPageRu());
+await writeFile(path.join(root, "ru/zapchasti-kitajskih-avto/index.html"), currentDeliveryCopy(hubPageRu()));
 
 for (const brand of brands) {
   await mkdir(path.join(root, "ru", brand.ruSlug), { recursive: true });
-  await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), brandPageRu(brand));
+  await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), currentDeliveryCopy(brandPageRu(brand)));
 }
 
 const standaloneSummary = rebuildStandalonePages ? "2 standalone pages, " : "";
