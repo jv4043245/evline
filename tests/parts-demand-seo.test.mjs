@@ -29,6 +29,7 @@ test("demand-backed BYD pages are substantial bilingual landing pages", async ()
       assert.match(html, new RegExp('<html lang="' + lang + '">'));
       assert.match(html, new RegExp('<link rel="canonical" href="https://evline\\.com\\.ua/' + canonicalSlug.replaceAll("/", "\\/") + '">'));
       assert.equal((html.match(/<h1>/g) || []).length, 1, canonicalSlug + ": expected one H1");
+      assert.match(html, /<meta name="robots" content="index, follow, max-image-preview:large">/);
       assert.doesNotMatch(html, /noindex/i, canonicalSlug);
       assert.match(html, /data-telegram-parts-form/);
       assert.match(html, /https:\/\/t\.me\/evline_support/);

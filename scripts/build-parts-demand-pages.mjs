@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { footerContactsMarkup } from "./lib/footer-contacts.mjs";
+import { sellerIdentityMarkup } from "./lib/seller-identity.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const siteUrl = "https://evline.com.ua";
@@ -42,14 +44,10 @@ const common = {
     contactButton: "Написати в Telegram",
     address: "м. Київ, Оболонська набережна, 1",
     hours: "Пн–Пт: 10:00–18:00",
-    footerManager: "Менеджер із запчастин",
     rights: "Усі права захищено",
     footerAria: "Нижня навігація",
     brandsUrl: "/zapchastyny-kytajskyh-avto/",
     brandsLabel: "Марки авто",
-    privacyUrl: "/privacy/",
-    sellerText: "EVLine — торгове найменування діяльності ФОП Ванюшин Євген Анатолійович, власника сайту та продавця запчастин.",
-    sellerLink: "Про продавця та контакти",
   },
   ru: {
     htmlLang: "ru-UA",
@@ -85,14 +83,10 @@ const common = {
     contactButton: "Написать в Telegram",
     address: "г. Киев, Оболонская набережная, 1",
     hours: "Пн–Пт: 10:00–18:00",
-    footerManager: "Менеджер по запчастям",
     rights: "Все права защищены",
     footerAria: "Нижняя навигация",
     brandsUrl: "/ru/zapchasti-kitajskih-avto/",
     brandsLabel: "Марки авто",
-    privacyUrl: "/ru/privacy/",
-    sellerText: "EVLine — торговое наименование деятельности ФЛП Ванюшин Евгений Анатольевич, владельца сайта и продавца запчастей.",
-    sellerLink: "О продавце и контактах",
   },
 };
 
@@ -293,14 +287,12 @@ function renderPage(topic, language) {
     CONTACT_BUTTON: copy.contactButton,
     ADDRESS: copy.address,
     HOURS: copy.hours,
-    FOOTER_MANAGER: copy.footerManager,
+    FOOTER_CONTACTS: footerContactsMarkup(copy.htmlLang),
     RIGHTS: copy.rights,
     FOOTER_ARIA: copy.footerAria,
     BRANDS_URL: copy.brandsUrl,
     BRANDS_LABEL: copy.brandsLabel,
-    SELLER_TEXT: copy.sellerText,
-    PRIVACY_URL: copy.privacyUrl,
-    SELLER_LINK: copy.sellerLink,
+    SELLER_IDENTITY: sellerIdentityMarkup(copy.htmlLang),
     UK_CURRENT: language === "uk" ? ' aria-current="true"' : "",
     RU_CURRENT: language === "ru" ? ' aria-current="true"' : "",
   };
