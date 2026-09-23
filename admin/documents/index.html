@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="same-origin">
+  <title>Документи замовлення | EVLine CRM</title>
+  <link rel="icon" href="/assets/images/favicon.png">
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924">
+  <script type="module" src="/admin/documents/documents.js?v=20260924"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/admin/"><img src="/assets/images/logo.png" alt="EVLine" width="98" height="40"><span>CRM</span></a>
+    <a data-back href="/admin/">До замовлення</a>
+  </header>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow" data-order-number>Замовлення</p><h1>Документи клієнту</h1><p class="muted" data-customer></p></div><span class="state-label" data-state>Завантаження</span></div>
+    <p class="notice error" data-error role="alert" hidden></p>
+    <p class="notice" data-auth hidden>Потрібен <a href="/admin/">вхід до адмінки</a>.</p>
+    <div data-workspace hidden>
+      <nav class="document-toolbar" aria-label="Дії з документами">
+        <div class="view-switch" role="tablist" aria-label="Режим документа">
+          <button type="button" data-view="edit" role="tab" aria-controls="editor" aria-selected="true">Редагування</button>
+          <button type="button" data-view="preview" role="tab" aria-controls="preview" aria-selected="false">Перегляд</button>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" data-action="save">Зберегти</button>
+          <button type="button" class="primary" data-action="pdf">PDF</button>
+          <button type="button" class="icon-button" data-action="print" aria-label="Друкувати" title="Друкувати"></button>
+          <button type="button" data-action="send">Надіслати</button>
+        </div>
+      </nav>
+      <div class="document-layout">
+        <div class="document-main">
+          <form id="editor" data-editor autocomplete="off"></form>
+          <section id="preview" data-preview hidden>
+            <div class="preview-toolbar">
+              <select data-preview-mode aria-label="Документ для перегляду"><option value="all">Договір та специфікація</option><option value="contract">Договір</option><option value="specification">Специфікація</option><option value="receipt">Підтвердження оплати</option></select>
+              <button type="button" data-action="draft-pdf">PDF чернетки</button>
+            </div>
+            <div data-paper></div>
+          </section>
+        </div>
+        <aside class="document-sidebar" aria-label="Підсумок документа">
+          <section><h2>Специфікація</h2><dl data-totals></dl></section>
+          <section><h2>Перевірка</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label></section>
+          <section><h2>Версії</h2><select data-versions aria-label="Збережена версія"><option value="">Ще не збережено</option></select><p class="muted" data-version-info></p><p class="muted" data-delivery-status></p></section>
+        </aside>
+      </div>
+      <p class="save-status" data-save-status role="status"></p>
+    </div>
+  </main>
+  <dialog data-send-dialog aria-labelledby="send-title">
+    <form method="dialog"><div class="dialog-heading"><h2 id="send-title">Надіслати клієнту</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
+    <div data-send-content></div>
+    <p data-send-error class="error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" data-action="send-download">Завантажити PDF</button><button type="button" data-action="share" hidden>Поділитися файлом</button><button type="button" data-action="telegram" class="primary" hidden>Надіслати в Telegram</button></div>
+  </dialog>
+</body>
+</html>
