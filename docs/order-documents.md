@@ -125,6 +125,11 @@ loading another component framework:
   16px input text; touch targets are not shrunk to achieve density.
 - Main editor sections retain 12px padding and dividers; their heading-to-fields
   spacing is 4px. No document fields or actions are removed for density.
+- Flat, full-width backgrounds distinguish seller (gray), buyer (white),
+  specification (pale blue) and invoice/payment (pale green). Additional sections
+  stay neutral. White inputs and visible headings remain consistent; colors are
+  not payment-status indicators. No shadows, nested cards or extra vertical gaps
+  are introduced. Mobile horizontal insets are 8px.
 - Secondary buyer details, contract metadata, condition, payment and delivery
   sections use native keyboard-operable disclosures. Expanded state survives
   saves and item edits. Failed preparation reveals incomplete sections; selecting
