@@ -116,10 +116,15 @@ The editor uses a productive enterprise-UI scale, adapted to EVLine rather than
 loading another component framework:
 
 - Arial/Helvetica retained for site consistency; 14px/20px controls, 12px/16px
-  labels, 16px section headings and a 24px page title. Letter spacing stays zero.
-- Spacing steps are 4/8/12/16/24px; related fields use 12px row and 16px column
+  labels, 16px section headings and a 20px page title. Letter spacing stays zero.
+- The title, order number and customer contact share a desktop line and wrap on
+  narrow screens. Long names cannot overlap the status. Empty seller summaries
+  consume no space.
+- Spacing steps are 4/8/12/16/24px; related fields use 8px row and 12px column
   gaps. Desktop input/button heights are 32px. Mobile controls are 44px, with
   16px input text; touch targets are not shrunk to achieve density.
+- Main editor sections retain 12px padding and dividers; their heading-to-fields
+  spacing is 4px. No document fields or actions are removed for density.
 - Secondary buyer details, contract metadata, condition, payment and delivery
   sections use native keyboard-operable disclosures. Expanded state survives
   saves and item edits. Failed preparation reveals incomplete sections; selecting
