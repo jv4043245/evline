@@ -4662,3 +4662,120 @@ body.audit-log-open .audit-log-panel {
   .order-editor__tools { width:100%; justify-content:flex-start; }
   .order-editor__tools .admin-btn { font-size:13px; padding:8px 12px; }
 }
+
+/* Compact working surfaces; status colors and data-table spacing stay semantic. */
+.admin-shell { --work-neutral:#f0f2f4; --work-blue:#eef5fa; --work-green:#edf7f0; }
+.admin-shell :is(h1, h2, h3, label) { letter-spacing:0; }
+.admin-header { min-height:64px; padding-block:8px; }
+.admin-main { padding-top:16px; }
+.admin-tabs { margin-bottom:12px; box-shadow:none; }
+.admin-panel { box-shadow:none; border-radius:8px; }
+.admin-panel__head { padding:12px 16px; gap:12px; }
+.admin-panel__head h2 { font-size:20px; }
+.admin-panel__head p { margin:4px 0 0; font-size:14px; }
+.admin-panel__head :is(.admin-btn, .admin-link-button) { margin-top:0; }
+.admin-grid { gap:12px; margin-bottom:12px; }
+.admin-panel { margin-bottom:12px; }
+.admin-grid > .admin-panel { margin-bottom:0; }
+:is(.order-detail, .market-lookup-detail, .china-request-detail, .china-preorder-detail, .audit-log-panel) { margin:0; }
+:is(.order-detail, .market-lookup-detail, .china-request-detail, .china-preorder-detail, .audit-log-panel) .admin-panel__head { flex-shrink:0; align-items:center; }
+.order-detail .order-editor { padding:12px 16px 24px; gap:10px; }
+.order-editor__meta { padding:10px 12px; border-radius:0; }
+.order-editor__meta-head { align-items:center; }
+.order-editor__tools .admin-btn { margin:0; }
+.order-editor__details { padding:0; }
+.order-editor__details > summary { padding:6px 0; line-height:1.4; }
+.order-editor__tabs { grid-auto-rows:minmax(36px,auto); min-height:0; padding:0; }
+.order-editor__tab { min-height:36px; white-space:normal; }
+.order-editor__grid { gap:8px 12px; align-items:start; }
+.order-editor label { gap:4px; line-height:1.4; }
+.order-editor :is(input:not([type="checkbox"]):not([type="hidden"]), select, textarea) { min-width:0; width:100%; font-size:14px; }
+.order-editor :is(input:not([type="checkbox"]):not([type="hidden"]), select) { min-height:36px; padding-block:6px; }
+.order-editor textarea { padding:7px 10px; line-height:1.45; }
+.editor-band { min-width:0; padding:12px; background:var(--work-neutral); border:0; border-radius:0; }
+.editor-band + .editor-band { margin-top:12px; }
+.editor-band--customer { background:#fff; border-block:1px solid var(--line); }
+.editor-band--request { background:var(--work-blue); }
+.editor-band--finance { background:var(--work-green); }
+.editor-band > h3 { margin:0 0 8px; font-size:14px; line-height:1.4; font-weight:800; }
+.editor-band > .order-editor__section { padding:0 0 10px; background:transparent; border-radius:0; align-items:baseline; flex-wrap:wrap; }
+.editor-band > .order-editor__section span { font-size:13px; }
+.order-editor__pane > .order-editor__section { padding:10px 12px; align-items:center; flex-wrap:wrap; }
+.order-status-message { padding:10px; background:#fff8e6; }
+.order-status-message .muted { margin:0 0 8px; }
+.order-save-bar { padding:8px 0; }
+.supplier-requests__intro { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.supplier-requests__intro .supplier-request-card__actions { gap:8px; }
+.supplier-payments__create { padding:8px 0 0; gap:8px 12px; }
+.supplier-payment-card { gap:6px; }
+.supplier-payment-card__main { display:grid; grid-template-columns:minmax(150px,1fr) minmax(0,2fr); align-items:start; gap:12px; }
+.supplier-payment-amounts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 16px; }
+.supplier-payment-card__main > div { align-content:start; }
+.supplier-payment-card .order-editor__details + .order-editor__details { border-top:1px solid var(--line); }
+.market-panel { gap:10px; }
+.market-panel__head { align-items:center; gap:8px; }
+.market-search-details { padding:8px 12px; background:var(--work-blue); }
+.market-search-details > summary { min-height:24px; padding:2px 0; }
+.market-search { gap:8px 12px; padding:10px 0 0; }
+.market-items { gap:16px; }
+.market-item h3 { font-size:17px; }
+.market-price-group { padding:10px 12px; background:#f4f7f9; }
+.market-trust-group { margin:12px 0; }
+.shipping-estimate { padding:12px; background:var(--work-blue); }
+.shipping-estimate__head { gap:8px; }
+.shipping-estimate__result { gap:8px; }
+.market-lookup-detail__body { padding:12px 16px 24px; gap:12px; }
+.market-lookup-form { padding:12px; border:0; border-radius:0; background:var(--work-blue); }
+.market-lookup-welcome { padding:14px; border-radius:0; }
+.market-lookup-welcome strong { font-size:17px; }
+.market-lookup-welcome span { font-size:14px; }
+.market-lookup-results { padding:0; border:0; border-radius:0; background:transparent; gap:12px; }
+.market-lookup-history { border-radius:0; }
+.market-lookup-history > summary { padding:10px 12px; }
+.china-request-detail .china-preorder-form { padding:12px 16px 24px; gap:8px 12px; }
+.china-preorder-form label { gap:4px; }
+.cost-form, .shipping-form { padding:12px 16px; gap:8px 12px; background:#f7f9fa; }
+.cost-form label, .shipping-form label { gap:4px; }
+.tracking-sync-card { padding:10px; }
+
+@media (min-width:1000px) {
+  .order-editor__grid--workflow { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .order-editor__grid--customer, .order-editor__grid--shipping { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .order-editor__grid--finance { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .order-editor__grid--finance > label:first-child { grid-column:span 2; }
+  .order-editor__grid--finance > label:nth-child(2) { grid-column:span 2; }
+}
+
+@media (max-width:760px) {
+  .admin-header { padding:8px 12px; }
+  .admin-main { padding-top:12px; }
+  .admin-panel__head, .order-detail .admin-panel__head { padding:10px 12px; }
+  .admin-panel__title-actions h2 { font-size:20px; line-height:1.25; }
+  .order-detail .order-editor { padding:10px 12px 24px; }
+  .order-editor__tabs { grid-auto-rows:minmax(44px,auto); }
+  .order-editor__tab { min-height:44px; }
+  .editor-band { padding:10px; }
+  .editor-band + .editor-band { margin-top:10px; }
+  .order-editor :is(input:not([type="checkbox"]):not([type="hidden"]), select, textarea),
+  :is(.market-lookup-form, .china-preorder-form, .cost-form, .shipping-form, .manual-order-form) :is(input:not([type="hidden"]), select, textarea) { font-size:16px; min-height:44px; }
+  .admin-btn, .order-editor__tools .admin-btn, .order-save-bar .admin-btn, .market-filter, .admin-tab { min-height:44px; }
+  .order-editor__details > summary, .market-search-details > summary { min-height:44px; display:flex; align-items:center; }
+  .order-editor__details > summary::before, .market-search-details > summary::before { content:"\25B8"; margin-right:6px; }
+  .order-editor__details[open] > summary::before, .market-search-details[open] > summary::before { content:"\25BE"; }
+  .supplier-payment-card__main { grid-template-columns:1fr; }
+  .supplier-payment-amounts { gap:4px 10px; }
+  .market-lookup-detail__body, .china-request-detail .china-preorder-form { padding:12px 12px 24px; }
+}
+
+@media (max-width:480px) {
+  .supplier-payment-amounts { grid-template-columns:1fr; }
+}
+
+@media (max-width:380px) {
+  .order-save-bar { flex-wrap:wrap; gap:4px; }
+  .order-save-bar .admin-btn { min-width:0; flex:1; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .admin-shell :is(.admin-tab, .order-editor__tab, .admin-btn) { transition:none; }
+}

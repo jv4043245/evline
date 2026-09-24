@@ -25,7 +25,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true, channel: process.env.SMOKE_BROWSER || 'chrome' });
 const errors = [];
 try {
-  for (const width of [1440, 1024, 768, 390]) {
+  for (const width of [1440, 1024, 768, 390, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
     const page = await context.newPage();
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -105,6 +105,31 @@ try {
     await page.screenshot({ path: `${output}/orders-${width}.png`, fullPage: true });
     await page.locator('[data-open-order="smoke-order"]').first().click();
     const form = page.locator('[data-order-editor]');
+    const checkOrderLayout = async () => {
+      const issues = await form.evaluate((root) => {
+        const visible = el => el.getClientRects().length > 0;
+        const problems = [];
+        for (const el of root.querySelectorAll('.editor-band, .order-editor__grid, .order-editor__tabs, .market-panel, .supplier-payment-card, .shipping-estimate')) {
+          if (visible(el) && el.scrollWidth > el.clientWidth + 2) problems.push(`overflow: ${el.className}`);
+        }
+        for (const grid of root.querySelectorAll('.order-editor__grid, .supplier-payments__create, .shipping-estimate__controls')) {
+          const rects = [...grid.children].filter(el => visible(el) && el.matches('label')).map(el => el.getBoundingClientRect());
+          rects.forEach((a, index) => rects.slice(index + 1).forEach(b => {
+            if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) problems.push('overlapping fields');
+          }));
+        }
+        if (innerWidth <= 760) {
+          for (const el of root.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]), select, textarea')) {
+            if (visible(el) && (el.getBoundingClientRect().height < 44 || parseFloat(getComputedStyle(el).fontSize) < 16)) problems.push(`small phone field: ${el.name}`);
+          }
+          for (const el of root.querySelectorAll('.admin-btn, .order-editor__tab, .market-filter')) {
+            if (visible(el) && el.getBoundingClientRect().height < 44) problems.push(`small touch target: ${el.textContent}`);
+          }
+        }
+        return problems;
+      });
+      assert.deepEqual(issues, [], `${width}px order layout`);
+    };
     await form.locator('[name="status"]').waitFor();
     await page.locator('[data-order-detail-panel]').evaluate((el) => Promise.all(el.getAnimations().map((animation) => animation.finished)));
     const tabSize = await form.locator('.order-editor__tabs').evaluate((el) => ({ scrollWidth: el.scrollWidth, width: el.clientWidth, scrollHeight: el.scrollHeight, height: el.clientHeight, columns: getComputedStyle(el).gridTemplateColumns }));
@@ -119,6 +144,18 @@ try {
     assert.equal(await form.locator('.order-editor__tabs [data-order-tab]').count(), 5);
     assert.equal(await form.locator('[data-order-pane="messages"]').count(), 0);
     assert.equal(await form.locator('[data-order-documents]').isVisible(), true);
+    assert.deepEqual(await form.locator('[data-order-pane="main"] .editor-band > h3').allTextContents(), ['Робота із замовленням', 'Клієнт', 'Авто та запит']);
+    const bandColors = await form.locator('[data-order-pane="main"] .editor-band').evaluateAll(nodes => nodes.map(el => getComputedStyle(el).backgroundColor));
+    assert.equal(new Set(bandColors).size, 3);
+    await checkOrderLayout();
+    await form.locator('[name="customer_name"]').fill('Тестовий клієнт');
+    await form.locator('[name="request_text"]').fill('Фара права. Уточнення менеджера.');
+    await form.locator('[name="next_action_at"]').fill('2026-10-01');
+    await form.evaluate(el => { el.scrollTop = el.scrollHeight; });
+    const lastRequestBox = await form.locator('[name="request_text"]').boundingBox();
+    const saveBox = await form.locator('[data-order-save-bar]').boundingBox();
+    assert.ok(lastRequestBox.y + lastRequestBox.height <= saveBox.y + 1, 'Save bar must not cover the final field at maximum scroll');
+    await form.evaluate(el => { el.scrollTop = 0; });
     await page.screenshot({ path: `${output}/order-${width}.png` });
     await form.locator('[name="manager_notes"]').fill('Незбережена нотатка');
     page.once('dialog', dialog => { assert.match(dialog.message(), /Спочатку збережіть/); return dialog.accept(); });
@@ -138,6 +175,7 @@ try {
     assert.doesNotMatch(copied, /99\s?000|6\s?000/);
     assert.equal(await form.locator('[data-order-save-bar]').isVisible(), true);
     await page.screenshot({ path: `${output}/market-${width}.png` });
+    await checkOrderLayout();
     const colors = await form.locator('.market-trust-group > summary, .market-trust-group > h4').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
     assert.equal(new Set(colors).size, 2, 'Visible trust groups must have distinct colors and labels');
     assert.equal(await form.locator('.market-trust-group--irrelevant, .market-chip--irrelevant, .market-offer--irrelevant').count(), 0);
@@ -190,6 +228,9 @@ try {
     await page.waitForFunction(() => document.querySelector('[data-save-state]')?.textContent === 'Усі зміни збережено');
     assert.equal(saved.notify_customer, '0');
     assert.equal(saved.manager_notes, 'Незбережена нотатка');
+    assert.equal(saved.customer_name, 'Тестовий клієнт');
+    assert.equal(saved.request_text, 'Фара права. Уточнення менеджера.');
+    assert.match(saved.next_action_at, /^2026-10-01/);
     await form.locator('[data-order-tab="payment"]').click();
     assert.equal(await form.locator('.supplier-payments__create').isVisible(), true);
     assert.equal(await form.locator('[data-create-supplier-payment]').isVisible(), true);
@@ -202,9 +243,24 @@ try {
     await form.locator('summary').filter({ hasText: 'Квитанції' }).click();
     assert.equal(await form.locator('.supplier-receipt-links a').count(), 2);
     await page.screenshot({ path: `${output}/payment-${width}.png` });
+    await checkOrderLayout();
+    await form.locator('.editor-band--finance').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${output}/finances-${width}.png` });
+    await form.locator('[data-order-tab="delivery"]').click();
+    await form.locator('[name="shipping_carrier_choice"]').selectOption('air-test');
+    await form.locator('[name="shipping_mode"]').selectOption('air');
+    await form.locator('[name="shipping_weight_kg"]').fill('40');
+    await checkOrderLayout();
+    await page.screenshot({ path: `${output}/order-delivery-${width}.png` });
+    await form.locator('[data-order-save-bar] button').click();
+    await page.waitForFunction(() => document.querySelector('[data-save-state]')?.textContent === 'Усі зміни збережено');
+    assert.equal(Number(saved.shipping_weight_kg), 40);
+    assert.equal(saved.shipping_mode, 'air');
     await form.locator('[data-order-tab="history"]').click();
     assert.equal(await form.locator('[data-order-save-bar]').isVisible(), false);
     await form.locator('[data-order-tab="suppliers"]').click();
+    await checkOrderLayout();
+    await page.screenshot({ path: `${output}/order-suppliers-${width}.png` });
     await form.locator('[data-open-supplier-payment]').click();
     assert.equal(await form.locator('[data-order-pane="payment"]').isVisible(), true);
     assert.equal(await form.locator('[data-supplier-payment-supplier]').evaluate(el => document.activeElement === el), true);
@@ -274,19 +330,26 @@ try {
     assert.deepEqual(overflow, { page: false, panels: [] });
     assert.equal(requests.some((request) => request.method !== 'GET' && !['/api/admin/orders/smoke-order', '/api/admin/orders/smoke-order/supplier-requests', '/api/admin/orders/smoke-order/supplier-payments', '/api/admin/market-feedback', '/api/admin/orders/smoke-order/market-research'].includes(request.path)), false);
     await page.locator('[data-china-request-close]').last().click();
+    await page.screenshot({ path: `${output}/china-list-${width}.png` });
     await page.locator('.admin-tabs [data-admin-tab="analytics"]').click();
     assert.equal(await page.locator('[data-analytics-nav]').isVisible(), true);
     assert.equal(await page.locator('[data-google-ads-conversions]').isVisible(), false);
+    await page.screenshot({ path: `${output}/analytics-${width}.png`, fullPage: true });
     await page.locator('[data-analytics-nav] [data-admin-tab="contacts"]').click();
     assert.equal(await page.locator('[data-admin-view="contacts"]').isVisible(), true);
+    await page.screenshot({ path: `${output}/contacts-${width}.png`, fullPage: true });
     await page.locator('.admin-header [data-filter-menu-button]').click();
     await page.locator('.admin-header [data-admin-tab="delivery"]').click();
     assert.equal(await page.locator('[data-shipping-form]').isVisible(), false);
     await page.locator('[data-new-shipping-carrier]').click();
     assert.equal(await page.locator('[data-shipping-form]').isVisible(), true);
+    await page.screenshot({ path: `${output}/shipping-settings-${width}.png`, fullPage: true });
     await page.locator('[data-close-shipping-form]').click();
     assert.equal(await page.locator('[data-shipping-form]').isVisible(), false);
     await page.locator('.admin-tabs [data-admin-tab="orders"]').click();
+    await page.locator('[data-manual-order-toggle]').click();
+    await page.screenshot({ path: `${output}/manual-order-${width}.png`, fullPage: true });
+    await page.locator('[data-manual-order-toggle]').click();
     await page.locator('[data-market-lookup-open]').click();
     const lookup = page.locator('[data-market-lookup-panel]');
     await lookup.locator('[name="part_number"]').fill('13158405-00');
@@ -306,6 +369,7 @@ try {
     await lookup.locator('.market-feedback-notice').waitFor({ state: 'detached' });
     assert.equal(await lookup.locator('.market-offer--exact').count(), 3);
     assert.equal(await lookup.locator('.market-trust-group--irrelevant, .market-chip--irrelevant, .market-offer--irrelevant').count(), 0);
+    await page.screenshot({ path: `${output}/market-lookup-${width}.png` });
     order.car = '';
     order.item_name = 'Передні праві двері і переднє праве крило';
     market.summary.items = [{ key: 'door', label: 'Передні праві двері', car: '', part_numbers: [] }, { key: 'fender', label: 'Переднє праве крило', car: '', part_numbers: [] }];
