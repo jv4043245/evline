@@ -110,6 +110,30 @@ PDF rendering and bundled Cyrillic fonts run locally in the manager's browser.
 The PDF runtime is loaded only on demand; no external CDN or PDF service receives
 customer data. Original DOCX and real client fixtures are not published.
 
+## Editor Density
+
+The editor uses a productive enterprise-UI scale, adapted to EVLine rather than
+loading another component framework:
+
+- Arial/Helvetica retained for site consistency; 14px/20px controls, 12px/16px
+  labels, 16px section headings and a 24px page title. Letter spacing stays zero.
+- Spacing steps are 4/8/12/16/24px; related fields use 12px row and 16px column
+  gaps. Desktop input/button heights are 32px. Mobile controls are 44px, with
+  16px input text; touch targets are not shrunk to achieve density.
+- Secondary buyer details, contract metadata, condition, payment and delivery
+  sections use native keyboard-operable disclosures. Expanded state survives
+  saves and item edits. Failed preparation reveals incomplete sections; selecting
+  prepayment/balance opens its payment fields.
+- Actions remain visible in a sticky desktop toolbar and a fixed mobile footer
+  naming the chosen output. Sidebar offset follows the measured toolbar height;
+  mobile content reserves footer space, including device safe-area inset.
+- Printed PDFs, their font, page margins and document contents are unchanged.
+
+References: [Salesforce spacing and sizing](https://www.lightningdesignsystem.com/2e1ef8501/p/03d6b0),
+[Carbon productive typography](https://carbondesignsystem.com/elements/typography/type-sets/),
+[Carbon text input sizes](https://carbondesignsystem.com/components/text-input/usage/),
+[Carbon long-form grouping and progressive disclosure](https://carbondesignsystem.com/patterns/forms-pattern/).
+
 ## Verification
 
 `node --test tests/order-documents.test.mjs`

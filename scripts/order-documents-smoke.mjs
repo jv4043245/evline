@@ -55,8 +55,17 @@ try {
     const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
     await page.goto(`${origin}/admin/documents/?order=${order.id}`);
     await page.locator('[data-workspace]').waitFor({ state: 'visible' });
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    console.log(`Compact initial editor ${width}px: ${height}px high`);
+    assert.ok(height < (width > 760 ? 1500 : 2700), `Compact editor unexpectedly tall at ${width}`);
+    assert.equal(await page.locator('[data-disclosure="buyer"]').getAttribute('open'), null);
+    await page.locator('[data-disclosure="buyer"] > summary').focus();
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Адреса', { exact: true }).fill('Тестова адреса покупця');
     await page.getByLabel('ПІБ / найменування', { exact: true }).fill('Тестова Покупчиня');
     await page.locator('[data-action="save"]').click(); await page.getByText('Збережено версію 2', { exact: true }).waitFor();
+    assert.equal(await page.locator('[data-disclosure="buyer"]').getAttribute('open'), '');
+    await page.locator('[data-disclosure="buyer"] > summary').click();
     assert.equal(db.prepare('SELECT count(*) n FROM order_documents').get().n, 2);
     await page.locator('[data-versions]').selectOption('fixture'); await page.getByLabel('ПІБ / найменування', { exact: true }).waitFor();
     await page.waitForFunction(() => document.querySelector('[data-path="buyer.name"]')?.value === 'Тестовий Покупець');
@@ -77,13 +86,38 @@ try {
     }
     assert.equal(await page.locator('[data-path="buyer.name"]').inputValue(), 'Тестовий Покупець');
     assert.equal(await page.locator('[data-path="items.0.price"]').inputValue(), '10000.00');
+    if (width === 1440) {
+      await page.locator('[data-output-mode]').selectOption('agreement');
+      await page.locator('[data-disclosure="delivery"] > summary').click();
+      await page.locator('[data-path="forecast"]').fill('');
+      await page.locator('[data-disclosure="delivery"] > summary').click();
+      await page.locator('[data-reviewed]').check();
+      await page.locator('[data-action="pdf"]').click();
+      await page.locator('[data-error]').filter({ hasText: 'Прогноз доставки' }).waitFor();
+      assert.equal(await page.locator('[data-disclosure="delivery"]').getAttribute('open'), '');
+      assert.equal(db.prepare('SELECT count(*) n FROM order_documents').get().n, 2);
+      await page.locator('[data-path="forecast"]').fill(fixture.forecast);
+      await page.locator('[data-output-mode]').selectOption('invoice');
+    }
     await page.locator('[data-path="invoice.mode"]').selectOption('prepayment');
+    assert.equal(await page.locator('[data-disclosure="payment"]').getAttribute('open'), '');
     await page.locator('[data-reviewed]').check();
     await page.screenshot({ path: path.join(output, `editor-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Editor overflow at ${width}`);
     for (const field of await page.locator('input:visible,textarea:visible,select:visible,button:visible').all()) {
       const box = await field.boundingBox(); assert.ok(box && box.width > 0 && box.x >= 0 && box.x + box.width <= width + 1, `Clipped control at ${width}`);
+      if (await field.getAttribute('type') !== 'checkbox') assert.ok(box.height >= (width <= 760 ? 44 : 32), `Small control at ${width}`);
     }
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const actionBox = await page.locator('.toolbar-actions').boundingBox();
+    assert.ok(actionBox.y >= 0 && actionBox.y + actionBox.height <= 1001, `Actions scrolled away at ${width}`);
+    if (width > 760) {
+      const toolbar = await page.locator('.document-toolbar').boundingBox(), sidebar = await page.locator('.document-sidebar').boundingBox();
+      assert.ok(sidebar.y >= toolbar.y + toolbar.height, `Sidebar under toolbar at ${width}`);
+    }
+    await page.screenshot({ path: path.join(output, `actions-${width}.png`) });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: path.join(output, `top-${width}.png`) });
     await page.locator('[data-view="preview"]').click();
     assert.match(await page.locator('[data-paper]').innerText(), /До сплати за цим рахунком: 5.000,00 грн/);
     assert.match(await page.locator('[data-paper]').innerText(), /Другий Тестовий Продавець/);
