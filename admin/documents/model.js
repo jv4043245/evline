@@ -30,6 +30,11 @@ export const amount = value => value == null ? '' : (Number(value) / 100).toFixe
 export const dateLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('.') : value || '________________';
 export function cleanSeller(value = {}) { return Object.fromEntries(SELLER_FIELDS.map(k => [k, str(value[k], ['address', 'tax_status'].includes(k) ? 1000 : 200)])); }
 export const invoiceModes = { total: 'Повна вартість', prepayment: 'Погоджена передоплата', balance: 'Залишок після отриманої оплати', custom: 'Інша погоджена сума' };
+export const documentModes = { invoice: 'Рахунок', agreement: 'Договір і специфікація', all: 'Повний комплект', receipt: 'Підтвердження оплати' };
+export function documentMode(mode = 'all') {
+  if (!Object.hasOwn(documentModes, mode)) throw fail('Невідомий документ.');
+  return mode;
+}
 export function invoiceDefaults(d, enabled = false) { return { enabled, number: d.number || '', date: d.date || '', mode: 'total', amount: '', due: '' }; }
 export function invoiceAmount(d) {
   const i = d.invoice || invoiceDefaults(d), t = totals(d);
@@ -52,6 +57,25 @@ export function fromOrder(order, rows = [], seller = DEFAULT_SELLER) {
   };
   result.invoice = invoiceDefaults(result, true);
   return result;
+}
+
+export function orderRefreshChanges(current, source) {
+  const changes = [];
+  for (const [path, label] of Object.entries({ 'buyer.name': 'Покупець', 'buyer.phone': 'Телефон', 'buyer.contact': 'Email / месенджер', car: 'Авто', vin: 'VIN', recipient: 'Одержувач', route: 'Маршрут' })) {
+    const read = d => path.split('.').reduce((v, k) => v[k], d);
+    const before = read(current), after = read(source);
+    if (after && before !== after) changes.push({ path, label, before, after });
+  }
+  // A blank source must never erase a manually completed price or specification.
+  if (source.items.some(row => row.title)) {
+    const items = source.items.map(row => {
+      const matches = current.items.filter(old => row.sku ? old.sku === row.sku : old.title === row.title);
+      const old = matches.length === 1 ? matches[0] : null;
+      return { ...row, ...(old ? { kind: old.kind, vin: old.vin, notes: old.notes, price: row.price || old.price } : {}) };
+    });
+    if (JSON.stringify(items) !== JSON.stringify(current.items)) changes.push({ path: 'items', label: 'Позиції та ціни', before: current.items, after: items });
+  }
+  return changes;
 }
 
 export function normalizeDocument(input) {
@@ -89,32 +113,40 @@ export function totals(d) {
   return { items, extras, total, balance: total - (cents(d.prepayment) || 0), received: d.receipt.enabled ? cents(d.receipt.amount) || 0 : 0 };
 }
 
-export function validateReady(d) {
+export function validateReady(d, mode = 'all') {
+  documentMode(mode);
+  const agreement = mode === 'all' || mode === 'agreement';
+  const invoice = mode === 'invoice' || (mode === 'all' && d.invoice?.enabled);
+  const receipt = mode === 'receipt' || (mode === 'all' && d.receipt.enabled) || (invoice && d.invoice?.mode === 'balance');
   const errors = [];
   const required = (v, label) => { if (!String(v ?? '').trim()) errors.push(label); };
-  for (const k of ['number', 'date', 'city', 'car', 'condition', 'warranty', 'tax', 'included', 'prepayment_due', 'balance_due', 'route', 'forecast', 'deadline_days', 'handover', 'recipient', 'partial']) required(d[k], fieldLabels[k]);
-  for (const [k, label] of Object.entries({ name: 'ПІБ / назва покупця', address: 'Адреса покупця', phone: 'Телефон покупця', purpose: 'Мета придбання' })) required(d.buyer[k], label);
+  const fields = agreement ? ['number', 'date', 'city', 'car', 'condition', 'warranty', 'tax', 'included', 'prepayment_due', 'balance_due', 'route', 'forecast', 'deadline_days', 'handover', 'recipient', 'partial'] : mode === 'receipt' ? ['number', 'date'] : ['tax'];
+  for (const k of fields) required(d[k], fieldLabels[k]);
+  for (const [k, label] of Object.entries(agreement ? { name: 'ПІБ / назва покупця', address: 'Адреса покупця', phone: 'Телефон покупця', purpose: 'Мета придбання' } : { name: 'ПІБ / назва покупця' })) required(d.buyer[k], label);
   for (const [k, label] of Object.entries({ name: 'Продавець', tax_id: 'РНОКПП продавця', address: 'Адреса продавця', iban: 'IBAN продавця', bank: 'Банк', phone: 'Телефон продавця' })) required(d.seller[k], label);
   if (d.seller.iban && !validIban(d.seller.iban)) errors.push('Коректний український IBAN');
-  if (d.date && !validDate(d.date)) errors.push('Коректна дата договору');
-  if (d.deadline_days && !/^[1-9]\d{0,3}$/.test(d.deadline_days)) errors.push('Строк: від 1 до 9999 календарних днів');
+  if ((agreement || mode === 'receipt') && d.date && !validDate(d.date)) errors.push('Коректна дата договору');
+  if (agreement && d.deadline_days && !/^[1-9]\d{0,3}$/.test(d.deadline_days)) errors.push('Строк: від 1 до 9999 календарних днів');
   for (const [i, row] of d.items.entries()) {
-    required(row.title, `Позиція ${i + 1}: назва`); required(row.kind, `Позиція ${i + 1}: оригінал / OEM / аналог`);
+    required(row.title, `Позиція ${i + 1}: назва`);
+    if (agreement) required(row.kind, `Позиція ${i + 1}: оригінал / OEM / аналог`);
     if (cents(row.price) == null) errors.push(`Позиція ${i + 1}: ціна`);
   }
   for (const [i, row] of d.extras.entries()) if (!row.title || cents(row.price) == null) errors.push(`Окремі витрати ${i + 1}: назва і сума`);
-  if (d.extras.length && !d.allocation) errors.push('Розподіл спільних витрат');
+  if (agreement && d.extras.length && !d.allocation) errors.push('Розподіл спільних витрат');
   const t = totals(d);
   if (t.total <= 0) errors.push('Загальна ціна більше нуля');
-  if (cents(d.prepayment) == null || t.balance < 0) errors.push('Передоплата від 0 до загальної ціни');
-  if (d.terms.some(s => !s.text)) errors.push('Текст усіх розділів договору');
-  if (d.receipt.enabled) {
+  if (agreement && (cents(d.prepayment) == null || t.balance < 0)) errors.push('Передоплата від 0 до загальної ціни');
+  if (agreement && d.terms.some(s => !s.text)) errors.push('Текст усіх розділів договору');
+  if (receipt) {
+    if (!d.receipt.enabled) errors.push('Підтвердження оплати не ввімкнено');
     if (!cents(d.receipt.amount) || cents(d.receipt.amount) > t.total) errors.push('Отримано від клієнта: сума від 0,01 до загальної ціни');
     if (!validDate(d.receipt.date)) errors.push('Дата отримання оплати');
     required(d.receipt.method, 'Спосіб оплати клієнта'); required(d.receipt.reference, 'Підстава підтвердження оплати');
     if (!d.receipt.confirmed) errors.push('Підтвердження перевірки надходження від клієнта');
   }
-  if (d.invoice?.enabled) {
+  if (invoice) {
+    if (!d.invoice?.enabled) errors.push('Рахунок не ввімкнено');
     required(d.invoice.number, 'Номер рахунку');
     if (!validDate(d.invoice.date)) errors.push('Дата рахунку');
     const payable = invoiceAmount(d);

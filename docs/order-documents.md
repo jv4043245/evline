@@ -21,8 +21,13 @@ auto parts, so this action is intentionally not offered on programming services.
    only that profile behind admin auth in D1. Switching profiles asks for
    confirmation and changes the seller in the current draft, not buyer/items or
    saved versions. Do not place actual requisites in source control.
-4. **Перегляд** displays the invoice, contract, specification and optional payment
-   acknowledgment. Standard terms from the supplied 2026-09-23 DOCX are editable
+4. The document selector applies to **preview, PDF, print, copy and send**:
+   **Рахунок**, **Договір і специфікація**, **Повний комплект**, or the optional
+   payment acknowledgment. Invoice is selected initially. Contract and
+   specification stay together; neither requires sending the invoice. Shared
+   buyer, seller and line-item edits appear in both documents.
+   **Перегляд** displays the selected document, not necessarily the whole pack.
+   Standard terms from the supplied 2026-09-23 DOCX are editable
    per document. OEM/analogue lines qualify the originality wording explicitly;
    an all-original specification retains the original wording. Custom edited
    clauses are never overwritten by a type change.
@@ -33,14 +38,28 @@ auto parts, so this action is intentionally not offered on programming services.
    supplier payments are never used. Seller tax status does not imply VAT status.
    Existing saved documents retain their original invoice-free content unless a
    manager explicitly enables the invoice and saves a new version.
-5. **Зберегти** saves a draft. **PDF** requires the manager's review and all
-   necessary fields, then stores a prepared snapshot and downloads a real PDF.
+5. **Зберегти** saves a draft. **PDF** requires the manager's review and the
+   selected document's necessary fields, then stores a prepared snapshot and
+   downloads a real PDF with a document-specific filename. An invoice needs
+   buyer name, seller requisites, prices, tax treatment and invoice details;
+   unfinished contract delivery terms/address do not block it. Conversely, an
+   unfinished invoice or optional receipt does not block the agreement. The
+   server validates each requested output again before a Telegram send.
    It does not claim the contract is signed. Incomplete documents can be saved
    as a watermarked **PDF чернетки** from preview.
-6. Print opens the PDF viewer with a print action. **Надіслати** offers download,
+6. Print opens the selected PDF with a print action. Copy copies its plain text
+   (or opens a selectable text dialog if clipboard access is unavailable).
+   **Надіслати** explicitly names the selected document and offers download,
    native file sharing where supported, and the existing customer Telegram bot
    connection. Telegram requires an explicit recipient check. No public document
    URL is created, and no document is sent automatically.
+7. Existing snapshots are never silently replaced by current order data.
+   **Оновити з замовлення** shows field-by-field differences; only checked
+   changes are applied to the shared draft. Blank source fields do not erase
+   manual values. Matching item metadata is retained. Seller and contract text
+   are not imported. **До замовлення** saves pending draft edits before returning;
+   a failed save keeps the manager on the page with their edits. Document edits
+   do not silently overwrite order/contact records or trigger financial events.
 
 ## Payment And Legal Boundaries
 
@@ -73,7 +92,10 @@ The first profile remains the default; managers choose the required seller per
 order. Old clients cannot overwrite multiple profiles through the legacy request.
 No new D1 migration is required for seller profiles/invoices; their versioned
 JSON stays inside the existing document/settings tables.
-`document_deliveries` records each version's Telegram send attempt. A confirmed
+`document_deliveries` records each version/output's Telegram send attempt. Invoice
+and agreement can be sent independently from the same snapshot. Existing legacy
+delivery IDs retain whole-pack semantics; other outputs use `snapshot-id:mode`.
+No migration is needed for separate outputs. A confirmed
 success is never resent; ambiguous network outcomes are not blindly retried.
 Definitively rejected Telegram requests can be manually retried. Recipient must
 still match the order's connected positive/private chat ID at send time.

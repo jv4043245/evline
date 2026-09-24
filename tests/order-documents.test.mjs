@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
-import { fromOrder, normalizeDocument, validateReady, totals, cents, validIban, syncStandardTerms, invoiceAmount } from '../admin/documents/model.js';
+import { fromOrder, normalizeDocument, validateReady, totals, cents, validIban, syncStandardTerms, invoiceAmount, orderRefreshChanges } from '../admin/documents/model.js';
 import { AGREEMENT_TERMS } from '../admin/documents/agreement-template.js';
-import { documentBlocks, previewHtml, pdfDefinition } from '../admin/documents/render.js';
+import { documentBlocks, previewHtml, pdfDefinition, documentText } from '../admin/documents/render.js';
 import { getDocumentContext, saveDocument, saveSeller, ensureDocuments, documentRecipient, documentPayload } from '../functions/_lib/order-documents.js';
 import { onRequestPost as sendDocument } from '../functions/api/admin/orders/[id]/document-send.js';
 import { onRequest as authorize } from '../functions/api/admin/_middleware.js';
@@ -35,8 +35,9 @@ async function setup(t) {
   return { db, env };
 }
 const payload = (data = completeDocument(), expected_revision = 0, status = 'ready') => ({ request_id: crypto.randomUUID(), expected_revision, status, data });
-function sendRequest(id, recipient = '123456789') {
+function sendRequest(id, recipient = '123456789', mode) {
   const form = new FormData(); form.set('document_id', id); form.set('recipient', recipient);
+  if (mode) form.set('mode', mode);
   form.set('file', new File(['%PDF-1.7\n' + 'synthetic'.repeat(20)], 'test.pdf', { type: 'application/pdf' }));
   return new Request('https://evline.test/api/admin/orders/test/document-send', { method: 'POST', headers: { authorization: 'Bearer test-admin' }, body: form });
 }
@@ -153,6 +154,58 @@ test('old saved agreements do not acquire an invoice or a different seller autom
   assert.equal(documentBlocks(old)[0].text, 'Договір замовлення автозапчастин');
   assert.equal(documentBlocks(old).filter(b => b.type === 'title').length, 2);
   assert.deepEqual(validateReady(old), []);
+});
+test('invoice can be prepared before agreement details; ready status never bypasses per-document checks', async t => {
+  const { env } = await setup(t), d = completeDocument();
+  Object.assign(d, { car: '', date: '', number: '', city: '', prepayment: '', deadline_days: '', handover: '' });
+  Object.assign(d.buyer, { address: '', phone: '', purpose: '' }); d.items[0].kind = '';
+  d.terms[0].text = ''; d.receipt.enabled = true;
+  assert.deepEqual(validateReady(d, 'invoice'), []);
+  assert.ok(validateReady(d, 'agreement').length > 5);
+  const p = { ...payload(d), mode: 'invoice' };
+  const saved = await saveDocument(env, req(), orderId, p);
+  assert.equal(saved.document.status, 'ready');
+  await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(p.request_id, '123456789', 'agreement') }), /перевірте/);
+  await assert.rejects(saveDocument(env, req(), orderId, { ...payload(d, 1), mode: 'agreement' }), e => e.status === 422);
+  await assert.rejects(saveDocument(env, req(), orderId, { ...payload(d, 1), mode: 'unknown' }), /Невідомий/);
+  d.invoice.mode = 'balance'; assert.ok(validateReady(d, 'invoice').includes('Підтвердження перевірки надходження від клієнта'));
+  const agreement = completeDocument(); agreement.invoice.number = ''; agreement.invoice.date = ''; agreement.receipt.enabled = true;
+  assert.deepEqual(validateReady(agreement, 'agreement'), []);
+  assert.ok(validateReady(agreement, 'all').length > 0);
+  agreement.invoice.enabled = false; assert.ok(validateReady(agreement, 'invoice').includes('Рахунок не ввімкнено'));
+});
+test('separate outputs share edits without attaching other documents or claiming an existing agreement', () => {
+  const d = completeDocument(); d.buyer.name = 'Виправлене Прізвище'; d.items[0].price = '12000';
+  const invoice = documentText(d, 'invoice'), agreement = documentText(d, 'agreement');
+  for (const text of [invoice, agreement]) { assert.match(text, /Виправлене Прізвище/); assert.match(text, /12.000,00/); }
+  assert.doesNotMatch(invoice, /Договір|Специфікація|додаються/);
+  assert.doesNotMatch(agreement, /Рахунок на оплату/);
+  assert.deepEqual(documentBlocks(d, 'agreement').filter(b => b.type === 'title').map(b => [b.text, !!b.pageBreak]), [['Договір замовлення автозапчастин', false], ['Специфікація замовлення', true]]);
+  assert.equal(documentBlocks(d, 'invoice').filter(b => b.type === 'title').length, 1);
+});
+test('refresh candidates are explicit, never import supplier costs, preserve matched manual item details and empty-source fields', () => {
+  const current = completeDocument(), original = clone(current);
+  const source = fromOrder({ id: orderId, customer_name: 'Нове Прізвище', customer_phone: '+380000000002', item_name: 'Бампер', purchase_cost_uah: 999 });
+  let changes = orderRefreshChanges(current, source);
+  assert.ok(changes.some(c => c.path === 'buyer.name' && c.after === 'Нове Прізвище'));
+  assert.ok(!changes.some(c => ['car', 'vin', 'items'].includes(c.path)));
+  source.items[0].price = '12500.00'; changes = orderRefreshChanges(current, source);
+  assert.equal(changes.find(c => c.path === 'items').after[0].kind, 'original');
+  assert.equal(changes.find(c => c.path === 'items').after[0].price, '12500.00');
+  assert.deepEqual(current, original);
+});
+test('invoice and agreement Telegram sends are independent, mode-specific and deduplicated per revision', async t => {
+  const { env, db } = await setup(t), p = payload(); await saveDocument(env, req(), orderId, p);
+  const originalFetch = globalThis.fetch; t.after(() => { globalThis.fetch = originalFetch; }); const messages = [];
+  globalThis.fetch = async (_, options) => { messages.push({ caption: options.body.get('caption'), name: options.body.get('document').name }); return Response.json({ ok: true, result: { message_id: messages.length } }); };
+  for (const mode of ['invoice', 'agreement']) {
+    await sendDocument({ env, params: { id: orderId }, request: sendRequest(p.request_id, '123456789', mode) });
+    assert.equal((await (await sendDocument({ env, params: { id: orderId }, request: sendRequest(p.request_id, '123456789', mode) })).json()).already_sent, true);
+  }
+  assert.equal(messages.length, 2); assert.match(messages[0].caption, /Рахунок/); assert.doesNotMatch(messages[0].caption, /Договір/);
+  assert.match(messages[0].name, /-invoice-v1.pdf$/); assert.match(messages[1].name, /-agreement-v1.pdf$/);
+  assert.equal(db.prepare('SELECT count(*) n FROM document_deliveries WHERE document_id=?').get(p.request_id).n, 2);
+  await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(p.request_id, '123456789', 'bad') }), /Невідомий/);
 });
 test('runtime schema works without migration; deleting order cascades documents and delivery records', async t => {
   const { env, db } = await setup(t);

@@ -1,4 +1,4 @@
-import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail } from '../../admin/documents/model.js';
+import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode } from '../../admin/documents/model.js';
 import { auditActor, recordAuditEvent } from './audit-log.js';
 
 export const DOCUMENT_SCHEMA = [
@@ -73,9 +73,10 @@ export async function saveDocument(env, request, orderId, payload) {
   if (!Number.isInteger(payload.expected_revision) || payload.expected_revision < 0) throw fail('Некоректна версія.');
   if (!['draft', 'ready'].includes(payload.status)) throw fail('Некоректний стан документа.');
   const data = normalizeDocument(payload.data);
+  const mode = documentMode(payload.mode);
   if (data.seller_profile_id && !(await sellerSettings(env)).profiles.some(p => p.id === data.seller_profile_id)) throw fail('ФОПа не знайдено. Оновіть список реквізитів.');
   if (payload.status === 'ready') {
-    const errors = validateReady(data);
+    const errors = validateReady(data, mode);
     if (errors.length) throw fail(`Заповніть або перевірте: ${errors.join('; ')}.`, 422);
   }
   const serialized = JSON.stringify(data);
@@ -91,7 +92,7 @@ export async function saveDocument(env, request, orderId, payload) {
   if (!result.meta.changes) throw fail('Інший менеджер уже зберіг нову версію. Оновіть сторінку перед збереженням; ваші правки поки залишаються на екрані.', 409);
   await recordAuditEvent(env, { actor, action: 'document.save', entity_type: 'order_document', entity_id: payload.request_id,
     entity_label: `${data.number} · v${payload.expected_revision + 1}`, order_id: orderId,
-    details: { order_number: order.order_number, revision: payload.expected_revision + 1, status: payload.status } });
+    details: { order_number: order.order_number, revision: payload.expected_revision + 1, status: payload.status, mode } });
   return getDocumentContext(env, orderId, payload.request_id);
 }
 export async function saveSeller(env, request, payload) {

@@ -49,7 +49,7 @@ try {
   for (const width of [1440, 1024, 768, 390, 320]) {
     db.exec('DELETE FROM order_documents');
     db.prepare('INSERT INTO order_documents(id,order_id,revision,created_at,actor,status,data_json) VALUES(?,?,?,?,?,?,?)').run('fixture', order.id, 1, '2026-09-24T09:00:00Z', 'Тестовий менеджер', 'draft', JSON.stringify(fixture));
-    const context = await browser.newContext({ viewport: { width, height: 1000 }, acceptDownloads: true });
+    const context = await browser.newContext({ viewport: { width, height: 1000 }, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
     await context.addInitScript(() => localStorage.setItem('evline_admin_token', 'synthetic-admin'));
     await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -90,13 +90,39 @@ try {
     await page.screenshot({ path: path.join(output, `preview-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Preview overflow at ${width}`);
     const downloaded = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click();
-    const file = await downloaded; await file.saveAs(path.join(output, `agreement-${width}.pdf`));
-    await page.waitForFunction(() => document.querySelector('[data-state]').textContent === 'Підготовлено до підписання');
+    const file = await downloaded; assert.match(file.suggestedFilename(), /-invoice-v\d+.pdf$/); await file.saveAs(path.join(output, `invoice-${width}.pdf`));
+    await page.waitForFunction(() => document.querySelector('[data-state]').textContent === 'Підготовлено');
     assert.equal(db.prepare('SELECT status FROM order_documents ORDER BY revision DESC LIMIT 1').get().status, 'ready');
     assert.equal(JSON.parse(db.prepare('SELECT data_json FROM order_documents WHERE id=?').get('fixture').data_json).seller.name, fixture.seller.name);
     await page.locator('[data-action="send"]').click(); await page.locator('[data-send-dialog]').waitFor({ state: 'visible' });
+    assert.match(await page.locator('[data-send-content]').innerText(), /^Рахунок ·/);
     assert.equal(await page.locator('[data-action="telegram"]').isVisible(), false, 'No unknown or group recipient');
     await page.getByRole('button', { name: 'Закрити', exact: true }).click();
+    await page.locator('[data-action="copy"]').click();
+    assert.doesNotMatch(await page.evaluate(() => navigator.clipboard.readText()), /Договір|Специфікація/);
+    await page.locator('[data-output-mode]').selectOption('agreement');
+    assert.equal(await page.locator('[data-paper] h2').count(), 2);
+    const agreementDownload = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click();
+    const agreement = await agreementDownload; assert.match(agreement.suggestedFilename(), /-agreement-v\d+.pdf$/); await agreement.saveAs(path.join(output, `agreement-${width}.pdf`));
+    await page.locator('[data-action="send"]').click(); await page.locator('[data-send-dialog]').waitFor({ state: 'visible' });
+    assert.match(await page.locator('[data-send-content]').innerText(), /^Договір і специфікація ·/);
+    await page.getByRole('button', { name: 'Закрити', exact: true }).click();
+    if (width === 1440) {
+      await page.locator('[data-action="copy"]').click(); assert.match(await page.evaluate(() => navigator.clipboard.readText()), /Договір замовлення/);
+      const popupEvent = page.waitForEvent('popup'); await page.locator('[data-action="print"]').click();
+      const popup = await popupEvent; await popup.waitForURL('blob:**'); await popup.close();
+      await page.locator('[data-view="edit"]').click();
+      db.prepare('UPDATE orders SET customer_name=?,customer_phone=? WHERE id=?').run('Виправлено у замовленні', '+380000000009', order.id);
+      await page.locator('[data-action="refresh-order"]').click(); await page.locator('[data-refresh-dialog]').waitFor({ state: 'visible' });
+      await page.locator('.refresh-change').filter({ hasText: 'Виправлено у замовленні' }).filter({ hasText: 'Покупець' }).first().locator('input').check();
+      await page.locator('[data-action="apply-order"]').click(); await page.locator('[data-refresh-dialog]').waitFor({ state: 'hidden' });
+      assert.equal(await page.locator('[data-path="buyer.name"]').inputValue(), 'Виправлено у замовленні');
+      assert.equal(await page.locator('[data-path="buyer.phone"]').inputValue(), '+380000000001');
+      assert.equal(await page.locator('[data-path="seller.name"]').inputValue(), 'Фізична особа-підприємець Другий Тестовий Продавець');
+      await page.locator('[data-back]').click(); await page.waitForURL(`${origin}/admin/?order=${order.id}`);
+      assert.equal(JSON.parse(db.prepare('SELECT data_json FROM order_documents ORDER BY revision DESC LIMIT 1').get().data_json).buyer.name, 'Виправлено у замовленні');
+      db.prepare('UPDATE orders SET customer_name=?,customer_phone=? WHERE id=?').run(order.customer_name, order.customer_phone, order.id);
+    }
     assert.deepEqual(errors, []); await context.close();
     console.log(`PASS ${width}px: real protected API, edit/save/history/preview/PDF, no overflow, no external requests`);
   }
@@ -108,6 +134,7 @@ try {
   db.prepare('INSERT INTO order_documents(id,order_id,revision,created_at,actor,status,data_json) VALUES(?,?,?,?,?,?,?)').run('long-fixture', order.id, 1, '2026-09-24T09:00:00Z', 'Тестовий менеджер', 'ready', JSON.stringify(longData));
   const longContext = await browser.newContext({ acceptDownloads: true }); await longContext.addInitScript(() => localStorage.setItem('evline_admin_token', 'synthetic-admin'));
   const page = await longContext.newPage(); await page.goto(`${origin}/admin/documents/?order=${order.id}`); await page.locator('[data-workspace]').waitFor({ state: 'visible' });
+  await page.locator('[data-output-mode]').selectOption('all');
   const download = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click(); await (await download).saveAs(path.join(output, 'agreement-long.pdf')); await longContext.close();
   console.log('PASS long specification PDF');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); db.close(); }
