@@ -57,7 +57,28 @@ try {
     await page.locator('[data-workspace]').waitFor({ state: 'visible' });
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     console.log(`Compact initial editor ${width}px: ${height}px high`);
-    assert.ok(height < (width > 760 ? 1500 : 2700), `Compact editor unexpectedly tall at ${width}`);
+    assert.ok(height < (width > 760 ? 1250 : 2400), `Compact editor unexpectedly tall at ${width}`);
+    const heading = await page.locator('.page-heading').boundingBox();
+    assert.ok(heading.height <= (width > 760 ? 32 : 110), `Header unexpectedly tall at ${width}`);
+    if (width > 760) {
+      const title = await page.locator('.page-identity h1').boundingBox();
+      for (const selector of ['[data-order-number]', '[data-customer]']) {
+        const box = await page.locator(selector).boundingBox();
+        assert.ok(box.y >= title.y && box.y + box.height <= title.y + title.height, `Header not on one line at ${width}`);
+      }
+    }
+    // Long customer names must wrap without covering the document status.
+    const customerHeading = await page.locator('[data-customer]').textContent();
+    await page.locator('[data-customer]').evaluate(el => { el.textContent = 'Товариство з обмеженою відповідальністю '.repeat(4) + '+380000000001'; });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Long header overflow at ${width}`);
+    const state = await page.locator('[data-state]').boundingBox();
+    for (const element of await page.locator('.page-identity > *').all()) {
+      const box = await element.boundingBox();
+      assert.ok(box.x + box.width <= state.x || box.y + box.height <= state.y || box.y >= state.y + state.height, `Header overlaps status at ${width}`);
+    }
+    await page.locator('[data-customer]').evaluate((el, value) => { el.textContent = value; }, customerHeading);
+    const spacing = await page.locator('.seller-section').evaluate(el => ({ padding: getComputedStyle(el).paddingTop, gap: getComputedStyle(document.querySelector('.fields')).rowGap }));
+    assert.equal(spacing.padding, '12px'); assert.equal(spacing.gap, '8px');
     assert.equal(await page.locator('[data-disclosure="buyer"]').getAttribute('open'), null);
     await page.locator('[data-disclosure="buyer"] > summary').focus();
     await page.keyboard.press('Enter');
@@ -101,6 +122,10 @@ try {
     }
     await page.locator('[data-path="invoice.mode"]').selectOption('prepayment');
     assert.equal(await page.locator('[data-disclosure="payment"]').getAttribute('open'), '');
+    if (width <= 760) {
+      const title = await page.locator('.page-identity h1').boundingBox();
+      assert.equal(title.height, 28, `Unsaved status wraps mobile title at ${width}`);
+    }
     await page.locator('[data-reviewed]').check();
     await page.screenshot({ path: path.join(output, `editor-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Editor overflow at ${width}`);
