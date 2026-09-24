@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924-invoice">
-  <script type="module" src="/admin/documents/documents.js?v=20260924-invoice"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924-separate">
+  <script type="module" src="/admin/documents/documents.js?v=20260924-separate"></script>
 </head>
 <body>
   <header class="app-header">
@@ -21,6 +21,7 @@
     <p class="notice" data-auth hidden>Потрібен <a href="/admin/">вхід до адмінки</a>.</p>
     <div data-workspace hidden>
       <nav class="document-toolbar" aria-label="Дії з документами">
+        <select data-output-mode aria-label="Обраний документ"><option value="invoice">Рахунок</option><option value="agreement">Договір і специфікація</option><option value="all">Повний комплект</option><option value="receipt">Підтвердження оплати</option></select>
         <div class="view-switch" role="tablist" aria-label="Режим документа">
           <button type="button" data-view="edit" role="tab" aria-controls="editor" aria-selected="true">Редагування</button>
           <button type="button" data-view="preview" role="tab" aria-controls="preview" aria-selected="false">Перегляд</button>
@@ -29,6 +30,7 @@
           <button type="button" data-action="save">Зберегти</button>
           <button type="button" class="primary" data-action="pdf">PDF</button>
           <button type="button" class="icon-button" data-action="print" aria-label="Друкувати" title="Друкувати"></button>
+          <button type="button" class="icon-button" data-action="copy" aria-label="Копіювати текст документа" title="Копіювати текст документа"></button>
           <button type="button" data-action="send">Надіслати</button>
         </div>
       </nav>
@@ -37,7 +39,6 @@
           <form id="editor" data-editor autocomplete="off"></form>
           <section id="preview" data-preview hidden>
             <div class="preview-toolbar">
-              <select data-preview-mode aria-label="Документ для перегляду"><option value="all">Повний комплект</option><option value="invoice">Рахунок</option><option value="contract">Договір</option><option value="specification">Специфікація</option><option value="receipt">Підтвердження оплати</option></select>
               <button type="button" data-action="draft-pdf">PDF чернетки</button>
             </div>
             <div data-paper></div>
@@ -45,7 +46,8 @@
         </div>
         <aside class="document-sidebar" aria-label="Підсумок документа">
           <section><h2>Специфікація</h2><dl data-totals></dl></section>
-          <section><h2>Перевірка</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label></section>
+          <section><h2 data-check-title>Перевірка рахунку</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label></section>
+          <section><h2>Дані замовлення</h2><button type="button" data-action="refresh-order">Оновити з замовлення</button></section>
           <section><h2>Версії</h2><select data-versions aria-label="Збережена версія"><option value="">Ще не збережено</option></select><p class="muted" data-version-info></p><p class="muted" data-delivery-status></p></section>
         </aside>
       </div>
@@ -57,6 +59,16 @@
     <div data-send-content></div>
     <p data-send-error class="error" role="alert" hidden></p>
     <div class="dialog-actions"><button type="button" data-action="send-download">Завантажити PDF</button><button type="button" data-action="share" hidden>Поділитися файлом</button><button type="button" data-action="telegram" class="primary" hidden>Надіслати в Telegram</button></div>
+  </dialog>
+  <dialog data-refresh-dialog aria-labelledby="refresh-title">
+    <form method="dialog"><div class="dialog-heading"><h2 id="refresh-title">Зміни з замовлення</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
+    <div data-refresh-changes></div>
+    <p data-refresh-error class="notice error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" data-action="apply-order" class="primary">Застосувати вибране</button></div>
+  </dialog>
+  <dialog data-copy-dialog aria-labelledby="copy-title">
+    <form method="dialog"><div class="dialog-heading"><h2 id="copy-title">Текст документа</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
+    <textarea data-copy-text rows="14" readonly aria-label="Текст для копіювання"></textarea>
   </dialog>
   <dialog data-seller-dialog aria-labelledby="seller-title">
     <form method="dialog"><div class="dialog-heading"><h2 id="seller-title">Новий ФОП</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>

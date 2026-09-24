@@ -1,4 +1,4 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes } from './model.js?v=20260924-invoice';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20260924-separate';
 
 const value = v => String(v || '').trim() || '________________';
 const p = text => ({ type: 'p', text });
@@ -22,15 +22,14 @@ export function documentBlocks(d, mode = 'all') {
     field('Адреса постачальника', d.seller.address), field('Телефон', d.seller.phone),
     ...(d.seller.tax_status ? [field('Податковий статус постачальника', d.seller.tax_status)] : []),
     field('Покупець', d.buyer.name), ...(d.buyer.code ? [field('Код / РНОКПП покупця', d.buyer.code)] : []),
-    p(`Підстава: Договір № ${value(d.number)} від ${dateLabel(d.date)} та Специфікація № 1.`),
     itemsTable,
     ...d.extras.map(row => field(row.title || 'Погоджені витрати', `${money(cents(row.price))} грн`)),
     field('Повна вартість замовлення', `${money(t.total)} грн`), field('Податковий статус ціни', d.tax),
     field('Платіж', invoiceModes[d.invoice.mode]),
     { type: 'total', text: `До сплати за цим рахунком: ${invoiceAmount(d) == null ? '____' : money(invoiceAmount(d))} грн` },
     ...(d.invoice.due ? [field('Сплатити до', d.invoice.due)] : []),
-    field('Призначення платежу', `Оплата автозапчастин за рахунком № ${value(d.invoice.number)}, Договором № ${value(d.number)} від ${dateLabel(d.date)}. ${value(d.tax)}.`),
-    p('Рахунок не підтверджує отримання коштів. Договір і специфікація додаються.'),
+    field('Призначення платежу', `Оплата автозапчастин за рахунком № ${value(d.invoice.number)} від ${dateLabel(d.invoice.date)}. ${value(d.tax)}.`),
+    p('Рахунок не підтверджує отримання коштів.'),
   ] : [];
   const contract = [
     { type: 'title', text: 'Договір замовлення автозапчастин', pageBreak: mode === 'all' && invoice.length > 0 },
@@ -41,7 +40,7 @@ export function documentBlocks(d, mode = 'all') {
     heading('7 Реквізити та підписи'), ...party(d), signatures(),
   ];
   const specification = [
-    { type: 'title', text: 'Специфікація замовлення', pageBreak: mode === 'all' },
+    { type: 'title', text: 'Специфікація замовлення', pageBreak: mode === 'all' || mode === 'agreement' },
     p(`Додаток № 1 до Договору № ${value(d.number)} від ${dateLabel(d.date)}`),
     field('Автомобіль', d.car), ...(d.vin ? [field('VIN', d.vin)] : []),
     itemsTable,
@@ -70,7 +69,14 @@ export function documentBlocks(d, mode = 'all') {
     p('Це підтвердження Продавця щодо отриманої оплати. Воно не є фіскальним чеком і не замінює розрахунковий документ у випадках, коли його видача передбачена законом.'),
     p('Продавець ____________________'),
   ] : [];
-  return mode === 'invoice' ? invoice : mode === 'contract' ? contract : mode === 'specification' ? specification : mode === 'receipt' ? receipt : [...invoice, ...contract, ...specification, ...receipt];
+  return mode === 'invoice' ? invoice : mode === 'agreement' ? [...contract, ...specification] : mode === 'contract' ? contract : mode === 'specification' ? specification : mode === 'receipt' ? receipt : [...invoice, ...contract, ...specification, ...receipt];
+}
+
+export function documentText(data, mode) {
+  return documentBlocks(data, mode).map(b => b.type === 'table'
+    ? [b.headers.join(' | '), ...b.rows.map(row => row.join(' | '))].join('\n')
+    : b.type === 'field' ? `${b.label}: ${b.text}`
+    : b.type === 'signatures' ? 'Продавець ____________________\nПокупець ____________________' : b.text).join('\n\n');
 }
 
 export function previewHtml(data, mode, isDraft) {
@@ -104,11 +110,12 @@ export function pdfDefinition(data, { mode = 'all', draft = false, revision = 0 
     const tail = content.splice(deliveryStart, deliveryEnd - deliveryStart + 1);
     content.splice(deliveryStart, 0, { stack: tail, unbreakable: true });
   }
-  return { info: { title: `EVLine ${data.number}`, author: 'EVLine' }, pageSize: 'A4', pageMargins: [42, 50, 42, 46],
+  const number = mode === 'invoice' ? data.invoice.number : data.number;
+  return { info: { title: `EVLine ${documentModes[mode] || ''} ${number}`, author: 'EVLine' }, pageSize: 'A4', pageMargins: [42, 50, 42, 46],
     defaultStyle: { font: 'Roboto', fontSize: 10, lineHeight: 1.2, color: '#17221e' },
     styles: { title: { fontSize: 19, bold: true, margin: [0, 0, 0, 13] }, heading: { fontSize: 11, bold: true, margin: [0, 10, 0, 7] } },
     header: { text: 'EVLine', color: '#08754f', bold: true, fontSize: 11, margin: [42, 22, 0, 0] },
-    footer: (page, pages) => ({ columns: [{ text: pdfText(`${data.number} · версія ${revision}${draft ? ' · ЧЕРНЕТКА' : ''}`) }, { text: `${page} / ${pages}`, alignment: 'right' }], fontSize: 8, color: '#5e6a65', margin: [42, 12, 42, 0] }),
+    footer: (page, pages) => ({ columns: [{ text: pdfText(`${number} · версія ${revision}${draft ? ' · ЧЕРНЕТКА' : ''}`) }, { text: `${page} / ${pages}`, alignment: 'right' }], fontSize: 8, color: '#5e6a65', margin: [42, 12, 42, 0] }),
     ...(draft ? { watermark: { text: 'ЧЕРНЕТКА', color: '#84948d', opacity: 0.12, bold: true } } : {}),
     pageBreakBefore: (node, following) => node.headlineLevel === 1 && following.length === 0,
     content,
