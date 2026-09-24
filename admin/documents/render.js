@@ -1,4 +1,4 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels } from './model.js';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes } from './model.js?v=20260924-invoice';
 
 const value = v => String(v || '').trim() || '________________';
 const p = text => ({ type: 'p', text });
@@ -13,8 +13,27 @@ const pdfText = text => String(text).replace(/[^\s\u200b]{35,}/gu, word => word.
 
 export function documentBlocks(d, mode = 'all') {
   const t = totals(d);
+  const itemsTable = { type: 'table', headers: ['№', 'Запчастина / артикул', 'К-сть', 'Ціна, грн/шт.', 'Сума, грн'], rows: d.items.map((r, i) => [String(i + 1), [r.title, r.sku && `Артикул: ${r.sku}`, kindLabels[r.kind], r.vin && `VIN: ${r.vin}`, r.notes].filter(Boolean).join('\n'), String(r.quantity), cents(r.price) == null ? '____' : money(cents(r.price)), cents(r.price) == null ? '____' : money(cents(r.price) * r.quantity)]) };
+  const invoice = d.invoice?.enabled ? [
+    { type: 'title', text: 'Рахунок на оплату' },
+    p(`№ ${value(d.invoice.number)} від ${dateLabel(d.invoice.date)}`),
+    field('Постачальник / одержувач коштів', d.seller.name),
+    field('РНОКПП / ЄДРПОУ', d.seller.tax_id), field('IBAN', d.seller.iban), field('Банк', d.seller.bank),
+    field('Адреса постачальника', d.seller.address), field('Телефон', d.seller.phone),
+    ...(d.seller.tax_status ? [field('Податковий статус постачальника', d.seller.tax_status)] : []),
+    field('Покупець', d.buyer.name), ...(d.buyer.code ? [field('Код / РНОКПП покупця', d.buyer.code)] : []),
+    p(`Підстава: Договір № ${value(d.number)} від ${dateLabel(d.date)} та Специфікація № 1.`),
+    itemsTable,
+    ...d.extras.map(row => field(row.title || 'Погоджені витрати', `${money(cents(row.price))} грн`)),
+    field('Повна вартість замовлення', `${money(t.total)} грн`), field('Податковий статус ціни', d.tax),
+    field('Платіж', invoiceModes[d.invoice.mode]),
+    { type: 'total', text: `До сплати за цим рахунком: ${invoiceAmount(d) == null ? '____' : money(invoiceAmount(d))} грн` },
+    ...(d.invoice.due ? [field('Сплатити до', d.invoice.due)] : []),
+    field('Призначення платежу', `Оплата автозапчастин за рахунком № ${value(d.invoice.number)}, Договором № ${value(d.number)} від ${dateLabel(d.date)}. ${value(d.tax)}.`),
+    p('Рахунок не підтверджує отримання коштів. Договір і специфікація додаються.'),
+  ] : [];
   const contract = [
-    { type: 'title', text: 'Договір замовлення автозапчастин' },
+    { type: 'title', text: 'Договір замовлення автозапчастин', pageBreak: mode === 'all' && invoice.length > 0 },
     p(`№ ${value(d.number)} від ${dateLabel(d.date)} · м. ${value(d.city)}`),
     p(`Продавець: ${value(d.seller.name)}, який працює під торговим найменуванням EVLine; реквізити наведені в розділі 7.`),
     p(`Покупець: ${value(d.buyer.name)}. Мета придбання: ${value(d.buyer.purpose)}.`),
@@ -25,7 +44,7 @@ export function documentBlocks(d, mode = 'all') {
     { type: 'title', text: 'Специфікація замовлення', pageBreak: mode === 'all' },
     p(`Додаток № 1 до Договору № ${value(d.number)} від ${dateLabel(d.date)}`),
     field('Автомобіль', d.car), ...(d.vin ? [field('VIN', d.vin)] : []),
-    { type: 'table', headers: ['№', 'Запчастина / артикул', 'К-сть', 'Ціна, грн/шт.', 'Сума, грн'], rows: d.items.map((r, i) => [String(i + 1), [r.title, r.sku && `Артикул: ${r.sku}`, kindLabels[r.kind], r.vin && `VIN: ${r.vin}`, r.notes].filter(Boolean).join('\n'), String(r.quantity), cents(r.price) == null ? '____' : money(cents(r.price)), cents(r.price) == null ? '____' : money(cents(r.price) * r.quantity)]) },
+    itemsTable,
     field('Стан та комплектність', d.condition), field('Гарантійні умови', d.warranty),
     field('Сума позицій, грн', money(t.items)), field('У ціну позицій включено', d.included),
     ...(d.extras.length ? [heading('Окремі погоджені складові'), ...d.extras.map(row => field(row.title || 'Складова', `${money(cents(row.price))} грн`)), field('Розподіл спільних витрат', d.allocation)] : [p('Окремо оплачувані складові: відсутні.')]),
@@ -51,7 +70,7 @@ export function documentBlocks(d, mode = 'all') {
     p('Це підтвердження Продавця щодо отриманої оплати. Воно не є фіскальним чеком і не замінює розрахунковий документ у випадках, коли його видача передбачена законом.'),
     p('Продавець ____________________'),
   ] : [];
-  return mode === 'contract' ? contract : mode === 'specification' ? specification : mode === 'receipt' ? receipt : [...contract, ...specification, ...receipt];
+  return mode === 'invoice' ? invoice : mode === 'contract' ? contract : mode === 'specification' ? specification : mode === 'receipt' ? receipt : [...invoice, ...contract, ...specification, ...receipt];
 }
 
 export function previewHtml(data, mode, isDraft) {

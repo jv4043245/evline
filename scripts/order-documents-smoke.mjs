@@ -25,6 +25,8 @@ Object.assign(fixture.seller, { name: 'ФОП Тестовий Продавец�
 Object.assign(fixture.buyer, { address: 'Тестова адреса покупця', purpose: 'Особисті потреби' });
 Object.assign(fixture, { condition: 'Новий, бампер без кріплень', warranty: 'Погоджені гарантійні умови', tax: 'Без ПДВ', included: 'Товар, пакування, міжнародна доставка, митні платежі', prepayment: '5000', prepayment_due: 'Після підписання', balance_due: 'До передачі', route: 'Море', forecast: '70-90 днів', deadline_days: '90', handover: 'Київ, за погодженням', recipient: 'Тестовий Покупець, +380000000001', partial: 'Лише після окремого погодження', reviewed: false });
 fixture.items[0].kind = 'original';
+fixture.seller_profile_id = 'primary';
+db.prepare('INSERT INTO document_seller_settings(id,revision,updated_at,actor,data_json) VALUES(1,1,?,?,?)').run('2026-09-24', 'test', JSON.stringify(fixture.seller));
 Object.assign(fixture.receipt, { enabled: true, amount: '5000', date: '2026-09-24', method: 'IBAN', reference: 'Тестовий платіж № TEST-001', confirmed: true });
 const server = createServer(async (req, res) => {
   try {
@@ -59,6 +61,23 @@ try {
     await page.locator('[data-versions]').selectOption('fixture'); await page.getByLabel('ПІБ / найменування', { exact: true }).waitFor();
     await page.waitForFunction(() => document.querySelector('[data-path="buyer.name"]')?.value === 'Тестовий Покупець');
     assert.equal(await page.locator('[data-back]').getAttribute('href'), `/admin/?order=${order.id}`);
+    if (width === 1440) {
+      await page.locator('[data-action="add-seller"]').click();
+      await page.locator('[data-new-seller-name]').fill('Фізична особа-підприємець Другий Тестовий Продавець');
+      await page.locator('[data-action="create-seller"]').click();
+      await page.locator('[data-seller-dialog]').waitFor({ state: 'hidden' });
+      for (const [key, value] of Object.entries(fixture.seller)) if (key !== 'name') await page.locator(`[data-path="seller.${key}"]`).fill(value);
+      await page.locator('[data-path="seller.tax_status"]').fill('Тестовий податковий статус');
+      await page.locator('[data-action="save-seller"]').click();
+      await page.getByText('Реквізити цього ФОПа збережено', { exact: true }).waitFor();
+    } else {
+      page.once('dialog', d => d.accept());
+      await page.locator('[data-seller-profile]').selectOption({ label: 'Другий Тестовий Продавець' });
+      await page.waitForFunction(() => document.querySelector('[data-path="seller.name"]')?.value.includes('Другий'));
+    }
+    assert.equal(await page.locator('[data-path="buyer.name"]').inputValue(), 'Тестовий Покупець');
+    assert.equal(await page.locator('[data-path="items.0.price"]').inputValue(), '10000.00');
+    await page.locator('[data-path="invoice.mode"]').selectOption('prepayment');
     await page.locator('[data-reviewed]').check();
     await page.screenshot({ path: path.join(output, `editor-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Editor overflow at ${width}`);
@@ -66,12 +85,15 @@ try {
       const box = await field.boundingBox(); assert.ok(box && box.width > 0 && box.x >= 0 && box.x + box.width <= width + 1, `Clipped control at ${width}`);
     }
     await page.locator('[data-view="preview"]').click();
+    assert.match(await page.locator('[data-paper]').innerText(), /До сплати за цим рахунком: 5.000,00 грн/);
+    assert.match(await page.locator('[data-paper]').innerText(), /Другий Тестовий Продавець/);
     await page.screenshot({ path: path.join(output, `preview-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Preview overflow at ${width}`);
     const downloaded = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click();
     const file = await downloaded; await file.saveAs(path.join(output, `agreement-${width}.pdf`));
     await page.waitForFunction(() => document.querySelector('[data-state]').textContent === 'Підготовлено до підписання');
     assert.equal(db.prepare('SELECT status FROM order_documents ORDER BY revision DESC LIMIT 1').get().status, 'ready');
+    assert.equal(JSON.parse(db.prepare('SELECT data_json FROM order_documents WHERE id=?').get('fixture').data_json).seller.name, fixture.seller.name);
     await page.locator('[data-action="send"]').click(); await page.locator('[data-send-dialog]').waitFor({ state: 'visible' });
     assert.equal(await page.locator('[data-action="telegram"]').isVisible(), false, 'No unknown or group recipient');
     await page.getByRole('button', { name: 'Закрити', exact: true }).click();

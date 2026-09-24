@@ -15,15 +15,24 @@ auto parts, so this action is intentionally not offered on programming services.
    Supplier costs, commission, profit, internal notes and market estimates are
    never copied into customer documents. No delivery deadlines, tax treatment,
    originality, or actual received payment are guessed.
-3. Enter the seller's tax ID, address, IBAN and bank privately in the editor.
-   **Зберегти реквізити для наступних документів** stores them behind admin auth
-   in D1. Do not place these details in source control. Older snapshots retain
-   their original seller information.
-4. **Перегляд** displays the contract, specification and optional payment
+3. Select **Продавець / ФОП** at the top. **Додати ФОП** creates a separate
+   private seller profile. Enter its tax ID, address, IBAN, bank and supplied tax
+   status under **Реквізити продавця**; **Зберегти реквізити цього ФОПа** persists
+   only that profile behind admin auth in D1. Switching profiles asks for
+   confirmation and changes the seller in the current draft, not buyer/items or
+   saved versions. Do not place actual requisites in source control.
+4. **Перегляд** displays the invoice, contract, specification and optional payment
    acknowledgment. Standard terms from the supplied 2026-09-23 DOCX are editable
    per document. OEM/analogue lines qualify the originality wording explicitly;
    an all-original specification retains the original wording. Custom edited
    clauses are never overwritten by a type change.
+   New drafts include an invoice first in the full PDF pack. Its number/date,
+   due date and payment amount can be edited: full total, agreed prepayment,
+   verified remaining balance, or another agreed amount. The invoice is not a
+   payment acknowledgment. A balance requires explicitly verified customer funds;
+   supplier payments are never used. Seller tax status does not imply VAT status.
+   Existing saved documents retain their original invoice-free content unless a
+   manager explicitly enables the invoice and saves a new version.
 5. **Зберегти** saves a draft. **PDF** requires the manager's review and all
    necessary fields, then stores a prepared snapshot and downloads a real PDF.
    It does not claim the contract is signed. Incomplete documents can be saved
@@ -58,7 +67,12 @@ per-order versions, status, actor and timestamp. Atomic expected-version checks
 reject stale saves. Request IDs make uncertain save retries idempotent. At most
 100 recent versions are listed; older rows are not overwritten or deleted.
 
-`document_seller_settings` stores private shared defaults with revision checks.
+`document_seller_settings` stores private seller profiles with revision checks.
+Legacy single-seller JSON is read as the `primary` profile without rewriting it.
+The first profile remains the default; managers choose the required seller per
+order. Old clients cannot overwrite multiple profiles through the legacy request.
+No new D1 migration is required for seller profiles/invoices; their versioned
+JSON stays inside the existing document/settings tables.
 `document_deliveries` records each version's Telegram send attempt. A confirmed
 success is never resent; ambiguous network outcomes are not blindly retried.
 Definitively rejected Telegram requests can be manually retried. Recipient must

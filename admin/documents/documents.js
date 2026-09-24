@@ -1,5 +1,5 @@
-import { normalizeDocument, validateReady, totals, money, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms } from './model.js';
-import { previewHtml, pdfDefinition } from './render.js';
+import { normalizeDocument, validateReady, totals, money, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount } from './model.js?v=20260924-invoice';
+import { previewHtml, pdfDefinition } from './render.js?v=20260924-invoice';
 import { icon } from './icons.js';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
 
@@ -9,6 +9,7 @@ const endpoint = `/api/admin/orders/${encodeURIComponent(orderId)}/documents`;
 let context, data, baseline = '', view = 'edit', busy = false, pdfLoading, sendFile, pendingSave;
 const dirty = () => data && JSON.stringify(data) !== baseline;
 const clone = v => structuredClone(v);
+const sellerLabel = name => name.replace(/^(?:Фізична\s+особа[\s-]*підприємець|ФОП)\s*/iu, '');
 function error(message, target = '[data-error]') { const el = $(target); el.textContent = message || ''; el.hidden = !message; }
 function status(message) { $('[data-save-status]').textContent = message; }
 async function api(path, options = {}) {
@@ -27,7 +28,9 @@ function input(label, path, value, { type = 'text', wide = false, rows, options,
 const docInput = (key, options) => input(fieldLabels[key], key, data[key], options);
 function renderEditor() {
   const s = data.seller, b = data.buyer;
+  const profiles = context.seller_profiles || [];
   $('[data-editor]').innerHTML = `
+    <section class="editor-section seller-section"><div class="seller-choice"><label>Продавець / ФОП<select data-seller-profile>${!profiles.some(p => p.id === data.seller_profile_id) ? '<option value="">Реквізити цієї версії</option>' : ''}${profiles.map(p => `<option value="${esc(p.id)}" ${p.id === data.seller_profile_id ? 'selected' : ''}>${esc(sellerLabel(p.seller.name))}</option>`).join('')}</select></label><button type="button" data-action="add-seller">${icon('Plus')}Додати ФОП</button></div><p class="muted">${esc([s.tax_id && `РНОКПП ${s.tax_id}`, s.iban && `IBAN ${s.iban}`].filter(Boolean).join(' · '))}</p></section>
     <section class="editor-section"><h2>Договір</h2><div class="fields three">${docInput('number')}${docInput('date', { type: 'date' })}${docInput('city')}</div></section>
     <section class="editor-section"><h2>Покупець</h2><div class="fields">
       ${input('ПІБ / найменування', 'buyer.name', b.name)}${input('Телефон', 'buyer.phone', b.phone, { type: 'tel' })}
@@ -54,12 +57,17 @@ function renderEditor() {
         <label class="check-label wide"><input type="checkbox" data-path="receipt.confirmed" ${data.receipt.confirmed ? 'checked' : ''}><span>Надходження від клієнта перевірено</span></label>
       </div>
     </section>
+    <section class="editor-section"><h2>Рахунок на оплату</h2><p><label class="check-label"><input type="checkbox" data-path="invoice.enabled" ${data.invoice.enabled ? 'checked' : ''}><span>Додати рахунок до договору</span></label></p><div class="fields" data-invoice-fields ${data.invoice.enabled ? '' : 'hidden'}>
+      ${input('Номер рахунку', 'invoice.number', data.invoice.number)}${input('Дата рахунку', 'invoice.date', data.invoice.date, { type: 'date' })}
+      ${input('Сума рахунку', 'invoice.mode', data.invoice.mode, { options: Object.entries(invoiceModes) })}${input('Сплатити до', 'invoice.due', data.invoice.due)}
+      <div data-custom-invoice ${data.invoice.mode === 'custom' ? '' : 'hidden'}>${input('Погоджена сума рахунку, грн', 'invoice.amount', data.invoice.amount)}</div>
+    </div></section>
     <section class="editor-section"><h2>Доставка й отримання</h2><div class="fields">
       ${docInput('route')}${docInput('forecast')}${docInput('deadline_days')}${docInput('partial', { options: [['Допускається', 'Допускається'], ['Лише після окремого погодження', 'Лише після окремого погодження']] })}${docInput('handover')}${docInput('recipient')}${docInput('notes', { wide: true, rows: 3 })}
     </div></section>
     <details class="editor-section" ${!s.tax_id || !s.iban ? 'open' : ''}><summary>Реквізити продавця</summary><div class="fields">
-      ${SELLER_FIELDS.map(key => input({ name: 'Продавець', tax_id: 'РНОКПП / ЄДРПОУ', address: 'Адреса реєстрації та для звернень', iban: 'IBAN', bank: 'Банк', phone: 'Телефон', email: 'Email' }[key], `seller.${key}`, s[key], { wide: key === 'address' || key === 'name' })).join('')}
-      <div class="wide"><button type="button" data-action="save-seller">Зберегти реквізити для наступних документів</button></div></div></details>
+      ${SELLER_FIELDS.map(key => input({ name: 'Продавець', tax_id: 'РНОКПП / ЄДРПОУ', address: 'Адреса реєстрації та для звернень', iban: 'IBAN', bank: 'Банк', phone: 'Телефон', email: 'Email', tax_status: 'Податковий статус ФОПа' }[key], `seller.${key}`, s[key], { wide: ['address', 'name', 'tax_status'].includes(key) })).join('')}
+      <div class="wide"><button type="button" data-action="save-seller">Зберегти реквізити цього ФОПа</button></div></div></details>
     <details class="editor-section"><summary>Текст договору</summary>${data.terms.map((s, i) => `<details class="contract-section"><summary>${esc(s.title)}</summary><textarea data-path="terms.${i}.text" rows="10" maxlength="15000" aria-label="${esc(s.title)}">${esc(s.text)}</textarea></details>`).join('')}</details>
   `;
 }
@@ -69,6 +77,7 @@ function refreshSummary() {
     const normalized = normalizeDocument(data), t = totals(normalized);
     messages = validateReady({ ...normalized, reviewed: true });
     $('[data-totals]').innerHTML = `<div><dt>Позиції (${data.items.length})</dt><dd>${money(t.items)} грн</dd></div>${data.extras.length ? `<div><dt>Окремі витрати</dt><dd>${money(t.extras)} грн</dd></div>` : ''}<div class="total-row"><dt>Разом</dt><dd>${money(t.total)} грн</dd></div><div><dt>Передоплата</dt><dd>${data.prepayment === '' ? '—' : `${money(t.total - t.balance)} грн`}</dd></div>${data.receipt.enabled ? `<div><dt>Отримано</dt><dd>${money(t.received)} грн</dd></div>` : ''}`;
+    if (data.invoice.enabled) $('[data-totals]').innerHTML += `<div class="invoice-total"><dt>Рахунок до сплати</dt><dd>${invoiceAmount(normalized) == null ? '—' : `${money(invoiceAmount(normalized))} грн`}</dd></div>`;
   } catch (e) { messages = [e.message]; }
   $('[data-checks]').innerHTML = messages.length ? `<details><summary>Не заповнено / потребує перевірки: ${messages.length}</summary><ul class="checks-list">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul></details>` : '<p class="checks-ok">Обов’язкові поля заповнено</p>';
   $('[data-reviewed]').checked = data.reviewed;
@@ -82,6 +91,7 @@ function renderPreview() {
   try { $('[data-paper]').innerHTML = previewHtml(normalizeDocument(data), $('[data-preview-mode]').value, dirty() || context.document?.status !== 'ready'); }
   catch (e) { $('[data-paper]').innerHTML = `<p class="notice error">${esc(e.message)}</p>`; }
   $('[data-preview-mode] option[value="receipt"]').disabled = !data.receipt.enabled;
+  $('[data-preview-mode] option[value="invoice"]').disabled = !data.invoice.enabled;
 }
 function setView(next) {
   view = next;
@@ -91,6 +101,9 @@ function setView(next) {
 }
 function adopt(result, initial = false) {
   context = result; data = clone(result.document?.data || result.defaults); baseline = JSON.stringify(data);
+  data.invoice ||= invoiceDefaults(data);
+  data.seller_profile_id ||= '';
+  baseline = JSON.stringify(data);
   if (initial) { document.title = `${context.order.number} · Документи | EVLine CRM`; $('[data-order-number]').textContent = context.order.number; $('[data-customer]').textContent = [context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '); }
   $('[data-versions]').innerHTML = result.versions.length ? result.versions.map(v => `<option value="${esc(v.id)}" ${v.id === result.document?.id ? 'selected' : ''}>Версія ${v.revision} · ${v.status === 'ready' ? 'підготовлено' : 'чернетка'}</option>`).join('') : '<option value="">Ще не збережено</option>';
   $('[data-version-info]').textContent = result.document ? `${new Date(result.document.created_at).toLocaleString('uk-UA')} · ${result.document.actor}` : '';
@@ -132,7 +145,7 @@ async function pdfFile(draft = false, autoPrint = false) {
 function download(file) { const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 async function prepareSend() {
   sendFile = await pdfFile();
-  $('[data-send-content]').innerHTML = `<p>Договір, специфікація${data.receipt.enabled ? ' та підтвердження оплати' : ''} · версія ${context.document.revision}</p><p>${esc(data.buyer.name)}</p>${context.recipient ? `<div class="recipient"><strong>Telegram клієнта цього замовлення</strong>${esc([context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '))}<br>ID: ${esc(context.recipient)}</div><label class="check-label"><input type="checkbox" data-confirm-recipient><span>Документ і одержувача перевірено</span></label>` : '<p>Telegram клієнта не підключено до бота.</p>'}`;
+  $('[data-send-content]').innerHTML = `<p>${data.invoice.enabled ? 'Рахунок, договір' : 'Договір'}, специфікація${data.receipt.enabled ? ' та підтвердження оплати' : ''} · версія ${context.document.revision}</p><p>${esc(data.buyer.name)}</p><p>${esc(data.seller.name)}</p>${context.recipient ? `<div class="recipient"><strong>Telegram клієнта цього замовлення</strong>${esc([context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '))}<br>ID: ${esc(context.recipient)}</div><label class="check-label"><input type="checkbox" data-confirm-recipient><span>Документ і одержувача перевірено</span></label>` : '<p>Telegram клієнта не підключено до бота.</p>'}`;
   $('[data-action="telegram"]').hidden = !context.recipient;
   $('[data-action="share"]').hidden = !navigator.canShare?.({ files: [sendFile] });
   error('', '[data-send-error]'); $('[data-send-dialog]').showModal();
@@ -158,8 +171,17 @@ async function action(name) {
     $('[data-send-dialog]').close(); adopt(await api(`${endpoint}?version=${encodeURIComponent(context.document.id)}`)); status('Документи надіслано клієнту в Telegram');
   }
   else if (name === 'save-seller') {
-    const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ seller: data.seller, expected_revision: context.seller_revision }) });
-    context.seller_revision = result.revision; status('Реквізити продавця збережено');
+    if (!data.seller_profile_id) throw new Error('Спочатку оберіть ФОПа або додайте нового.');
+    const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ profile_id: data.seller_profile_id, seller: data.seller, expected_revision: context.seller_revision }) });
+    context.seller_revision = result.revision; context.seller_profiles = result.profiles; renderEditor(); status('Реквізити цього ФОПа збережено');
+  }
+  else if (name === 'add-seller') { error('', '[data-seller-error]'); $('[data-new-seller-name]').value = ''; $('[data-seller-dialog]').showModal(); }
+  else if (name === 'create-seller') {
+    const seller = cleanSeller({ name: $('[data-new-seller-name]').value });
+    const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ profile_id: crypto.randomUUID(), create: true, seller, expected_revision: context.seller_revision }) });
+    context.seller_revision = result.revision; context.seller_profiles = result.profiles;
+    data.seller = seller; data.seller_profile_id = result.profile_id; data.reviewed = false;
+    $('[data-seller-dialog]').close(); renderEditor(); status('ФОПа додано');
   }
   else if (name === 'add-item') {
     if (data.items.length >= 40) throw new Error('Не більше 40 позицій.');
@@ -177,7 +199,7 @@ document.addEventListener('click', async e => {
   if (!button || busy) return;
   busy = true; error(''); error('', '[data-send-error]'); button.disabled = true; $('[data-editor]').inert = true;
   try { await action(button.dataset.action); }
-  catch (err) { if (err.name !== 'AbortError') error(err.message, $('[data-send-dialog]').open ? '[data-send-error]' : '[data-error]'); }
+  catch (err) { if (err.name !== 'AbortError') error(err.message, $('[data-send-dialog]').open ? '[data-send-error]' : $('[data-seller-dialog]').open ? '[data-seller-error]' : '[data-error]'); }
   finally { busy = false; button.disabled = false; $('[data-editor]').inert = false; refreshSummary(); }
 });
 document.addEventListener('click', e => {
@@ -201,7 +223,17 @@ $('[data-editor]').addEventListener('input', e => {
   data.reviewed = false;
   if (path.startsWith('receipt.') && path !== 'receipt.confirmed') { data.receipt.confirmed = false; $('[data-path="receipt.confirmed"]').checked = false; }
   if (path === 'receipt.enabled') { $('[data-receipt-fields]').hidden = !data.receipt.enabled; if (!data.receipt.enabled && $('[data-preview-mode]').value === 'receipt') $('[data-preview-mode]').value = 'all'; }
+  if (path === 'invoice.enabled') { $('[data-invoice-fields]').hidden = !data.invoice.enabled; if (!data.invoice.enabled && $('[data-preview-mode]').value === 'invoice') $('[data-preview-mode]').value = 'all'; }
+  if (path === 'invoice.mode') $('[data-custom-invoice]').hidden = data.invoice.mode !== 'custom';
   refreshSummary(); status('');
+});
+$('[data-editor]').addEventListener('change', e => {
+  if (!e.target.matches('[data-seller-profile]') || busy) return;
+  const profile = context.seller_profiles.find(p => p.id === e.target.value);
+  if (!profile || profile.id === data.seller_profile_id) return;
+  if (!confirm('Змінити ФОПа та його реквізити в поточному рахунку й договорі? Збережені версії залишаться без змін.')) { e.target.value = data.seller_profile_id || ''; return; }
+  data.seller = clone(profile.seller); data.seller_profile_id = profile.id; data.reviewed = false;
+  renderEditor(); refreshSummary(); status('');
 });
 $('[data-reviewed]').addEventListener('change', e => { if (busy) return; data.reviewed = e.target.checked; refreshSummary(); });
 $('[data-preview-mode]').addEventListener('change', renderPreview);
