@@ -1,7 +1,7 @@
 import { AGREEMENT_TERMS } from './agreement-template.js';
 
 export const TEMPLATE_VERSION = '2026-09-23';
-export const SELLER_FIELDS = ['name', 'tax_id', 'address', 'iban', 'bank', 'phone', 'email'];
+export const SELLER_FIELDS = ['name', 'tax_id', 'address', 'iban', 'bank', 'phone', 'email', 'tax_status'];
 export const BUYER_FIELDS = ['name', 'address', 'code', 'phone', 'contact', 'purpose'];
 export const TEXT_FIELDS = ['number', 'date', 'city', 'car', 'vin', 'condition', 'warranty', 'tax', 'included', 'allocation', 'prepayment_due', 'balance_due', 'route', 'forecast', 'deadline_days', 'handover', 'recipient', 'partial', 'notes'];
 export const DEFAULT_SELLER = { name: 'ФОП Ванюшин Євген Анатолійович', phone: '+38 (093) 525-10-24', email: 'evlineukraine@gmail.com', tax_id: '', address: '', iban: '', bank: '' };
@@ -28,12 +28,20 @@ export function cents(value, label = 'Сума') {
 export const money = value => new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((value ?? 0) / 100);
 export const amount = value => value == null ? '' : (Number(value) / 100).toFixed(2);
 export const dateLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-').reverse().join('.') : value || '________________';
-export function cleanSeller(value = {}) { return Object.fromEntries(SELLER_FIELDS.map(k => [k, str(value[k], k === 'address' ? 1000 : 200)])); }
+export function cleanSeller(value = {}) { return Object.fromEntries(SELLER_FIELDS.map(k => [k, str(value[k], ['address', 'tax_status'].includes(k) ? 1000 : 200)])); }
+export const invoiceModes = { total: 'Повна вартість', prepayment: 'Погоджена передоплата', balance: 'Залишок після отриманої оплати', custom: 'Інша погоджена сума' };
+export function invoiceDefaults(d, enabled = false) { return { enabled, number: d.number || '', date: d.date || '', mode: 'total', amount: '', due: '' }; }
+export function invoiceAmount(d) {
+  const i = d.invoice || invoiceDefaults(d), t = totals(d);
+  if (i.mode === 'prepayment') return cents(d.prepayment);
+  if (i.mode === 'balance') return d.receipt.enabled && d.receipt.confirmed ? t.total - t.received : null;
+  return i.mode === 'custom' ? cents(i.amount) : t.total;
+}
 
 export function fromOrder(order, rows = [], seller = DEFAULT_SELLER) {
   const d = Object.fromEntries(TEXT_FIELDS.map(k => [k, '']));
   const price = Number(order.revenue_uah) > 0 ? Number(order.revenue_uah).toFixed(2) : '';
-  return { ...d, schema: 1, template_version: TEMPLATE_VERSION,
+  const result = { ...d, schema: 1, template_version: TEMPLATE_VERSION, seller_profile_id: '',
     number: `EV-${order.order_number || order.id}`, date: new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).format(new Date()), city: 'Київ',
     seller: { ...DEFAULT_SELLER, ...seller }, buyer: { name: order.customer_name || '', phone: order.customer_phone || '', contact: order.customer_email || order.customer_telegram || '', address: '', code: '', purpose: '' },
     car: order.car || '', vin: order.vin || '', recipient: [order.customer_name, order.customer_phone].filter(Boolean).join(', '),
@@ -42,11 +50,13 @@ export function fromOrder(order, rows = [], seller = DEFAULT_SELLER) {
     extras: [], prepayment: '', receipt: { enabled: false, amount: '', date: '', method: '', reference: '', confirmed: false },
     terms: structuredClone(AGREEMENT_TERMS), reviewed: false,
   };
+  result.invoice = invoiceDefaults(result, true);
+  return result;
 }
 
 export function normalizeDocument(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail('Документ відсутній.');
-  const d = { schema: 1, template_version: TEMPLATE_VERSION, seller: cleanSeller(input.seller), buyer: {}, reviewed: input.reviewed === true };
+  const d = { schema: 1, template_version: TEMPLATE_VERSION, seller: cleanSeller(input.seller), seller_profile_id: str(input.seller_profile_id, 80), buyer: {}, reviewed: input.reviewed === true };
   for (const key of TEXT_FIELDS) d[key] = str(input[key], ['number', 'date', 'deadline_days'].includes(key) ? 80 : 3000);
   for (const key of BUYER_FIELDS) d.buyer[key] = str(input.buyer?.[key], 1000);
   if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 40) throw fail('У специфікації має бути від 1 до 40 позицій.');
@@ -61,6 +71,9 @@ export function normalizeDocument(input) {
   d.extras = input.extras.map(row => ({ title: str(row.title, 300), price: amount(cents(row.price, 'Окремі витрати')) }));
   d.prepayment = amount(cents(input.prepayment, 'Передоплата'));
   d.receipt = { enabled: input.receipt?.enabled === true, amount: amount(cents(input.receipt?.amount, 'Отримано від клієнта')), date: str(input.receipt?.date, 20), method: str(input.receipt?.method, 200), reference: str(input.receipt?.reference, 300), confirmed: input.receipt?.confirmed === true };
+  const invoice = input.invoice || invoiceDefaults(d);
+  if (!invoiceModes[invoice.mode]) throw fail('Невідомий тип суми рахунку.');
+  d.invoice = { enabled: invoice.enabled === true, number: str(invoice.number, 80), date: str(invoice.date, 20), mode: invoice.mode, amount: amount(cents(invoice.amount, 'Сума рахунку')), due: str(invoice.due, 300) };
   if (!Array.isArray(input.terms) || input.terms.length !== AGREEMENT_TERMS.length) throw fail('Некоректні розділи договору.');
   d.terms = input.terms.map((s, i) => ({ title: AGREEMENT_TERMS[i].title, text: str(s.text, 15000) }));
   syncStandardTerms(d);
@@ -100,6 +113,13 @@ export function validateReady(d) {
     if (!validDate(d.receipt.date)) errors.push('Дата отримання оплати');
     required(d.receipt.method, 'Спосіб оплати клієнта'); required(d.receipt.reference, 'Підстава підтвердження оплати');
     if (!d.receipt.confirmed) errors.push('Підтвердження перевірки надходження від клієнта');
+  }
+  if (d.invoice?.enabled) {
+    required(d.invoice.number, 'Номер рахунку');
+    if (!validDate(d.invoice.date)) errors.push('Дата рахунку');
+    const payable = invoiceAmount(d);
+    if (payable == null || payable <= 0 || payable > t.total) errors.push('Сума рахунку від 0,01 до вартості замовлення');
+    if (d.invoice.mode === 'balance' && (!d.receipt.enabled || !d.receipt.confirmed)) errors.push('Перевірена отримана оплата для рахунку на залишок');
   }
   if (!d.reviewed) errors.push('Перевірка менеджером');
   return errors;

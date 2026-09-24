@@ -30,6 +30,13 @@ export function documentRecipient(order) {
   const id = String(order.telegram_chat_id || order.customer_telegram_chat_id || '');
   return /^[1-9]\d{3,15}$/.test(id) ? id : '';
 }
+export async function sellerSettings(env) {
+  const row = await env.DB.prepare('SELECT * FROM document_seller_settings WHERE id=1').first();
+  const value = row ? JSON.parse(row.data_json) : DEFAULT_SELLER;
+  // Read the original single-seller settings without changing saved documents.
+  const settings = value.profiles ? value : { profiles: [{ id: 'primary', seller: cleanSeller(value) }], default_id: 'primary' };
+  return { ...settings, revision: row?.revision || 0 };
+}
 export async function getDocumentContext(env, orderId, versionId = '') {
   const order = await documentOrder(env, orderId);
   await ensureDocuments(env);
@@ -38,14 +45,14 @@ export async function getDocumentContext(env, orderId, versionId = '') {
     ? await env.DB.prepare('SELECT * FROM order_documents WHERE order_id=? AND id=?').bind(orderId, versionId).first()
     : await env.DB.prepare('SELECT * FROM order_documents WHERE order_id=? ORDER BY revision DESC LIMIT 1').bind(orderId).first();
   if (versionId && !saved) throw fail('Версію документа не знайдено.', 404);
-  const sellerRow = await env.DB.prepare('SELECT * FROM document_seller_settings WHERE id=1').first();
-  const seller = sellerRow ? JSON.parse(sellerRow.data_json) : DEFAULT_SELLER;
+  const settings = await sellerSettings(env);
+  const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
   const items = (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
   const deliveries = saved ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
   return { order: { id: order.id, number: order.order_number || order.id, customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
     recipient: documentRecipient(order), versions, latest_revision: versions[0]?.revision || 0,
     document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
-    defaults: fromOrder(order, items, seller), seller_revision: sellerRow?.revision || 0, deliveries };
+    defaults: { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id }, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
 }
 export function checkDocumentOrigin(request) {
   const origin = request.headers.get('origin');
@@ -66,6 +73,7 @@ export async function saveDocument(env, request, orderId, payload) {
   if (!Number.isInteger(payload.expected_revision) || payload.expected_revision < 0) throw fail('Некоректна версія.');
   if (!['draft', 'ready'].includes(payload.status)) throw fail('Некоректний стан документа.');
   const data = normalizeDocument(payload.data);
+  if (data.seller_profile_id && !(await sellerSettings(env)).profiles.some(p => p.id === data.seller_profile_id)) throw fail('ФОПа не знайдено. Оновіть список реквізитів.');
   if (payload.status === 'ready') {
     const errors = validateReady(data);
     if (errors.length) throw fail(`Заповніть або перевірте: ${errors.join('; ')}.`, 422);
@@ -89,15 +97,31 @@ export async function saveDocument(env, request, orderId, payload) {
 export async function saveSeller(env, request, payload) {
   await ensureDocuments(env);
   if (!Number.isInteger(payload.expected_revision) || payload.expected_revision < 0) throw fail('Некоректна версія реквізитів.');
+  const settings = await sellerSettings(env);
+  if (settings.revision !== payload.expected_revision) throw fail('Реквізити вже змінив інший менеджер. Оновіть сторінку.', 409);
   const seller = cleanSeller(payload.seller), actor = auditActor(request, env), now = new Date().toISOString();
+  if (!seller.name) throw fail('Вкажіть найменування ФОПа.');
+  if (!payload.profile_id && settings.profiles.length > 1) throw fail('Оберіть ФОПа. Оновіть сторінку адмінки.', 409);
+  const profileId = payload.profile_id || settings.default_id;
+  if (!/^[a-zA-Z0-9-]{1,80}$/.test(profileId)) throw fail('Некоректний ідентифікатор ФОПа.');
+  const index = settings.profiles.findIndex(p => p.id === profileId);
+  if (payload.create === true) {
+    if (index !== -1) throw fail('Такий профіль ФОПа вже існує.', 409);
+    if (settings.profiles.length >= 10) throw fail('Не більше 10 ФОПів.');
+    settings.profiles.push({ id: profileId, seller });
+  } else {
+    if (index === -1) throw fail('ФОПа не знайдено.', 404);
+    settings.profiles[index] = { id: profileId, seller };
+  }
+  const serialized = JSON.stringify({ profiles: settings.profiles, default_id: settings.default_id });
   const row = await env.DB.prepare(`INSERT INTO document_seller_settings(id,revision,updated_at,actor,data_json)
     SELECT 1,1,?,?,? WHERE ?=0
     ON CONFLICT(id) DO UPDATE SET revision=revision+1, updated_at=?, actor=?, data_json=? WHERE revision=? RETURNING revision`)
-    .bind(now, actor, JSON.stringify(seller), payload.expected_revision, now, actor, JSON.stringify(seller), payload.expected_revision).first();
+    .bind(now, actor, serialized, payload.expected_revision, now, actor, serialized, payload.expected_revision).first();
   // Existing settings need an UPDATE; the INSERT's zero-version guard intentionally cannot create them at a stale version.
   const updated = row || (payload.expected_revision > 0 ? await env.DB.prepare(`UPDATE document_seller_settings SET revision=revision+1,updated_at=?,actor=?,data_json=? WHERE id=1 AND revision=? RETURNING revision`)
-    .bind(now, actor, JSON.stringify(seller), payload.expected_revision).first() : null);
+    .bind(now, actor, serialized, payload.expected_revision).first() : null);
   if (!updated) throw fail('Реквізити вже змінив інший менеджер. Оновіть сторінку.', 409);
-  await recordAuditEvent(env, { actor, action: 'document.seller_update', entity_type: 'document_settings', entity_id: 'seller', details: { revision: updated.revision } });
-  return { ok: true, revision: updated.revision };
+  await recordAuditEvent(env, { actor, action: 'document.seller_update', entity_type: 'document_settings', entity_id: profileId, details: { revision: updated.revision, created: payload.create === true } });
+  return { ok: true, revision: updated.revision, profiles: settings.profiles, profile_id: profileId };
 }

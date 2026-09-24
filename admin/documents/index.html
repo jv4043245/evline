@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924">
-  <script type="module" src="/admin/documents/documents.js?v=20260924"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924-invoice">
+  <script type="module" src="/admin/documents/documents.js?v=20260924-invoice"></script>
 </head>
 <body>
   <header class="app-header">
@@ -37,7 +37,7 @@
           <form id="editor" data-editor autocomplete="off"></form>
           <section id="preview" data-preview hidden>
             <div class="preview-toolbar">
-              <select data-preview-mode aria-label="Документ для перегляду"><option value="all">Договір та специфікація</option><option value="contract">Договір</option><option value="specification">Специфікація</option><option value="receipt">Підтвердження оплати</option></select>
+              <select data-preview-mode aria-label="Документ для перегляду"><option value="all">Повний комплект</option><option value="invoice">Рахунок</option><option value="contract">Договір</option><option value="specification">Специфікація</option><option value="receipt">Підтвердження оплати</option></select>
               <button type="button" data-action="draft-pdf">PDF чернетки</button>
             </div>
             <div data-paper></div>
@@ -57,6 +57,12 @@
     <div data-send-content></div>
     <p data-send-error class="error" role="alert" hidden></p>
     <div class="dialog-actions"><button type="button" data-action="send-download">Завантажити PDF</button><button type="button" data-action="share" hidden>Поділитися файлом</button><button type="button" data-action="telegram" class="primary" hidden>Надіслати в Telegram</button></div>
+  </dialog>
+  <dialog data-seller-dialog aria-labelledby="seller-title">
+    <form method="dialog"><div class="dialog-heading"><h2 id="seller-title">Новий ФОП</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
+    <label>ПІБ / найменування ФОПа<input data-new-seller-name maxlength="200" autocomplete="off"></label>
+    <p data-seller-error class="notice error" role="alert" hidden></p>
+    <div class="dialog-actions"><button type="button" data-action="create-seller" class="primary">Додати ФОП</button></div>
   </dialog>
 </body>
 </html>
