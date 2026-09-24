@@ -79,6 +79,16 @@ try {
     await page.locator('[data-customer]').evaluate((el, value) => { el.textContent = value; }, customerHeading);
     const spacing = await page.locator('.seller-section').evaluate(el => ({ padding: getComputedStyle(el).paddingTop, gap: getComputedStyle(document.querySelector('.fields')).rowGap }));
     assert.equal(spacing.padding, '12px'); assert.equal(spacing.gap, '8px');
+    const sectionColors = await page.locator('#editor > .editor-section').evaluateAll(elements => elements.map(el => ({
+      classes: el.className, background: getComputedStyle(el).backgroundColor,
+      radius: getComputedStyle(el).borderRadius, shadow: getComputedStyle(el).boxShadow,
+    })));
+    for (const [section, color] of Object.entries({ 'seller-section': 'rgb(237, 240, 242)', 'buyer-section': 'rgb(255, 255, 255)', 'specification-section': 'rgb(238, 245, 250)', 'finance-section': 'rgb(237, 247, 240)' })) {
+      const matches = sectionColors.filter(s => s.classes.split(' ').includes(section));
+      assert.ok(matches.length); assert.ok(matches.every(s => s.background === color), `Wrong ${section} background at ${width}`);
+    }
+    assert.ok(sectionColors.every(s => s.radius === '0px' && s.shadow === 'none'), 'Sections must remain flat bands');
+    assert.equal(await page.locator('[data-path="buyer.name"]').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)');
     assert.equal(await page.locator('[data-disclosure="buyer"]').getAttribute('open'), null);
     await page.locator('[data-disclosure="buyer"] > summary').focus();
     await page.keyboard.press('Enter');

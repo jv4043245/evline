@@ -34,14 +34,14 @@ function renderEditor() {
   $('[data-editor]').innerHTML = `
     <section class="editor-section seller-section"><div class="seller-choice"><label>Продавець / ФОП<select data-seller-profile>${!profiles.some(p => p.id === data.seller_profile_id) ? '<option value="">Реквізити цієї версії</option>' : ''}${profiles.map(p => `<option value="${esc(p.id)}" ${p.id === data.seller_profile_id ? 'selected' : ''}>${esc(sellerLabel(p.seller.name))}</option>`).join('')}</select></label><button type="button" data-action="add-seller" aria-label="Додати ФОП" title="Додати ФОП">${icon('Plus')}Додати ФОП</button></div><p class="muted">${esc([s.tax_id && `РНОКПП ${s.tax_id}`, s.iban && `IBAN ${s.iban}`].filter(Boolean).join(' · '))}</p></section>
     <details class="editor-section" data-disclosure="agreement" data-agreement-fields><summary>Реквізити договору</summary><div class="fields three">${docInput('number')}${docInput('date', { type: 'date' })}${docInput('city')}</div></details>
-    <section class="editor-section"><h2>Покупець</h2><div class="fields">
+    <section class="editor-section buyer-section"><h2>Покупець</h2><div class="fields">
       ${input('ПІБ / найменування', 'buyer.name', b.name)}${input('Телефон', 'buyer.phone', b.phone, { type: 'tel' })}
     </div><details class="field-details" data-disclosure="buyer"><summary>Контакти, авто та реквізити покупця</summary><div class="fields">
       ${input('Email / месенджер', 'buyer.contact', b.contact)}${input('Адреса', 'buyer.address', b.address)}
       ${input('Мета придбання', 'buyer.purpose', b.purpose, { options: [['Особисті потреби', 'Особисті потреби'], ['Господарська діяльність', 'Господарська діяльність']] })}
       ${input('Код / РНОКПП, для бізнесу', 'buyer.code', b.code)}${docInput('car')}${docInput('vin')}
     </div></details></section>
-    <section class="editor-section"><div class="section-heading"><h2>Специфікація</h2><button type="button" data-action="add-item">${icon('Plus')}Позиція</button></div>
+    <section class="editor-section specification-section"><div class="section-heading"><h2>Специфікація</h2><button type="button" data-action="add-item">${icon('Plus')}Позиція</button></div>
     ${data.items.map((r, i) => `<div class="spec-item"><div class="item-heading"><strong>Позиція ${i + 1}</strong><button type="button" class="icon-button" data-remove-item="${i}" ${data.items.length === 1 ? 'disabled' : ''} aria-label="Видалити позицію ${i + 1}" title="Видалити позицію">${icon('Trash2')}</button></div><div class="item-fields">
       <label class="item-title">Найменування<input data-path="items.${i}.title" value="${esc(r.title)}" maxlength="2000"></label>
       ${input('Кількість', `items.${i}.quantity`, r.quantity, { type: 'number' })}${input('Ціна за одиницю, грн', `items.${i}.price`, r.price)}
@@ -53,12 +53,12 @@ function renderEditor() {
       ${data.extras.map((r, i) => `<div class="extra-row">${input('Складова', `extras.${i}.title`, r.title)}${input('Сума, грн', `extras.${i}.price`, r.price)}<button class="icon-button" type="button" data-remove-extra="${i}" title="Видалити складову" aria-label="Видалити складову">${icon('Trash2')}</button></div>`).join('')}
       <button type="button" data-action="add-extra">${icon('Plus')}Додати складову</button>${data.extras.length ? `<div class="fields">${docInput('allocation', { wide: true, rows: 2 })}</div>` : ''}</details>
     </section>
-    <section class="editor-section"><div class="section-heading"><h2>Рахунок на оплату</h2><label class="check-label"><input type="checkbox" data-path="invoice.enabled" ${data.invoice.enabled ? 'checked' : ''}><span>Формувати рахунок</span></label></div><div class="fields invoice-fields" data-invoice-fields ${data.invoice.enabled ? '' : 'hidden'}>
+    <section class="editor-section finance-section"><div class="section-heading"><h2>Рахунок на оплату</h2><label class="check-label"><input type="checkbox" data-path="invoice.enabled" ${data.invoice.enabled ? 'checked' : ''}><span>Формувати рахунок</span></label></div><div class="fields invoice-fields" data-invoice-fields ${data.invoice.enabled ? '' : 'hidden'}>
       ${input('Номер рахунку', 'invoice.number', data.invoice.number)}${input('Дата рахунку', 'invoice.date', data.invoice.date, { type: 'date' })}
       ${input('Сума рахунку', 'invoice.mode', data.invoice.mode, { options: Object.entries(invoiceModes) })}${input('Сплатити до', 'invoice.due', data.invoice.due)}
       <div data-custom-invoice ${data.invoice.mode === 'custom' ? '' : 'hidden'}>${input('Погоджена сума рахунку, грн', 'invoice.amount', data.invoice.amount)}</div>
     </div></section>
-    <details class="editor-section" data-disclosure="payment"><summary>Передоплата та отримані кошти</summary><div class="fields">${input('Погоджена передоплата, грн', 'prepayment', data.prepayment)}${docInput('prepayment_due')}${docInput('balance_due', { wide: true })}</div>
+    <details class="editor-section finance-section" data-disclosure="payment"><summary>Передоплата та отримані кошти</summary><div class="fields">${input('Погоджена передоплата, грн', 'prepayment', data.prepayment)}${docInput('prepayment_due')}${docInput('balance_due', { wide: true })}</div>
       <p><label class="check-label"><input type="checkbox" data-path="receipt.enabled" ${data.receipt.enabled ? 'checked' : ''}><span>Додати підтвердження отриманої оплати</span></label></p>
       <div class="fields" data-receipt-fields ${data.receipt.enabled ? '' : 'hidden'}>
         ${input('Фактично отримано від клієнта, грн', 'receipt.amount', data.receipt.amount)}${input('Дата надходження', 'receipt.date', data.receipt.date, { type: 'date' })}
