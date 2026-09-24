@@ -2159,6 +2159,7 @@ function renderSupplierRequests(order) {
   const rows = state.selectedSupplierRequests || [];
   return `
     <section class="supplier-requests wide">
+      <div class="editor-band editor-band--request supplier-requests__intro">
       <div class="supplier-requests__head">
         <div>
           <strong>Запити постачальникам</strong>
@@ -2169,6 +2170,7 @@ function renderSupplierRequests(order) {
       <div class="supplier-request-card__actions">
         <button class="admin-btn admin-btn--primary" type="button" data-order-to-china="${escapeHtml(order.id)}">Запросити пропозицію</button>
         <button class="admin-btn" type="button" data-open-supplier-payment>Надіслати на оплату</button>
+      </div>
       </div>
 
       ${rows.length ? `
@@ -2228,6 +2230,7 @@ function renderSupplierPayments(order) {
   const requestedPlaceholder = order.type === "byd" ? "VDS / програмування" : "постачальник / Taobao / склад";
   return `
     <section class="supplier-payments wide">
+      <div class="editor-band editor-band--request">
       <div class="supplier-payments__head">
         <div>
           <strong>Оплата постачальнику</strong>
@@ -2265,6 +2268,7 @@ function renderSupplierPayments(order) {
         <button class="admin-btn admin-btn--primary wide" type="button" data-create-supplier-payment="${escapeHtml(order.id)}">
           Надіслати запит на оплату в Telegram
         </button>
+      </div>
       </div>
 
       ${rows.length ? `
@@ -3354,7 +3358,9 @@ function renderOrderEditor(order, preserveDraft = true) {
     </div>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "main" ? "is-active" : ""}" data-order-pane="main" ${activeOrderEditorTab() === "main" ? "" : "hidden"}>
-      <div class="order-editor__grid">
+      <section class="editor-band editor-band--workflow" aria-labelledby="order-workflow-heading">
+      <h3 id="order-workflow-heading">Робота із замовленням</h3>
+      <div class="order-editor__grid order-editor__grid--workflow">
 
     <label>
       Статус
@@ -3388,15 +3394,20 @@ function renderOrderEditor(order, preserveDraft = true) {
       Наступна дія
       <input name="next_action_at" type="date" value="${escapeHtml(order.next_action_at ? String(order.next_action_at).slice(0, 10) : "")}">
     </label>
-    <label class="wide">
-      Коментар менеджера
-      <textarea name="manager_notes" rows="2">${escapeHtml(order.manager_notes || "")}</textarea>
-    </label>
     <label>
       Менеджер напряму
       <input name="manager_contact" value="${escapeHtml(order.manager_contact || (order.type === "byd" ? "@evline_tech" : "@evline_support"))}">
     </label>
+    <label class="wide">
+      Коментар менеджера
+      <textarea name="manager_notes" rows="2">${escapeHtml(order.manager_notes || "")}</textarea>
+    </label>
+      </div>
+      </section>
 
+      <section class="editor-band editor-band--customer" aria-labelledby="order-customer-heading">
+      <h3 id="order-customer-heading">Клієнт</h3>
+      <div class="order-editor__grid order-editor__grid--customer">
     <label>
       Ім'я клієнта
       <input name="customer_name" value="${escapeHtml(order.customer_name || "")}">
@@ -3429,6 +3440,11 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
 
     </details>
 
+      </div>
+      </section>
+      <section class="editor-band editor-band--request" aria-labelledby="order-request-heading">
+      <h3 id="order-request-heading">Авто та запит</h3>
+      <div class="order-editor__grid">
     <label>
       Авто / модель
       <input name="car" value="${escapeHtml(order.car || "")}">
@@ -3451,6 +3467,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     </label>
 
       </div>
+      </section>
     </section>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "market" ? "is-active" : ""}" data-order-pane="market" ${activeOrderEditorTab() === "market" ? "" : "hidden"}>
@@ -3470,6 +3487,8 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
         <strong>Попередній розрахунок</strong>
         <a class="admin-btn admin-btn--small" href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Калькулятор: море / авіа</a>
       </div>
+      <section class="editor-band editor-band--customer" aria-labelledby="order-tracking-heading">
+      <h3 id="order-tracking-heading">Відстеження посилки</h3>
       <div class="order-editor__grid">
 
     <label>
@@ -3507,6 +3526,9 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       </button>
     </div>
 
+      </div>
+      </section>
+      <section class="editor-band editor-band--request" aria-label="Доставка з Китаю">
     <div class="order-editor__section order-editor__section--delivery wide">
       <div>
         <strong>Доставка з Китаю</strong>
@@ -3514,6 +3536,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       </div>
       <button class="admin-btn" type="button" data-open-shipping-settings>Керувати тарифами</button>
     </div>
+      <div class="order-editor__grid order-editor__grid--shipping">
     <input type="hidden" name="shipping_rate_id" value="${escapeHtml(order.shipping_rate_id || selectedRate?.id || "")}" data-shipping-rate-id>
     <input type="hidden" name="shipping_rate" value="${Number(order.shipping_rate || selectedRate?.rate || 0)}" data-shipping-rate>
     <input type="hidden" name="shipping_rate_currency" value="${escapeHtml(order.shipping_rate_currency || selectedRate?.currency || "")}" data-shipping-currency>
@@ -3539,6 +3562,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     </label>
 
       </div>
+      </section>
     </section>
 
     <section class="order-editor__pane wide ${activeOrderEditorTab() === "payment" ? "is-active" : ""}" data-order-pane="payment" ${activeOrderEditorTab() === "payment" ? "" : "hidden"}>
@@ -3546,10 +3570,12 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
 
     ${renderSupplierPayments(order)}
 
+    <section class="editor-band editor-band--finance wide" aria-label="Фінанси замовлення">
     <div class="order-editor__section wide">
       <strong>Фінанси замовлення · грн</strong>
       <span>${Number(order.revenue_uah) > 0 && Number(order.purchase_cost_uah) > 0 ? `Витрати внесено: ${money.format(costs)} · попередня маржа: ${money.format(profit)}` : "Маржа не розрахована: потрібні сума клієнту й закупівельна вартість у грн."}</span>
     </div>
+      <div class="order-editor__grid order-editor__grid--finance">
     <label>Оплата від клієнта
       <select name="payment_status">${Object.entries(paymentLabels).map(([key, label]) => `<option value="${key}" ${key === (order.payment_status || "unknown") ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select>
     </label>
@@ -3578,6 +3604,8 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <input name="other_cost_uah" type="number" step="0.01" min="0" value="${Number(order.other_cost_uah || 0)}">
     </label>
 
+      </div>
+    </section>
       </div>
     </section>
 
