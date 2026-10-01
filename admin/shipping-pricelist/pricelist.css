@@ -378,3 +378,8 @@
   .shipping-pricelist-card-body { padding:12px; }
   .shipping-calculator :is(input, select) { min-height:44px; font-size:16px; }
 }
+
+/* Optional measurements stay out of the default category-first flow. */
+.shipping-calculator form > details { grid-column: 1 / -1; }
+.shipping-calculator form > details[open] > label { margin-top: 10px; }
+[data-shipping-recommendation-root] { padding-top: 14px; }

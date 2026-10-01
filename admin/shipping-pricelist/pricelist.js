@@ -1,6 +1,7 @@
+import { createShippingClassifier } from '../../assets/js/shipping-classifier-client.js?v=20260930';
 import { adminApiError } from "../../assets/js/admin-api-errors.js";
 import { renderAirFreight, updateAirFreightOutput } from "../../assets/js/shipping-air-estimate.js?v=20260914-progress";
-import { renderAirGuide } from "../../assets/js/shipping-air-guide.js?v=20260914-guide";
+import { recommendShipping, renderShippingRecommendation, shippingCategories, classifyShipping } from "../../assets/js/shipping-recommendation.js?v=20260930";
 
 const usd = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -22,6 +23,18 @@ const date = new Intl.DateTimeFormat("uk-UA", {
 
 let pricelist;
 let airGuide;
+let evidence;
+const classifier = createShippingClassifier({
+  getAuth: () => localStorage.getItem('evline_admin_token'),
+  request: async (order,{signal}) => {
+    const auth=localStorage.getItem('evline_admin_token');
+    const response=await fetch('/api/admin/shipping-classify',{method:'POST',headers:{'content-type':'application/json',...(auth?{authorization:`Bearer ${auth}`}:{})},body:JSON.stringify(order),cache:'no-store',signal});
+    return response.ok?response.json():{status:'unavailable'};
+  },
+  onResult: () => renderCalculator(),
+});
+let classificationTimer;
+let currentClassificationKey;
 let freightMode = location.hash === '#air' ? 'air' : 'sea';
 let shipping;
 let airLoading;
@@ -62,12 +75,7 @@ function setFreightMode(mode) {
   document.querySelectorAll("[data-sea-only]").forEach(node => { node.hidden = air; });
   document.querySelector("[data-air-guide]").hidden = !air;
   document.querySelector("[data-air-advanced]").hidden = !air;
-  if (pricelist) {
-    const selected = document.querySelector('[data-profile]').value;
-    appendOptions(document.querySelector('[data-profile]'), air && airGuide ? airGuide.profiles : pricelist.profiles);
-    if ([...document.querySelector('[data-profile]').options].some(o => o.value === selected)) document.querySelector('[data-profile]').value = selected;
-    renderCalculator();
-  }
+  if (pricelist) renderCalculator();
 }
 document.querySelector('[data-air-advanced]').addEventListener('toggle', event => { if (event.target.open) loadAirRates(); });
 
@@ -161,30 +169,26 @@ function renderRules(data) {
   }
 }
 
-function selectedRow(rows, selector) {
-  const value = document.querySelector(selector)?.value;
-  return rows.find((row) => row.id === value) || rows[0];
-}
-
 function renderCalculator() {
   if (!pricelist) return;
-  if (freightMode === 'air') {
-    document.querySelector('[data-air-guide]').innerHTML = renderAirGuide(airGuide, document.querySelector('[data-profile]').value, document.querySelector('[data-vehicle-size]').value, document.querySelector('[data-packing]').value);
-    return;
+  const value = selector => document.querySelector(selector)?.value;
+  const order = { item_name:value('[data-request]'), car:value('[data-car]'), quantity:value('[data-quantity]') };
+  const key = order.item_name || '';
+  clearTimeout(classificationTimer);
+  // Cancel immediately on edit, before the next debounce; ignore even mocks that don't honor abort.
+  if(key!==currentClassificationKey) classifier.cancel('calculator');
+  currentClassificationKey=key;
+  if (key.trim() && evidence?.ai_enabled && classifyShipping(order, shippingCategories(pricelist,airGuide)).category === 'unknown' && !classifier.get(order)) {
+    classificationTimer=setTimeout(()=>classifier.ensure('calculator',order),600);
   }
-  const profile = selectedRow(pricelist.profiles, "[data-profile]");
-  const vehicle = selectedRow(pricelist.vehicle_size_factors, "[data-vehicle-size]");
-  const packing = selectedRow(pricelist.packing_factors, "[data-packing]");
-  const purchasePrice = Math.max(Number(document.querySelector("[data-purchase-price]")?.value) || 0, 0);
-  const adjustedVolume = profile.packed_volume_m3 * vehicle.factor * packing.factor;
-  const freight = adjustedVolume * pricelist.quote_rate_per_m3;
-  const insurance = purchasePrice * (pricelist.insurance_percent / 100);
-
-  setText("[data-result-volume]", `${decimal.format(adjustedVolume)} м³`);
-  setText("[data-result-freight]", usd.format(freight));
-  setText("[data-result-insurance]", usd.format(insurance));
-  setText("[data-result-total]", usd.format(freight + insurance));
-  setText("[data-result-note]", profile.note);
+  const result = recommendShipping({
+    order, ai:classifier.get(order),
+    mode: freightMode, pricelist, airGuide, evidence,
+    overrides: { category: value('[data-profile]'), size: value('[data-vehicle-size]'), packing: value('[data-packing]'),
+      goodsValueUsd: value('[data-purchase-price]'), itemNetKg: value('[data-net]'), packageGrossKg: value('[data-gross]'),
+      outerVolumeM3: value('[data-outer-volume]'), chargeableKg: value('[data-billed]'), destination: value('[data-destination]') }
+  });
+  document.querySelector('[data-shipping-recommendation-root]').innerHTML = renderShippingRecommendation(result);
 }
 
 async function loadPricelist() {
@@ -195,13 +199,18 @@ async function loadPricelist() {
     const airResponse = await fetch('/admin/shipping-pricelist/air-guide.json', { cache: 'no-store' });
     if (airResponse.ok) airGuide = await airResponse.json();
   } catch { /* The sea reference is independent of the air guide. */ }
+  try {
+    const token = localStorage.getItem('evline_admin_token') || '';
+    const response = await fetch('/api/admin/shipping-reference', {headers: token ? {authorization: `Bearer ${token}`} : {}, cache:'no-store'});
+    if (response.ok) { const data=await response.json(); if(token === (localStorage.getItem('evline_admin_token') || '')) evidence=data; }
+  } catch { /* Unavailable history must not suppress the recommendation. */ }
   renderMetadata(pricelist);
   renderProfiles(pricelist);
   renderRules(pricelist);
-  appendOptions(document.querySelector("[data-profile]"), pricelist.profiles);
-  appendOptions(document.querySelector("[data-vehicle-size]"), pricelist.vehicle_size_factors);
+  appendOptions(document.querySelector("[data-profile]"), [{id:"auto", name:"Автоматично за описом"}, ...shippingCategories(pricelist,airGuide)]);
+  appendOptions(document.querySelector("[data-vehicle-size]"), [{id:"auto",name:"Автоматично"},...pricelist.vehicle_size_factors]);
   appendOptions(document.querySelector("[data-packing]"), pricelist.packing_factors);
-  document.querySelector("[data-vehicle-size]").value = "standard";
+  document.querySelector("[data-vehicle-size]").value = "auto";
   document.querySelector("[data-packing]").value = "shared";
   setFreightMode(freightMode);
 }
@@ -212,3 +221,7 @@ document.querySelector("[data-shipping-calculator]")?.addEventListener("change",
 loadPricelist().catch((error) => {
   setText("[data-pricelist-status]", error.message);
 });
+
+window.addEventListener('storage', event => { if(event.key==='evline_admin_token') { evidence=null; classifier.clear(); clearTimeout(classificationTimer); window.location.reload(); } });
+
+window.addEventListener('pagehide',()=>{classifier.clear();clearTimeout(classificationTimer);});

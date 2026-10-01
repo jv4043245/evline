@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20260924-workspace">
     <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260924-workspace">
-    <script type="module" src="/admin/shipping-pricelist/pricelist.js?v=20260914-guide"></script>
+    <script type="module" src="/admin/shipping-pricelist/pricelist.js?v=20260930-20260914-guide"></script>
   </head>
   <body class="admin-shell shipping-pricelist-page">
     <header class="admin-header">
@@ -32,7 +32,7 @@
         <div>
           <p class="shipping-pricelist-kicker">Море / Авіа · Китай → Київ</p>
           <h1>Калькулятор доставки</h1>
-          <p>Стартова база для швидкої оцінки. Після отримання габаритів упаковки норматив замінюється точним розрахунком.</p>
+          <p>Рекомендація за категорією та типовим пакуванням працює навіть без моделі чи артикулу. Точні параметри — необов’язкові.</p>
         </div>
 
       </section>
@@ -44,7 +44,7 @@
           <div class="admin-panel__head">
             <div>
               <h2>Швидкий розрахунок</h2>
-              <p class="muted" data-sea-only>Море: робоча ціна містить резерв 15%. Страхування додається за вартістю товару.</p>
+              <p class="muted" data-sea-only>Історичні котировки й позначені планові сценарії. Це не кінцевий рахунок перевізника.</p>
             </div>
           </div>
           <div class="shipping-pricelist-card-body">
@@ -53,45 +53,24 @@
               <button type="button" data-freight-mode="air" aria-pressed="false">Авіа</button>
             </div>
             <form data-shipping-calculator>
-              <label>
-                Деталь
-                <select data-profile></select>
-              </label>
-              <label>
-                Клас автомобіля
-                <select data-vehicle-size></select>
-              </label>
-              <label>
-                Упаковка
-                <select data-packing></select>
-              </label>
-              <label data-sea-only>
-                Закупівельна ціна, USD
-                <input data-purchase-price type="number" min="0" step="0.01" value="0">
-              </label>
+              <label>Запчастина / опис<input data-request placeholder="Напр.: амортизатори 2 шт. або невідомий артикул"></label>
+              <label>Автомобіль, якщо відомий<input data-car placeholder="Модель необов’язкова"></label>
+              <label>Кількість, якщо відома<input data-quantity type="number" min="1" max="100" step="1" placeholder="Із тексту або 1"></label>
+              <label>Вартість усіх товарів, USD<input data-purchase-price type="number" min="0" step="0.01" placeholder="Невідома"></label>
+              <details class="order-editor__details"><summary>Необов’язкові точні параметри</summary>
+                <label>Категорія<select data-profile></select></label>
+                <label>Розмір авто<select data-vehicle-size></select></label>
+                <label>Пакування<select data-packing></select></label>
+                <p>Ваги й об’єм нижче — сумарно для всієї партії, не на одну деталь.</p>
+                <label>Нетто деталей, кг<input data-net type="number" min="0" step="0.01"></label>
+                <label>Брутто з упаковкою, кг<input data-gross type="number" min="0" step="0.01"></label>
+                <label>Зовнішній об’єм упаковки, м³<input data-outer-volume type="number" min="0" step="0.001"></label>
+                <label>Підтверджена тарифна вага, кг<input data-billed type="number" min="0" step="0.01"></label>
+                <label>Склад призначення<select data-destination><option value="Kyiv">Київ</option><option value="Mukachevo">Мукачево</option></select></label>
+              </details>
             </form>
-            <div data-sea-only>
-            <div class="shipping-calculator-result" aria-live="polite">
-              <div>
-                <span>Нормативний об'єм</span>
-                <strong data-result-volume>—</strong>
-              </div>
-              <div>
-                <span>Доставка з резервом</span>
-                <strong data-result-freight>—</strong>
-              </div>
-              <div>
-                <span>Страхування</span>
-                <strong data-result-insurance>—</strong>
-              </div>
-              <div class="shipping-calculator-result__total">
-                <span>Море + страхування</span>
-                <strong data-result-total>—</strong>
-              </div>
-            </div>
+            <div data-shipping-recommendation-root aria-live="polite"></div>
             <p class="shipping-calculator-exclusion">Не включено: доставка по Китаю та фактична вартість обрешітки за рахунком постачальника.</p>
-            <p class="shipping-calculator-note" data-result-note></p>
-            </div>
             <div data-air-guide hidden></div>
             <details class="order-editor__details" data-air-advanced hidden><summary>Окреме відправлення: розрахунок за тарифом</summary><div data-air-calculator></div></details>
           </div>
@@ -103,8 +82,8 @@
       <section class="admin-panel shipping-pricelist-table-panel" data-sea-only>
         <div class="admin-panel__head">
           <div>
-            <h2>Море: прайс по категоріях</h2>
-            <p class="muted">Робоча ціна підходить для попередньої пропозиції; діапазон враховує невизначеність упаковки.</p>
+            <h2>Море: початкова планова таблиця</h2>
+            <p class="muted">Архів початкових припущень. Актуальна рекомендація вище враховує кількість, малі партії та придатні історичні аналоги.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -145,7 +124,7 @@
         </div>
       <section class="shipping-pricelist-metrics" aria-label="Базові параметри розрахунку">
         <article>
-          <span>Підтверджений тариф</span>
+          <span>Початковий ефективний орієнтир</span>
           <strong data-base-rate>$319/м³</strong>
           <small data-route>Guangzhou → Chełm → Kyiv</small>
         </article>

@@ -1,6 +1,7 @@
+import { createShippingClassifier } from '../assets/js/shipping-classifier-client.js?v=20260930';
 import { filterMarketOffers, summarizeMarketItem, hasMarketIdentity, canSearchMarketItem } from "../assets/js/market-comparison.js?v=20260914-vin";
 import { adminApiError } from "../assets/js/admin-api-errors.js";
-import { renderAirGuide } from "../assets/js/shipping-air-guide.js?v=20260914-guide";
+import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
 
@@ -37,6 +38,7 @@ const state = {
   },
   shippingPricelist: null,
   shippingAirGuide: null,
+  shippingEvidence: null,
   shippingPricelistPromise: null,
   shippingEstimateSettings: {},
   chinaPreorders: [],
@@ -482,6 +484,8 @@ async function api(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401) {
       setAdminUser("");
+      state.shippingEvidence = null;
+      shippingClassifier.clear();
       setAuthVisible(true);
     }
     const message = await adminApiError(response);
@@ -2416,6 +2420,7 @@ function highlightSelectedOrder() {
 function closeOrderDetail(options = {}) {
   if (!options.force && !allowDiscardOrder()) return false;
   setOrderDetailOpen(false);
+  shippingClassifier.cancel("order");
   if (options.clearSelection) {
     state.selectedOrder = null;
     state.orderEditorTab = "main";
@@ -2437,6 +2442,7 @@ function setMarketLookupOpen(open) {
 }
 
 function closeMarketLookup() {
+  shippingClassifier.cancel("lookup");
   setMarketLookupOpen(false);
 }
 
@@ -3087,6 +3093,7 @@ async function ensureShippingPricelist() {
           const response = await fetch('/admin/shipping-pricelist/air-guide.json', { cache: 'no-store' });
           if (response.ok) state.shippingAirGuide = await response.json();
         } catch { /* Sea estimates remain available if the air reference is offline. */ }
+        try { const auth = localStorage.getItem('evline_admin_token'); const data = await api('/api/admin/shipping-reference', { cache:'no-store' }); if (auth === localStorage.getItem('evline_admin_token')) state.shippingEvidence = data; } catch { /* Planning fallback works without private history. */ }
         return data;
       })
       .finally(() => {
@@ -3096,101 +3103,50 @@ async function ensureShippingPricelist() {
   return state.shippingPricelistPromise;
 }
 
-function shippingText(order) {
-  return `${order?.item_name || ""} ${order?.request_text || ""}`.toLowerCase();
-}
-
-function autoShippingProfile(order, pricelist) {
-  const haystack = shippingText(order);
-  const matches = pricelist.profiles.flatMap((profile) => (profile.keywords || [])
-    .filter((keyword) => haystack.includes(String(keyword).toLowerCase()))
-    .map((keyword) => ({ profile, length: String(keyword).length })));
-  matches.sort((left, right) => right.length - left.length);
-  return matches[0]?.profile || null;
-}
-
-function autoVehicleSize(order, pricelist) {
-  const haystack = String(order?.car || "").toLowerCase();
-  return pricelist.vehicle_size_factors.find((row) => (row.match_terms || []).some((term) => haystack.includes(String(term).toLowerCase()))) || pricelist.vehicle_size_factors.find((row) => row.id === "standard") || pricelist.vehicle_size_factors[0];
-}
-
-function shippingEstimateSettings(order, pricelist) {
-  if (!state.shippingEstimateSettings[order.id]) {
-    state.shippingEstimateSettings[order.id] = { profile: "auto", vehicle: "auto", packing: "shared" };
-  }
-  const settings = state.shippingEstimateSettings[order.id];
-  const profiles = settings.mode === 'air' && state.shippingAirGuide ? [...pricelist.profiles, ...state.shippingAirGuide.profiles.filter(row => !pricelist.profiles.some(p => p.id === row.id)).map(row => ({ ...row, keywords: row.id === 'door' ? ['двері', 'дверь', 'door'] : [] }))] : pricelist.profiles;
-  const profile = settings.profile === "auto" ? autoShippingProfile(order, { profiles }) : profiles.find((row) => row.id === settings.profile) || autoShippingProfile(order, { profiles });
-  const vehicle = settings.vehicle === "auto" ? autoVehicleSize(order, pricelist) : pricelist.vehicle_size_factors.find((row) => row.id === settings.vehicle) || autoVehicleSize(order, pricelist);
-  const packing = pricelist.packing_factors.find((row) => row.id === settings.packing) || pricelist.packing_factors[0];
-  return { settings, profile, vehicle, packing, profiles };
-}
-
 function shippingOptions(rows, selected) {
   return rows.map((row) => `<option value="${escapeHtml(row.id)}" ${selected === row.id ? "selected" : ""}>${escapeHtml(row.name)}</option>`).join("");
 }
 
+const shippingClassifier = createShippingClassifier({
+  getAuth: () => localStorage.getItem('evline_admin_token'),
+  request: (order, {signal}) => api('/api/admin/shipping-classify', {method:'POST',body:JSON.stringify(order),signal,cache:'no-store'}),
+  onResult: view => { if(view === 'order') updateShippingEstimateRoot(); else updateMarketLookupShippingRoot(); },
+});
+
 function renderShippingEstimate(order) {
   const pricelist = state.shippingPricelist;
   if (!pricelist) return `<div class="market-loading market-loading--small"><span></span><strong>Завантажуємо орієнтир доставки</strong></div>`;
-  const { settings, profile, vehicle, packing, profiles } = shippingEstimateSettings(order, pricelist);
-  const controls = `
-    <div class="shipping-estimate__controls">
-      <label>Тип деталі
-        <select data-shipping-estimate-profile>
-          <option value="auto" ${settings.profile === "auto" ? "selected" : ""}>${profile ? `Автоматично: ${escapeHtml(profile.name)}` : "Автоматично: тип не визначено"}</option>
-          ${shippingOptions(profiles, settings.profile)}
-        </select>
-      </label>
-      <label>Розмір авто
-        <select data-shipping-estimate-vehicle>
-          <option value="auto" ${settings.vehicle === "auto" ? "selected" : ""}>Автоматично: ${escapeHtml(vehicle.name)}</option>
-          ${shippingOptions(pricelist.vehicle_size_factors, settings.vehicle)}
-        </select>
-      </label>
-      <label>Пакування
-        <select data-shipping-estimate-packing>${shippingOptions(pricelist.packing_factors, settings.packing)}</select>
-      </label>
-    </div>`;
-  const head = `
-    <div class="shipping-estimate__head">
-      <div>
-        <h3>Доставка · Китай → Київ</h3>
-      </div>
-      <a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Калькулятор і прайс</a>
-    </div>
+  const settings = state.shippingEstimateSettings[order.id] ||= { profile: "auto", vehicle: "auto", packing: "shared" };
+  const profiles = shippingCategories(pricelist, state.shippingAirGuide);
+  const view = String(order.id).startsWith('market-lookup-') ? 'lookup' : 'order';
+  if (state.shippingEvidence?.ai_enabled && classifyShipping(order, profiles).category === 'unknown') shippingClassifier.ensure(view,order);
+  else shippingClassifier.cancel(view);
+  const result = recommendShipping({ order, mode: settings.mode, pricelist, airGuide: state.shippingAirGuide, evidence: state.shippingEvidence, ai: shippingClassifier.get(order), overrides: {
+    category: settings.profile === 'auto' ? undefined : settings.profile,
+    size: settings.vehicle === 'auto' ? undefined : settings.vehicle,
+    packing: settings.packing,
+    // Legacy generic fields do not establish net/gross/billed or packed outer volume.
+    reportedWeightKg: Number(order.shipping_weight_kg) > 0 ? order.shipping_weight_kg : undefined,
+    reportedVolumeM3: Number(order.shipping_volume_m3) > 0 ? order.shipping_volume_m3 : undefined,
+    carrier: order.tracking_carrier || undefined,
+  } });
+  return `<div class="shipping-estimate__head"><h3>Орієнтир доставки</h3><a href="/admin/shipping-pricelist/" target="_blank" rel="noopener">Калькулятор і прайс</a></div>
     <div class="shipping-mode-switch" role="group" aria-label="Спосіб доставки">
-      <button type="button" data-estimate-mode="sea" aria-pressed="${settings.mode !== "air"}">Море</button>
-      <button type="button" data-estimate-mode="air" aria-pressed="${settings.mode === "air"}">Авіа</button>
-    </div>`;
-  if (settings.mode === "air") return `${head}${renderAirGuide(state.shippingAirGuide, profile?.id, vehicle.id, packing.id)}<details class="order-editor__details" data-shipping-options ${profile ? '' : 'open'}><summary>Деталь і пакування</summary>${controls}</details>`;
-  if (!profile) {
-    return `${head}<p class="muted">Тип деталі не визначено. Оцінка доставки недоступна.</p>
-      <details class="order-editor__details" data-shipping-options><summary>Обрати деталь і пакування</summary>${controls}</details>`;
-  }
-  const factor = Number(vehicle.factor || 1) * Number(packing.factor || 1);
-  const quote = Number(profile.working_quote_usd || 0) * factor;
-  const range = (profile.working_range_usd || [quote, quote]).map((value) => Number(value || 0) * factor);
-  const volume = Number(profile.packed_volume_m3 || 0) * factor;
-  return `
-    ${head}
-    <div class="shipping-estimate__result">
-      <div><span>Робочий орієнтир</span><strong>${usdMoney.format(quote)}</strong></div>
-      <div><span>Діапазон</span><strong>${usdMoney.format(range[0])}–${usdMoney.format(range[1])}</strong></div>
-
-    </div>
-    <p class="shipping-estimate__caveat">Попередня оцінка. Не включено: доставка по Китаю, обрешітка за рахунком постачальника та страхування 1,5%.</p>
-    <details class="order-editor__details" data-shipping-options><summary>Параметри й методика розрахунку</summary>
-    ${controls}
-    <p>${escapeHtml(profile.note)} · ${Number(volume.toFixed(2)).toLocaleString("uk-UA")} м³</p>
-    <p class="shipping-estimate__caveat">Це підказка за накопиченими відправленнями, версія ${escapeHtml(pricelist.version)}, оновлено ${escapeHtml(pricelist.updated_at)}. Консолідація кількох деталей в одному ящику може зменшити сумарну доставку на 15–30%. Страхування 1,5% і фактичні розміри пакування рахуються окремо.</p>
-    </details>
-  `;
+      <button type="button" data-estimate-mode="sea" aria-pressed="${settings.mode !== 'air'}">Море</button>
+      <button type="button" data-estimate-mode="air" aria-pressed="${settings.mode === 'air'}">Авіа</button>
+    </div>${renderShippingRecommendation(result)}
+    <details class="order-editor__details" data-shipping-options><summary>Необов’язкове уточнення</summary>
+      <div class="shipping-estimate__controls">
+        <label>Тип деталі<select data-shipping-estimate-profile><option value="auto" ${settings.profile === 'auto' ? 'selected' : ''}>Автоматично</option>${shippingOptions(profiles, settings.profile)}</select></label>
+        <label>Розмір авто<select data-shipping-estimate-vehicle><option value="auto" ${settings.vehicle === 'auto' ? 'selected' : ''}>Автоматично</option>${shippingOptions(pricelist.vehicle_size_factors, settings.vehicle)}</select></label>
+        <label>Пакування<select data-shipping-estimate-packing>${shippingOptions(pricelist.packing_factors, settings.packing)}</select></label>
+      </div><p class="muted">Заповнювати ці поля не потрібно: рекомендація вже враховує назву, опис, кількість і типове пакування. Маса авто не використовується як маса деталі.</p>
+    </details>`;
 }
 
 function updateShippingEstimateRoot(order = state.selectedOrder) {
   const root = document.querySelector("[data-shipping-estimate-root]");
-  if (root && order) {
+  if (root && order && state.selectedOrder?.id === order.id && root.closest("[data-market-research-root]")?.dataset.orderId === order.id) {
     const open = root.querySelector("[data-shipping-options]")?.open;
     root.innerHTML = renderShippingEstimate(order);
     if (open && root.querySelector("[data-shipping-options]")) root.querySelector("[data-shipping-options]").open = true;
@@ -4407,6 +4363,9 @@ document.querySelector("[data-token-form]")?.addEventListener("submit", async (e
 
 document.querySelector("[data-switch-user]")?.addEventListener("click", () => {
   localStorage.removeItem("evline_admin_token");
+  state.shippingEvidence = null;
+  shippingClassifier.clear();
+  state.shippingPricelist = null;
   window.location.reload();
 });
 
@@ -5178,7 +5137,7 @@ document.addEventListener("click", event => {
   const lookup = button.closest("[data-market-lookup-panel]");
   const order = lookup ? marketLookupOrder() : state.selectedOrder;
   if (!order) return;
-  shippingEstimateSettings(order, state.shippingPricelist).settings.mode = button.dataset.estimateMode;
+  (state.shippingEstimateSettings[order.id] ||= {profile:"auto",vehicle:"auto",packing:"shared"}).mode = button.dataset.estimateMode;
   if (lookup) updateMarketLookupShippingRoot();
   else updateShippingEstimateRoot(order);
 });
@@ -5541,4 +5500,12 @@ document.addEventListener("click", (event) => {
     inviteButton.textContent = "Скопійовано ✓";
     setTimeout(() => { inviteButton.textContent = original; }, 1500);
   });
+});
+
+// Keep private recommendation caches isolated when another tab changes admin identity.
+window.addEventListener('storage', event => {
+  if (event.key !== 'evline_admin_token') return;
+  state.shippingEvidence = null;
+  shippingClassifier.clear();
+  window.location.reload();
 });

@@ -1361,7 +1361,9 @@ const server = http.createServer(async (req, res) => {
     const pathname = decodeURIComponent(url.pathname);
     let file = path.resolve(root, `.${pathname}`);
 
-    if (!file.startsWith(root)) return send(res, 403, "forbidden");
+    if (!file.startsWith(root + path.sep)) return send(res, 403, "forbidden");
+    const relative = path.relative(root, file).split(path.sep).join('/');
+    if (relative.split('/').some(segment => segment.startsWith('.') && segment!=='.well-known') || /^(?:functions|tests|scripts|node_modules|workers|migrations)(?:\/|$)/i.test(relative) || /\.(?:md|patch|toml|sql)$/i.test(relative)) return send(res, 404, "not found");
     if (!existsSync(file)) return send(res, 404, "not found");
     if (statSync(file).isDirectory()) file = path.join(file, "index.html");
     if (!existsSync(file)) return send(res, 404, "not found");
