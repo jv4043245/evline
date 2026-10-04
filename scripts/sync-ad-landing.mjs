@@ -4,6 +4,7 @@ import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
 import { syncFooterContacts } from "./lib/footer-contacts.mjs";
 import { currentDeliveryCopy } from "./lib/delivery-copy.mjs";
+import { syncEmailProtection } from "./lib/email-protection.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const source = path.resolve(root, "../evline/public/запчастини-з-китаю/index.html");
@@ -310,5 +311,6 @@ await writeFile(path.join(root, "запчастини-з-китаю/index.html")
 await writeFile(path.join(root, "ru/zapchasti-iz-kitaya/index.html"), currentDeliveryCopy(ruHtml));
 await syncSellerIdentity(root);
 await syncFooterContacts(root);
+await syncEmailProtection(root);
 
 console.log("Ad landing synced: /запчастини-з-китаю/ and /ru/zapchasti-iz-kitaya/.");

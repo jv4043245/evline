@@ -31,8 +31,8 @@ test("organic home pages target the generic Chinese-parts intent", async () => {
 
 test("brand hubs expose priority model pages and real sourcing proof", async () => {
   const pages = [
-    ["zapchastyny-kytajskyh-avto/index.html", "Запчастини для китайських авто з Китаю"],
-    ["ru/zapchasti-kitajskih-avto/index.html", "Запчасти для китайских авто из Китая"],
+    ["zapchastyny-kytajskyh-avto/index.html", "Каталог запчастин для китайських авто за марками"],
+    ["ru/zapchasti-kitajskih-avto/index.html", "Каталог запчастей для китайских авто по маркам"],
   ];
 
   for (const [relativePath, heading] of pages) {
@@ -56,6 +56,8 @@ test("Zeekr 001 pages use exact commercial titles and headings", async () => {
   assert.match(uk, /<h1>Запчастини на Zeekr 001 з Китаю<\/h1>/);
   assert.match(ru, /<title>Запчасти на Zeekr 001 из Китая/);
   assert.match(ru, /<h1>Запчасти на Zeekr 001 из Китая<\/h1>/);
+  assert.match(uk, /Каталог запчастин Zeekr 001: що можна замовити/);
+  assert.match(ru, /Каталог запчастей Zeekr 001: что можно заказать/);
 });
 
 test("organic brand pages do not promote the abandoned low-margin service branch", async () => {
@@ -74,4 +76,3 @@ test("Russian generator cannot overwrite the authoritative sitemap by default", 
   assert.match(source, /process\.argv\.includes\("--standalone"\)/);
   assert.match(source, /электронные блоки и зарядные модули/);
 });
-

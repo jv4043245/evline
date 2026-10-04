@@ -4,6 +4,7 @@ import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
 import { syncFooterContacts } from "./lib/footer-contacts.mjs";
 import { currentDeliveryCopy } from "./lib/delivery-copy.mjs";
+import { syncEmailProtection } from "./lib/email-protection.mjs";
 
 const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const siteUrl = "https://evline.com.ua";
@@ -1268,8 +1269,8 @@ function hubPageRu() {
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Запчасти для китайских авто из Китая — по маркам | EVLine</title>
-    <meta name="description" content="Запчасти на современные китайские авто: BYD, ZEEKR, Xiaomi, Li Auto, AVATR и другие. Кузов, оптика, электроника, подбор по VIN и доставка в Украину.">
+    <title>Каталог запчастей для китайских авто по маркам | EVLine</title>
+    <meta name="description" content="Каталог запчастей для современных китайских авто: BYD, ZEEKR, Xiaomi, Li Auto, AVATR и другие. Выберите марку или модель; подбор по VIN и доставка по Украине.">
     <meta name="theme-color" content="#00b472">
     <link rel="canonical" href="${canonical}">
     <link rel="alternate" hreflang="uk-UA" href="${ukCanonical}">
@@ -1280,8 +1281,8 @@ function hubPageRu() {
     <meta property="og:type" content="website">
     <meta property="og:locale" content="ru_UA">
     <meta property="og:url" content="${canonical}">
-    <meta property="og:title" content="Запчасти для китайских авто из Китая — по маркам | EVLine">
-    <meta property="og:description" content="Кузовные детали, оптика, электроника и подвеска для современных китайских авто. Подбор по VIN и доставка в Украину.">
+    <meta property="og:title" content="Каталог запчастей для китайских авто по маркам | EVLine">
+    <meta property="og:description" content="Выберите марку или модель авто: кузовные детали, оптика, электроника и подвеска с подбором по VIN и доставкой по Украине.">
     <meta property="og:image" content="${siteUrl}/assets/images/oem-parts-visual.jpg">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
@@ -1293,11 +1294,11 @@ function hubPageRu() {
         {
           "@type": "CollectionPage",
           "@id": `${canonical}#webpage`,
-          name: "Запчасти для китайских авто из Китая",
+          name: "Каталог запчастей для китайских авто по маркам",
           url: canonical,
           inLanguage: "ru-UA",
           about: brands.map((brand) => brand.name).join(", "),
-          description: "Подбор по VIN и доставка кузовных деталей, оптики, электроники и подвески для современных китайских автомобилей.",
+          description: "Каталог марок и моделей современных китайских автомобилей с подбором запчастей по VIN, проверкой в Китае и доставкой по Украине.",
         },
         {
           "@type": "ItemList",
@@ -1320,8 +1321,8 @@ function hubPageRu() {
       <section class="brand-seo-hero brand-seo-hero--hub">
         <div class="container">
           <p class="brand-seo-kicker">Каталог современных авто из Китая</p>
-          <h1>Запчасти для китайских авто из Китая</h1>
-          <p class="brand-seo-lead">Подбираем запчасти для современных автомобилей, произведенных в Китае, и доставляем в Украину. Это не только китайские бренды BYD, ZEEKR, Xiaomi, Li Auto или AVATR, но и китайские версии Volkswagen ID, Smart, Volvo EX30, Audi Q5 e-tron и MG. Совместимость подтверждаем по VIN.</p>
+          <h1>Каталог запчастей для китайских авто по маркам</h1>
+          <p class="brand-seo-lead">Выберите марку или популярную модель современного автомобиля, произведенного в Китае. Подбираем оригинальные и проверенные OEM-детали по VIN, осматриваем их в Китае и доставляем по Украине. Работаем с BYD, ZEEKR, Xiaomi, Li Auto, AVATR, а также китайскими версиями Volkswagen ID, Smart, Volvo EX30, Audi Q5 e-tron и MG.</p>
           <a class="origin-pill-button" href="../">Перейти к основной заявке</a>
         </div>
       </section>
@@ -1492,4 +1493,5 @@ for (const brand of brands) {
 const standaloneSummary = rebuildStandalonePages ? "2 standalone pages, " : "";
 await syncSellerIdentity(root);
 await syncFooterContacts(root);
+await syncEmailProtection(root);
 console.log(`Russian version generated: ${standaloneSummary}1 brand hub, ${brands.length} brand SEO pages. Run npm run build:sitemap after changing URLs.`);

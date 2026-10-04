@@ -652,6 +652,15 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true, order_id: orderId, retry });
   }
 
+  if (url.pathname === "/api/leads" && (req.method === "GET" || req.method === "HEAD")) {
+    res.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-robots-tag": "noindex, nofollow",
+    });
+    return res.end(req.method === "HEAD" ? undefined : JSON.stringify({ ok: true, endpoint: "/api/leads", accepts: ["POST"] }));
+  }
+
   if (url.pathname === "/api/leads" && req.method === "POST") {
     const payload = await readBody(req);
     if (!payload.phone && !payload.email && !payload.telegram) {

@@ -8,6 +8,8 @@
     "build:sitemap": "node scripts/build-sitemap.mjs",
     "audit:forms": "node scripts/audit-public-forms.mjs",
     "audit:links": "node scripts/audit-internal-links.mjs",
+    "sync:email": "node scripts/sync-email-protection.mjs",
+    "audit:email": "node scripts/sync-email-protection.mjs --check",
     "sync:seller": "node scripts/sync-seller-identity.mjs",
     "audit:seller": "node scripts/sync-seller-identity.mjs --check",
     "sync:footer": "node scripts/sync-footer-contacts.mjs",

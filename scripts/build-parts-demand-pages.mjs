@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { footerContactsMarkup } from "./lib/footer-contacts.mjs";
 import { sellerIdentityMarkup } from "./lib/seller-identity.mjs";
+import { syncEmailProtection } from "./lib/email-protection.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const siteUrl = "https://evline.com.ua";
@@ -316,5 +317,7 @@ for (const topic of config.pages) {
     generated += 1;
   }
 }
+
+await syncEmailProtection(root);
 
 console.log("Generated " + generated + " demand-backed BYD SEO pages.");

@@ -80,8 +80,8 @@ test("general hubs describe cars manufactured in China, including foreign brands
     read("ru/zapchasti-kitajskih-avto/index.html"),
   ]);
 
-  assert.match(uk, /автомобілів, вироблених у Китаї/i);
-  assert.match(ru, /автомобилей, произведенных в Китае/i);
+  assert.match(uk, /вироблен(?:ого|их) [ув] Китаї/i);
+  assert.match(ru, /произведенн(?:ого|ых) в Китае/i);
   for (const html of [uk, ru]) {
     assert.match(html, /Volkswagen ID/);
     assert.match(html, /Smart/);

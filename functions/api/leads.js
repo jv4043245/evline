@@ -12,6 +12,27 @@ import {
 } from "../_lib/crm.js";
 
 const ALLOWED_TYPES = new Set(["parts", "byd", "other"]);
+const PUBLIC_ENDPOINT_HEADERS = {
+  "x-robots-tag": "noindex, nofollow",
+};
+
+export function onRequestGet() {
+  return json(
+    { ok: true, endpoint: "/api/leads", accepts: ["POST"] },
+    { headers: PUBLIC_ENDPOINT_HEADERS }
+  );
+}
+
+export function onRequestHead() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      ...PUBLIC_ENDPOINT_HEADERS,
+    },
+  });
+}
 
 function booleanFlag(value) {
   if (value === true || value === 1) return 1;
