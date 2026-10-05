@@ -1,5 +1,6 @@
 import { json, leadCorsHeaders, readPayload, text } from "../_lib/http.js";
 import { inferAttribution } from "../_lib/attribution.js";
+import { notificationSource } from "../_lib/notification-source.js";
 import { linkContactEventsToLead } from "../_lib/contact-events.js";
 import { runMarketResearch } from "../_lib/market-research.js";
 import {
@@ -194,6 +195,7 @@ async function notifyTelegram(env, lead, orderId, request) {
   const lines = [
     lead.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
     `Менеджер: ${managerContactForType(lead.type)}`,
+    `Джерело: ${notificationSource(lead)}`,
     ...(lead.phone ? [`Телефон: ${lead.phone}`] : []),
     ...(lead.name ? [`Ім'я: ${lead.name}`] : []),
     ...(lead.telegram ? [`Telegram: ${lead.telegram}`] : []),

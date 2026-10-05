@@ -1,5 +1,6 @@
 import { number, text } from "./http.js";
 import { queueGoogleAdsConversionsForOrder } from "./google-ads.js";
+import { notificationSource } from "./notification-source.js";
 
 export const ORDER_STATUS_LABELS = {
   new: "Нова заявка",
@@ -394,6 +395,7 @@ export function buildManagerOrderMessage(order, origin = "https://evline.com.ua"
     prefix,
     order.type === "byd" ? "Нова заявка EVLine: програмування BYD" : "Нова заявка EVLine: запчастини",
     `Менеджер: ${text(order.manager_contact) || managerContactForType(order.type)}`,
+    `Джерело: ${notificationSource(order)}`,
     ...(order.customer_phone ? [`Телефон: ${order.customer_phone}`] : []),
     ...(order.customer_name ? [`Ім'я: ${order.customer_name}`] : []),
     ...(order.customer_telegram ? [`Telegram: ${order.customer_telegram}`] : []),
