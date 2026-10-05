@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Заявки зі скриншотів | EVLine CRM</title>
+  <link rel="icon" href="/assets/images/favicon.png">
+  <link rel="stylesheet" href="/admin/telegram/intake.css?v=20260922">
+  <link rel="stylesheet" href="/admin/screenshot-intake/intake.css?v=20261005">
+  <script type="module" src="/admin/screenshot-intake/intake.js?v=20261005"></script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/admin/"><img src="/assets/images/logo.png" alt="EVLine" width="100" height="40"><span>CRM</span></a>
+    <a href="/admin/">Замовлення</a>
+    <a href="/admin/telegram/">Telegram-вхідні</a>
+    <button type="button" data-refresh>Оновити</button>
+  </header>
+  <main>
+    <h1>Заявки зі скриншотів</h1>
+    <p class="intro">У приватному чаті з ботом надішліть <code>/intake</code>, оберіть справжній канал клієнта та додайте скриншоти або текст. Перед внесенням у CRM перевірте чернетку нижче.</p>
+    <p role="alert" class="notice error" data-error hidden></p>
+    <p role="status" class="notice" data-status hidden></p>
+    <p class="notice" data-auth hidden>Потрібен <a href="/admin/">вхід до адмінки</a>. Після входу поверніться й натисніть «Оновити».</p>
+    <div data-private hidden>
+      <details class="settings">
+        <summary>Бот і доступ менеджерів <span data-manager-count></span></summary>
+        <div class="settings-content">
+          <p>Початковий менеджер: <strong>@evline_support</strong>. Нехай цей акаунт надішле боту <code>/intake</code>. Перед активацією звірте username і числовий Telegram ID особисто з менеджером.</p>
+          <div class="toolbar"><button type="button" data-check-setup>Перевірити бота</button><button type="button" data-test-analysis>Перевірити AI на тестовому тексті</button><button type="button" data-test-vision>Перевірити розпізнавання скрина</button></div>
+          <p class="muted">Обидві перевірки AI використовують лише синтетичний приклад і не створюють заявки в CRM.</p>
+          <p data-setup role="status"></p>
+          <a class="button" data-bot-link hidden target="_blank" rel="noopener noreferrer">Відкрити бота та почати /intake</a>
+          <p data-ai-test-result role="status"></p>
+          <div data-managers></div>
+        </div>
+      </details>
+      <p class="notice" data-ai-warning hidden>AI недоступний. Чернетки можна перевірити й заповнити вручну; автоматичний розбір зараз вимкнено.</p>
+      <div class="workspace">
+        <aside>
+          <label class="search-label">Пошук чернетки<input type="search" placeholder="Авто, запчастина, ім'я, № замовлення" data-search></label>
+          <div data-drafts role="list" aria-label="Чернетки"></div>
+        </aside>
+        <section data-detail aria-label="Перевірка чернетки"><p class="empty">Оберіть чернетку</p></section>
+      </div>
+      <p class="privacy-note">Зображення й текст для розбору обробляє підключений Cloudflare Workers AI. Оригінали залишаються у приватному листуванні з ботом, доки менеджер не видалить їх у Telegram; публічні посилання не створюються. Чернетка активна 24 години. Після 7 днів її матеріали й персональні поля очищаються під час наступного звернення до сервісу, а не окремим таймером. Заявки, вже внесені до CRM, залишаються в CRM.</p>
+    </div>
+  </main>
+</body>
+</html>

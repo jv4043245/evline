@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640">
+  <rect width="1000" height="640" fill="#edf2ef"/>
+  <rect width="1000" height="90" fill="#225a49"/>
+  <g font-family="Arial, sans-serif" font-size="26">
+    <text x="32" y="40" fill="white" font-weight="bold">EVLine — СИНТЕТИЧНИЙ ТЕСТ</text>
+    <text x="32" y="73" fill="white" font-size="19">Вигадана переписка. Не створювати реальне замовлення.</text>
+    <rect x="25" y="115" width="840" height="155" rx="18" fill="white"/>
+    <text x="48" y="153" fill="#286b56" font-weight="bold">Клієнт:</text>
+    <text x="48" y="192" fill="#1c2622">BYD Yuan Plus 2023.</text>
+    <text x="48" y="232" fill="#1c2622">Потрібна права передня дверка, 1 штука.</text>
+    <rect x="175" y="295" width="800" height="104" rx="18" fill="#cbead4"/>
+    <text x="200" y="335" fill="#286b56" font-weight="bold">Менеджер:</text>
+    <text x="200" y="373" fill="#1c2622">Підкажіть номер телефону, будь ласка.</text>
+    <rect x="25" y="425" width="840" height="140" rx="18" fill="white"/>
+    <text x="48" y="467" fill="#286b56" font-weight="bold">Клієнт:</text>
+    <text x="48" y="514" fill="#1c2622" font-size="34">+380000000001</text>
+    <text x="32" y="610" fill="#53645b" font-size="20">Тестові дані: телефон вигаданий, VIN відсутній.</text>
+  </g>
+</svg>
