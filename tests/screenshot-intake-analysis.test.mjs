@@ -47,6 +47,16 @@ test('VIN digits and numbers from different lines do not prove a customer phone'
   }
 });
 
+test('an extra or missing OCR digit in a Ukrainian international number blocks the draft', () => {
+  for (const phone of ['+3800000000001', '+38000000001']) {
+    const result = validateScreenshotAnalysis(output({ fields: { customer_phone: field(phone) } }), [{ id: '1', text: `Телефон ${phone}` }]);
+    assert.equal(result.fields.customer_phone, undefined); assert.equal(result.blocking, true);
+  }
+  const phone = '+380 00 000 00 01';
+  const result = validateScreenshotAnalysis(output({ fields: { customer_phone: field(phone) } }), [{ id: '1', text: `Телефон ${phone}` }]);
+  assert.equal(result.fields.customer_phone, phone); assert.equal(result.blocking, false);
+});
+
 test('phone evidence cannot join separate spans or slice digits out of a VIN', () => {
   const scenarios = [
     { sources: [{ id: '1', text: 'Артикул 12345' }, { id: '2', text: 'Номер 678901. Фара' }],

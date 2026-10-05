@@ -13,7 +13,7 @@
     <text x="200" y="373" fill="#1c2622">Підкажіть номер телефону, будь ласка.</text>
     <rect x="25" y="425" width="840" height="140" rx="18" fill="white"/>
     <text x="48" y="467" fill="#286b56" font-weight="bold">Клієнт:</text>
-    <text x="48" y="514" fill="#1c2622" font-size="34">+380000000001</text>
+    <text x="48" y="514" fill="#1c2622" font-size="34">+380 00 000 00 01</text>
     <text x="32" y="610" fill="#53645b" font-size="20">Тестові дані: телефон вигаданий, VIN відсутній.</text>
   </g>
 </svg>

@@ -82,7 +82,7 @@ export function screenshotPreview(draft, duplicates = []) {
     `VIN: ${clean(fields.vin, 32) || 'не вказано'}`,
     `Запчастини: ${clean(fields.item_name, 2000) || 'не вказано'}`,
     ...(fields.request_text && fields.request_text !== fields.item_name ? [`Деталі запиту: ${clean(fields.request_text, 4000)}`] : []),
-    '', 'Звірте VIN, ліву/праву сторону, перед/зад, кількість і артикул з оригіналом.',
+    '', 'Звірте телефон, VIN, ліву/праву сторону, перед/зад, кількість і артикул з оригіналом.',
   ];
   const warnings = (Array.isArray(draft.warnings) ? draft.warnings : []).slice(0, 6);
   if (warnings.length) lines.push('', ...warnings.map(value => `Увага: ${clean(value, 220)}`));

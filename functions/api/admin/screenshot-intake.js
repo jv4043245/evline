@@ -97,7 +97,7 @@ async function handlePost({ request, env }) {
       ? [{ kind: 'image', message_id: 1, file_id: 'synthetic-demo' }]
       : [{ kind: 'text', message_id: 1, text: 'Клієнт: BYD Yuan Plus 2023. Потрібна права передня дверка, 1 штука. Мій телефон +380000000001. Менеджер: Добре, перевіримо.' }] },
       image ? { download: async () => image } : {});
-    return json({ ok: true, result, checks: { phone: result.fields.customer_phone === '+380000000001', parts: /двер/iu.test(result.fields.item_name || ''), car: /BYD/iu.test(result.fields.car || '') } });
+    return json({ ok: true, result, checks: { phone: (result.fields.customer_phone || '').replace(/\D/g, '') === '380000000001', parts: /двер/iu.test(result.fields.item_name || ''), car: /BYD/iu.test(result.fields.car || '') } });
   }
   if (!validId(payload.id) || !Number.isSafeInteger(payload.revision) || payload.revision < 0) throw fail('Оновіть чернетку перед дією.');
   const draft = await getScreenshotDraft(env, payload.id);

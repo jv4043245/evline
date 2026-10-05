@@ -12,6 +12,10 @@ const normalize = (value) => plain(value).normalize('NFKC').replace(/\s+/g, ' ')
 const words = (value) => normalize(value).match(/[\p{L}\p{N}]+/gu) || [];
 const phoneCandidates = value => (value.match(/(?<![\p{L}\p{N}])\+?\d[\d ().-]{5,46}\d(?![\p{L}\p{N}])/gu) || [])
   .map(phone => phone.replace(/\D/g, '')).filter(phone => phone.length >= 9 && phone.length <= 15);
+const plausiblePhone = value => {
+  const digits = value.replace(/\D/g, '').replace(/^00/, '');
+  return !digits.startsWith('380') || digits.length === 12;
+};
 
 async function boundedBody(response, limit) {
   if (!response.ok || Number(response.headers.get('content-length') || 0) > limit) throw fail('Не вдалося завантажити зображення або файл завеликий.', 'image_download');
@@ -143,7 +147,7 @@ export function validateScreenshotAnalysis(data, sources) {
     const quoted = checked.filter(Boolean).map(span => span.quote).join(' ');
     const sourceWords = new Set(words(quoted));
     const supported = key === 'customer_phone'
-      ? /^\+?[\d ()-]{7,48}$/.test(value) && checked.some(span => span
+      ? /^\+?[\d ()-]{7,48}$/.test(value) && plausiblePhone(value) && checked.some(span => span
         && phoneCandidates(span.quote).includes(value.replace(/\D/g, ''))
         && phoneCandidates(sources.find(source => source.id === span.source_id).text).includes(value.replace(/\D/g, '')))
       : words(value).every(word => sourceWords.has(word));
@@ -189,5 +193,7 @@ export async function analyzeScreenshotDraft(env, draft, { download = downloadSc
     messages: [{ role: 'system', content: EXTRACT_PROMPT }, { role: 'user', content: JSON.stringify({ channel: draft.channel, sources }) }],
     response_format: { type: 'json_object' }, temperature: 0, max_tokens: 2600,
   });
-  return validateScreenshotAnalysis(structured(response), sources);
+  const analysis = validateScreenshotAnalysis(structured(response), sources);
+  if (imageHashes.size) analysis.warnings.unshift('Звірте телефон і VIN з оригіналом: розпізнавання може пропустити, замінити або додати цифру.');
+  return analysis;
 }
