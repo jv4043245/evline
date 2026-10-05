@@ -37,7 +37,7 @@ export async function downloadScreenshot(env, fileId) {
   let response, info;
   try {
     response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file_id: fileId }), signal: AbortSignal.timeout(10000), redirect: 'error',
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file_id: fileId }), signal: AbortSignal.timeout(10000), redirect: 'manual',
     });
     info = await response.json();
   } catch { throw fail('Не вдалося отримати файл із Telegram. Спробуйте ще раз.', 'image_download', 503); }
@@ -47,7 +47,7 @@ export async function downloadScreenshot(env, fileId) {
   }
   let bytes;
   try {
-    const image = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${path}`, { signal: AbortSignal.timeout(15000), redirect: 'error' });
+    const image = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${path}`, { signal: AbortSignal.timeout(15000), redirect: 'manual' });
     bytes = await boundedBody(image, MAX_IMAGE_BYTES);
   } catch (error) {
     if (error instanceof IntakeAnalysisError) throw error;

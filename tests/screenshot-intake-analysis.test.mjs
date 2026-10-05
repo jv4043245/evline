@@ -116,6 +116,17 @@ test('coded transport errors cannot expose a Telegram download URL', async t => 
     !/secret|https|ECONNRESET/.test(error.message) && error.code === 'image_download' && error.status === 503);
 });
 
+test('Workers-compatible manual mode refuses redirects instead of following credential URLs', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls++; assert.equal(options.redirect, 'manual');
+    if (url.endsWith('/getFile')) return Response.json({ ok: true, result: { file_path: 'photos/a.jpg' } });
+    return new Response('', { status: 302, headers: { location: 'https://example.invalid/' } });
+  });
+  await assert.rejects(downloadScreenshot({ TELEGRAM_BOT_TOKEN: 'synthetic' }, 'file1'), error => error.code === 'image_download');
+  assert.equal(calls, 2);
+});
+
 test('oversized context, missing AI and invalid structured outputs remain uncommitted', async () => {
   await assert.rejects(analyzeScreenshotDraft({}, { sources: Array.from({ length: 7 }, () => ({})) }), /від 1 до 6/);
   await assert.rejects(analyzeScreenshotDraft({}, { sources: [{ kind: 'text', text: 'x'.repeat(20001) }] }), /Забагато/);

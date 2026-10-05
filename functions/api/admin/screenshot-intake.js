@@ -18,7 +18,7 @@ async function telegram(env, method, body = {}) {
   if (!env.TELEGRAM_BOT_TOKEN) throw fail('Telegram-бот не підключений.', 503);
   try {
     const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000), redirect: 'error',
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(10000), redirect: 'manual',
     });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error();
@@ -86,7 +86,7 @@ export async function onRequestPost({ request, env }) {
   if (payload.action === 'test_analysis') {
     let image;
     if (payload.vision === true) {
-      const response = await fetch('https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png', { signal: AbortSignal.timeout(10000), redirect: 'error' });
+      const response = await fetch('https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png', { signal: AbortSignal.timeout(10000), redirect: 'manual' });
       if (!response.ok || Number(response.headers.get('content-length') || 0) > 200000) throw fail('Тестове зображення поки недоступне.', 503);
       image = new Uint8Array(await response.arrayBuffer());
       if (image.length > 200000) throw fail('Некоректний тестовий файл.', 503);

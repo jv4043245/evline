@@ -31,7 +31,7 @@ async function telegram(env, method, payload) {
   try {
     const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload), signal: controller.signal,
+      body: JSON.stringify(payload), signal: controller.signal, redirect: 'manual',
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) throw new Error('screenshot_telegram_unavailable');

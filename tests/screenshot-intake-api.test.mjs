@@ -233,7 +233,7 @@ test('synthetic vision test fetches only its fixed public fixture, mocks OCR, an
   const bytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 1]);
   const fetched = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
-    fetched.push(url); assert.equal(url, 'https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png'); assert.equal(options.redirect, 'error');
+    fetched.push(url); assert.equal(url, 'https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png'); assert.equal(options.redirect, 'manual');
     return new Response(bytes, { headers: { 'content-length': String(bytes.length), 'content-type': 'image/png' } });
   });
   let calls = 0;
