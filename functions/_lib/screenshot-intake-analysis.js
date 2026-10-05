@@ -1,4 +1,4 @@
-const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+const VISION_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 const TEXT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_TEXT = 20000;
@@ -171,8 +171,8 @@ export async function analyzeScreenshotDraft(env, draft, { download = downloadSc
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
       if (imageHashes.has(hash)) continue;
       imageHashes.add(hash);
-      // Cloudflare deprecates top-level image bytes in favor of inline message image data URIs:
-      // https://raw.githubusercontent.com/cloudflare/cloudflare-docs/production/src/content/workers-ai-models/llama-3.2-11b-vision-instruct.json
+      // Use the documented inline image message format; never send public/private image URLs to AI:
+      // https://developers.cloudflare.com/workers-ai/models/llama-4-scout-17b-16e-instruct/
       const result = await runAi(env, env.SCREENSHOT_INTAKE_VISION_MODEL || VISION_MODEL, {
         messages: [{ role: 'user', content: [{ type: 'text', text: OCR_PROMPT }, { type: 'image_url', image_url: { url: screenshotDataUri(bytes) } }] }],
         temperature: 0, max_tokens: 2200,

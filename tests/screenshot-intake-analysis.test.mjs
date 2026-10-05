@@ -102,7 +102,7 @@ test('modern vision input round-trips PNG bytes up to the 8 MB limit without an 
   const env = { AI: { run: async (model, payload) => {
     calls++;
     if (calls === 1) {
-      assert.match(model, /llama-3\.2-11b-vision/);
+      assert.match(model, /llama-4-scout-17b-16e/);
       const uri = payload.messages[0].content[1].image_url.url;
       assert.match(uri, /^data:image\/png;base64,/);
       assert.deepEqual(new Uint8Array(Buffer.from(uri.split(',')[1], 'base64')), bytes);
