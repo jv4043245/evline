@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { buildWhere, onRequestGet } from "../functions/api/admin/orders.js";
 
-function fixture(t, { history = true, extraOrders = 0 } = {}) {
+function fixture(t, { history = true, extraOrders = 0, payments = false } = {}) {
   const db = new DatabaseSync(":memory:");
   t.after(() => db.close());
   db.exec(`
@@ -21,6 +21,10 @@ function fixture(t, { history = true, extraOrders = 0 } = {}) {
     );
   `);
   if (history) db.exec("CREATE TABLE order_status_events (id TEXT PRIMARY KEY, order_id TEXT, status TEXT)");
+  if (payments) db.exec(`CREATE TABLE supplier_payments (
+    id TEXT PRIMARY KEY, order_id TEXT, status TEXT, requested_amount REAL, paid_amount REAL,
+    requested_currency TEXT, paid_currency TEXT
+  )`);
   const rows = [
     { id: "paid-later", status: "left_china", payment_status: "paid", shipping_mode: "sea" },
     { id: "supplier-paid", status: "paid", payment_status: "unknown", shipping_mode: "sea", paid_at: new Date().toISOString() },
@@ -75,7 +79,7 @@ function fixture(t, { history = true, extraOrders = 0 } = {}) {
   };
   const get = async (query) => (await response(query)).json();
   const select = (query) => {
-    const { where, binds } = buildWhere(new URL(`https://example.test/?range=all&${query}`), { hasOrderStatusEvents: history });
+    const { where, binds } = buildWhere(new URL(`https://example.test/?range=all&${query}`), { hasOrderStatusEvents: history, hasSupplierPayments: payments });
     return db.prepare(`SELECT orders.id FROM orders LEFT JOIN customers ON customers.id = orders.customer_id LEFT JOIN leads ON leads.id = orders.lead_id ${where} ORDER BY orders.id`).all(...binds).map((row) => row.id);
   };
   return { db, rows, statements, select, get, response };
@@ -167,7 +171,7 @@ test("pagination has deterministic ID ordering when creation timestamps tie", as
 
 test("invalid filter values fail with status 400 and never become SQL", async (t) => {
   const { response, statements } = fixture(t);
-  for (const query of ["payment_status=complete", "shipping_mode=boat", "shipped_only=maybe", "payment_status=paid%27%20OR%201%3D1--", "shipping_mode=air%27%3BDROP%20TABLE%20orders--"]) {
+  for (const query of ["payment_status=complete", "supplier_payment_status=refunded", "supplier_payment_status=paid%27%20OR%201%3D1--", "shipping_mode=boat", "shipped_only=maybe", "payment_status=paid%27%20OR%201%3D1--", "shipping_mode=air%27%3BDROP%20TABLE%20orders--"]) {
     assert.throws(() => buildWhere(new URL(`https://example.test/?${query}`)), (error) => error.status === 400 && /^Invalid .* filter$/.test(error.message));
     await assert.rejects(response(query), (error) => error.status === 400);
   }
@@ -217,4 +221,77 @@ test("CSV refuses oversized selections explicitly instead of silently truncating
   assert.equal(result.status, 413);
   assert.match(result.headers.get("content-type"), /^application\/json/);
   assert.match((await result.json()).error, /10000/);
+});
+
+function supplierFixture(t, extraOrders = 0) {
+  const data = fixture(t, { payments: true });
+  const cases = [
+    ["fully-paid", "paid", ["paid"]],
+    ["paid-at-warehouse", "china_warehouse", ["paid", "paid"]],
+    ["paid-in-transit", "left_china", ["paid", "canceled"]],
+    ["mixed-payments", "paid", ["paid", "requested"]],
+    ["installment", "awaiting_payment", ["partial"]],
+    ["review-receipt", "paid", ["paid", "needs_review"]],
+    ["payment-requested", "paid", ["requested"]],
+    ["canceled-payment", "paid", ["canceled"]],
+  ];
+  for (let i = 0; i < extraOrders; i++) cases.push([`supplier-extra-${i}`, "left_china", ["paid"]]);
+  for (const [id, status, payments] of cases) {
+    data.db.prepare("INSERT INTO orders (id, order_number, created_at, status, payment_status, shipping_mode, type, item_name) VALUES (?, ?, ?, ?, 'unknown', 'sea', 'parts', 'supplier fixture')").run(id, id, new Date().toISOString(), status);
+    payments.forEach((payment, i) => data.db.prepare("INSERT INTO supplier_payments VALUES (?, ?, ?, 100, ?, 'CNY', 'CNY')").run(`${id}-${i}`, id, payment, payment === "paid" ? 100 : payment === "partial" ? 40 : 0));
+  }
+  return data;
+}
+
+test("supplier paid matches the visible workflow badge without marking the customer paid", async (t) => {
+  const { select, get, db } = supplierFixture(t);
+  assert.deepEqual(select("supplier_payment_status=paid"), ["fully-paid", "paid-at-warehouse", "paid-in-transit", "supplier-paid"]);
+  const result = await get("supplier_payment_status=paid");
+  assert.equal(result.total, 4);
+  assert.ok(result.orders.every(order => order.payment_status === "unknown" && order.supplier_payment_status === "paid"));
+  assert.equal((await get("supplier_payment_status=paid&payment_status=paid")).total, 0);
+  assert.equal(db.prepare("SELECT payment_status FROM orders WHERE id='fully-paid'").get().payment_status, "unknown");
+});
+
+test("supplier ledger overrides stale paid stages: partial, review and canceled stay distinct", async (t) => {
+  const { select, get } = supplierFixture(t);
+  assert.deepEqual(select("supplier_payment_status=partial"), ["installment", "mixed-payments"]);
+  assert.deepEqual(select("supplier_payment_status=needs_review"), ["review-receipt"]);
+  const unpaid = select("supplier_payment_status=unpaid");
+  assert.ok(unpaid.includes("canceled-payment"));
+  assert.ok(unpaid.includes("payment-requested"));
+  assert.ok(unpaid.includes("paid-later"), "customer payment must not count as a supplier payment");
+  assert.ok(unpaid.includes("blank-payment"), "no recorded supplier payment is unpaid");
+  assert.ok(!unpaid.includes("supplier-paid"));
+  const all = (await get()).total;
+  const partitions = ["paid", "partial", "unpaid", "needs_review"].flatMap(status => select(`supplier_payment_status=${status}`));
+  assert.equal(partitions.length, all);
+  assert.equal(new Set(partitions).size, all);
+});
+
+test("supplier payment filters survive missing legacy payment tables", async (t) => {
+  const { get } = fixture(t, { history: false });
+  assert.deepEqual((await get("supplier_payment_status=paid")).orders.map(order => order.id), ["supplier-paid"]);
+  assert.equal((await get("supplier_payment_status=partial")).total, 0);
+  assert.equal((await get("supplier_payment_status=needs_review")).total, 0);
+});
+
+test("supplier payment count, pages and CSV share filters with delivery and search", async (t) => {
+  const { get, response } = supplierFixture(t, 105);
+  const filters = "supplier_payment_status=paid&shipping_mode=sea&shipped_only=1&type=parts&q=supplier fixture";
+  const first = await get(`${filters}&limit=100`);
+  const second = await get(`${filters}&limit=100&offset=100`);
+  assert.equal(first.total, 106);
+  assert.equal(second.total, 106);
+  assert.equal(first.orders.length, 100);
+  assert.equal(second.orders.length, 6);
+  const ids = [...first.orders, ...second.orders].map(order => order.id);
+  assert.equal(new Set(ids).size, 106);
+  assert.ok(ids.includes("paid-in-transit"));
+  assert.equal((await get("supplier_payment_status=paid&shipping_mode=air")).total, 0);
+  const result = await response(`${filters}&format=csv&limit=1&offset=999`);
+  assert.equal(result.status, 200);
+  const [header, ...rows] = (await result.text()).split("\n").map(line => line.split(","));
+  assert.deepEqual(rows.map(row => row[header.indexOf("order_number")]).sort(), ids.sort());
+  assert.ok(rows.every(row => row[header.indexOf("payment_status")] === "unknown"));
 });

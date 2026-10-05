@@ -4,7 +4,7 @@ import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
-import { readOrderFilters, orderQuery, selectOrderFilter, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005";
+import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 
 const state = {
   range: "30d",
@@ -1366,7 +1366,7 @@ function supplierPaymentChip(order) {
   } else if (paid > 0 && paid === count) {
     stateName = "paid";
     label = "Постач. оплачено";
-  } else if (paid > 0) {
+  } else if (paid > 0 || order.supplier_payment_status === "partial") {
     stateName = "partial";
     label = "Постач. частково";
   } else if (open > 0) {
@@ -4474,6 +4474,10 @@ document.querySelectorAll("[data-order-filter]").forEach((button) => {
   });
 });
 document.querySelector("[data-shipped-only]")?.addEventListener("change", reloadFilteredOrders);
+document.querySelector("[data-payment-source]")?.addEventListener("change", () => {
+  syncPaymentSource(document);
+  reloadFilteredOrders();
+});
 document.querySelector("[data-order-filters-reset]")?.addEventListener("click", () => {
   resetOrderFilters(document);
   reloadFilteredOrders();
