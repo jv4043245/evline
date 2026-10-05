@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20260924-workspace">
-    <script type="module" src="/admin/admin.js?v=20260930-20260924-workspace"></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20261005-order-filters">
+    <script type="module" src="/admin/admin.js?v=20261005-order-filters"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -100,13 +100,13 @@
             </div>
             <div class="filters">
               <input type="search" id="search" placeholder="№, VIN, телефон, авто, трек..." aria-label="Пошук замовлення">
-              <select id="status-filter">
-                <option value="all">Усі статуси</option>
+              <select id="status-filter" aria-label="Етап замовлення">
+                <option value="all">Усі етапи</option>
                 <option value="new">Нова заявка</option>
                 <option value="accepted">Прийнято в роботу</option>
                 <option value="proposal_sent">Пропозицію відправлено</option>
                 <option value="awaiting_payment">Очікує оплати</option>
-                <option value="paid">Оплачено</option>
+                <option value="paid">Етап: оплачено</option>
                 <option value="sourcing_china">Шукаємо / замовляємо в Китаї</option>
                 <option value="china_warehouse">На складі в Китаї</option>
                 <option value="left_china">Виїхало з Китаю</option>
@@ -115,7 +115,7 @@
                 <option value="completed">Завершено</option>
                 <option value="canceled">Скасовано</option>
               </select>
-              <select id="type-filter">
+              <select id="type-filter" aria-label="Тип замовлення">
                 <option value="all">Усі типи</option>
                 <option value="parts">Запчастини</option>
                 <option value="byd">BYD</option>
@@ -128,7 +128,35 @@
             <button type="button" data-work-filter="new" aria-pressed="false">Нові</button>
             <button type="button" data-work-filter="response" aria-pressed="false">Без пропозиції</button>
             <button type="button" data-work-filter="overdue" aria-pressed="false">Прострочена дія</button>
-            <span data-orders-visible-count></span>
+          </div>
+          <div class="order-detail-filters">
+            <fieldset>
+              <legend>Оплата від клієнта</legend>
+              <div class="order-filter-buttons">
+                <button type="button" data-order-filter="payment" value="all" aria-pressed="true">Усі</button>
+                <button type="button" data-order-filter="payment" value="paid" aria-pressed="false">Оплачено</button>
+                <button type="button" data-order-filter="payment" value="partial" aria-pressed="false">Частково</button>
+                <button type="button" data-order-filter="payment" value="unpaid" aria-pressed="false">Не оплачено</button>
+                <button type="button" data-order-filter="payment" value="unknown" aria-pressed="false">Не вказано</button>
+                <button type="button" data-order-filter="payment" value="refunded" aria-pressed="false">Повернення</button>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Спосіб доставки</legend>
+              <div class="order-filter-buttons">
+                <button type="button" data-order-filter="shipping" value="all" aria-pressed="true">Усі</button>
+                <button type="button" data-order-filter="shipping" value="sea" aria-pressed="false">Море</button>
+                <button type="button" data-order-filter="shipping" value="air" aria-pressed="false">Авіа</button>
+                <button type="button" data-order-filter="shipping" value="unknown" aria-pressed="false">Не вказано</button>
+              </div>
+            </fieldset>
+            <div class="order-filter-tools">
+              <label title="У дорозі, готові до видачі та завершені з історією відправки. Сам вибір способу доставки не означає відправку.">
+                <input type="checkbox" data-shipped-only> Тільки відправлені
+              </label>
+              <button class="admin-btn admin-btn--small" type="button" data-order-filters-reset title="Скинути фільтри та пошук. Обраний період не зміниться.">Скинути фільтри</button>
+            </div>
+            <p class="order-filter-result" data-orders-visible-count role="status" aria-live="polite"></p>
           </div>
           <form class="manual-order-form" data-manual-order-form hidden>
             <input type="hidden" name="status" value="new">
@@ -220,6 +248,9 @@
               </thead>
               <tbody data-orders></tbody>
             </table>
+          </div>
+          <div class="order-list-pagination" data-orders-pagination hidden>
+            <button class="admin-btn" type="button" data-orders-more>Показати ще 100</button>
           </div>
         </section>
 

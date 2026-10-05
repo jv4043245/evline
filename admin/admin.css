@@ -4551,6 +4551,25 @@ body.audit-log-open .audit-log-panel {
 .order-work-filters button { background:transparent; color:var(--muted); border:0; border-bottom:2px solid transparent; border-radius:0; padding:8px; font-size:13px; cursor:pointer; }
 .order-work-filters button[aria-pressed="true"] { border-bottom-color:var(--green-dark); color:var(--green-dark); font-weight:700; }
 .order-work-filters > span { margin-left:auto; font-size:12px; color:var(--muted); }
+.order-detail-filters { display:flex; flex-wrap:wrap; align-items:flex-start; gap:14px 24px; padding:14px 16px; border-bottom:1px solid var(--line); background:#f8faf9; }
+.order-detail-filters fieldset { min-width:0; margin:0; padding:0; border:0; }
+.order-detail-filters legend { margin-bottom:7px; padding:0; color:var(--muted); font-size:12px; font-weight:600; }
+.order-filter-buttons { display:flex; flex-wrap:wrap; gap:6px; }
+.order-filter-buttons button { min-height:40px; padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:13px; cursor:pointer; }
+.order-filter-buttons button[aria-pressed="true"] { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
+.order-filter-buttons button:focus-visible { outline:2px solid var(--green-dark); outline-offset:3px; }
+.order-filter-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px 20px; width:100%; }
+.order-filter-tools label { display:flex; align-items:center; gap:8px; min-height:40px; font-size:13px; cursor:pointer; }
+.order-filter-tools input[type="checkbox"] { width:18px; height:18px; min-height:0; margin:0; accent-color:var(--green-dark); }
+.order-filter-tools > button { margin-left:auto; }
+.order-filter-result { width:100%; margin:0; color:var(--muted); font-size:12px; }
+.order-list-pagination { padding:16px; text-align:center; border-top:1px solid var(--line); }
+@media (max-width:600px) {
+  .order-detail-filters { gap:12px; padding:12px; }
+  .order-detail-filters fieldset { width:100%; }
+  .order-filter-buttons button { min-height:44px; }
+  .order-filter-tools > button { margin-left:0; }
+}
 .filters #search { flex:1 1 230px; min-width:180px; }
 [data-admin-view="orders"] > section.admin-panel > .admin-panel__head { display:grid; grid-template-columns:1fr; gap:12px; }
 [data-admin-view="orders"] .filters { display:grid; grid-template-columns:minmax(200px,1fr) 200px 150px; }

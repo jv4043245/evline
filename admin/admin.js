@@ -4,6 +4,7 @@ import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
+import { readOrderFilters, orderQuery, selectOrderFilter, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005";
 
 const state = {
   range: "30d",
@@ -3177,7 +3178,7 @@ function shippingCarrierOptions(selectedId) {
 }
 
 function shippingModeOptions(selectedMode) {
-  return Object.entries(shippingModeLabels)
+  return `<option value="" ${!selectedMode ? "selected" : ""}>Не вказано</option>` + Object.entries(shippingModeLabels)
     .map(([value, label]) => `<option value="${value}" ${selectedMode === value ? "selected" : ""}>${label}</option>`)
     .join("");
 }
@@ -3202,8 +3203,8 @@ function applyShippingSelection(form, options = {}) {
   if (form.elements.shipping_carrier_id) form.elements.shipping_carrier_id.value = carrierChoice;
   if (customCarrier) customCarrier.hidden = true;
   const carrierId = carrierChoice;
-  const mode = form.elements.shipping_mode?.value || "air";
-  const rate = selectRate(carrierId, mode, form.elements.shipping_rate_id?.value || "");
+  const mode = form.elements.shipping_mode?.value || "";
+  const rate = mode ? selectRate(carrierId, mode, form.elements.shipping_rate_id?.value || "") : null;
   const carrier = carrierById(carrierId);
   const display = form.querySelector("[data-shipping-rate-display]");
   const hint = form.querySelector("[data-shipping-hint]");
@@ -3228,7 +3229,7 @@ function applyShippingSelection(form, options = {}) {
 
   const cost = calculateDeliveryCost(rate, form.elements.shipping_weight_kg?.value, form.elements.shipping_volume_m3?.value);
   const costInput = form.querySelector("[data-delivery-cost]");
-  if (costInput && (options.overwriteCost || !numeric(costInput.value))) {
+  if (rate && costInput && (options.overwriteCost || !numeric(costInput.value))) {
     costInput.value = cost || 0;
   }
 }
@@ -3255,8 +3256,8 @@ function renderOrderEditor(order, preserveDraft = true) {
   const profit = Number(order.revenue_uah || 0) - costs;
   const matchedCarrier = carrierByName(order.tracking_carrier);
   const selectedCarrierId = order.shipping_carrier_id || matchedCarrier?.id || "";
-  const selectedMode = order.shipping_mode || "air";
-  const selectedRate = selectRate(selectedCarrierId, selectedMode, order.shipping_rate_id);
+  const selectedMode = order.shipping_mode || "";
+  const selectedRate = selectedMode ? selectRate(selectedCarrierId, selectedMode, order.shipping_rate_id) : null;
   const currentRateLabel = selectedRate ? rateLabel(selectedRate) : "Оберіть перевізника і тип доставки";
   const selectedCarrier = carrierById(selectedCarrierId) || matchedCarrier || null;
   const customCarrierName = order.tracking_carrier && !matchedCarrier ? order.tracking_carrier : "";
@@ -3681,20 +3682,41 @@ async function loadSummary() {
   renderSummary(data);
 }
 
-async function loadOrders() {
-  const params = new URLSearchParams({
-    range: state.range,
-    work: document.querySelector("[data-work-filter][aria-pressed='true']")?.dataset.workFilter || "all",
-    status: document.querySelector("#status-filter")?.value || "all",
-    type: document.querySelector("#type-filter")?.value || "all",
-    q: document.querySelector("#search")?.value || "",
-    limit: "100",
-  });
-  const data = await api(`/api/admin/orders?${params}`);
-  state.orders = data.orders || [];
-  const count = document.querySelector("[data-orders-visible-count]");
-  if (count) count.textContent = `${state.orders.length} з ${Number(data.total || state.orders.length)}`;
-  renderOrders();
+function orderExportUrl() {
+  return `/api/admin/orders?${orderQuery(readOrderFilters(document, state.range), { csv: true })}`;
+}
+
+const loadOrders = createOrderLoader({
+  readFilters: () => readOrderFilters(document, state.range),
+  fetchPage: (params) => api(`/api/admin/orders?${params}`),
+  onUpdate: ({ orders, total, loading, error }) => {
+    state.orders = orders;
+    const count = document.querySelector("[data-orders-visible-count]");
+    const period = document.querySelector("#range option:checked")?.textContent || state.range;
+    if (count) count.textContent = error ? `Не вдалося завантажити замовлення: ${error.message}`
+      : loading ? "Завантаження замовлень…"
+      : `Знайдено: ${total}${orders.length < total ? ` · показано: ${orders.length}` : ""} · період: ${period}`;
+    const pagination = document.querySelector("[data-orders-pagination]");
+    if (pagination) pagination.hidden = total === null || orders.length >= total;
+    const more = document.querySelector("[data-orders-more]");
+    if (more) {
+      more.disabled = loading;
+      more.textContent = loading ? "Завантаження…" : `Показати ще ${Math.min(100, Math.max(0, total - orders.length))}`;
+    }
+    document.querySelector("[data-orders]")?.setAttribute("aria-busy", String(loading));
+    const exportLink = document.querySelector("[data-export]");
+    if (exportLink) exportLink.href = orderExportUrl();
+    renderOrders();
+    if (!orders.length && (loading || error)) {
+      const cell = document.querySelector("[data-orders] td");
+      if (cell) cell.textContent = loading ? "Завантаження…" : "Не вдалося завантажити список. Спробуйте оновити дані.";
+    }
+  },
+});
+
+function reloadFilteredOrders() {
+  clearTimeout(window.__searchTimer);
+  loadOrders().catch((error) => { if (error.status === 401) setAuthVisible(true); });
 }
 
 async function loadContactEvents() {
@@ -3930,7 +3952,7 @@ async function refresh() {
   try {
     state.range = document.querySelector("#range")?.value || "30d";
     const exportLink = document.querySelector("[data-export]");
-    if (exportLink) exportLink.href = `/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`;
+    if (exportLink) exportLink.href = orderExportUrl();
     const googleAdsExport = document.querySelector("[data-google-ads-export]");
     if (googleAdsExport) googleAdsExport.href = `/api/admin/google-ads/conversions?format=csv&range=${encodeURIComponent(state.range)}`;
     const googleAdsKeywordsExport = document.querySelector("[data-google-ads-keywords-export]");
@@ -4440,10 +4462,24 @@ document.querySelectorAll("[data-admin-tab]").forEach((button) => {
   button.addEventListener("click", () => { setActiveTab(button.dataset.adminTab); closeFilterMenus(); });
 });
 document.querySelectorAll("[data-work-filter]").forEach((button) => {
-  button.addEventListener("click", async () => {
+  button.addEventListener("click", () => {
     document.querySelectorAll("[data-work-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
-    try { await loadOrders(); } catch (error) { alert(error.message); }
+    reloadFilteredOrders();
   });
+});
+document.querySelectorAll("[data-order-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    selectOrderFilter(document, button);
+    reloadFilteredOrders();
+  });
+});
+document.querySelector("[data-shipped-only]")?.addEventListener("change", reloadFilteredOrders);
+document.querySelector("[data-order-filters-reset]")?.addEventListener("click", () => {
+  resetOrderFilters(document);
+  reloadFilteredOrders();
+});
+document.querySelector("[data-orders-more]")?.addEventListener("click", () => {
+  loadOrders({ append: true }).catch((error) => { if (error.status === 401) setAuthVisible(true); });
 });
 document.querySelector("[data-contact-channel]")?.addEventListener("change", loadContactEvents);
 document.querySelector("[data-contact-intent]")?.addEventListener("change", loadContactEvents);
@@ -4587,7 +4623,7 @@ document.querySelector("[data-china-preorder-form]")?.addEventListener("submit",
 document.querySelector("[data-export]")?.addEventListener("click", async (event) => {
   event.preventDefault();
   try {
-    const csv = await api(`/api/admin/orders?format=csv&range=${encodeURIComponent(state.range)}`, {
+    const csv = await api(orderExportUrl(), {
       headers: { accept: "text/csv" },
     });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -4722,12 +4758,12 @@ document.querySelector("[data-google-ads-upload]")?.addEventListener("click", (e
   runGoogleAdsApiAction("upload", event.currentTarget);
 });
 document.querySelector("#range")?.addEventListener("change", refresh);
-document.querySelector("#status-filter")?.addEventListener("change", loadOrders);
-document.querySelector("#type-filter")?.addEventListener("change", loadOrders);
+document.querySelector("#status-filter")?.addEventListener("change", reloadFilteredOrders);
+document.querySelector("#type-filter")?.addEventListener("change", reloadFilteredOrders);
 document.querySelector("#search")?.addEventListener("input", () => {
   syncFilterMenuButtons();
   clearTimeout(window.__searchTimer);
-  window.__searchTimer = setTimeout(loadOrders, 250);
+  window.__searchTimer = setTimeout(reloadFilteredOrders, 250);
 });
 
 document.querySelector("[data-orders]")?.addEventListener("click", async (event) => {

@@ -89,6 +89,21 @@ async function insertKnownFields(env, table, fields) {
     .run();
 }
 
+const PAYMENT_FILTERS = new Set(["all", "paid", "partial", "unpaid", "unknown", "refunded"]);
+const SHIPPING_FILTERS = new Set(["all", "sea", "air", "unknown"]);
+const SHIPPED_FILTERS = new Set(["all", "0", "1", "false", "true"]);
+const MAX_CSV_ORDERS = 10000;
+
+function filterValue(url, name, allowed) {
+  const value = url.searchParams.get(name) || "all";
+  if (!allowed.has(value)) {
+    const error = new Error(`Invalid ${name} filter`);
+    error.status = 400;
+    throw error;
+  }
+  return value;
+}
+
 export function buildWhere(url, options = {}) {
   const clauses = [];
   const binds = [];
@@ -98,6 +113,9 @@ export function buildWhere(url, options = {}) {
   const source = url.searchParams.get("source");
   const q = url.searchParams.get("q");
   const work = url.searchParams.get("work");
+  const payment = filterValue(url, "payment_status", PAYMENT_FILTERS);
+  const shipping = filterValue(url, "shipping_mode", SHIPPING_FILTERS);
+  const shippedOnly = filterValue(url, "shipped_only", SHIPPED_FILTERS);
   if (work === "new") clauses.push("orders.status = 'new'");
   if (work === "response") clauses.push("orders.status IN ('new', 'accepted')");
   if (work === "overdue") {
@@ -120,6 +138,25 @@ export function buildWhere(url, options = {}) {
   if (source && source !== "all") {
     clauses.push("COALESCE(NULLIF(orders.source, ''), 'direct') = ?");
     binds.push(source);
+  }
+  // Customer payment is independent of the workflow status and supplier payments.
+  if (payment !== "all") {
+    clauses.push("COALESCE(NULLIF(LOWER(TRIM(orders.payment_status)), ''), 'unknown') = ?");
+    binds.push(payment);
+  }
+  if (shipping !== "all") {
+    clauses.push("COALESCE(NULLIF(LOWER(TRIM(orders.shipping_mode)), ''), 'unknown') = ?");
+    binds.push(shipping);
+  }
+  if (shippedOnly === "1" || shippedOnly === "true") {
+    // A quoted delivery mode or tracking number alone does not prove dispatch.
+    // Completed services/local orders need a recorded international-shipping stage.
+    clauses.push(`(orders.status IN ('left_china', 'in_ukraine', 'ready_for_pickup')${options.hasOrderStatusEvents !== false ? `
+      OR (orders.status = 'completed' AND EXISTS (
+        SELECT 1 FROM order_status_events AS shipment_event
+        WHERE shipment_event.order_id = orders.id
+          AND shipment_event.status IN ('left_china', 'in_ukraine', 'ready_for_pickup')
+      ))` : ""})`);
   }
   if (q) {
     const searchColumns = [
@@ -161,22 +198,28 @@ export async function onRequestGet({ request, env }) {
     hasLeadNumber: await tableHasColumn(env, "leads", "lead_number"),
     hasSupplierPayments: await tableHasColumn(env, "supplier_payments", "id"),
     hasSupplierRequests: await tableHasColumn(env, "supplier_requests", "id"),
+    hasOrderStatusEvents: await tableHasColumn(env, "order_status_events", "status"),
   };
   const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);
   const offset = Math.max(integer(url.searchParams.get("offset")) || 0, 0);
   const wantsCsv = url.searchParams.get("format") === "csv";
 
-  const rows = await env.DB.prepare(`${orderSelect(options)} ${where} ORDER BY orders.created_at DESC LIMIT ? OFFSET ?`)
-    .bind(...binds, limit, offset)
+  const rows = await env.DB.prepare(`${orderSelect(options)} ${where} ORDER BY orders.created_at DESC, orders.id DESC LIMIT ? OFFSET ?`)
+    .bind(...binds, wantsCsv ? MAX_CSV_ORDERS + 1 : limit, wantsCsv ? 0 : offset)
     .all();
 
   if (wantsCsv) {
+    // Export the selection, not just the visible page. Never silently truncate it.
+    if (rows.results.length > MAX_CSV_ORDERS) {
+      return json({ error: `Забагато замовлень для CSV (понад ${MAX_CSV_ORDERS}). Звузьте фільтри або період.` }, { status: 413 });
+    }
     const columns = [
       "order_number",
       "created_at",
       "type",
       "status",
+      "payment_status",
       "customer_number",
       "lead_number",
       "customer_name",
