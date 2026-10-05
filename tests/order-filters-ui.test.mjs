@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
-import { readOrderFilters, orderQuery, selectOrderFilter, resetOrderFilters, createOrderLoader } from "../admin/order-filters.js";
+import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "../admin/order-filters.js";
 
 const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../admin/admin.js", import.meta.url), "utf8");
@@ -21,7 +21,7 @@ test("payment and delivery controls are independent; shipped-only combines with 
   root.querySelector("#search").value = "BYD & door";
   root.querySelector("#status-filter").value = "left_china";
   const filters = readOrderFilters(root, "all");
-  assert.deepEqual(filters, { range: "all", work: "all", status: "left_china", type: "all", q: "BYD & door", payment_status: "paid", shipping_mode: "sea", shipped_only: "1" });
+  assert.deepEqual(filters, { range: "all", work: "all", status: "left_china", type: "all", q: "BYD & door", supplier_payment_status: "paid", shipping_mode: "sea", shipped_only: "1" });
   for (const group of ["payment", "shipping"]) assert.equal(root.querySelectorAll(`[data-order-filter="${group}"][aria-pressed="true"]`).length, 1);
   assert.equal(new URLSearchParams(String(orderQuery(filters))).get("q"), "BYD & door");
 });
@@ -42,6 +42,8 @@ test("CSV uses exactly the same filters without visible-page limit or offset", (
 
 test("reset clears all order filters and search while preserving the visible global period", (t) => {
   const root = dom(t);
+  root.querySelector("[data-payment-source]").value = "customer";
+  syncPaymentSource(root);
   choose(root, "payment", "paid"); choose(root, "shipping", "sea");
   root.querySelector("[data-shipped-only]").checked = true;
   root.querySelector("#search").value = "door";
@@ -50,12 +52,13 @@ test("reset clears all order filters and search while preserving the visible glo
   root.querySelector("#range").value = "all";
   root.querySelectorAll("[data-work-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item.dataset.workFilter === "overdue")));
   resetOrderFilters(root);
-  assert.deepEqual(readOrderFilters(root, root.querySelector("#range").value), { range: "all", work: "all", status: "all", type: "all", q: "", payment_status: "all", shipping_mode: "all", shipped_only: "0" });
+  assert.deepEqual(readOrderFilters(root, root.querySelector("#range").value), { range: "all", work: "all", status: "all", type: "all", q: "", supplier_payment_status: "all", shipping_mode: "all", shipped_only: "0" });
+  assert.equal(root.querySelector('[value="refunded"][data-order-filter]').hidden, true);
 });
 
 test("all filter choices, reset, pagination and live result count are accessible", (t) => {
   const root = dom(t);
-  assert.deepEqual([...root.querySelectorAll('[data-order-filter="payment"]')].map((item) => item.value), ["all", "paid", "partial", "unpaid", "unknown", "refunded"]);
+  assert.deepEqual([...root.querySelectorAll('[data-order-filter="payment"]')].filter(item => !item.hidden).map((item) => item.value), ["all", "paid", "partial", "unpaid", "needs_review"]);
   assert.deepEqual([...root.querySelectorAll('[data-order-filter="shipping"]')].map((item) => item.value), ["all", "sea", "air", "unknown"]);
   for (const button of root.querySelectorAll("[data-order-filter]")) {
     assert.equal(button.type, "button");
@@ -64,6 +67,35 @@ test("all filter choices, reset, pagination and live result count are accessible
   assert.equal(root.querySelector("[data-orders-visible-count]").getAttribute("role"), "status");
   assert.ok(root.querySelector("[data-orders-more]"));
   assert.ok(root.querySelector("[data-order-filters-reset]").title.includes("період"));
+});
+
+test("payment source switches between independent ledgers and clears incompatible choices", (t) => {
+  const root = dom(t);
+  const source = root.querySelector("[data-payment-source]");
+  assert.equal(source.value, "supplier");
+  assert.equal(source.getAttribute("aria-label"), "Напрям оплати");
+  choose(root, "payment", "needs_review");
+  source.value = "customer";
+  syncPaymentSource(root);
+  assert.equal(readOrderFilters(root, "all").payment_status, "all");
+  assert.equal("supplier_payment_status" in readOrderFilters(root, "all"), false);
+  assert.deepEqual([...root.querySelectorAll('[data-order-filter="payment"]')].filter(item => !item.hidden).map(item => item.value), ["all", "paid", "partial", "unpaid", "unknown", "refunded"]);
+  choose(root, "payment", "paid");
+  assert.equal(readOrderFilters(root, "all").payment_status, "paid");
+  choose(root, "payment", "refunded");
+  source.value = "supplier";
+  syncPaymentSource(root);
+  assert.equal(readOrderFilters(root, "all").supplier_payment_status, "all");
+  assert.equal("payment_status" in readOrderFilters(root, "all"), false);
+});
+
+test("a partially paid supplier invoice keeps a partial badge in the order list", () => {
+  const body = source.slice(source.indexOf("function supplierPaymentChip("), source.indexOf("function supplierRequestChip("));
+  const chip = new Function("supplierAmount", "financeChip", `${body}; return supplierPaymentChip;`)(
+    (amount, currency) => `${amount} ${currency}`, (label, value, state) => ({ label, value, state }),
+  );
+  const result = chip({ supplier_payment_count: 1, supplier_payment_paid_count: 0, supplier_payment_open_count: 1, supplier_payment_paid_amount: 40, supplier_payment_status: "partial" });
+  assert.deepEqual(result, { label: "Постач.", value: "частк. 40 CNY", state: "partial" });
 });
 
 test("unknown delivery remains unknown when opening the editor (no implicit air)", () => {

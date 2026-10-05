@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="/assets/images/favicon.png">
     <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="stylesheet" href="/admin/admin.css?v=20261005-order-filters">
-    <script type="module" src="/admin/admin.js?v=20261005-order-filters"></script>
+    <link rel="stylesheet" href="/admin/admin.css?v=20261005-payment-source">
+    <script type="module" src="/admin/admin.js?v=20261005-payment-source"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -132,14 +132,19 @@
           </div>
           <div class="order-detail-filters">
             <fieldset>
-              <legend>Оплата від клієнта</legend>
+              <legend>Оплата</legend>
               <div class="order-filter-buttons">
+                <select data-payment-source aria-label="Напрям оплати">
+                  <option value="supplier">Постачальнику</option>
+                  <option value="customer">Від клієнта</option>
+                </select>
                 <button type="button" data-order-filter="payment" value="all" aria-pressed="true">Усі</button>
                 <button type="button" data-order-filter="payment" value="paid" aria-pressed="false">Оплачено</button>
                 <button type="button" data-order-filter="payment" value="partial" aria-pressed="false">Частково</button>
                 <button type="button" data-order-filter="payment" value="unpaid" aria-pressed="false">Не оплачено</button>
-                <button type="button" data-order-filter="payment" value="unknown" aria-pressed="false">Не вказано</button>
-                <button type="button" data-order-filter="payment" value="refunded" aria-pressed="false">Повернення</button>
+                <button type="button" data-order-filter="payment" value="needs_review" data-payment-source-only="supplier" aria-pressed="false">Перевірити</button>
+                <button type="button" data-order-filter="payment" value="unknown" data-payment-source-only="customer" aria-pressed="false" hidden>Не вказано</button>
+                <button type="button" data-order-filter="payment" value="refunded" data-payment-source-only="customer" aria-pressed="false" hidden>Повернення</button>
               </div>
             </fieldset>
             <fieldset>
