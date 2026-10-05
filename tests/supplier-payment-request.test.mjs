@@ -58,7 +58,8 @@ for (const [index, supplier] of ['BYD', 'Zeekr', 'Toyota'].entries()) {
     assert.ok(calls[0].body.text.includes(`Постачальник: ${supplier}`));
     assert.match(calls[0].body.text.replace(/\s/g, ''), /1234,56CNY/);
     assert.ok(calls[1].url.endsWith('/sendPhoto'));
-    assert.equal(calls[1].body.photo, `https://evline.com.ua/assets/images/suppliers/${supplier.toLowerCase()}-payment-qr.jpg`);
+    const qrFilename = supplier === 'Zeekr' ? 'zeekr-payment-qr-20261005.jpg' : `${supplier.toLowerCase()}-payment-qr.jpg`;
+    assert.equal(calls[1].body.photo, `https://evline.com.ua/assets/images/suppliers/${qrFilename}`);
     assert.equal(calls[1].body.reply_parameters.message_id, 101);
     assert.equal(calls[1].body.chat_id, env.TELEGRAM_PAYMENTS_CHAT_ID);
     assert.equal(result.supplier_payment.qr_photo_sent, true);

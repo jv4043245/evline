@@ -1,7 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 import { parsePaymentBreakdown, supplierPaymentQrImage } from "../functions/_lib/supplier-payments.js";
+
+test("Zeekr uses the owner-provided updated QR without image modification", () => {
+  const url = "https://evline.com.ua/assets/images/suppliers/zeekr-payment-qr-20261005.jpg";
+  for (const name of ["Zeekr", "Ziker", "Зікр", "Зикер", "Постачальник Zeekr"]) {
+    assert.equal(supplierPaymentQrImage(name)?.url, url);
+  }
+  assert.equal(supplierPaymentQrImage("Zeekr")?.caption, "QR для оплати постачальнику Zeekr");
+  const image = readFileSync(new URL("../assets/images/suppliers/zeekr-payment-qr-20261005.jpg", import.meta.url));
+  assert.equal(createHash("sha256").update(image).digest("hex"), "00878c0153a2ad6cf53d44c57f0c6ff1025ac137e9261dbc9c7d849fd9d6eb1a");
+  assert.equal(supplierPaymentQrImage("BYD")?.url, "https://evline.com.ua/assets/images/suppliers/byd-payment-qr.jpg");
+  assert.equal(supplierPaymentQrImage("Toyota")?.url, "https://evline.com.ua/assets/images/suppliers/toyota-payment-qr.jpg");
+});
 
 test("maps the Toyota supplier to its payment QR", () => {
   const paymentQr = supplierPaymentQrImage("Toyota");

@@ -28,7 +28,7 @@ const SUPPLIER_PAYMENT_QR_IMAGES = [
   },
   {
     aliases: ["zeekr", "ziker", "z e e k r", "зікр", "зікер", "зикр", "зикер"],
-    url: "https://evline.com.ua/assets/images/suppliers/zeekr-payment-qr.jpg",
+    url: "https://evline.com.ua/assets/images/suppliers/zeekr-payment-qr-20261005.jpg",
     caption: "QR для оплати постачальнику Zeekr",
   },
   {
