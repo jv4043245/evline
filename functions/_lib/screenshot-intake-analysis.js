@@ -59,9 +59,21 @@ export async function downloadScreenshot(env, fileId) {
   return bytes;
 }
 
-async function runAi(env, model, input) {
+function screenshotDataUri(bytes) {
+  if (bytes.length > MAX_IMAGE_BYTES) throw fail('Зображення завелике. Надішліть файл до 8 МБ.', 'image_too_large');
+  const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  const png = [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value);
+  if (!jpeg && !png) throw fail('Потрібне зображення JPEG або PNG, не PDF чи інший документ.', 'image_type');
+  // Multiple-of-three chunks avoid interior padding and large argument/string allocations at 8 MB.
+  const encoded = [], chunkSize = 3 * 8192;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    encoded.push(btoa(String.fromCharCode(...bytes.subarray(offset, offset + chunkSize))));
+  }
+  return `data:image/${jpeg ? 'jpeg' : 'png'};base64,${encoded.join('')}`;
+}
+
+async function runAi(env, model, input, phase = 'ai') {
   if (!env.AI?.run) throw fail('Розпізнавання AI не підключене.', 'ai_unavailable', 503);
-  const phase = input.image ? 'ocr' : 'ai';
   let timer;
   try {
     return await Promise.race([
@@ -159,7 +171,12 @@ export async function analyzeScreenshotDraft(env, draft, { download = downloadSc
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('');
       if (imageHashes.has(hash)) continue;
       imageHashes.add(hash);
-      const result = await runAi(env, env.SCREENSHOT_INTAKE_VISION_MODEL || VISION_MODEL, { image: Array.from(bytes), prompt: OCR_PROMPT, temperature: 0, max_tokens: 2200 });
+      // Cloudflare deprecates top-level image bytes in favor of inline message image data URIs:
+      // https://raw.githubusercontent.com/cloudflare/cloudflare-docs/production/src/content/workers-ai-models/llama-3.2-11b-vision-instruct.json
+      const result = await runAi(env, env.SCREENSHOT_INTAKE_VISION_MODEL || VISION_MODEL, {
+        messages: [{ role: 'user', content: [{ type: 'text', text: OCR_PROMPT }, { type: 'image_url', image_url: { url: screenshotDataUri(bytes) } }] }],
+        temperature: 0, max_tokens: 2200,
+      }, 'ocr');
       const transcript = plain(result?.response ?? result);
       if (!transcript || transcript.length > 6000) throw fail('Скриншот не прочитано повністю. Розділіть його на коротші фрагменти.', 'ocr_incomplete');
       text = [text ? `Manager-provided caption (context, not customer speech): ${text}` : '', transcript].filter(Boolean).join('\n');

@@ -240,7 +240,14 @@ test('synthetic vision test fetches only its fixed public fixture, mocks OCR, an
   let calls = 0;
   env.AI.run = async (_model, input) => {
     calls += 1;
-    if (input.image) { assert.deepEqual(input.image, [...bytes]); return { response: transcript }; }
+    if (calls === 1) {
+      assert.equal(input.image, undefined); assert.equal(input.prompt, undefined);
+      const parts = input.messages[0].content;
+      assert.match(parts[0].text, /Transcribe the visible text/); assert.match(parts[0].text, /untrusted/);
+      assert.equal(parts[1].type, 'image_url'); assert.match(parts[1].image_url.url, /^data:image\/png;base64,/);
+      assert.deepEqual(new Uint8Array(Buffer.from(parts[1].image_url.url.split(',')[1], 'base64')), bytes);
+      return { response: transcript };
+    }
     return proposal();
   };
   const result = await post({ action: 'test_analysis', vision: true });

@@ -77,12 +77,55 @@ test('image intake transcribes first then extracts, deduplicating identical byte
   let calls = 0;
   const env = { TELEGRAM_BOT_TOKEN: 'synthetic', AI: { run: async (model, payload) => {
     calls++;
-    if (calls === 1) { assert.deepEqual(payload.image, [...bytes]); assert.match(payload.prompt, /untrusted/); return { response: transcript }; }
+    if (calls === 1) {
+      assert.equal(payload.image, undefined); assert.equal(payload.prompt, undefined);
+      assert.equal(payload.messages[0].role, 'user');
+      assert.equal(payload.messages[0].content[0].type, 'text'); assert.match(payload.messages[0].content[0].text, /untrusted/);
+      const part = payload.messages[0].content[1]; assert.equal(part.type, 'image_url');
+      assert.match(part.image_url.url, /^data:image\/jpeg;base64,/);
+      assert.deepEqual(new Uint8Array(Buffer.from(part.image_url.url.split(',')[1], 'base64')), bytes);
+      assert.equal(payload.temperature, 0); assert.equal(payload.max_tokens, 2200);
+      return { response: transcript };
+    }
     assert.equal(JSON.parse(payload.messages[1].content).sources.length, 1);
     return { response: output() };
   } } };
   const result = await analyzeScreenshotDraft(env, { channel: 'viber', sources: [{ kind: 'image', message_id: 1, file_id: 'synthetic1' }, { kind: 'image', message_id: 2, file_id: 'synthetic2' }] });
   assert.equal(calls, 2); assert.equal(result.fields.customer_phone, '+380000000001');
+});
+
+test('modern vision input round-trips PNG bytes up to the 8 MB limit without an external image URL', async () => {
+  const bytes = new Uint8Array(8 * 1024 * 1024);
+  for (let index = 0; index < bytes.length; index++) bytes[index] = index % 251;
+  bytes.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  let calls = 0;
+  const env = { AI: { run: async (model, payload) => {
+    calls++;
+    if (calls === 1) {
+      assert.match(model, /llama-3\.2-11b-vision/);
+      const uri = payload.messages[0].content[1].image_url.url;
+      assert.match(uri, /^data:image\/png;base64,/);
+      assert.deepEqual(new Uint8Array(Buffer.from(uri.split(',')[1], 'base64')), bytes);
+      return { response: transcript };
+    }
+    return { response: output() };
+  } } };
+  const result = await analyzeScreenshotDraft(env, { sources: [{ kind: 'image', message_id: 1, file_id: 'synthetic' }] }, { download: async () => bytes });
+  assert.equal(calls, 2); assert.equal(result.fields.customer_phone, '+380000000001');
+});
+
+test('modern image messages keep explicit OCR timeout and sanitized provider error codes', async t => {
+  const draft = { sources: [{ kind: 'image', message_id: 1, file_id: 'synthetic' }] };
+  const download = async () => Uint8Array.from([255, 216, 255, 1]);
+  for (const [message, code] of [['transport https://secret.invalid/bot-token', 'ocr_unavailable'], ['Accept model license at https://secret.invalid', 'ocr_license_required']]) {
+    let calls = 0;
+    await assert.rejects(analyzeScreenshotDraft({ AI: { run: async () => { calls++; throw new Error(message); } } }, draft, { download }),
+      error => error.code === code && error.status === 503 && !/secret|https|token|license/i.test(error.message));
+    assert.equal(calls, 1);
+  }
+  t.mock.method(globalThis, 'setTimeout', (callback, delay) => { assert.equal(delay, 45000); queueMicrotask(callback); });
+  await assert.rejects(analyzeScreenshotDraft({ AI: { run: () => new Promise(() => {}) } }, draft, { download }),
+    error => error.code === 'ocr_timeout' && error.status === 503);
 });
 
 test('unsafe Telegram paths and oversized files are rejected before download', async t => {
