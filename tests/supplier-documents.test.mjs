@@ -131,6 +131,52 @@ test('download and ZIP contain only selected, linked documents; no public URLs',
   assert.match(new TextDecoder().decode(Object.values(contents)[0]),/Synthetic supplier document/);
   assert.equal((await request('bundle',{order_id:'order1',ids:[d.id,d.id]})).status,400);
 });
+test('Drive originals work through authenticated upload, versions, ZIP and Telegram without R2',async t=>{
+  const { env,request,db,connect,calls }=await fixture(t);
+  env.SUPPLIER_DOCUMENTS=null;
+  Object.assign(env,{GOOGLE_DRIVE_CLIENT_ID:'test-client',GOOGLE_DRIVE_CLIENT_SECRET:'test-drive-secret',GOOGLE_DRIVE_REFRESH_TOKEN:'test-refresh',GOOGLE_DRIVE_FOLDER_ID:'folder_private_12345'});
+  const originals=new Map(),staged=new Map();let count=0;
+  const telegram=globalThis.fetch;
+  t.mock.method(globalThis,'fetch',async(url,options={})=>{
+    url=new URL(url);
+    if(url.hostname==='api.telegram.org') return telegram(url,options);
+    if(url.hostname==='oauth2.googleapis.com') return Response.json({access_token:'drive-access',expires_in:3600});
+    assert.equal(url.hostname,'www.googleapis.com');
+    assert.equal(options.headers.authorization,'Bearer drive-access');
+    if(url.pathname.endsWith('/folder_private_12345')) return Response.json({mimeType:'application/vnd.google-apps.folder',permissions:[{type:'user'}]});
+    if(url.pathname.endsWith('/generateIds')) return Response.json({ids:[`drive_original_${++count}`]});
+    if(url.searchParams.get('uploadType')==='resumable') {
+      const data=JSON.parse(options.body);staged.set(data.id,data);
+      return new Response(null,{headers:{location:`https://www.googleapis.com/upload/drive/v3/files?upload_id=${data.id}`}});
+    }
+    if(url.searchParams.has('upload_id')) {
+      const id=url.searchParams.get('upload_id');originals.set(id,{...staged.get(id),bytes:new Uint8Array(options.body)});
+      return Response.json({id});
+    }
+    const original=originals.get(url.pathname.split('/').at(-1));assert.ok(original);
+    if(options.method==='PATCH') {original.trashed=true;return Response.json({id:original.id});}
+    if(url.searchParams.get('alt')==='media') return new Response(original.bytes);
+    return Response.json({...original,bytes:undefined,size:String(original.bytes.length),permissions:[{type:'user'}]});
+  });
+  const form=new FormData();for(const [key,value]of Object.entries(meta))form.set(key,value);form.set('file',file());
+  const d=await (await request('upload',form)).json();assert.ok(d.ok);
+  assert.match(db.prepare('SELECT object_key FROM supplier_document_versions').get().object_key,/^gdrive:/);
+  await uploadDocument(env,user,{...meta,document_id:d.id,version:1},file('new.pdf','updated'));
+  assert.equal(originals.size,2);
+  assert.match(await (await request('file',null,{order_id:'order1',id:d.id,version:'1'})).text(),/Synthetic/);
+  const archive=await request('bundle',{order_id:'order1',ids:[d.id]});
+  assert.match(new TextDecoder().decode(Object.values(unzipSync(new Uint8Array(await archive.arrayBuffer())))[0]),/updated/);
+  connect();assert.deepEqual((await (await request('send',{order_id:'order1',ids:[d.id]})).json()).sent,[d.id]);
+  assert.equal(calls.find(c=>c.method==='sendDocument').body.get('chat_id'),'1001');
+  const setup=await (await request('setup')).json();assert.equal(setup.storage_ready,true);assert.equal(setup.storage_provider,'google_drive');
+  assert.doesNotMatch(JSON.stringify(setup),/test-drive-secret|test-refresh|folder_private/);
+  assert.doesNotMatch(await (await request('list',null,{order_id:'order1'})).text(),/gdrive:|drive_original/);
+  const batch=env.DB.batch;env.DB.batch=async()=>{throw new Error('synthetic database outage');};
+  await assert.rejects(()=>uploadDocument(env,user,meta,file('orphan.pdf','orphan')),/outage/);
+  env.DB.batch=batch;
+  assert.equal(originals.get('drive_original_3').trashed,true);
+  assert.equal(db.prepare('SELECT count(*) n FROM supplier_document_versions').get().n,2);
+});
 test('manager pairing is one-use, expires and requires matching admin confirmation',async t=>{
   const{env,db,request}=await fixture(t);
   const {link}=await createPairing(env,user);

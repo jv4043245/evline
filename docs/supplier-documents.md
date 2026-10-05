@@ -46,9 +46,9 @@ failed after ten minutes. Removed admin identities cannot receive files/reminder
 ## Deployment
 
 - Apply `migrations/0030_supplier_documents.sql` to the production D1 database.
-- Create a private Standard-class R2 bucket and bind it as `SUPPLIER_DOCUMENTS`
-  in the Pages Wrangler configuration. Do not enable r2.dev, a public custom domain,
-  or public object URLs. Use a separate bucket for preview deployments.
+- Connect a private Google Drive folder using the setup below. R2 and a billing
+  card are not required. Use a separate Drive folder and credentials for previews;
+  production secrets must never be copied to a public preview deployment.
 - Deploy `workers/supplier-document-reminders/wrangler.toml`.
 - Generate a cryptographically random secret for the Worker's
   `SUPPLIER_DOCS_CRON_TOKEN`. Store only its SHA-256 digest in D1:
@@ -63,9 +63,57 @@ All file endpoints require a current admin token and return no-store responses.
 Stored keys and the scheduler digest are not included in UI responses. PDF preview
 is sandboxed; originals remain downloadable if a browser blocks embedded PDF viewers.
 
+## Google Drive Setup
+
+The owner's Codex connector is not a credential for the production CRM. Use a
+dedicated Google OAuth application with only `https://www.googleapis.com/auth/drive.file`.
+Do not request whole-Drive access, reuse advertising credentials, or use a service
+account to store files in a personal Drive (service accounts do not own a personal
+storage quota). No paid Google Cloud trial or billing account is needed for Drive API.
+
+1. In an owner-controlled Google Cloud project, enable Google Drive API. Configure
+   the OAuth consent screen and a Desktop app client. The owner accepts any terms
+   and grants access. Save the downloaded client JSON outside Git, for example
+   under the ignored `.local-data/` directory with owner-only permissions.
+2. For lasting authorization, put the consent app in production before connecting.
+   External apps left in Testing may have seven-day refresh tokens. This is a
+   single-owner integration, not a public sign-in feature for managers.
+3. Run `node scripts/connect-supplier-drive.mjs /absolute/path/to/client.json`.
+   Open its Google authorization URL and sign in as the Drive owner. The local
+   callback uses a short-lived state and PKCE, listens only on loopback, requests
+   only per-file access, and saves secrets with mode 0600 in `.local-data/`.
+   It does not log tokens or authorization codes. The helper checks storage quota
+   and creates or reuses the application's private `EVLine CRM - Originals` folder.
+4. Move that application-created folder inside the owner's `EVLine CRM - Supplier
+   Documents` folder using the owner's Drive connector/UI. Keep both private.
+   The nested folder's ID remains the storage target. A folder created through the
+   Codex connector alone is not automatically accessible to another OAuth app.
+5. Install the helper's four values as production-only Cloudflare Pages secrets:
+   `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`,
+   `GOOGLE_DRIVE_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID`.
+   Use a secrets file/stdin, never command-line values, Git, screenshots or chat.
+   Keep the local grant file protected until the production connection is verified.
+6. Deploy and test a synthetic invoice end to end: upload, preview, download,
+   replacement/version history, ZIP, archive/restore and authorized Telegram send.
+   Check the file appears only in the private folder and that unauthenticated CRM
+   downloads return 401. Trash disposable test files after the test, not real files.
+
+New files use resumable upload and opaque `gdrive:` references in D1. Each version
+is a separate immutable original. CRM downloads verify folder membership, private
+visibility, size and SHA-256; externally changed files must be added as new versions.
+File bytes are proxied through the authenticated CRM, never public Drive links.
+Archiving only hides an order link; failed uploads are moved to Drive Trash rather
+than permanently deleted. Low quota and revoked access produce safe UI messages.
+
+The app will not silently switch storage when Drive configuration is incomplete.
+Legacy `SUPPLIER_DOCUMENTS` R2 bindings remain supported for already-stored files,
+but no R2 subscription or bucket is needed for the Drive rollout.
+
 ## Verification
 
 - `node --test tests/supplier-documents.test.mjs`
+- `node --test tests/supplier-document-storage.test.mjs`
+- `node scripts/supplier-drive-connect-smoke.mjs` (loopback only; simulated Google APIs)
 - `node scripts/supplier-documents-smoke.mjs` with `PLAYWRIGHT_MODULE` if necessary
 - `npx wrangler pages functions build --outfile /tmp/evline-worker.js`
 

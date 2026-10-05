@@ -1,6 +1,7 @@
 import { zipSync } from 'fflate';
 import { adminUser, adminIdentities, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
+import { documentStorageStatus } from '../../_lib/supplier-document-storage.js';
 import { all, first, run, fail, clean, nowISO, digest, DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, orderAndPayment, uploadDocument, listDocuments, documentVersion, selectedDocuments, readOriginal, listFollowups, saveFollowup, documentAudit, supplierFollowupText, watchPayment } from '../../_lib/supplier-documents.js';
 import { boundedBytes, ownTelegram, pairingStatus, createPairing, confirmPairing, botLink, sendOriginal } from '../../_lib/supplier-documents-telegram.js';
 
@@ -17,7 +18,8 @@ export async function onRequest({request,env}) {
         const cron=await first(env,"SELECT value FROM supplier_document_runtime WHERE key='cron_last_run_at'");
         const linked=new Set((await all(env,'SELECT admin_id FROM supplier_document_telegram')).map(row=>row.admin_id));
         const managers=adminIdentities(env).map(manager=>({...manager,telegram_ready:linked.has(manager.id)}));
-        return json({storage_ready:Boolean(env.SUPPLIER_DOCUMENTS),cron_ready:Boolean(cron?.value && Date.now()-Date.parse(cron.value)<86400000),cron_last_run_at:cron?.value || null,user,managers,...await pairingStatus(env,user)});
+        const storage=documentStorageStatus(env);
+        return json({storage_ready:storage.ready,storage_provider:storage.provider,cron_ready:Boolean(cron?.value && Date.now()-Date.parse(cron.value)<86400000),cron_last_run_at:cron?.value || null,user,managers,...await pairingStatus(env,user)});
       }
       if (action==='counts') {
         const ids=(url.searchParams.get('ids') || '').split(',').filter(Boolean);
@@ -62,7 +64,7 @@ export async function onRequest({request,env}) {
     if (action==='followup') { await saveFollowup(env,user,data); return json({ok:true}); }
     const {order,payment}=await orderAndPayment(env,clean(data.order_id),clean(data.payment_id));
     if (action==='intake') {
-      if (!env.SUPPLIER_DOCUMENTS) fail('Приватне сховище ще не підключене.',503);
+      if (!documentStorageStatus(env).ready) fail('Приватне сховище ще не підключене.',503);
       if (!await ownTelegram(env,user.id)) fail('Підключіть свій Telegram.');
       if (!DOCUMENT_KINDS[data.kind]) fail('Оберіть тип документа.');
       const supplier=clean(payment?.supplier_name || data.supplier_name);

@@ -1,5 +1,6 @@
 import { recordAuditEvent } from './audit-log.js';
 import { adminIdentities } from './auth.js';
+import { documentStorageStatus, storeDocumentOriginal, loadDocumentOriginal, removeDocumentOriginal } from './supplier-document-storage.js';
 
 export const DOCUMENT_KINDS = { invoice: 'Рахунок постачальника', china_shipping: 'Доставка Китаєм', packing: 'Пакування', other: 'Інше' };
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
@@ -17,7 +18,7 @@ export async function documentAudit(env, user, action, documentId, orderId, deta
   await recordAuditEvent(env, { actor: user.name, action: `supplier_document.${action}`, entity_type: 'supplier_document', entity_id: documentId, order_id: orderId, details: { admin_id: user.id, ...details } });
 }
 export function requireStorage(env) {
-  if (!env.SUPPLIER_DOCUMENTS) fail('Приватне сховище ще не підключене. Зверніться до адміністратора.', 503);
+  if (!documentStorageStatus(env).ready) fail('Приватне сховище ще не підключене. Зверніться до адміністратора.', 503);
 }
 export function fileType(bytes) {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return ['image/jpeg', 'jpg'];
@@ -70,8 +71,10 @@ export async function uploadDocument(env, user, data, file, sourceKey = null) {
     const duplicate = await first(env, `SELECT d.id FROM supplier_documents d JOIN supplier_document_versions v ON v.document_id=d.id AND v.version=d.current_version JOIN supplier_document_links l ON l.document_id=d.id WHERE l.order_id=? AND l.archived_at IS NULL AND v.sha256=? AND d.kind=? AND d.supplier_name=?`, order.id, hash, data.kind, supplier);
     if (duplicate) return { id: duplicate.id, duplicate: true };
   }
-  const id = crypto.randomUUID(), time = nowISO(), key = `supplier-documents/${documentId}/${id}.${extension}`;
-  await env.SUPPLIER_DOCUMENTS.put(key, bytes, { httpMetadata: { contentType: mime } });
+  const id = crypto.randomUUID(), time = nowISO();
+  const key = await storeDocumentOriginal(env, `supplier-documents/${documentId}/${id}.${extension}`, bytes, {
+    mime, name: `${order.order_number} - ${supplier} - v${version} - ${safeFilename(file.name,extension)}`,
+  });
   const statements = [];
   if (version === 1) statements.push(env.DB.prepare('INSERT INTO supplier_documents(id,supplier_name,kind,reference,created_at,created_by) VALUES(?,?,?,?,?,?)').bind(documentId, supplier, data.kind, clean(data.reference), time, user.id));
   statements.push(env.DB.prepare('INSERT INTO supplier_document_versions(id,document_id,version,object_key,filename,mime,bytes,sha256,created_at,created_by,source_key) VALUES(?,?,?,?,?,?,?,?,?,?,?)').bind(id,documentId,version,key,safeFilename(file.name,extension),mime,bytes.length,hash,time,user.id,sourceKey));
@@ -79,7 +82,7 @@ export async function uploadDocument(env, user, data, file, sourceKey = null) {
   else statements.push(env.DB.prepare('INSERT INTO supplier_document_links(document_id,order_id,payment_id,created_at,created_by) VALUES(?,?,?,?,?)').bind(documentId,order.id,payment?.id || null,time,user.id));
   try { await env.DB.batch(statements); }
   catch (error) {
-    await env.SUPPLIER_DOCUMENTS.delete(key).catch(() => {});
+    await removeDocumentOriginal(env,key).catch(() => {});
     const duplicate=sourceKey ? await first(env, 'SELECT document_id FROM supplier_document_versions WHERE source_key=?',sourceKey) : null;
     if (duplicate) return { id: duplicate.document_id, duplicate: true };
     if (version > 1) fail('Файл уже оновив інший менеджер. Оновіть список.',409);
@@ -117,10 +120,7 @@ export async function selectedDocuments(env, orderId, ids) {
   return rows;
 }
 export async function readOriginal(env, row) {
-  requireStorage(env);
-  const object = await env.SUPPLIER_DOCUMENTS.get(row.object_key);
-  if (!object) fail('Оригінал тимчасово недоступний.',503);
-  return object;
+  return loadDocumentOriginal(env,row);
 }
 export async function listFollowups(env, orderId) {
   return all(env, `SELECT f.*,p.payment_number,p.supplier_name,p.status AS payment_status,p.paid_at,
