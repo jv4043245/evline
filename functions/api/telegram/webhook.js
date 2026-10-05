@@ -4,6 +4,7 @@ import { handleSupplierPaymentTelegramUpdate } from "../../_lib/supplier-payment
 import { handleSupplierTelegramUpdate } from "../../_lib/supplier-portal.js";
 import { isBusinessUpdate, receiveBusinessUpdate } from "../../_lib/telegram-intake.js";
 import { handleScreenshotIntakeUpdate } from "../../_lib/screenshot-intake-bot.js";
+import { handleSupplierDocumentsUpdate } from "../../_lib/supplier-documents-telegram.js";
 
 function extractOrderId(value) {
   const input = text(value);
@@ -71,6 +72,8 @@ export async function onRequestPost({ request, env }) {
       return json({ error: "Telegram intake temporarily unavailable" }, { status: 503 });
     }
   }
+  const documentResult = await handleSupplierDocumentsUpdate(env, update);
+  if (documentResult.handled) return json({ ok: true, ...documentResult, handled: 'supplier_documents' });
   // Explicit private manager intake must not be mistaken for a supplier receipt.
   // Business conversations above retain their independent, approved workflow.
   const screenshotResult = await handleScreenshotIntakeUpdate(env, update);

@@ -1,0 +1,6 @@
+name = "evline-supplier-document-reminders"
+main = "index.js"
+compatibility_date = "2026-05-23"
+
+[triggers]
+crons = ["0 * * * *"]

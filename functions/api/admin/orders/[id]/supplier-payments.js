@@ -6,6 +6,8 @@ import {
 } from "../../../../_lib/supplier-payments.js";
 import { registerSupplier } from "../../../../_lib/supplier-portal.js";
 import { auditActor, recordAuditEvent } from "../../../../_lib/audit-log.js";
+import { adminUser } from "../../../../_lib/auth.js";
+import { watchPayment } from "../../../../_lib/supplier-documents.js";
 
 export async function onRequestPost({ request, params, env }) {
   const payload = await readPayload(request);
@@ -14,6 +16,8 @@ export async function onRequestPost({ request, params, env }) {
     const supplier = await registerSupplier(env, payload.supplier_name);
     payload.supplier_name = supplier.display_name;
     const payment = await createSupplierPaymentRequest(env, params.id, payload, { actor: auditActor(request, env) });
+    const manager = adminUser(request, env);
+    if (manager) await watchPayment(env, payment.id, manager.id).catch(() => console.warn('supplier followup registration unavailable'));
     const order = await loadOrder(env, params.id);
     const supplierPayments = await listSupplierPayments(env, params.id);
 
