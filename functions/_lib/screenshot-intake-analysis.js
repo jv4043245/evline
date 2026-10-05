@@ -61,16 +61,18 @@ export async function downloadScreenshot(env, fileId) {
 
 async function runAi(env, model, input) {
   if (!env.AI?.run) throw fail('Розпізнавання AI не підключене.', 'ai_unavailable', 503);
+  const phase = input.image ? 'ocr' : 'ai';
   let timer;
   try {
     return await Promise.race([
       env.AI.run(model, input),
-      new Promise((_, reject) => { timer = setTimeout(() => reject(fail('Розпізнавання зайняло забагато часу. Спробуйте ще раз.', 'ai_timeout', 503)), 45000); }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(fail('Розпізнавання зайняло забагато часу. Спробуйте ще раз.', `${phase}_timeout`, 503)), 45000); }),
     ]);
   } catch (error) {
-    if (error instanceof IntakeAnalysisError && error.code === 'ai_timeout') throw error;
+    if (error instanceof IntakeAnalysisError) throw error;
     // Provider errors may contain credential-bearing URLs; never forward them.
-    throw fail('AI не завершив розпізнавання. Заявку не створено; можна повторити.', 'ai_unavailable', 503);
+    const needsLicense = /(?:agree|accept)[\s\S]{0,80}(?:license|terms)|(?:license|terms)[\s\S]{0,80}(?:agree|accept)/i.test(String(error?.message || ''));
+    throw fail('AI не завершив розпізнавання. Заявку не створено; можна повторити.', `${phase}_${needsLicense ? 'license_required' : 'unavailable'}`, 503);
   } finally { clearTimeout(timer); }
 }
 

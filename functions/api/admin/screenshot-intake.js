@@ -33,7 +33,7 @@ async function draftResult(env, id) {
   return { draft, duplicates: manager?.status === 'approved' ? await findScreenshotDuplicates(env, draft) : [] };
 }
 
-export async function onRequestGet({ request, env }) {
+async function handleGet({ request, env }) {
   if (!adminUser(request, env)) return unauthorized();
   await ensureScreenshotIntake(env);
   const params = new URL(request.url).searchParams;
@@ -56,7 +56,7 @@ export async function onRequestGet({ request, env }) {
   return json({ ...await screenshotOverview(env), ai_available: Boolean(env.AI?.run) });
 }
 
-export async function onRequestPost({ request, env }) {
+async function handlePost({ request, env }) {
   if (!adminUser(request, env)) return unauthorized();
   const payload = await readPayload(request);
   const actor = auditActor(request, env);
@@ -86,10 +86,12 @@ export async function onRequestPost({ request, env }) {
   if (payload.action === 'test_analysis') {
     let image;
     if (payload.vision === true) {
-      const response = await fetch('https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png', { signal: AbortSignal.timeout(10000), redirect: 'manual' });
-      if (!response.ok || Number(response.headers.get('content-length') || 0) > 200000) throw fail('Тестове зображення поки недоступне.', 503);
-      image = new Uint8Array(await response.arrayBuffer());
-      if (image.length > 200000) throw fail('Некоректний тестовий файл.', 503);
+      try {
+        const response = await fetch('https://evline.com.ua/assets/images/admin/screenshot-intake-demo.png', { signal: AbortSignal.timeout(10000), redirect: 'manual' });
+        if (!response.ok || Number(response.headers.get('content-length') || 0) > 200000) throw new Error();
+        image = new Uint8Array(await response.arrayBuffer());
+        if (image.length > 200000) throw new Error();
+      } catch { throw Object.assign(fail('Тестове зображення поки недоступне.', 503), { code: 'image_download' }); }
     }
     const result = await analyzeScreenshotDraft(env, { channel: 'whatsapp', sources: image
       ? [{ kind: 'image', message_id: 1, file_id: 'synthetic-demo' }]
@@ -121,3 +123,15 @@ export async function onRequestPost({ request, env }) {
   } else throw fail('Невідома дія.');
   return json({ ok: true, ...await draftResult(env, draft.id) });
 }
+
+const SAFE_ERROR_CODES = new Set(['ai_timeout', 'ai_unavailable', 'ai_license_required', 'ocr_timeout', 'ocr_unavailable', 'ocr_license_required', 'image_download']);
+async function withSafeDiagnostic(handler, context) {
+  try { return await handler(context); }
+  catch (error) {
+    // Only fixed codes cross this boundary; no raw provider details, keys or URLs.
+    if (SAFE_ERROR_CODES.has(error?.code) && error.status >= 500) return json({ error_code: error.code }, { status: 503 });
+    throw error;
+  }
+}
+export const onRequestGet = context => withSafeDiagnostic(handleGet, context);
+export const onRequestPost = context => withSafeDiagnostic(handlePost, context);

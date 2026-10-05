@@ -5,6 +5,17 @@ const limits = { customer_name: 160, customer_phone: 48, car: 240, vin: 17, item
 const statuses = { collecting: "Збір матеріалів", ready: "На перевірці", applied: "Внесено до CRM", canceled: "Скасовано", expired: "Термін минув" };
 const channels = { viber: "Viber", whatsapp: "WhatsApp", telegram: "Telegram", instagram: "Instagram", facebook: "Facebook", phone: "Телефон", email: "Email", other: "Інший канал", unknown: "Не визначено" };
 const managerStatuses = { pending: "Очікує підтвердження", approved: "Доступ активний", paused: "Доступ призупинено" };
+// Only these fixed explanations may replace the generic server-failure message.
+// Provider errors can contain credentials, internal URLs or response bodies.
+const serviceErrors = Object.freeze({
+  ai_timeout: "Час розбору тексту AI вичерпано. Повторіть спробу або заповніть поля вручну.",
+  ai_unavailable: "AI для розбору тексту зараз недоступний. Повторіть спробу пізніше або заповніть поля вручну.",
+  ai_license_required: "Модель AI для розбору тексту потребує підтвердження умов використання у Cloudflare. Зверніться до адміністратора.",
+  ocr_timeout: "Час розпізнавання зображення вичерпано. Повторіть спробу або внесіть текст вручну.",
+  ocr_unavailable: "Розпізнавання зображень зараз недоступне. Повторіть спробу пізніше або внесіть текст вручну.",
+  ocr_license_required: "Модель розпізнавання зображень потребує підтвердження умов використання у Cloudflare. Зверніться до адміністратора.",
+  image_download: "Не вдалося отримати зображення для розпізнавання. Повторіть спробу; якщо це матеріал чернетки, надішліть його боту повторно.",
+});
 let drafts = [], managers = [], current = null, targets = [], dirty = false, busy = false, aiAvailable = false;
 let overviewVersion = 0, detailVersion = 0, lookupVersion = 0, sessionVersion = 0, disposed = false, confirmation = null;
 const channelLabel = value => channels[String(value || "").toLowerCase()] || "Інший канал";
@@ -41,9 +52,10 @@ async function api(suffix = "", body) {
     clearPrivate(); $("[data-auth]").hidden = false;
     throw Object.assign(new Error("Немає доступу до цього розділу. Увійдіть до адмінки з чинним токеном."), { status: response.status });
   }
+  const serviceMessage = typeof result.error_code === "string" && Object.hasOwn(serviceErrors, result.error_code) ? serviceErrors[result.error_code] : "";
   if (!response.ok) throw Object.assign(new Error(response.status === 409
     ? "Чернетка або замовлення вже змінилися. Оновіть дані та перевірте їх знову. Незбережений текст залишено у формі."
-    : response.status >= 500 ? "Сервіс тимчасово недоступний. Спробуйте ще раз."
+    : response.status >= 500 ? serviceMessage || "Сервіс тимчасово недоступний. Спробуйте ще раз."
       : String(result.error || "Не вдалося виконати запит.").slice(0, 500)), { status: response.status });
   $("[data-auth]").hidden = true;
   return result;
@@ -281,14 +293,21 @@ document.addEventListener("click", async event => {
       else link.removeAttribute("href");
     } else if (button.hasAttribute("data-test-analysis") || button.hasAttribute("data-test-vision")) {
       const vision = button.hasAttribute("data-test-vision");
+      notice("");
       await mutate(async () => {
         $("[data-ai-test-result]").textContent = vision ? "Розпізнавання синтетичного скриншота — без створення заявки…" : "Перевірка на синтетичному тексті — без створення заявки…";
-        const result = await api("", { action: "test_analysis", ...(vision ? { vision: true } : {}) });
+        let result;
+        try { result = await api("", { action: "test_analysis", ...(vision ? { vision: true } : {}) }); }
+        catch (error) {
+          if (!error?.silent && !disposed) $("[data-ai-test-result]").textContent = "Тест не завершено. Причину вказано в повідомленні про помилку.";
+          throw error;
+        }
         const checkLabels = { phone: "Телефон", parts: "Запчастини", car: "Авто" };
         $("[data-ai-test-result]").textContent = Object.entries(checkLabels).map(([key, label]) => `${label}: ${result.checks?.[key] === true ? "OK" : "потрібна перевірка"}`).join(" · ");
         if (result.result?.fields) {
           const fields = result.result.fields;
-          $("[data-ai-test-result]").textContent += ` | Розпізнано: ${fields.car || "авто не визначено"}; ${fields.item_name || "деталі не визначено"}; ${fields.customer_phone || "телефон не визначено"}. ${result.result.blocking ? "Є неоднозначні дані — потрібна ручна перевірка." : "Блокуючих попереджень немає."}`;
+          const blockingStatus = result.result.blocking === true ? "Є неоднозначні дані — потрібна ручна перевірка." : result.result.blocking === false ? "Блокуючих попереджень немає." : "Стан блокуючих попереджень не визначено.";
+          $("[data-ai-test-result]").textContent += ` | Розпізнано: ${fields.car || "авто не визначено"}; ${fields.item_name || "деталі не визначено"}; ${fields.customer_phone || "телефон не визначено"}. Деталі запиту: ${fields.request_text || "не визначено"}. ${blockingStatus}`;
         }
       }, `Тест AI завершено на синтетичному ${vision ? "скриншоті" : "тексті"}. Заявку до CRM не створено.`);
     } else if (button.hasAttribute("data-manager")) {

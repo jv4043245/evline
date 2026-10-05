@@ -198,7 +198,8 @@ test('provider failure releases the lease, stays uncommitted and returns no toke
   const draft = await sourced();
   env.AI.run = async () => { throw new Error('Provider URL https://api.telegram.org/bot-real-secret/license=ACCEPT'); };
   const failure = await post({ action: 'analyze', id: draft.id, revision: draft.revision });
-  assert.equal(failure.response.status, 503); assert.doesNotMatch(JSON.stringify(failure.body), /real-secret|license|https/);
+  assert.equal(failure.response.status, 503); assert.doesNotMatch(JSON.stringify(failure.body), /real-secret|https|ACCEPT/);
+  assert.deepEqual(failure.body, { error_code: 'ai_license_required' });
   const row = db.prepare('SELECT * FROM screenshot_intake_drafts WHERE id=?').get(draft.id);
   assert.equal(row.analysis_until, 0); assert.equal(row.analysis_token, ''); assert.equal(row.status, 'collecting'); noCrm();
 });

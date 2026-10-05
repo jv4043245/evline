@@ -125,6 +125,53 @@ test("setup offers a safe bot invite and AI synthetic check never submits a CRM 
   assert.equal(hostile.$("[data-bot-link]").hidden, true); assert.equal(hostile.$("[data-bot-link]").hasAttribute("href"), false);
 });
 
+const safeServiceErrors = [
+  ["ai_timeout", /Час розбору тексту AI вичерпано/],
+  ["ai_unavailable", /AI для розбору тексту зараз недоступний/],
+  ["ai_license_required", /Модель AI для розбору тексту потребує підтвердження умов використання у Cloudflare/],
+  ["ocr_timeout", /Час розпізнавання зображення вичерпано/],
+  ["ocr_unavailable", /Розпізнавання зображень зараз недоступне/],
+  ["ocr_license_required", /Модель розпізнавання зображень потребує підтвердження умов використання у Cloudflare/],
+  ["image_download", /Не вдалося отримати зображення для розпізнавання/],
+];
+for (const [code, expected] of safeServiceErrors) {
+  test(`AI service code ${code} displays only its fixed safe explanation`, async t => {
+    const p = await page(t, { handle: ({ body }) => body?.action === "test_analysis"
+      ? reply({ error_code: code, error: "PRIVATE_PROVIDER_SECRET https://api.telegram.org/botSECRET_TOKEN <img onerror=alert(1)>" }, 503) : undefined });
+    await p.click("[data-test-vision]");
+    assert.equal(p.$("[data-error]").hidden, false); assert.match(p.$("[data-error]").textContent, expected);
+    assert.doesNotMatch(p.w.document.body.textContent, /PRIVATE_PROVIDER_SECRET|SECRET_TOKEN|api\.telegram\.org/);
+    assert.equal(p.$("[data-error]").querySelector("img"), null);
+    assert.match(p.$("[data-ai-test-result]").textContent, /Тест не завершено/);
+    assert.equal(p.$("[data-test-vision]").disabled, false); assert.equal(p.$("[data-status]").hidden, true);
+    assert.deepEqual(p.posts(), [{ action: "test_analysis", vision: true }]);
+  });
+}
+
+test("unknown, missing, malformed and prototype error codes cannot expose raw server failures", async t => {
+  for (const errorCode of [undefined, "new_provider_failure", "constructor", "__proto__", { ocr_timeout: true }]) {
+    const p = await page(t, { handle: ({ body }) => body?.action === "test_analysis"
+      ? reply({ error_code: errorCode, error: "PRIVATE_RAW_FAILURE" }, 500) : undefined });
+    await p.click("[data-test-analysis]");
+    assert.equal(p.$("[data-error]").textContent, "Сервіс тимчасово недоступний. Спробуйте ще раз.");
+    assert.doesNotMatch(p.w.document.body.textContent, /PRIVATE_RAW_FAILURE/);
+  }
+});
+
+test("synthetic AI result shows request details and explicit blocking state as escaped text", async t => {
+  for (const blocking of [true, false, undefined]) {
+    const text = '<img src=x onerror="window.BAD=1"> Колір уточнити';
+    const p = await page(t, { handle: ({ body }) => body?.action === "test_analysis" ? reply({
+      checks: { phone: true, parts: true, car: true },
+      result: { fields: { ...draft().fields, request_text: text }, ...(blocking === undefined ? {} : { blocking }) },
+    }) : undefined });
+    await p.click("[data-test-analysis]");
+    assert.ok(p.$("[data-ai-test-result]").textContent.includes(`Деталі запиту: ${text}`));
+    assert.match(p.$("[data-ai-test-result]").textContent, blocking === true ? /Є неоднозначні дані/ : blocking === false ? /Блокуючих попереджень немає/ : /Стан блокуючих попереджень не визначено/);
+    assert.equal(p.$("[data-ai-test-result]").querySelector("img"), null); assert.equal(p.w.BAD, undefined);
+  }
+});
+
 test("partial draft save permits missing fields and sends only allowed fields with current revision", async t => {
   const p = await page(t);
   p.set("item_name", ""); p.set("customer_phone", "");
