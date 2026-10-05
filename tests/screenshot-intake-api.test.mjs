@@ -109,7 +109,7 @@ test('setup GET only inspects Telegram configuration and returns the correct pri
   const methods = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     const method = url.split('/').at(-1); methods.push(method);
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert.deepEqual(JSON.parse(options.body), {});
     if (method === 'getMe') return Response.json({ ok: true, result: { username: 'SyntheticEVLineBot' } });
     if (method === 'getWebhookInfo') return Response.json({ ok: true, result: { url: 'https://evline.com.ua/api/telegram/webhook', allowed_updates: ['message', 'edited_message', 'callback_query', 'business_message'] } });
