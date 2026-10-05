@@ -7,7 +7,7 @@ export function readOrderFilters(root, range) {
     status: root.querySelector("#status-filter")?.value || "all",
     type: root.querySelector("#type-filter")?.value || "all",
     q: root.querySelector("#search")?.value || "",
-    payment_status: pressed("payment"),
+    [root.querySelector("[data-payment-source]")?.value === "customer" ? "payment_status" : "supplier_payment_status"]: pressed("payment"),
     shipping_mode: pressed("shipping"),
     shipped_only: root.querySelector("[data-shipped-only]")?.checked ? "1" : "0",
   };
@@ -23,7 +23,18 @@ export function selectOrderFilter(root, button) {
   });
 }
 
+export function syncPaymentSource(root) {
+  const source = root.querySelector("[data-payment-source]")?.value || "supplier";
+  root.querySelectorAll('[data-order-filter="payment"]').forEach((item) => {
+    item.hidden = Boolean(item.dataset.paymentSourceOnly && item.dataset.paymentSourceOnly !== source);
+    item.setAttribute("aria-pressed", String(item.value === "all"));
+  });
+}
+
 export function resetOrderFilters(root) {
+  const source = root.querySelector("[data-payment-source]");
+  if (source) source.value = "supplier";
+  syncPaymentSource(root);
   root.querySelectorAll("[data-order-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item.value === "all")));
   root.querySelectorAll("[data-work-filter]").forEach((item) => item.setAttribute("aria-pressed", String(item.dataset.workFilter === "all")));
   for (const id of ["status-filter", "type-filter"]) root.querySelector(`#${id}`).value = "all";

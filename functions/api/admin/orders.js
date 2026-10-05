@@ -11,10 +11,29 @@ import {
 import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
 import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
 
+function supplierPaymentStateSql(options) {
+  const legacy = "CASE WHEN orders.status = 'paid' THEN 'paid' ELSE 'unpaid' END";
+  if (!options.hasSupplierPayments) return legacy;
+  // The ledger wins over a stale workflow stage, including after cancellation.
+  // A scalar aggregate works identically in listing, count and CSV queries.
+  return `COALESCE((
+    SELECT CASE
+      WHEN SUM(CASE WHEN status != 'canceled' THEN 1 ELSE 0 END) = 0 THEN 'unpaid'
+      WHEN SUM(CASE WHEN status = 'needs_review' THEN 1 ELSE 0 END) > 0 THEN 'needs_review'
+      WHEN SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)
+        = SUM(CASE WHEN status != 'canceled' THEN 1 ELSE 0 END) THEN 'paid'
+      WHEN SUM(CASE WHEN status IN ('paid', 'partial') THEN 1 ELSE 0 END) > 0 THEN 'partial'
+      ELSE 'unpaid'
+    END
+    FROM supplier_payments WHERE order_id = orders.id HAVING COUNT(*) > 0
+  ), ${legacy})`;
+}
+
 function orderSelect(options = {}) {
   return `
     SELECT
       orders.*,
+      ${supplierPaymentStateSql(options)} AS supplier_payment_status,
       ${options.hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
       ${options.hasLeadNumber ? "leads.lead_number" : "NULL"} AS lead_number,
       ${options.hasSupplierPayments ? "COALESCE(supplier_summary.supplier_payment_count, 0)" : "0"} AS supplier_payment_count,
@@ -90,6 +109,7 @@ async function insertKnownFields(env, table, fields) {
 }
 
 const PAYMENT_FILTERS = new Set(["all", "paid", "partial", "unpaid", "unknown", "refunded"]);
+const SUPPLIER_PAYMENT_FILTERS = new Set(["all", "paid", "partial", "unpaid", "needs_review"]);
 const SHIPPING_FILTERS = new Set(["all", "sea", "air", "unknown"]);
 const SHIPPED_FILTERS = new Set(["all", "0", "1", "false", "true"]);
 const MAX_CSV_ORDERS = 10000;
@@ -114,6 +134,7 @@ export function buildWhere(url, options = {}) {
   const q = url.searchParams.get("q");
   const work = url.searchParams.get("work");
   const payment = filterValue(url, "payment_status", PAYMENT_FILTERS);
+  const supplierPayment = filterValue(url, "supplier_payment_status", SUPPLIER_PAYMENT_FILTERS);
   const shipping = filterValue(url, "shipping_mode", SHIPPING_FILTERS);
   const shippedOnly = filterValue(url, "shipped_only", SHIPPED_FILTERS);
   if (work === "new") clauses.push("orders.status = 'new'");
@@ -143,6 +164,10 @@ export function buildWhere(url, options = {}) {
   if (payment !== "all") {
     clauses.push("COALESCE(NULLIF(LOWER(TRIM(orders.payment_status)), ''), 'unknown') = ?");
     binds.push(payment);
+  }
+  if (supplierPayment !== "all") {
+    clauses.push(`${supplierPaymentStateSql(options)} = ?`);
+    binds.push(supplierPayment);
   }
   if (shipping !== "all") {
     clauses.push("COALESCE(NULLIF(LOWER(TRIM(orders.shipping_mode)), ''), 'unknown') = ?");

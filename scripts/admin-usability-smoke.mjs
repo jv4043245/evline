@@ -54,7 +54,7 @@ try {
     await page.route('**/api/**', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
-      requests.push({ path: url.pathname, method: request.method() });
+      requests.push({ path: url.pathname, method: request.method(), query: url.search });
       let body = {};
       if (url.pathname.endsWith('/market-research')) {
         if (request.method() === 'POST' && request.postDataJSON()?.action !== 'continue') marketPayload = request.postDataJSON();
@@ -89,7 +89,13 @@ try {
           saved = request.postDataJSON(); order = { ...order, ...saved };
         }
         body = detail();
-      } else if (url.pathname === '/api/admin/orders') body = { orders: [order, { ...order, id: 'duplicate', order_number: 'O-900002' }], total: 2 };
+      } else if (url.pathname === '/api/admin/orders') {
+        const rows = [
+          { ...order, status: 'paid', payment_status: 'unknown', supplier_payment_status: 'paid', shipping_mode: 'sea' },
+          { ...order, id: 'duplicate', order_number: 'O-900002', payment_status: 'paid', supplier_payment_status: 'unpaid', shipping_mode: 'air' },
+        ].filter(row => ['payment_status', 'supplier_payment_status', 'shipping_mode'].every(key => !url.searchParams.get(key) || url.searchParams.get(key) === 'all' || url.searchParams.get(key) === row[key]));
+        body = { orders: rows, total: rows.length };
+      }
       else if (url.pathname === '/api/admin/summary') body = { totals: {}, sources: [], campaigns: [], daily: [] };
       else if (url.pathname === '/api/admin/market-search') {
         if (request.method() === 'POST' && request.postDataJSON()?.action === 'continue') lookupSteps++;
@@ -103,6 +109,41 @@ try {
     await page.locator('[data-open-order="smoke-order"]').first().waitFor();
     assert.equal(await page.locator('#search').isVisible(), true);
     await page.screenshot({ path: `${output}/orders-${width}.png`, fullPage: true });
+    const checkFilteredRows = async (ids) => {
+      await page.locator('[data-orders][aria-busy="false"]').waitFor();
+      assert.deepEqual(await page.locator('[data-orders] .orders-table__open').evaluateAll(nodes => nodes.map(node => node.dataset.openOrder)), ids);
+    };
+    await page.locator('[data-order-filter="payment"][value="paid"]').click();
+    await checkFilteredRows(['smoke-order']);
+    assert.ok(requests.at(-1).query.includes('supplier_payment_status=paid'));
+    assert.ok(!requests.at(-1).query.includes('&payment_status='));
+    await page.screenshot({ path: `${output}/supplier-paid-filter-${width}.png`, fullPage: true });
+    await page.locator('[data-order-filter="shipping"][value="air"]').click();
+    await checkFilteredRows([]);
+    await page.locator('[data-order-filter="shipping"][value="sea"]').click();
+    await checkFilteredRows(['smoke-order']);
+    await page.locator('[data-order-filter="shipping"][value="all"]').click();
+    await page.locator('[data-order-filter="payment"][value="unpaid"]').click();
+    await checkFilteredRows(['duplicate']);
+    await page.locator('[data-payment-source]').selectOption('customer');
+    await checkFilteredRows(['smoke-order', 'duplicate']);
+    await page.locator('[data-order-filter="payment"][value="paid"]').click();
+    await checkFilteredRows(['duplicate']);
+    assert.ok(requests.at(-1).query.includes('&payment_status=paid'));
+    assert.ok(!requests.at(-1).query.includes('supplier_payment_status='));
+    assert.equal(await page.locator('[data-order-filter="payment"][value="needs_review"]').isVisible(), false);
+    assert.equal(await page.locator('[data-order-filter="payment"][value="refunded"]').isVisible(), true);
+    await page.locator('[data-order-filters-reset]').click();
+    await checkFilteredRows(['smoke-order', 'duplicate']);
+    assert.equal(await page.locator('[data-payment-source]').inputValue(), 'supplier');
+    const filterOverflow = await page.locator('.order-detail-filters').evaluate(root => [...root.querySelectorAll('fieldset, .order-filter-buttons')].some(el => el.scrollWidth > el.clientWidth + 2));
+    assert.equal(filterOverflow, false, `${width}px filters must wrap without overflow`);
+    if (process.env.SMOKE_FILTERS_ONLY === '1') {
+      assert.ok(requests.every(request => request.method === 'GET'), 'Filtering must not modify orders');
+      console.log(`Order filters passed at ${width}px`);
+      await context.close();
+      continue;
+    }
     await page.locator('[data-open-order="smoke-order"]').first().click();
     const form = page.locator('[data-order-editor]');
     const checkOrderLayout = async () => {
