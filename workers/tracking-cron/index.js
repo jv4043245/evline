@@ -1,3 +1,5 @@
+import supplierReminders from '../supplier-document-reminders/index.js';
+
 const DEFAULT_SYNC_URL = "https://evline.com.ua/api/cron/tracking-sync";
 
 function timingSafeEqual(left, right) {
@@ -59,6 +61,8 @@ async function runTrackingSync(env, source = "scheduled") {
 
 export default {
   async scheduled(event, env, ctx) {
+    // Independent task on the existing schedule; neither failure blocks the other.
+    if (env.SUPPLIER_DOCS_CRON_TOKEN) await supplierReminders.scheduled(event, env, ctx);
     ctx.waitUntil(
       runTrackingSync(env, "scheduled").then((result) => {
         console.log(JSON.stringify(result));

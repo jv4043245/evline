@@ -33,7 +33,8 @@ its status is `paid`. Managers may change the owner/date, pause a reminder, or m
 that payment's goods shipped. An assigned manager must have a confirmed personal
 Telegram connection. Order stages from China warehouse onward stop reminders.
 
-The scheduler checks hourly from 09:00 through 18:00 Europe/Kyiv and sends up to five
+The production scheduler reuses the existing tracking cron every two hours, only
+from 09:00 through 18:00 Europe/Kyiv, and sends up to five
 due reminders per run. The message includes a Chinese follow-up draft, order link,
 and up to three original supplier invoices; the remainder stays available in the
 order. No message is sent to a customer or supplier, and there is no WeChat integration.
@@ -49,8 +50,12 @@ failed after ten minutes. Removed admin identities cannot receive files/reminder
 - Connect a private Google Drive folder using the setup below. R2 and a billing
   card are not required. Use a separate Drive folder and credentials for previews;
   production secrets must never be copied to a public preview deployment.
-- Deploy `workers/supplier-document-reminders/wrangler.toml`.
-- Generate a cryptographically random secret for the Worker's
+- Deploy `workers/tracking-cron/wrangler.toml`, preserving its existing variables,
+  secret and cron schedule. Its independent reminder task reuses the existing cron
+  slot, so the account does not need an extra paid cron. The standalone
+  `workers/supplier-document-reminders/wrangler.toml` is optional, not deployed
+  alongside the shared scheduler.
+- Generate a cryptographically random secret for the tracking Worker's
   `SUPPLIER_DOCS_CRON_TOKEN`. Store only its SHA-256 digest in D1:
   `supplier_document_runtime(key='cron_token_sha256', value=<digest>)`.
   The Pages application does not need new account-level Cloudflare permissions.

@@ -14,7 +14,7 @@ function fixture(t, override = () => undefined) {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options = {}) => {
     url = String(url); calls.push({ url, ...options });
-    assert.equal(options.redirect, 'error');
+    assert.equal(options.redirect, 'manual');
     assert.ok(options.signal);
     const custom = override(url, options);
     if (custom !== undefined) return custom;
@@ -81,6 +81,16 @@ test('unexpected upload URLs never receive tokens or invoice bytes; cleanup is r
   assert.equal(calls.some(call => call.url.includes('other.test')), false);
   assert.deepEqual(JSON.parse(calls.find(call => call.method === 'PATCH').body), { trashed: true });
   assert.equal(calls.some(call => call.method === 'DELETE'), false);
+});
+
+test('OAuth and Drive redirects are rejected without forwarding credentials', async t => {
+  for (const stage of ['oauth2.googleapis.com', `/files/${folderId}?`]) {
+    const { env, calls } = fixture(t, url => url.includes(stage) ? new Response(null, { status: 302, headers: { location: 'https://other.test/steal' } }) : undefined);
+    await assert.rejects(() => storeDocumentOriginal(env, key, bytes, metadata), /тимчасово недоступний/);
+    assert.equal(calls.some(call => call.url.includes('other.test')), false);
+    assert.ok(calls.every(call => call.redirect === 'manual'));
+    t.mock.restoreAll();
+  }
 });
 
 test('download rejects files moved outside the archive, shared publicly, or changed on Drive', async t => {

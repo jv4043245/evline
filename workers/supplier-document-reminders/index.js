@@ -4,7 +4,7 @@ export default {
     if (hour<9 || hour>18) return;
     ctx.waitUntil((async()=>{
       const response=await fetch('https://evline.com.ua/api/cron/supplier-documents',{
-        method:'POST',redirect:'error',signal:AbortSignal.timeout(120000),
+        method:'POST',redirect:'manual',signal:AbortSignal.timeout(120000),
         headers:{authorization:`Bearer ${env.SUPPLIER_DOCS_CRON_TOKEN}`},
       });
       if (!response.ok) throw new Error(`Supplier document reminders: HTTP ${response.status}`);
