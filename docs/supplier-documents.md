@@ -78,14 +78,19 @@ storage quota). No paid Google Cloud trial or billing account is needed for Driv
 2. For lasting authorization, put the consent app in production before connecting.
    External apps left in Testing may have seven-day refresh tokens. This is a
    single-owner integration, not a public sign-in feature for managers.
-3. Run `node scripts/connect-supplier-drive.mjs /absolute/path/to/client.json`.
+3. Run `node scripts/connect-supplier-drive.mjs /absolute/path/to/client.json expected-owner-email`,
+   replacing the last argument with the owner's exact Google account address.
    Open its Google authorization URL and sign in as the Drive owner. The local
    callback uses a short-lived state and PKCE, listens only on loopback, requests
    only per-file access, and saves secrets with mode 0600 in `.local-data/`.
-   It does not log tokens or authorization codes. The helper checks storage quota
-   and creates or reuses the application's private `EVLine CRM - Originals` folder.
-4. Move that application-created folder inside the owner's `EVLine CRM - Supplier
-   Documents` folder using the owner's Drive connector/UI. Keep both private.
+   It does not log tokens or authorization codes. Before saving credentials or
+   creating any folder, the helper checks the live Drive owner's email. It then
+   checks storage quota and creates or reuses the application's private
+   `Supplier invoices` folder.
+4. Move that application-created folder inside the owner's existing `EVLine CRM`
+   folder using the owner's Drive connector/UI. Keep both private. Reuse the
+   existing archive instead of creating another top-level folder. It can be
+   renamed for the manager without changing its ID or application marker.
    The nested folder's ID remains the storage target. A folder created through the
    Codex connector alone is not automatically accessible to another OAuth app.
 5. Install the helper's four values as production-only Cloudflare Pages secrets:

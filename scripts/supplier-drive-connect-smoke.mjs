@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
 
+for (const account of ['owner@example.test', 'wrong-owner@example.test', null]) {
 const directory = await mkdtemp(join(tmpdir(), 'evline-drive-connect-test-'));
 const clientPath = join(directory, 'client.json');
 const script = new URL('./connect-supplier-drive.mjs', import.meta.url).href;
@@ -14,7 +15,7 @@ try {
   await writeFile(clientPath, JSON.stringify({ installed: { client_id: 'fixture-client.apps.googleusercontent.com', client_secret: tokens[0] } }), { mode: 0o600 });
   const mock = `
     import assert from 'node:assert/strict';
-    process.argv = ['node', ${JSON.stringify(script)}, ${JSON.stringify(clientPath)}];
+    process.argv = ['node', ${JSON.stringify(script)}, ${JSON.stringify(clientPath)}, 'owner@example.test'];
     globalThis.fetch = async (url, options = {}) => {
       url = String(url);
       assert.equal(options.redirect, 'error');
@@ -25,10 +26,15 @@ try {
         return Response.json({ access_token: 'SYNTHETIC_ACCESS_TOKEN', refresh_token: 'SYNTHETIC_REFRESH_TOKEN', scope: 'https://www.googleapis.com/auth/drive.file' });
       }
       assert.equal(options.headers.authorization, 'Bearer SYNTHETIC_ACCESS_TOKEN');
-      if (url.includes('/about?')) return Response.json({ storageQuota: { limit: '15000000000', usage: '10000000' } });
+      if (url.includes('/about?')) {
+        assert.equal(new URL(url).searchParams.get('fields'), 'user(emailAddress),storageQuota');
+        return Response.json({ user: { emailAddress: ${JSON.stringify(account)} }, storageQuota: { limit: '15000000000', usage: '10000000' } });
+      }
+      assert.equal(${JSON.stringify(account)}, 'owner@example.test', 'Wrong owner must not read or write archive folders');
       if (url.includes('/files?q=')) return Response.json({ files: [] });
       if (url.includes('/files?fields=')) {
         const data = JSON.parse(options.body);
+        assert.equal(data.name, 'Supplier invoices');
         assert.equal(data.mimeType, 'application/vnd.google-apps.folder');
         assert.equal(data.permissions, undefined);
         return Response.json({ id: 'synthetic_folder_12345', webViewLink: 'https://drive.google.com/drive/folders/synthetic_folder_12345' });
@@ -52,6 +58,7 @@ try {
   });
   clearTimeout(timeout);
   assert.equal(authorization.searchParams.get('scope'), 'https://www.googleapis.com/auth/drive.file');
+  assert.equal(authorization.searchParams.get('login_hint'), 'owner@example.test');
   assert.equal(authorization.searchParams.get('code_challenge_method'), 'S256');
   const callback = new URL(authorization.searchParams.get('redirect_uri'));
   assert.equal(callback.hostname, '127.0.0.1');
@@ -59,19 +66,25 @@ try {
   assert.equal((await fetch(callback)).status, 400);
   callback.searchParams.set('state', authorization.searchParams.get('state'));
   const response = await fetch(callback);
-  assert.equal(response.status, 200);
+  const correctOwner = account === 'owner@example.test';
+  assert.equal(response.status, correctOwner ? 200 : 400);
   const exposed = JSON.stringify([...response.headers]) + await response.text();
   const [code] = await exited;
-  assert.equal(code, 0, errors);
+  assert.equal(code, correctOwner ? 0 : 1, errors);
   for (const token of tokens) assert.ok(![exposed, output, errors].some(text => text.includes(token)), 'Credential appeared in logs or HTTP response');
   for (const file of ['supplier-drive-secrets.json', 'supplier-drive-grant.json']) {
     const path = join(directory, '.local-data', file);
+    if (!correctOwner) {
+      await assert.rejects(stat(path), { code: 'ENOENT' });
+      continue;
+    }
     assert.equal((await stat(path)).mode & 0o777, 0o600);
     assert.equal(JSON.parse(await readFile(path, 'utf8')).GOOGLE_DRIVE_REFRESH_TOKEN, tokens[2]);
   }
-  console.log('PASS: loopback + PKCE + state, private credential files, no token leakage; Google APIs simulated.');
+  console.log(`PASS: ${correctOwner ? 'owner connected' : 'wrong or missing owner rejected'}; private files, PKCE, state and token non-disclosure; Google APIs simulated.`);
 } finally {
   clearTimeout(timeout);
   if (child && child.exitCode === null) { child.kill(); await once(child, 'exit'); }
   await rm(directory, { recursive: true, force: true });
+}
 }
