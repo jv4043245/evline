@@ -40,7 +40,12 @@ async function json(response) {
   catch { fail('Не вдалося прочитати відповідь Google Диска.'); }
 }
 async function request(url, options = {}) {
-  try { return await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(25000) }); }
+  try {
+    // Workers requires manual mode; never forward credentials on a redirect.
+    const response = await fetch(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(25000) });
+    if (response.status >= 300 && response.status < 400) throw new Error('unexpected_redirect');
+    return response;
+  }
   catch { fail('Google Диск тимчасово недоступний. Спробуйте пізніше.'); }
 }
 async function token(env) {

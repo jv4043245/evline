@@ -6,7 +6,7 @@ export async function telegram(env, method, data) {
   try {
     const multipart = data instanceof FormData;
     const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
-      method:'POST', redirect:'error', signal:AbortSignal.timeout(20000),
+      method:'POST', redirect:'manual', signal:AbortSignal.timeout(20000),
       headers:multipart ? {} : { 'content-type':'application/json' }, body:multipart ? data : JSON.stringify(data),
     });
     const result = await response.json();
@@ -137,7 +137,7 @@ export async function handleSupplierDocumentsUpdate(env,update) {
     if (await first(env,'SELECT id FROM supplier_document_versions WHERE source_key=?',sourceKey)) return {handled:true,duplicate:true};
     const remote=await telegram(env,'getFile',{file_id:media.file_id});
     if (!/^[a-zA-Z0-9_/-]+\.[a-zA-Z0-9]+$/.test(remote.file_path || '') || remote.file_path.includes('..')) fail('Некоректний файл Telegram.');
-    const response=await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${remote.file_path}`,{redirect:'error',signal:AbortSignal.timeout(20000)});
+    const response=await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${remote.file_path}`,{redirect:'manual',signal:AbortSignal.timeout(20000)});
     const bytes=await boundedBytes(response,MAX_DOCUMENT_BYTES);
     await uploadDocument(env,user,session,new File([bytes],clean(media.file_name)||`telegram-${message.message_id}.jpg`),sourceKey);
     await say('Документ збережено. Суми оплати не змінені. Можна надіслати наступний файл або /docs_done.');
