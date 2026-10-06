@@ -4,6 +4,7 @@ import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
+import { mountSupplierDocuments } from './supplier-documents.js?v=20261005';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 
 const state = {
@@ -2291,6 +2292,7 @@ function renderSupplierPayments(order) {
                   <span>${payment.supplier_name ? escapeHtml(payment.supplier_name) : "постачальник не вказаний"}</span>
                 </div>
               </div>
+              <button class="admin-btn admin-btn--small" type="button" data-sd-payment-open="${escapeHtml(payment.id)}">${documentIcon('FileText')} Документи постачальника</button>
               <details class="order-editor__details"><summary>Квитанції та розпізнавання${Number(payment.receipt_count || 0) ? ` · ${Number(payment.receipt_count)}` : ""}</summary>
               <div class="supplier-receipt-links">${supplierReceiptLinks(payment)}</div>
               <div class="supplier-payment-card__telegram">
@@ -2365,7 +2367,7 @@ function renderOrders() {
           return `
             <tr data-order-id="${escapeHtml(order.id)}">
               <td class="orders-table__number-cell" data-label="№ / дата"><strong class="order-number">${textOrDash(publicNumber)}</strong><span class="orders-table__date">${escapeHtml(shortDateTime(order.created_at))}</span>${orderTypePill(order.type)}${duplicate ? `<button class="order-duplicate" type="button" data-open-order="${escapeHtml(duplicate.id)}" title="Переглянути можливий дубль">Схоже на ${escapeHtml(duplicate.order_number)}</button>` : ""}</td>
-              <td data-label="Клієнт">${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}</td>
+              <td data-label="Клієнт">${customerName ? `<strong class="orders-table__primary">${escapeHtml(customerName)}</strong>` : ""}${contactLine(order)}<button class="orders-table__documents" type="button" data-order-supplier-documents="${escapeHtml(order.id)}" hidden title="Документи постачальника" aria-label="Документи постачальника">${documentIcon('FileText')}<span></span></button></td>
               <td class="orders-table__request-cell" data-label="Авто / запит">${carName ? `<strong class="orders-table__primary">${escapeHtml(carName)}</strong>` : ""}${mutedLine(order.vin, "orders-table__mono")}${mutedLine(request, "orders-table__request")}</td>
               <td data-label="Статус">${badge(order.status || "new", true)}${mutedLine(nextAction)}</td>
               <td data-label="Сума">${moneyCell(order)}</td>
@@ -2391,6 +2393,16 @@ function renderOrders() {
         .join("")
     : `<tr><td colspan="7" class="muted">Замовлень за обраними фільтрами немає.</td></tr>`;
   highlightSelectedOrder();
+  for (const order of state.orders) setSupplierDocumentCount(order.id,Number(order.supplier_document_count || 0));
+}
+
+function setSupplierDocumentCount(id,count) {
+  const order=state.orders.find(order=>order.id===id);
+  if (order) order.supplier_document_count=count;
+  const button=document.querySelector(`[data-order-supplier-documents="${CSS.escape(id)}"]`);
+  if (!button) return;
+  button.hidden=!count;
+  button.querySelector('span').textContent=String(count);
 }
 
 function updateOrderDetailSubtitle(order) {
@@ -3526,6 +3538,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <div class="order-editor__grid">
 
     ${renderSupplierPayments(order)}
+    <section class="sd-panel wide" data-supplier-documents></section>
 
     <section class="editor-band editor-band--finance wide" aria-label="Фінанси замовлення">
     <div class="order-editor__section wide">
@@ -3602,6 +3615,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
   });
 
   applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
+  mountSupplierDocuments(form.querySelector('[data-supplier-documents]'), {order,payments:state.selectedSupplierPayments,suppliers:supplierDirectory,getHeaders:headers,onCountChanged:setSupplierDocumentCount});
   orderFormBaseline = orderFormSnapshot();
   for (const entry of draft) {
     const field = form.elements.namedItem(entry.name);
@@ -3970,8 +3984,14 @@ async function refresh() {
     if (requestedOrder && /^[0-9a-f-]{36}$/i.test(requestedOrder)) {
       const url = new URL(location.href);
       url.searchParams.delete("order");
+      const supplierDocumentsPanel=url.searchParams.get('panel')==='supplier-documents';
+      url.searchParams.delete('panel');
       history.replaceState(null, "", url);
       await openOrder(requestedOrder);
+      if (supplierDocumentsPanel) {
+        setOrderEditorTab('payment');
+        document.querySelector('[data-supplier-documents]')?.scrollIntoView({block:'start'});
+      }
     }
   } catch (error) {
     if (error.status === 401) setAuthVisible(true);
@@ -4795,6 +4815,14 @@ document.querySelector("[data-orders]")?.addEventListener("click", async (event)
     return;
   }
 
+  const supplierDocumentsButton=event.target.closest('[data-order-supplier-documents]');
+  if (supplierDocumentsButton) {
+    openOrder(supplierDocumentsButton.dataset.orderSupplierDocuments).then(()=>{
+      setOrderEditorTab('payment');
+      document.querySelector('[data-supplier-documents]')?.scrollIntoView({block:'start'});
+    }).catch(error=>alert(error.message));
+    return;
+  }
   const openButton = event.target.closest("[data-open-order]");
   if (openButton) {
     openOrder(openButton.dataset.openOrder).catch((error) => alert(error.message));
@@ -5522,6 +5550,12 @@ document.querySelector("[data-cost-form]")?.addEventListener("submit", async (ev
 });
 
 setActiveTab(state.activeTab);
+document.querySelector('[data-order-editor]')?.addEventListener('click',event=>{
+  const button=event.target.closest('[data-sd-payment-open]');
+  if (!button) return;
+  const root=document.querySelector('[data-supplier-documents]');
+  root?.dispatchEvent(new CustomEvent('sd:payment',{detail:button.dataset.sdPaymentOpen}));
+});
 setAuthVisible(!adminToken());
 syncFilterMenuButtons();
 if (adminToken()) refresh();

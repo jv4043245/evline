@@ -33,6 +33,7 @@ function orderSelect(options = {}) {
   return `
     SELECT
       orders.*,
+      ${options.hasSupplierDocuments ? '(SELECT COUNT(*) FROM supplier_document_links d WHERE d.order_id=orders.id AND d.archived_at IS NULL)' : '0'} AS supplier_document_count,
       ${supplierPaymentStateSql(options)} AS supplier_payment_status,
       ${options.hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
       ${options.hasLeadNumber ? "leads.lead_number" : "NULL"} AS lead_number,
@@ -224,6 +225,7 @@ export async function onRequestGet({ request, env }) {
     hasSupplierPayments: await tableHasColumn(env, "supplier_payments", "id"),
     hasSupplierRequests: await tableHasColumn(env, "supplier_requests", "id"),
     hasOrderStatusEvents: await tableHasColumn(env, "order_status_events", "status"),
+    hasSupplierDocuments: await tableHasColumn(env, 'supplier_document_links', 'document_id'),
   };
   const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);

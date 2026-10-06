@@ -40,6 +40,12 @@ export function isAdminRequest(request, env) {
   return Boolean(adminUser(request, env));
 }
 
+export function adminIdentities(env) {
+  const users = configuredUsers(env);
+  return users.filter(user => users.filter(other => other.id === user.id || other.token === user.token).length === 1)
+    .map(({ id, name }) => ({ id, name }));
+}
+
 export function unauthorized() {
   return json({ error: "Unauthorized" }, { status: 401 });
 }
