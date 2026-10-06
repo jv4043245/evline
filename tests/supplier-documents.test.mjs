@@ -203,6 +203,25 @@ test('foreign group/payment/business updates are not document intake',async t=>{
   const{env}=await fixture(t);
   for(const update of [{message:{chat:{id:-100,type:'supergroup'},from:{id:1001},document:{file_id:'x'}}},{business_message:{chat:{id:1001,type:'private'},from:{id:1001}}},privateMessage('unrelated')]) assert.equal((await handleSupplierDocumentsUpdate(env,update)).handled,false);
 });
+for(const table of ['supplier_document_telegram','supplier_document_intakes']) {
+  test(`routing failure in ${table} cannot turn an invoice into a payment receipt`,async t=>{
+    const{env,db,connect,calls,objects}=await fixture(t);connect();
+    const before=db.prepare('SELECT * FROM supplier_payments').all();
+    const prepare=env.DB.prepare;
+    t.mock.method(env.DB,'prepare',function(sql){
+      if(sql.includes(`FROM ${table}`)) throw new Error('synthetic routing outage');
+      return prepare.call(this,sql);
+    });
+    const result=await handleSupplierDocumentsUpdate(env,privateMessage(undefined,{photo:[{file_id:'invoice-photo'}]}));
+    assert.deepEqual(result,{handled:true,error:true});
+    assert.deepEqual(calls.map(c=>c.method),['sendMessage']);
+    assert.doesNotMatch(calls[0].body.text,/synthetic|outage/);
+    assert.equal(objects.size,0);
+    assert.deepEqual(db.prepare('SELECT * FROM supplier_payments').all(),before);
+    assert.equal(db.prepare('SELECT count(*) n FROM supplier_payment_receipts').get().n,0);
+    assert.equal(db.prepare('SELECT count(*) n FROM supplier_documents').get().n,0);
+  });
+}
 test('intake requires own explicit order/category and will not take over an active lead draft',async t=>{
   const{env,db,connect,request}=await fixture(t);connect();
   const response=await request('intake',meta);assert.equal(response.status,200);

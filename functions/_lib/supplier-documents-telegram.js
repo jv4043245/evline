@@ -143,7 +143,7 @@ export async function handleSupplierDocumentsUpdate(env,update) {
     await say('Документ збережено. Суми оплати не змінені. Можна надіслати наступний файл або /docs_done.');
     return {handled:true};
   } catch(error) {
-    if (!explicit && !session) return {handled:false};
+    // An unresolved intake must not fall through to payment receipt recognition.
     await telegram(env,'sendMessage',{chat_id:chatId,text:error.publicMessage || 'Документ не збережено. Спробуйте завантажити його через адмінку.'}).catch(()=>{});
     return {handled:true,error:true};
   }
