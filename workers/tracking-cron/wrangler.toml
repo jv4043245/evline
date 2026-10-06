@@ -1,6 +1,7 @@
 name = "evline-crm-tracking-cron"
 main = "index.js"
 compatibility_date = "2026-06-08"
+preview_urls = false
 
 [vars]
 CRM_TRACKING_SYNC_URL = "https://evline.com.ua/api/cron/tracking-sync"
