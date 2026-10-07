@@ -28,6 +28,7 @@ async function htmlFiles(directory = root) {
 }
 
 function formHandler(form) {
+  if (/data-zeekr-setup-form/i.test(form)) return "zeekr-setup";
   if (/onsubmit=["'][^"']*submitLead\(/i.test(form)) return "inline";
   if (/data-telegram-parts-form/i.test(form)) return "parts";
   if (/data-byd-seo-form/i.test(form)) return "byd-seo";
@@ -102,8 +103,11 @@ for (const absolutePath of files) {
   }
 
   const loadsMainScript = /assets\/js\/main\.js(?:\?[^"']*)?["']/i.test(html);
-  if (pageHandlers.some((handler) => handler !== "inline") && !loadsMainScript) {
+  if (pageHandlers.some((handler) => handler !== "inline" && handler !== "zeekr-setup") && !loadsMainScript) {
     failures.push(`${relativePath}: CRM form depends on assets/js/main.js but the script is missing`);
+  }
+  if (pageHandlers.includes("zeekr-setup") && !/assets\/js\/zeekr-9x-8x\.js(?:\?[^"']*)?["']/i.test(html)) {
+    failures.push(`${relativePath}: Zeekr setup form is missing its CRM script`);
   }
   if (pageHandlers.includes("inline") && !/\bsubmitLead\s*=|\bfunction\s+submitLead\b/i.test(html)) {
     failures.push(`${relativePath}: inline form references submitLead but the function is missing`);
