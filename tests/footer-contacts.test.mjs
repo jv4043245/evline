@@ -8,12 +8,20 @@ import { withFooterContacts } from '../scripts/lib/footer-contacts.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
-test('all public footers contain localized static parts messenger links', async () => {
+test('public footers preserve parts contacts or explicit technical contacts', async () => {
   let count = 0;
   for (const file of await publicHtmlFiles(root)) {
     const html = await readFile(file, 'utf8');
     const document = parse(html);
     if (!document.querySelector('footer')) continue;
+    if (document.querySelector('footer[data-footer-contact-intent="byd"]')) {
+      const footer = document.querySelector('footer');
+      assert.ok(footer.querySelector('a[href="https://t.me/evline_tech"][data-contact-intent="byd"]'), file);
+      assert.ok(footer.querySelector('a[href="tel:+380630630304"]'), file);
+      assert.ok(!footer.toString().includes('evline_support'), file);
+      assert.equal(withFooterContacts(html), html, `Technical footer must survive sync: ${file}`);
+      continue;
+    }
     assert.equal(document.querySelectorAll('footer [data-footer-contacts]').length, 1, file);
     assert.equal(document.querySelectorAll('head [data-footer-contacts-style]').length, 1, file);
     const footer = document.querySelector('[data-footer-contacts]');

@@ -16,7 +16,7 @@ function htmlFiles(directory = root) {
   });
 }
 const pages = htmlFiles().map(file => ({ file: path.relative(root, file), html: readFileSync(file, 'utf8') }));
-const standalone = ['byd.html', 'zeekr.html', 'ru/byd.html', 'ru/zeekr.html'];
+const standalone = ['byd.html', 'zeekr.html', 'ru/byd.html', 'ru/zeekr.html', 'ru/zeekr-9x-8x/index.html'];
 const programming = pages.filter(page => standalone.includes(page.file) || parse(page.html).querySelector('form[data-byd-seo-form]'));
 
 test('every programming landing page uses the technical phone in calls, visible text and structured data', () => {

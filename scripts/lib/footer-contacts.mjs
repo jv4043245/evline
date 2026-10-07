@@ -21,6 +21,8 @@ export function footerContactsMarkup(language = 'uk') {
 export function withFooterContacts(html) {
   const document = parse(html);
   if (!document.querySelector('footer')) return html;
+  // Dedicated programming landings own their technical contacts; do not inject parts links.
+  if (document.querySelector('footer[data-footer-contact-intent="byd"]')) return html;
   const markup = footerContactsMarkup(document.querySelector('html')?.getAttribute('lang') || 'uk');
   const stylesheet = `<link rel="stylesheet" href="/assets/css/footer-contacts.css?v=${footerContactsVersion}" data-footer-contacts-style>`;
   let updated = document.querySelector('[data-footer-contacts]')
