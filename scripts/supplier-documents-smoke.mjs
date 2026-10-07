@@ -73,9 +73,11 @@ try {
     await panel.locator('[data-sd-reference]').press('Enter');
     assert.equal(patches,0,'document Enter must not submit the order');
     await panel.locator('[data-sd-file]').setInputFiles({name:'invoice.png',mimeType:'image/png',buffer:png});
-    await panel.locator('[data-sd-action="upload"]').click();
+    assert.equal(await page.locator('[data-order-save-bar] button').isEnabled(),true,'pending files enable common save');
+    await page.locator('[data-order-save-bar] button').click();
     await panel.locator('[data-sd-row="doc1"]').waitFor();
     assert.equal(uploads,1);
+    assert.equal(patches,0,'attachment-only save must not patch order or notify customer');
     // Clipboard/drop events use browser-local synthetic files, not the system clipboard.
     for(const type of ['paste','drop']) {
       await panel.locator('.sd-drop').evaluate((node,type)=>{

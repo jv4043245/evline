@@ -9,7 +9,10 @@ order status, or advertising conversions.
 1. Open an order, choose Payment, then Documents for the relevant supplier payment.
 2. Choose invoice, China freight, packing, or other; upload JPG, PNG, WebP or PDF.
    Each file is limited to 10 MiB. Files can also be dropped or pasted into the file
-   area. Saving is explicit. Originals are retained in private storage.
+   area. Save with either the document's Save files button or the order's Save
+   changes button. Both save the selected originals to private storage. Pending
+   files enable Save changes and are included in the unsaved-changes warning.
+   Saving files alone never sends customer notifications or updates order finances.
 3. Use the shared-invoice search to link an existing file to another order. Replacing
    a shared document updates all its links; every older version remains available.
    Removing a link is reversible and does not remove it from other orders.

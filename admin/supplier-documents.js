@@ -24,10 +24,10 @@ export function documentRequest(getHeaders) {
   };
 }
 
-export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getHeaders,onCountChanged=()=>{}}) {
+export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getHeaders,onCountChanged=()=>{},onStateChanged=()=>{},draft=null}) {
   if (!root) return;
   const request=documentRequest(getHeaders);
-  let documents=[],followups=[],setup=null,pendingFiles=[],replacement=null,busy=false;
+  let documents=[],followups=[],setup=null,pendingFiles=draft?.files.slice() || [],replacement=draft?.replacement || null,busy=false;
   const payload=()=>({order_id:order.id,payment_id:root.querySelector('[data-sd-payment]').value,
     supplier_name:root.querySelector('[data-sd-supplier]').value,kind:root.querySelector('[data-sd-kind]').value,
     reference:root.querySelector('[data-sd-reference]').value});
@@ -61,6 +61,12 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     field.readOnly=Boolean(payment);
     if (payment) field.value=payment.supplier_name || '';
   }
+  if (draft) {
+    for (const [key,selector] of Object.entries({payment_id:'payment',supplier_name:'supplier',kind:'kind',reference:'reference'})) {
+      root.querySelector(`[data-sd-${selector}]`).value=draft.payload[key];
+    }
+    root.querySelector('[data-sd-upload]').open=true;
+  }
   syncSupplier();
   root.addEventListener('sd:payment',event=>{
     root.querySelector('[data-sd-payment]').value=event.detail;
@@ -77,8 +83,14 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   function renderPending() {
     root.querySelector('[data-sd-pending]').textContent=`${replacement?'Нова версія · ':''}${pendingFiles.map(f=>f.name).join(', ')}`;
     root.querySelector('[data-sd-action="upload"]').disabled=!pendingFiles.length || busy || !setup?.storage_ready;
+    if (root.isConnected) onStateChanged();
+  }
+  function setBusy(value) {
+    busy=value;root.inert=value;
+    updateSelection();renderPending();
   }
   function acceptFiles(files) {
+    if (busy) return;
     const candidates=[...files];
     if (candidates.length>10 || (replacement && candidates.length!==1)) throw new Error(replacement?'Для заміни оберіть один файл.':'Оберіть до 10 файлів.');
     if (candidates.some(f=>f.size>10*1024*1024)) throw new Error('Максимум 10 МБ на файл.');
@@ -111,6 +123,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   }
   function renderConnection() {
     const connected=setup?.connected, pending=setup?.pending;
+    root.querySelector('[data-sd-telegram] summary').textContent=connected?'Мій Telegram · підключено':'Мій Telegram · не підключено';
     root.querySelector('[data-sd-connection]').innerHTML=`<p>${esc(setup?.user.name)}${connected?` · ${esc(connected.display_name)} · ${esc(connected.telegram_id)}`:' · Telegram не підключений'}</p>
       ${pending?`<p>Підтвердити Telegram: <strong>${esc(pending.display_name)}</strong> · ${esc(pending.telegram_id)}</p>${button('confirm','Це мій Telegram','Save')}`:''}
       <div class="sd-toolbar">${button('connect',connected?'Змінити підключення':'Підключити мій Telegram','Share2')}${button('setup','Перевірити підключення','RefreshCw')}${connected?button('disconnect','Відключити','Trash2'):''}</div><div data-sd-connect-link></div>`;
@@ -127,6 +140,31 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     renderConnection(); renderPending();
     if (!setup.storage_ready) notify('Приватне сховище ще не підключене. Завантаження тимчасово недоступне.',true);
     else if (!setup.cron_ready) notify('Автоматичні нагадування ще не підключені.');
+  }
+  async function uploadPendingFiles() {
+    const total=pendingFiles.length;
+    if (!total) return;
+    if (!setup?.storage_ready) throw new Error('Приватне сховище ще не готове. Спробуйте оновити документи.');
+    const uploadPayload=payload();
+    if (replacement?.linked_orders>1 && !confirm(`Замінити файл у ${replacement.linked_orders} пов’язаних замовленнях? Стара версія збережеться.`)) return false;
+    while (pendingFiles.length) {
+      const form=new FormData();
+      for (const [key,value] of Object.entries(uploadPayload)) form.set(key,value);
+      if (replacement) {form.set('document_id',replacement.id);form.set('version',replacement.current_version);}
+      form.set('file',pendingFiles[0]);
+      await request('upload',{data:form});pendingFiles.shift();renderPending();
+    }
+    replacement=null;root.querySelector('[data-sd-file]').value='';
+    await refresh();notify(`Збережено файлів: ${total}. Суми оплати не змінені.`);
+    return true;
+  }
+  async function savePending() {
+    if (busy) throw new Error('Дочекайтеся завершення дії з документами.');
+    if (!pendingFiles.length) return true;
+    setBusy(true);notify('');
+    try {return await uploadPendingFiles();}
+    catch (error) {notify(error.message,true);throw error;}
+    finally {setBusy(false);}
   }
   function linkNotice(link) {
     const container=root.querySelector('[data-sd-connect-link]');
@@ -167,7 +205,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     const action=target.dataset.sdAction,id=target.dataset.id;
     const doc=documents.find(d=>d.id===id);
     const version=target.dataset.version;
-    busy=true;target.disabled=true;notify('');
+    setBusy(true);target.disabled=true;notify('');
     try {
       if(action==='refresh') {await refreshSetup();await refresh();}
       else if(action==='setup') {await refreshSetup();renderFollowups();}
@@ -189,19 +227,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
       }
       else if(action==='cancel-upload') {pendingFiles=[];replacement=null;root.querySelector('[data-sd-file]').value='';renderPending();}
       else if(action==='upload') {
-        const total=pendingFiles.length;
-        const uploadPayload=payload();
-        if(!total) throw new Error('Оберіть файл.');
-        if(replacement?.linked_orders>1 && !confirm(`Замінити файл у ${replacement.linked_orders} пов’язаних замовленнях? Стара версія збережеться.`)) return;
-        while(pendingFiles.length) {
-          const form=new FormData();
-          for(const [key,value] of Object.entries(uploadPayload)) form.set(key,value);
-          if(replacement){form.set('document_id',replacement.id);form.set('version',replacement.current_version);}
-          form.set('file',pendingFiles[0]);
-          await request('upload',{data:form});pendingFiles.shift();renderPending();
-        }
-        replacement=null;root.querySelector('[data-sd-file]').value='';
-        await refresh();notify(`Збережено файлів: ${total}. Суми оплати не змінені.`);
+        await uploadPendingFiles();
       }
       else if(action==='preview' || action==='download') {
         const blob=await request('file',{params:{order_id:order.id,id,...(version?{version}:{})},blob:true});
@@ -242,8 +268,10 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
         }
       }
     } catch(error) {notify(error.message,true);}
-    finally {busy=false;if(target.isConnected)target.disabled=false;updateSelection();renderPending();}
+    finally {if(target.isConnected)target.disabled=false;setBusy(false);}
   });
   refreshSetup().then(refresh).catch(error=>notify(error.message,true));
-  return {refresh};
+  renderPending();
+  return {refresh,savePending,orderId:order.id,hasPendingFiles:()=>pendingFiles.length>0,isBusy:()=>busy,
+    getDraft:()=>pendingFiles.length?{files:pendingFiles.slice(),replacement,payload:payload()}:null};
 }
