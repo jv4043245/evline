@@ -4,7 +4,7 @@ import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
-import { mountSupplierDocuments } from './supplier-documents.js?v=20261005';
+import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 
 const state = {
@@ -370,32 +370,38 @@ const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "pay
 
 let orderFormBaseline = "";
 let orderSaving = false;
+let orderDocumentsController = null;
 function orderFormSnapshot() {
   const form = document.querySelector("[data-order-editor]");
   return form ? JSON.stringify([...new FormData(form)]) : "";
 }
-function orderIsDirty() {
+function orderFieldsAreDirty() {
   return Boolean(state.selectedOrder && orderFormBaseline && orderFormSnapshot() !== orderFormBaseline);
 }
+function orderIsDirty() {
+  return orderFieldsAreDirty() || Boolean(orderDocumentsController?.hasPendingFiles());
+}
 function allowDiscardOrder() {
-  if (orderSaving) return false;
+  if (orderSaving || orderDocumentsController?.isBusy()) return false;
   if (!orderIsDirty()) return true;
-  if (!confirm("Є незбережені зміни замовлення. Відкинути їх?")) return false;
+  if (!confirm("Є незбережені зміни або файли замовлення. Відкинути їх?")) return false;
   renderOrderEditor(state.selectedOrder, false);
   return true;
 }
 function updateOrderSaveState() {
   const dirty = orderIsDirty();
+  const saving = orderSaving || orderDocumentsController?.isBusy();
+  const files = orderDocumentsController?.hasPendingFiles();
   const footer = document.querySelector("[data-order-save-bar]");
   if (!footer) return;
   footer.hidden = !dirty && ["market", "history", "suppliers"].includes(activeOrderEditorTab());
   const button = footer.querySelector("button");
-  button.disabled = !dirty || orderSaving;
-  button.textContent = orderSaving ? "Зберігаємо..." : "Зберегти зміни";
-  footer.querySelector("[data-save-state]").textContent = dirty ? "Є незбережені зміни" : "Усі зміни збережено";
+  button.disabled = !dirty || saving;
+  button.textContent = saving ? "Зберігаємо..." : "Зберегти зміни";
+  footer.querySelector("[data-save-state]").textContent = saving ? "Збереження..." : files ? (orderFieldsAreDirty() ? "Є незбережені зміни та файли" : "Є незбережені файли") : dirty ? "Є незбережені зміни" : "Усі зміни збережено";
 }
 window.addEventListener("beforeunload", (event) => {
-  if (orderIsDirty() || orderSaving) { event.preventDefault(); event.returnValue = ""; }
+  if (orderIsDirty() || orderSaving || orderDocumentsController?.isBusy()) { event.preventDefault(); event.returnValue = ""; }
 });
 
 const money = new Intl.NumberFormat("uk-UA", {
@@ -3249,6 +3255,8 @@ function applyShippingSelection(form, options = {}) {
 function renderOrderEditor(order, preserveDraft = true) {
   const form = document.querySelector("[data-order-editor]");
   if (!form) return;
+  const documentDraft = preserveDraft && orderDocumentsController?.orderId === order?.id ? orderDocumentsController.getDraft() : null;
+  orderDocumentsController = null;
   const baseline = Object.fromEntries(JSON.parse(orderFormBaseline || "[]"));
   const draft = preserveDraft && form.elements.id?.value === order?.id && orderIsDirty()
     ? [...form.elements].filter((field) => field.name && !field.readOnly && String(field.type === "checkbox" ? (field.checked ? field.value : undefined) : field.value) !== String(baseline[field.name])).map((field) => ({ name: field.name, value: field.value, checked: field.checked, type: field.type })) : [];
@@ -3615,7 +3623,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
   });
 
   applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
-  mountSupplierDocuments(form.querySelector('[data-supplier-documents]'), {order,payments:state.selectedSupplierPayments,suppliers:supplierDirectory,getHeaders:headers,onCountChanged:setSupplierDocumentCount});
+  orderDocumentsController = mountSupplierDocuments(form.querySelector('[data-supplier-documents]'), {order,payments:state.selectedSupplierPayments,suppliers:supplierDirectory,getHeaders:headers,onCountChanged:setSupplierDocumentCount,onStateChanged:()=>queueMicrotask(updateOrderSaveState),draft:documentDraft});
   orderFormBaseline = orderFormSnapshot();
   for (const entry of draft) {
     const field = form.elements.namedItem(entry.name);
@@ -5128,7 +5136,8 @@ document.querySelector("[data-market-lookup-panel]")?.addEventListener("click", 
 
 document.querySelector("[data-order-editor]")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (orderSaving || !orderIsDirty()) return;
+  if (orderSaving || orderDocumentsController?.isBusy() || !orderIsDirty()) return;
+  const saveOrderFields = orderFieldsAreDirty();
   const form = event.currentTarget;
   const data = Object.fromEntries(new FormData(form));
   if (!data.id) return;
@@ -5139,6 +5148,9 @@ document.querySelector("[data-order-editor]")?.addEventListener("submit", async 
   form.inert = true;
   updateOrderSaveState();
   try {
+    // Saving only an attachment must not change prices, statuses or send customer messages.
+    if (await orderDocumentsController?.savePending() === false) return;
+    if (!saveOrderFields) return;
     const result = await api(`/api/admin/orders/${encodeURIComponent(data.id)}`, {
       method: "PATCH", body: JSON.stringify(data),
     });
