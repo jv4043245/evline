@@ -65,13 +65,33 @@ test("all direct contacts go to programming, not parts", () => {
 
 test("model and service CTA prefill one accessible dialog", () => {
   const { window, dom, form } = setup();
-  window.document.querySelector('[data-model="Zeekr 8X"]').click();
-  assert.equal(form.elements.model.value, "Zeekr 8X");
-  assert.equal(window.document.querySelector("dialog").open, true);
-  window.document.getElementById("close-contact").click();
-  assert.equal(window.document.body.classList.contains("modal-open"), false);
-  window.document.querySelector('[data-service="SIM-карта и интернет"]').click();
-  assert.equal(form.elements.service.value, "SIM-карта и интернет");
+  for (const button of window.document.querySelectorAll("[data-model], [data-service]")) {
+    button.click();
+    if (button.dataset.model) assert.equal(form.elements.model.value, button.dataset.model);
+    if (button.dataset.service) assert.equal(form.elements.service.value, button.dataset.service);
+    assert.equal(window.document.querySelector("dialog").open, true);
+    window.document.getElementById("close-contact").click();
+    assert.equal(window.document.body.classList.contains("modal-open"), false);
+    assert.equal(window.document.activeElement, button);
+  }
+  dom.window.close();
+});
+
+test("native selects reserve space for a local centered chevron without shrinking touch targets", () => {
+  const css = readFileSync("assets/css/zeekr-9x-8x.css", "utf8");
+  const dom = new JSDOM(html.replace("</head>", `<style>${css}</style></head>`));
+  const { window } = dom;
+  const selectRule = [...window.document.styleSheets[0].cssRules].find(rule => rule.selectorText === "form select");
+  // JSDOM does not compute three-value background positions; browser checks cover rendering.
+  assert.equal(selectRule.style.getPropertyValue("background-position"), "right 12px center");
+  for (const select of window.document.querySelectorAll("select")) {
+    const style = window.getComputedStyle(select);
+    assert.ok(Number.parseFloat(style.minHeight) >= 44);
+    assert.ok(Number.parseFloat(style.paddingRight) >= 36);
+    assert.match(style.backgroundImage, /chevron-down\.svg/);
+    assert.ok(select.labels.length);
+  }
+  assert.ok(existsSync("assets/images/zeekr-9x-8x/chevron-down.svg"));
   dom.window.close();
 });
 
