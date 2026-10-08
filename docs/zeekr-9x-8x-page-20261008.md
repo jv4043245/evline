@@ -19,6 +19,15 @@ Telephone: +380630630304. Telegram: @evline_tech.
 
 ## Media provenance
 
+- `9x-interior.webp`: hero photograph by AutoLab, actual Zeekr 9X interior.
+  Source: https://commons.wikimedia.org/wiki/File:2025_Zeekr_9X_interior.png
+  Original: https://upload.wikimedia.org/wikipedia/commons/9/9b/2025_Zeekr_9X_interior.png
+  Commons identifies the license as CC BY 3.0: https://creativecommons.org/licenses/by/3.0/
+  Resized to 1920px, converted to WebP; responsive cropping is done in CSS.
+  Visible author, source, license and crop credit is present in all three languages.
+  The photo shows the original interface, not EVLine-installed apps. No display
+  contents were replaced. The separate owner-supplied video demonstrates our work.
+  Installer portfolio pictures found online were not reused as our own work.
 - `9x-hero.webp`: official Zeekr 9X page, https://www.zeekrlife.com/zh-cn/zeekr9x
   Source: https://zeekrlife-oss.zeekrlife.com/frontend/atom/atom_json/JSON-1745306191548/Banner2-a319e6f62f9e9ff781ef230eab1c1234.jpg
 - `9x.webp`: body-proportions photo from the same official 9X page.
