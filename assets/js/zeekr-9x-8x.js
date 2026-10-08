@@ -9,6 +9,44 @@
   let pending = null;
   let opener = null;
 
+  const video = document.getElementById("work-video");
+  const playButton = document.getElementById("video-play");
+  const videoStatus = document.getElementById("video-status");
+  if (video && playButton && videoStatus) {
+    const showPlay = () => {
+      playButton.hidden = false;
+      const label = video.ended ? "Смотреть видео ещё раз" : video.currentTime > 0 ? "Продолжить видео" : "Воспроизвести видео EVLine";
+      playButton.setAttribute("aria-label", label);
+      playButton.title = label;
+    };
+    const playbackFailed = () => {
+      showPlay();
+      videoStatus.textContent = "Не удалось запустить видео. Попробуйте ещё раз.";
+    };
+    video.addEventListener("play", () => {
+      playButton.hidden = true;
+      videoStatus.textContent = "";
+    });
+    video.addEventListener("pause", showPlay);
+    video.addEventListener("ended", showPlay);
+    video.addEventListener("error", playbackFailed);
+    playButton.addEventListener("click", async () => {
+      // Move focus before disabling/hiding the overlay so keyboard playback still works.
+      if (document.activeElement === playButton) video.focus({ preventScroll: true });
+      playButton.disabled = true;
+      videoStatus.textContent = "";
+      try {
+        await video.play();
+      } catch (error) {
+        if (error.name !== "AbortError") playbackFailed();
+      } finally {
+        playButton.disabled = false;
+      }
+    });
+    // Native controls remain available when JavaScript is disabled.
+    if (video.paused) showPlay();
+  }
+
   // Keep this page on the same attribution and Meta hooks as existing programming forms.
   window.trackingPayload = function () {
     const params = new URLSearchParams(location.search);

@@ -8,8 +8,8 @@
   <meta name="description" content="Настройка Zeekr 9X и 8X в EVLine: приложения и магазин приложений, SIM-карта, защита от региональных блокировок, приложение Zeekr через MA/FA. Видео нашей работы.">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"AutoRepair","name":"EVLine","url":"https://evline.com.ua/ru/zeekr-9x-8x/","telephone":"+380630630304","address":{"@type":"PostalAddress","streetAddress":"Оболонская набережная, 1","addressLocality":"Киев","addressCountry":"UA"},"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"18:00"}]}</script>
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/zeekr-9x-8x.css?v=20261008-3">
-  <script defer src="/assets/js/zeekr-9x-8x.js?v=20261008-1"></script>
+  <link rel="stylesheet" href="/assets/css/zeekr-9x-8x.css?v=20261008-4">
+  <script defer src="/assets/js/zeekr-9x-8x.js?v=20261008-2"></script>
   <script defer src="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2"></script>
 </head>
 <body>
@@ -61,11 +61,18 @@
 
     <section class="section work-section" id="work" aria-labelledby="work-title">
       <div class="wrap work-grid">
-        <div class="work-copy"><p class="eyebrow">Снято командой EVLine</p><h2 id="work-title">Ваш Zeekr может так же</h2><p class="lead">На видео после настройки: YouTube, Chrome, Google Maps и Waze на штатном экране.</p>
-          <ul class="work-points"><li><strong>Карты и навигация</strong><span>Просмотр карты и управление масштабом с экрана автомобиля.</span></li><li><strong>Переключение между задачами</strong><span>Переход между навигацией и приложениями.</span></li></ul>
-          <p class="note">Это пример нашей работы. Совместимость приложений с вашим 9X или 8X проверим перед установкой.</p><button class="btn" data-open-contact>Хочу такую настройку</button>
+        <div class="work-copy"><p class="eyebrow">Снято командой EVLine</p><h2 id="work-title">Ваш Zeekr может так же</h2><p class="lead">Показываем работу мультимедиа после нашей настройки.</p>
+          <ul class="work-points"><li><strong>Приложения</strong><span>YouTube и Chrome на штатном экране.</span></li><li><strong>Навигация</strong><span>Google Maps и Waze, управление масштабом карты.</span></li><li><strong>Переключение задач</strong><span>Переход между навигацией и приложениями.</span></li></ul>
+          <p class="note">Совместимость приложений с вашим 9X или 8X проверим перед установкой.</p><button class="btn" data-open-contact>Хочу такую настройку</button>
         </div>
-        <figure class="work-video"><video id="work-video" controls playsinline preload="none" width="720" height="1280" poster="/assets/images/zeekr-9x-8x/video-poster.webp" aria-label="Видео EVLine: работа мультимедиа после настройки"><source src="/assets/video/zeekr-9x-8x/evline-demo.mp4" type="video/mp4">Ваш браузер не поддерживает видео. <a href="/assets/video/zeekr-9x-8x/evline-demo.mp4">Открыть видео</a>.</video><figcaption>Видео EVLine · 1 мин 25 сек</figcaption></figure>
+        <figure class="work-video">
+          <div class="video-player">
+            <video id="work-video" controls playsinline preload="none" tabindex="0" width="720" height="1280" poster="/assets/images/zeekr-9x-8x/video-poster.webp" aria-label="Видео EVLine: работа мультимедиа после настройки"><source src="/assets/video/zeekr-9x-8x/evline-demo.mp4" type="video/mp4">Ваш браузер не поддерживает видео. <a href="/assets/video/zeekr-9x-8x/evline-demo.mp4">Открыть видео</a>.</video>
+            <button id="video-play" class="video-play" type="button" aria-label="Воспроизвести видео EVLine" aria-controls="work-video" title="Воспроизвести видео" hidden><svg class="icon" aria-hidden="true"><use href="/assets/images/zeekr-9x-8x/icons.svg#play"/></svg></button>
+          </div>
+          <figcaption>Видео EVLine · 1 мин 25 сек</figcaption>
+          <p id="video-status" class="video-status" role="status" aria-live="polite"></p>
+        </figure>
       </div>
     </section>
 

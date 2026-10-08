@@ -7,19 +7,105 @@ import { JSDOM } from "jsdom";
 const root = process.cwd();
 const html = readFileSync("ru/zeekr-9x-8x/index.html", "utf8");
 const script = readFileSync("assets/js/zeekr-9x-8x.js", "utf8");
-function setup(fetch) {
+function setup(fetch, configure = () => {}) {
   const dom = new JSDOM(html, { url: "https://evline.com.ua/ru/zeekr-9x-8x/?utm_source=test&gclid=test-click", runScripts: "outside-only" });
   const { window } = dom;
   window.fetch = fetch;
   window.AbortController = AbortController;
   window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   window.HTMLDialogElement.prototype.close = function () { this.open = false; this.dispatchEvent(new window.Event("close")); };
+  configure(window);
   window.eval(script);
   const form = window.document.querySelector("form");
   form.elements.contact.value = "+380000000126";
   return { dom, window, form, submit: () => form.dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true })) };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
+
+test("video overlay progressively enhances native playback and follows play, pause and end", async () => {
+  const initial = new JSDOM(html);
+  assert.equal(initial.window.document.getElementById("video-play").hidden, true);
+  assert.equal(initial.window.document.querySelector("video").controls, true);
+  initial.window.close();
+  let calls = 0;
+  const ctx = setup(undefined, window => {
+    window.HTMLMediaElement.prototype.play = function () {
+      calls++;
+      this.dispatchEvent(new window.Event("play"));
+      return Promise.resolve();
+    };
+  });
+  const { document, Event } = ctx.window;
+  const button = document.getElementById("video-play");
+  const video = document.getElementById("work-video");
+  assert.equal(button.hidden, false);
+  assert.equal(calls, 0, "initialization must not load or autoplay the video");
+  assert.equal(button.getAttribute("aria-controls"), video.id);
+  button.focus();
+  button.click();
+  await settle();
+  assert.equal(calls, 1);
+  assert.equal(button.hidden, true);
+  assert.equal(document.activeElement, video);
+  video.currentTime = 12;
+  video.dispatchEvent(new Event("pause"));
+  assert.equal(button.hidden, false);
+  assert.equal(button.getAttribute("aria-label"), "Продолжить видео");
+  button.click(); await settle();
+  assert.equal(button.hidden, true);
+  Object.defineProperty(video, "ended", { value: true });
+  video.dispatchEvent(new Event("ended"));
+  assert.equal(button.hidden, false);
+  assert.equal(button.getAttribute("aria-label"), "Смотреть видео ещё раз");
+  assert.equal(video.controls, true);
+  ctx.dom.window.close();
+});
+
+test("video rejects duplicate starts and allows retry after playback errors", async () => {
+  let rejectStart;
+  let calls = 0;
+  const ctx = setup(undefined, window => {
+    window.HTMLMediaElement.prototype.play = function () {
+      calls++;
+      if (calls === 1) return new Promise((_, reject) => { rejectStart = reject; });
+      this.dispatchEvent(new window.Event("play"));
+      return Promise.resolve();
+    };
+  });
+  const button = ctx.window.document.getElementById("video-play");
+  const status = ctx.window.document.getElementById("video-status");
+  button.click(); button.click();
+  assert.equal(calls, 1);
+  rejectStart(new Error("media unavailable"));
+  await settle();
+  assert.equal(button.disabled, false);
+  assert.equal(button.hidden, false);
+  assert.match(status.textContent, /Не удалось запустить/);
+  button.click(); await settle();
+  assert.equal(calls, 2);
+  assert.equal(button.hidden, true);
+  assert.equal(status.textContent, "");
+  ctx.window.document.getElementById("work-video").dispatchEvent(new ctx.window.Event("error"));
+  assert.equal(button.hidden, false);
+  assert.match(status.textContent, /Не удалось запустить/);
+  ctx.dom.window.close();
+});
+
+test("a native pause during startup does not report a playback failure", async () => {
+  const ctx = setup(undefined, window => {
+    window.HTMLMediaElement.prototype.play = function () {
+      this.dispatchEvent(new window.Event("play"));
+      this.dispatchEvent(new window.Event("pause"));
+      return Promise.reject(new window.DOMException("Interrupted", "AbortError"));
+    };
+  });
+  const button = ctx.window.document.getElementById("video-play");
+  button.click(); await settle();
+  assert.equal(button.hidden, false);
+  assert.equal(button.disabled, false);
+  assert.equal(ctx.window.document.getElementById("video-status").textContent, "");
+  ctx.dom.window.close();
+});
 
 test("page is Russian, unlisted, and uses real local model/video assets", () => {
   const { document } = new JSDOM(html).window;
