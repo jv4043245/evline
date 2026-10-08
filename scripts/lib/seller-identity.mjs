@@ -1,17 +1,20 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-// Owner-confirmed legal name. Keep the Ukrainian spelling in both languages.
+// Owner-confirmed legal name. Keep the Ukrainian spelling in every language.
 export const sellerName = "Ванюшин Євген Анатолійович";
 const skippedDirectories = new Set([".git", ".local-data", ".wrangler", "admin", "node_modules", "supplier"]);
 
 export function sellerIdentityMarkup(language = "uk") {
   const ru = language.startsWith("ru");
-  const statement = ru
+  const ro = language.startsWith("ro");
+  const statement = ro
+    ? `EVLine este denumirea comercială a activității întreprinzătorului individual ФОП ${sellerName}, proprietarul site-ului și vânzătorul de piese auto.`
+    : ru
     ? `EVLine — торговое название деятельности ФОП ${sellerName}, владельца сайта и продавца запчастей.`
     : `EVLine — торгове найменування діяльності ФОП ${sellerName}, власника сайту та продавця запчастин.`;
   const href = ru ? "/ru/privacy/#seller" : "/privacy/#seller";
-  const label = ru ? "О продавце и контакты" : "Про продавця та контакти";
+  const label = ro ? "Despre vânzător și contact (în ucraineană)" : ru ? "О продавце и контакты" : "Про продавця та контакти";
   return `<div data-seller-identity style="width:min(1140px,calc(100% - 40px));margin:18px auto 0;font-size:13px;line-height:1.6">${statement} <a href="${href}" style="color:inherit;text-decoration:underline">${label}</a></div>`;
 }
 

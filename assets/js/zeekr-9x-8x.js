@@ -1,5 +1,50 @@
 (function () {
   "use strict";
+  const language = document.documentElement.lang.split("-")[0];
+  const labels = ({
+    ru: {
+      play: "Воспроизвести видео EVLine", resume: "Продолжить видео", replay: "Смотреть видео ещё раз",
+      videoError: "Не удалось запустить видео. Попробуйте ещё раз.",
+      phoneError: "Проверьте номер телефона: в нём должно быть не менее 8 цифр.",
+      sending: "Отправляем…", submit: "Отправить заявку",
+      sendError: "Не удалось подтвердить отправку. Данные сохранены в форме. Попробуйте ещё раз или свяжитесь с нами: +38 (063) 063-03-04.",
+    },
+    uk: {
+      play: "Відтворити відео EVLine", resume: "Продовжити відео", replay: "Переглянути відео ще раз",
+      videoError: "Не вдалося запустити відео. Спробуйте ще раз.",
+      phoneError: "Перевірте номер телефону: він має містити щонайменше 8 цифр.",
+      sending: "Надсилаємо…", submit: "Надіслати заявку",
+      sendError: "Не вдалося підтвердити надсилання. Дані збережено у формі. Спробуйте ще раз або зв'яжіться з нами: +38 (063) 063-03-04.",
+    },
+    ro: {
+      play: "Redă videoclipul EVLine", resume: "Continuă videoclipul", replay: "Redă din nou videoclipul",
+      videoError: "Videoclipul nu a putut fi pornit. Încearcă din nou.",
+      phoneError: "Verifică numărul de telefon: trebuie să conțină cel puțin 8 cifre.",
+      sending: "Se trimite…", submit: "Trimite solicitarea",
+      sendError: "Nu am putut confirma trimiterea. Datele au rămas în formular. Încearcă din nou sau contactează-ne: +38 (063) 063-03-04.",
+    },
+  })[language] || null;
+  if (!labels) return;
+  const attributionKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
+  const languageSwitch = document.querySelector(".language-switch");
+  if (languageSwitch) {
+    const params = new URLSearchParams(location.search);
+    languageSwitch.querySelectorAll("a[hreflang]").forEach(link => {
+      const target = new URL(link.href);
+      attributionKeys.forEach(key => { if (params.has(key)) target.searchParams.set(key, params.get(key)); });
+      if (["#main", "#services", "#work", "#questions"].includes(location.hash)) target.hash = location.hash;
+      link.href = target.href;
+    });
+    document.addEventListener("click", event => {
+      if (!languageSwitch.contains(event.target)) languageSwitch.open = false;
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && languageSwitch.open) {
+        languageSwitch.open = false;
+        languageSwitch.querySelector("summary").focus();
+      }
+    });
+  }
   const form = document.getElementById("zeekr-9x-8x-form");
   const dialog = document.getElementById("contact-dialog");
   const success = document.getElementById("form-success");
@@ -15,13 +60,13 @@
   if (video && playButton && videoStatus) {
     const showPlay = () => {
       playButton.hidden = false;
-      const label = video.ended ? "Смотреть видео ещё раз" : video.currentTime > 0 ? "Продолжить видео" : "Воспроизвести видео EVLine";
+      const label = video.ended ? labels.replay : video.currentTime > 0 ? labels.resume : labels.play;
       playButton.setAttribute("aria-label", label);
       playButton.title = label;
     };
     const playbackFailed = () => {
       showPlay();
-      videoStatus.textContent = "Не удалось запустить видео. Попробуйте ещё раз.";
+      videoStatus.textContent = labels.videoError;
     };
     video.addEventListener("play", () => {
       playButton.hidden = true;
@@ -56,7 +101,7 @@
       if (saved.expires_at && saved.expires_at < Date.now()) saved = {};
     } catch (_) {}
     const payload = {};
-    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"]) {
+    for (const key of attributionKeys) {
       payload[key] = params.get(key) || saved[key] || "";
     }
     if (params.get("fbclid")) payload.gclid = payload.gbraid = payload.wbraid = "";
@@ -101,7 +146,7 @@
     if (busy || !form.reportValidity()) return;
     const fields = Object.fromEntries(new FormData(form));
     if (fields.contact.replace(/\D/g, "").length < 8) {
-      status.textContent = "Проверьте номер телефона: в нём должно быть не менее 8 цифр.";
+      status.textContent = labels.phoneError;
       form.elements.contact.focus();
       return;
     }
@@ -118,7 +163,7 @@
     const payload = pending.payload;
     busy = true;
     submit.disabled = true;
-    submit.textContent = "Отправляем…";
+    submit.textContent = labels.sending;
     status.textContent = "";
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
@@ -135,12 +180,12 @@
       try { window.trackLeadSubmit(payload); } catch (_) {}
       success.querySelector("a").focus();
     } catch (_) {
-      status.textContent = "Не удалось подтвердить отправку. Данные сохранены в форме. Попробуйте ещё раз или свяжитесь с нами: +38 (063) 063-03-04.";
+      status.textContent = labels.sendError;
     } finally {
       clearTimeout(timeout);
       busy = false;
       submit.disabled = false;
-      submit.textContent = "Отправить заявку";
+      submit.textContent = labels.submit;
     }
   });
 })();

@@ -1,8 +1,15 @@
-# Zeekr 9X / 8X Russian service page
+# Zeekr 9X / 8X service pages
 
-Route: `/ru/zeekr-9x-8x/`. Intentionally unlisted: no navigation or sitemap additions,
-with `noindex,nofollow`. This is a public URL, not an access-controlled page.
-Romanian is deferred until the Russian draft is approved.
+Routes: `/zeekr-9x-8x/` (Ukrainian), `/ru/zeekr-9x-8x/` (Russian),
+and `/ro/zeekr-9x-8x/` (Romanian). Intentionally unlisted: no external navigation
+or sitemap additions, with `noindex,nofollow`. These are public URLs, not access-controlled pages.
+The language menu links the three versions and preserves ad attribution.
+Russian is the layout source. After editing it, update the translation table in
+`scripts/build-zeekr-translations.mjs` and run `npm run build:zeekr-languages`.
+Tests check generated pages for drift. Scripts, styles and media are shared.
+Visible copy and dynamic form/video/cookie states are localized; internal service
+values retain the original CRM labels. Romanian privacy links explicitly lead
+to the existing Ukrainian policy. The owner's legal name stays in Ukrainian.
 
 The four services are supplied by the owner. No prices, turnaround guarantees,
 testimonials, or features from older Zeekr models have been carried over.

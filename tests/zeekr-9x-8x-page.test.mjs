@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { JSDOM } from "jsdom";
+import { routes, translatedPage } from "../scripts/build-zeekr-translations.mjs";
 
 const root = process.cwd();
 const html = readFileSync("ru/zeekr-9x-8x/index.html", "utf8");
 const script = readFileSync("assets/js/zeekr-9x-8x.js", "utf8");
-function setup(fetch, configure = () => {}) {
-  const dom = new JSDOM(html, { url: "https://evline.com.ua/ru/zeekr-9x-8x/?utm_source=test&gclid=test-click", runScripts: "outside-only" });
+function setup(fetch, configure = () => {}, source = html, route = routes.ru) {
+  const dom = new JSDOM(source, { url: `https://evline.com.ua${route}?utm_source=test&gclid=test-click&irrelevant=private#work`, runScripts: "outside-only" });
   const { window } = dom;
   window.fetch = fetch;
   window.AbortController = AbortController;
@@ -21,6 +22,108 @@ function setup(fetch, configure = () => {}) {
   return { dom, window, form, submit: () => form.dispatchEvent(new window.Event("submit", { cancelable: true, bubbles: true })) };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
+
+for (const [language, route] of Object.entries(routes)) {
+  const source = readFileSync(path.join(root, route, "index.html"), "utf8");
+  test(`${language}: static language links, content, assets and CRM choices remain consistent`, () => {
+    const dom = new JSDOM(source);
+    const { document } = dom.window;
+    assert.equal(document.documentElement.lang, language);
+    assert.equal(document.querySelector('meta[name="robots"]').content, "noindex,nofollow");
+    assert.equal(document.querySelector('link[rel="canonical"]').href, `https://evline.com.ua${route}`);
+    const menu = document.querySelector(".language-switch");
+    assert.equal(menu.querySelectorAll("a").length, 3);
+    assert.equal(menu.querySelectorAll('[aria-current="page"]').length, 1);
+    assert.equal(menu.querySelector('[aria-current="page"]').lang, language);
+    for (const [lang, destination] of Object.entries(routes)) {
+      assert.equal(menu.querySelector(`[lang="${lang}"]`).getAttribute("href"), destination);
+      assert.equal(document.querySelector(`link[hreflang="${lang}"]`).href, `https://evline.com.ua${destination}`);
+    }
+    assert.equal(document.querySelectorAll(".service").length, 4);
+    assert.equal(document.querySelectorAll(".faq-list details").length, 4);
+    assert.equal(document.querySelector("video source").getAttribute("src"), "/assets/video/zeekr-9x-8x/evline-demo.mp4");
+    for (const button of document.querySelectorAll("[data-service]")) {
+      assert.ok([...document.querySelectorAll('select[name="service"] option')].some(option => option.value === button.dataset.service));
+    }
+    for (const element of document.querySelectorAll("[src],link[href],use[href]")) {
+      const asset = element.getAttribute("src") || element.getAttribute("href");
+      if (asset.startsWith("/")) assert.ok(existsSync(path.join(root, asset.split(/[?#]/)[0])), asset);
+    }
+    if (language !== "ru") assert.equal(source, translatedPage(html, language), "Regenerate translations after changing the Russian layout");
+    if (language === "ro") {
+      document.querySelectorAll("script, .language-switch, [data-seller-identity]").forEach(element => element.remove());
+      assert.doesNotMatch(document.body.textContent, /[\u0400-\u04ff]/, "No untranslated visible Cyrillic copy");
+    }
+    dom.window.close();
+  });
+
+  test(`${language}: language switch preserves attribution, closes on Escape and outside click`, () => {
+    const ctx = setup(undefined, undefined, source, route);
+    const menu = ctx.window.document.querySelector(".language-switch");
+    for (const link of menu.querySelectorAll("a")) {
+      const target = new URL(link.href);
+      assert.equal(target.searchParams.get("gclid"), "test-click");
+      assert.equal(target.searchParams.get("utm_source"), "test");
+      assert.equal(target.searchParams.has("irrelevant"), false);
+      assert.equal(target.hash, "#work");
+    }
+    menu.open = true;
+    ctx.window.document.dispatchEvent(new ctx.window.KeyboardEvent("keydown", { key: "Escape" }));
+    assert.equal(menu.open, false);
+    assert.equal(ctx.window.document.activeElement, menu.querySelector("summary"));
+    menu.open = true;
+    ctx.window.document.querySelector("h1").click();
+    assert.equal(menu.open, false);
+    ctx.dom.window.close();
+  });
+
+  test(`${language}: translated form errors and success keep programming routing and retry identity`, async () => {
+    const sent = [];
+    const ctx = setup(async (_, options) => {
+      sent.push(JSON.parse(options.body));
+      return { ok: sent.length > 1, json: async () => ({ ok: sent.length > 1 }) };
+    }, undefined, source, route);
+    const expected = {
+      ru: ["Проверьте номер", "Не удалось подтвердить", "Отправить заявку"],
+      uk: ["Перевірте номер", "Не вдалося підтвердити", "Надіслати заявку"],
+      ro: ["Verifică numărul", "Nu am putut confirma", "Trimite solicitarea"],
+    }[language];
+    const status = ctx.window.document.getElementById("form-status");
+    ctx.form.elements.contact.value = "+( ) ....";
+    ctx.submit();
+    assert.ok(status.textContent.startsWith(expected[0]));
+    assert.equal(sent.length, 0);
+    ctx.form.elements.contact.value = "+40722123456";
+    ctx.window.document.querySelector('[data-service="SIM-карта и интернет"]').click();
+    assert.equal(ctx.form.elements.service.value, "SIM-карта и интернет");
+    ctx.submit(); await settle();
+    assert.ok(status.textContent.startsWith(expected[1]));
+    assert.equal(ctx.form.querySelector('[type="submit"]').textContent, expected[2]);
+    ctx.submit(); await settle();
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].meta_event_id, sent[1].meta_event_id);
+    assert.equal(sent[1].type, "byd");
+    assert.equal(sent[1].topic, "programming-zeekr-9x-8x");
+    assert.equal(sent[1].phone, "+40722123456");
+    assert.equal(sent[1].gclid, "test-click");
+    assert.equal(new URL(sent[1].page_url).pathname, route);
+    assert.equal(ctx.form.hidden, true);
+    assert.equal(ctx.window.document.getElementById("form-success").hidden, false);
+    ctx.dom.window.close();
+  });
+
+  test(`${language}: video controls use the page language`, async () => {
+    const ctx = setup(undefined, window => {
+      window.HTMLMediaElement.prototype.play = () => Promise.reject(new Error("unavailable"));
+    }, source, route);
+    const play = ctx.window.document.getElementById("video-play");
+    const expected = { ru: ["Воспроизвести", "Не удалось"], uk: ["Відтворити", "Не вдалося"], ro: ["Redă", "Videoclipul"] }[language];
+    assert.ok(play.getAttribute("aria-label").startsWith(expected[0]));
+    play.click(); await settle();
+    assert.ok(ctx.window.document.getElementById("video-status").textContent.startsWith(expected[1]));
+    ctx.dom.window.close();
+  });
+}
 
 test("video overlay progressively enhances native playback and follows play, pause and end", async () => {
   const initial = new JSDOM(html);

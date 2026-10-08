@@ -242,6 +242,17 @@
   }
 
   function copy() {
+    if ((document.documentElement.lang || "").toLowerCase().startsWith("ro")) {
+      return {
+        title: "Setări de confidențialitate",
+        body: "Meta Pixel se încarcă doar cu acordul tău. Ne ajută să măsurăm eficiența reclamelor fără a transmite VIN-ul sau textul solicitării.",
+        accept: "Permite marketingul",
+        necessary: "Doar cele necesare",
+        policy: "Politica de confidențialitate (în ucraineană)",
+        settings: "Setări cookies",
+        policyHref: "/privacy/",
+      };
+    }
     var isRu = (document.documentElement.lang || "").toLowerCase().startsWith("ru");
     return isRu
       ? {
