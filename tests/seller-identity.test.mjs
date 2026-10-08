@@ -7,12 +7,20 @@ import { publicHtmlFiles, sellerName, withSellerIdentity } from "../scripts/lib/
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
-test("every public footer identifies the same owner without translating the legal name", async () => {
+test("public footers identify the parts seller except the explicitly separate Zeekr service pages", async () => {
   let checked = 0;
+  const separateOperatorPages = new Set(["zeekr-9x-8x/index.html", "ru/zeekr-9x-8x/index.html", "ro/zeekr-9x-8x/index.html"]);
   for (const file of await publicHtmlFiles(root)) {
     const html = await readFile(file, "utf8");
     if (!/<footer\b/i.test(html)) continue;
     const matches = [...html.matchAll(/<div data-seller-identity\b[^>]*>([\s\S]*?)<\/div>/g)];
+    if (separateOperatorPages.has(path.relative(root, file))) {
+      assert.match(html, /<footer\b[^>]*data-seller-identity-policy="omit"/);
+      assert.equal(matches.length, 0, file);
+      assert.ok(!html.includes(sellerName), file);
+      assert.equal(withSellerIdentity(html), html, `Must not restore the seller: ${file}`);
+      continue;
+    }
     assert.equal(matches.length, 1, file);
     assert.ok(matches[0][1].includes(`ФОП ${sellerName}`), file);
     const expectedLink = /<html\b[^>]*lang="ru/i.test(html) ? "/ru/privacy/#seller" : "/privacy/#seller";
@@ -22,6 +30,18 @@ test("every public footer identifies the same owner without translating the lega
     checked += 1;
   }
   assert.ok(checked > 100, `Expected coverage across public landing pages, got ${checked}`);
+});
+
+test("explicit footer opt-out removes stale seller markup and stays idempotent", () => {
+  const original = '<html lang="ru"><body><footer><nav>Existing links</nav></footer></body></html>';
+  const optedOut = original.replace("<footer>", '<footer data-seller-identity-policy="omit">');
+  assert.equal(withSellerIdentity(optedOut), optedOut);
+  const stale = withSellerIdentity(original).replace("<footer>", '<footer data-seller-identity-policy="omit">');
+  const cleaned = withSellerIdentity(stale);
+  assert.ok(!cleaned.includes(sellerName));
+  assert.ok(cleaned.includes("<nav>Existing links</nav>"));
+  assert.equal(withSellerIdentity(cleaned), cleaned);
+  assert.ok(withSellerIdentity(original).includes(sellerName));
 });
 
 test("seller sections state the business relationship, independence and existing email", async () => {

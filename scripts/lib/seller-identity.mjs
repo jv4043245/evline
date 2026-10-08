@@ -20,6 +20,10 @@ export function sellerIdentityMarkup(language = "uk") {
 
 export function withSellerIdentity(html) {
   if (!/<footer\b/i.test(html)) return html;
+  // Some service pages use a different operator and must not inherit the parts seller.
+  if (/<footer\b[^>]*\bdata-seller-identity-policy=["']omit["']/i.test(html)) {
+    return html.replace(/<div data-seller-identity\b[^>]*>[\s\S]*?<\/div>/g, "");
+  }
   const language = html.match(/<html\b[^>]*\blang=["']([^"']+)/i)?.[1] || "uk";
   const markup = sellerIdentityMarkup(language);
   if (/<div data-seller-identity\b/.test(html)) {
