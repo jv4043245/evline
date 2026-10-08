@@ -36,8 +36,8 @@ test("seller sections state the business relationship, independence and existing
   }
 });
 
-test("static footer insertion preserves page content and supports both languages", () => {
-  for (const lang of ["uk-UA", "ru-UA"]) {
+test("static footer insertion preserves page content and supports all public languages", () => {
+  for (const lang of ["uk-UA", "ru-UA", "ro"]) {
     const original = `<html lang="${lang}"><body><form action="/api/leads"><input name="phone"></form><footer><nav>Existing links</nav></footer><script>existingBehavior()</script></body></html>`;
     const updated = withSellerIdentity(original);
     assert.equal(updated.replace(/<div data-seller-identity\b[^>]*>[\s\S]*?<\/div>\n/, ""), original);

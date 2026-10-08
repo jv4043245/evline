@@ -6,6 +6,7 @@
     "serve": "node scripts/serve-static.mjs",
     "build:demand-pages": "node scripts/build-parts-demand-pages.mjs",
     "build:sitemap": "node scripts/build-sitemap.mjs",
+    "build:zeekr-languages": "node scripts/build-zeekr-translations.mjs",
     "audit:forms": "node scripts/audit-public-forms.mjs",
     "audit:links": "node scripts/audit-internal-links.mjs",
     "sync:email": "node scripts/sync-email-protection.mjs",

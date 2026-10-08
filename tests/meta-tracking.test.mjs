@@ -67,7 +67,7 @@ function element(tagName, registry) {
   };
 }
 
-function metaContext(consentRecord) {
+function metaContext(consentRecord, language = "uk-UA") {
   const registry = new Map();
   const appendedScripts = [];
   const listeners = new Map();
@@ -79,7 +79,7 @@ function metaContext(consentRecord) {
   const document = {
     readyState: "complete",
     cookie: "",
-    documentElement: { lang: "uk-UA" },
+    documentElement: { lang: language },
     head: element("head", registry),
     body: element("body", registry),
     createElement(tagName) {
@@ -184,6 +184,16 @@ test("Pixel is not requested before marketing consent", () => {
     context.appendedScripts.some((script) => script.src === "https://connect.facebook.net/en_US/fbevents.js"),
     false
   );
+  assert.equal(typeof context.window.fbq, "undefined");
+});
+
+test("Romanian consent UI is localized without changing consent requirements", () => {
+  const context = metaContext(null, "ro");
+  const banner = context.window.document.getElementById("evline-consent");
+  assert.equal(banner.children[0].textContent, "Setări de confidențialitate");
+  assert.equal(banner.children[2].children[1].textContent, "Doar cele necesare");
+  assert.equal(banner.children[1].children[0].href, "/privacy/");
+  assert.match(banner.children[1].children[0].textContent, /în ucraineană/);
   assert.equal(typeof context.window.fbq, "undefined");
 });
 
