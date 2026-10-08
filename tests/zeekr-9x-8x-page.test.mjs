@@ -38,6 +38,24 @@ test("page is Russian, unlisted, and uses real local model/video assets", () => 
   assert.equal(document.querySelectorAll("h1").length, 1);
 });
 
+test("compact page keeps model frames and native FAQ without the removed process section", () => {
+  const { document } = new JSDOM(html).window;
+  assert.equal(document.querySelector("#services-title").textContent, "Возможности вашего Zeekr");
+  assert.equal(document.querySelector("#work-title").textContent, "Ваш Zeekr может так же");
+  assert.equal(document.querySelector("#process-title"), null);
+  assert.equal(document.querySelectorAll(".model-media > img").length, 2);
+  for (const model of document.querySelectorAll(".model")) {
+    assert.ok(model.querySelector(".model-media"));
+    assert.ok(model.querySelector("[data-model]"));
+  }
+  const faq = document.querySelector("#questions");
+  assert.equal(faq.querySelectorAll("details > summary").length, 4);
+  for (const details of faq.querySelectorAll("details")) {
+    assert.ok(details.querySelector("p").textContent.trim());
+    assert.equal(details.hasAttribute("open"), false);
+  }
+});
+
 test("all direct contacts go to programming, not parts", () => {
   const { document } = new JSDOM(html).window;
   for (const node of document.querySelectorAll('a[href^="tel:"]')) assert.equal(node.getAttribute("href"), "tel:+380630630304");
