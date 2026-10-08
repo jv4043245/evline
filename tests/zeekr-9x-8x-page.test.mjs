@@ -40,6 +40,12 @@ for (const [language, route] of Object.entries(routes)) {
       assert.equal(document.querySelector(`link[hreflang="${lang}"]`).href, `https://evline.com.ua${destination}`);
     }
     assert.equal(document.querySelectorAll(".service").length, 4);
+    const hero = document.querySelector(".hero-picture");
+    assert.equal(hero.querySelector("img").getAttribute("src"), "/assets/images/zeekr-9x-8x/9x-interior.webp");
+    assert.equal(hero.querySelectorAll("source").length, 0, "Mobile must show the same actual interior, not the old exterior");
+    assert.equal(hero.querySelector("img").getAttribute("fetchpriority"), "high");
+    assert.equal(document.querySelector('.hero-credit a[rel*="license"]').href, "https://creativecommons.org/licenses/by/3.0/");
+    assert.ok(document.querySelector(".hero-credit").textContent.includes("AutoLab"));
     assert.equal(document.querySelectorAll(".faq-list details").length, 4);
     assert.equal(document.querySelector("video source").getAttribute("src"), "/assets/video/zeekr-9x-8x/evline-demo.mp4");
     for (const button of document.querySelectorAll("[data-service]")) {
