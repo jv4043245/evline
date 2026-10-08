@@ -40,6 +40,9 @@ for (const [language, route] of Object.entries(routes)) {
       assert.equal(document.querySelector(`link[hreflang="${lang}"]`).href, `https://evline.com.ua${destination}`);
     }
     assert.equal(document.querySelectorAll(".service").length, 4);
+    assert.equal(document.querySelector("footer").dataset.sellerIdentityPolicy, "omit");
+    assert.equal(document.querySelectorAll("[data-seller-identity]").length, 0);
+    assert.doesNotMatch(source, /Ванюшин|ФОП|privacy\/#seller/);
     const hero = document.querySelector(".hero-picture");
     assert.equal(hero.querySelector("img").getAttribute("src"), "/assets/images/zeekr-9x-8x/9x-interior.webp");
     assert.equal(hero.querySelectorAll("source").length, 0, "Mobile must show the same actual interior, not the old exterior");
@@ -57,7 +60,7 @@ for (const [language, route] of Object.entries(routes)) {
     }
     if (language !== "ru") assert.equal(source, translatedPage(html, language), "Regenerate translations after changing the Russian layout");
     if (language === "ro") {
-      document.querySelectorAll("script, .language-switch, [data-seller-identity]").forEach(element => element.remove());
+      document.querySelectorAll("script, .language-switch").forEach(element => element.remove());
       assert.doesNotMatch(document.body.textContent, /[\u0400-\u04ff]/, "No untranslated visible Cyrillic copy");
     }
     dom.window.close();

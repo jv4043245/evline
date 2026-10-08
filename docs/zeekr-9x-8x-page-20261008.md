@@ -9,7 +9,10 @@ Russian is the layout source. After editing it, update the translation table in
 Tests check generated pages for drift. Scripts, styles and media are shared.
 Visible copy and dynamic form/video/cookie states are localized; internal service
 values retain the original CRM labels. Romanian privacy links explicitly lead
-to the existing Ukrainian policy. The owner's legal name stays in Ukrainian.
+to the existing Ukrainian policy. These service pages intentionally omit the
+parts seller's identity at the owner's request: a different entity will operate
+this service. `data-seller-identity-policy="omit"` prevents the shared footer sync
+and translation build from restoring that identity. Other public pages are unchanged.
 
 The four services are supplied by the owner. No prices, turnaround guarantees,
 testimonials, or features from older Zeekr models have been carried over.
