@@ -1,0 +1,17 @@
+name = "evline-accounting-meta"
+main = "index.js"
+compatibility_date = "2026-10-09"
+workers_dev = false
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "evline-crm"
+database_id = "77712619-95e4-4eb1-aaaf-6eda879ac3d3"
+
+[triggers]
+crons = ["45 5 * * *"]
+
+# Intentionally no guessed/default API version. At activation set the currently
+# supported, reviewed META_GRAPH_API_VERSION using --var or an approved vars block.
+# Install META_ADS_INSIGHTS_ACCESS_TOKEN as an encrypted Worker secret, never here.

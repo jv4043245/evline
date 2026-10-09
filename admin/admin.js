@@ -6,6 +6,7 @@ import { finishMarketWork, marketProgressText } from "../assets/js/market-progre
 import { icon as documentIcon } from "./documents/icons.js";
 import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
+import { createAccountingView } from "./accounting.js?v=20261009";
 
 const state = {
   range: "30d",
@@ -365,7 +366,8 @@ const keywordLevelLabels = {
   utm_term: "UTM term",
 };
 
-const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery"]);
+const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting"]);
+const accountingView = createAccountingView(document, api);
 const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "history"]);
 
 let orderFormBaseline = "";
@@ -555,6 +557,9 @@ function setActiveTab(tab) {
     stopChinaAutoRefresh();
   }
   if (nextTab === "delivery") renderShippingDirectory();
+  if (nextTab === "accounting" && adminToken()) {
+    accountingView.load(document.querySelector("#range")?.value || state.range).catch(() => {});
+  }
   return true;
 }
 
@@ -3982,7 +3987,9 @@ async function refresh() {
     if (googleAdsKeywordsExport) {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
-    await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory()]);
+    await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
+      state.activeTab === "accounting" ? accountingView.load(state.range) : Promise.resolve(),
+    ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
       await loadAuditLog();

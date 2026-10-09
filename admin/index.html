@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20261005-payment-source">
     <link rel="stylesheet" href="/admin/supplier-documents.css?v=20261005">
-    <script type="module" src="/admin/admin.js?v=20261007-document-save"></script>
+    <link rel="stylesheet" href="/admin/accounting.css?v=20261009">
+    <script type="module" src="/admin/admin.js?v=20261009-accounting"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -23,7 +24,7 @@
         </div>
       </div>
       <div class="admin-header__actions">
-        <select id="range">
+        <select id="range" aria-label="Період звіту">
           <option value="7d">7 днів</option>
           <option value="30d" selected>30 днів</option>
           <option value="90d">90 днів</option>
@@ -62,6 +63,7 @@
         <button class="admin-tab" type="button" data-admin-tab="china" aria-selected="false">Китай</button>
         <button class="admin-tab" type="button" data-admin-tab="delivery" aria-selected="false">Доставка</button>
         <button class="admin-tab" type="button" data-admin-tab="analytics" aria-selected="false">Аналітика і реклама</button>
+        <button class="admin-tab" type="button" data-admin-tab="accounting" aria-selected="false">Бухгалтерія</button>
       </nav>
       <nav class="admin-subnav" data-analytics-nav hidden aria-label="Аналітика">
         <button class="admin-btn admin-btn--small" type="button" data-admin-tab="analytics">Результати реклами</button>
@@ -662,6 +664,46 @@
             </table>
           </div>
         </section>
+      </section>
+
+      <section class="admin-view accounting-view" data-admin-view="accounting" hidden aria-labelledby="accounting-title">
+        <div class="accounting-heading">
+          <h1 id="accounting-title">Реклама</h1>
+          <p class="muted" data-accounting-period></p>
+        </div>
+        <p class="accounting-message" data-accounting-message role="status" aria-live="polite" hidden></p>
+        <div data-accounting-content aria-busy="false">
+          <section class="accounting-cards" aria-label="Витрати на рекламу та замовлення">
+            <article class="summary-card accounting-card">
+              <h2><span class="accounting-dot accounting-dot--google" aria-hidden="true"></span>Google Ads</h2>
+              <strong data-accounting-total="google">—</strong>
+              <small data-accounting-source="google">Немає даних</small>
+            </article>
+            <article class="summary-card accounting-card">
+              <h2><span class="accounting-dot accounting-dot--meta" aria-hidden="true"></span>Facebook · Instagram</h2>
+              <strong data-accounting-total="meta">—</strong>
+              <small data-accounting-source="meta">Немає даних</small>
+            </article>
+            <article class="summary-card accounting-card accounting-card--orders">
+              <h2><span class="accounting-dot accounting-dot--orders" aria-hidden="true"></span>Замовлення CRM</h2>
+              <strong data-accounting-total="orders">—</strong>
+              <small>Усі джерела</small>
+            </article>
+          </section>
+          <section class="admin-panel accounting-trend" data-accounting-trend hidden aria-labelledby="accounting-trend-title">
+            <div class="admin-panel__head"><h2 id="accounting-trend-title">Динаміка</h2></div>
+            <div class="accounting-chart" data-accounting-chart></div>
+          </section>
+          <section class="admin-panel accounting-history" aria-labelledby="accounting-history-title">
+            <div class="admin-panel__head"><h2 id="accounting-history-title">За днями</h2></div>
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Щоденні витрати та замовлення">
+              <table class="orders-table accounting-table">
+                <thead><tr><th scope="col">Дата</th><th scope="col">Google, грн</th><th scope="col">Meta, грн</th><th scope="col">Замовлення</th></tr></thead>
+                <tbody data-accounting-daily><tr><td colspan="4" class="muted accounting-empty">Дані ще не завантажено.</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </section>
 
       <section class="admin-view" data-admin-view="delivery" hidden>

@@ -1,0 +1,59 @@
+.admin-shell[data-admin-tab="accounting"] { background: #f5f6f8; }
+.accounting-view { --accounting-google: #3573cf; --accounting-meta: #8660bc; --accounting-orders: #18846b; }
+.accounting-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; margin: 10px 0 20px; }
+.accounting-heading h1 { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.035em; }
+.accounting-heading p { margin: 0; font-size: 13px; }
+.accounting-cards { display: grid; grid-template-columns: 1fr 1fr .8fr; gap: 14px; margin-bottom: 18px; }
+.accounting-card, .accounting-view .admin-panel { box-shadow: none; border-color: #e2e5e9; border-radius: 14px; }
+.accounting-card { min-width: 0; padding: 22px; }
+.accounting-card h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; font-weight: 550; color: #536171; }
+.accounting-card strong { margin: 16px 0 12px; font-size: clamp(23px, 2.6vw, 34px); font-weight: 650; line-height: 1.1; letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.accounting-card small { min-height: 17px; font-size: 12px; line-height: 1.5; }
+.accounting-card small[data-status="partial"], .accounting-card small[data-status="error"] { color: #895b13; }
+.accounting-dot { display: inline-block !important; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; }
+.accounting-dot--google { background: var(--accounting-google); }
+.accounting-dot--meta { background: var(--accounting-meta); }
+.accounting-dot--orders { background: var(--accounting-orders); }
+.accounting-view .admin-panel__head { padding: 19px 22px 13px; }
+.accounting-view .admin-panel__head h2 { font-size: 15px; font-weight: 600; }
+.accounting-chart { padding: 0 14px 12px; }
+.accounting-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.accounting-chart text { font: 11px system-ui, sans-serif; fill: #6b7280; }
+.accounting-chart .accounting-chart__label { font-weight: 550; fill: #536171; }
+.accounting-chart__google { stroke: var(--accounting-google); fill: var(--accounting-google); }
+.accounting-chart__meta { stroke: var(--accounting-meta); fill: var(--accounting-meta); }
+.accounting-chart__orders { stroke: var(--accounting-orders); fill: var(--accounting-orders); }
+.accounting-chart__grid { stroke: #edf0f3; stroke-width: 1; }
+.accounting-table th, .accounting-table td { padding: 13px 22px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.accounting-table th { font-size: 11px; font-weight: 550; text-transform: none; letter-spacing: 0; }
+.accounting-table th:not(:first-child), .accounting-table td:not(:first-child) { text-align: right; }
+.accounting-table th:first-child { font-weight: 500; }
+.accounting-table tbody th { font-size: 13px; color: inherit; }
+.accounting-table tbody tr:last-child > * { border-bottom: 0; }
+.accounting-table tbody tr:hover { background: #fafbfc; }
+.accounting-table .accounting-empty { padding: 32px 22px; text-align: center; }
+.accounting-history .table-wrap { max-height: 490px; scrollbar-width: thin; }
+.accounting-table thead { position: sticky; top: 0; z-index: 1; background: #fff; }
+.accounting-message { margin: 0 0 16px; color: #6b7280; font-size: 13px; }
+.accounting-message[data-state="error"] { color: #9b351f; }
+.accounting-view [aria-busy="true"] { opacity: .6; }
+@media (max-width: 760px) {
+  .accounting-heading { margin-top: 6px; margin-bottom: 16px; }
+  .accounting-heading h1 { font-size: 25px; }
+  .accounting-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .accounting-card { padding: 17px 14px; }
+  .accounting-card h2 { font-size: 12px; }
+  .accounting-card strong { font-size: 25px; }
+  .accounting-card--orders { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .accounting-card--orders strong { margin: 0 0 0 auto; font-size: 24px; }
+  .accounting-card--orders small { margin-left: 2px; }
+  .accounting-table th, .accounting-table td { padding: 12px 13px; }
+  .accounting-chart { padding: 0 7px 9px; }
+  .accounting-view .admin-panel__head { padding: 17px 14px 10px; }
+}
+@media (max-width: 390px) {
+  .accounting-card { padding: 16px 11px; }
+  .accounting-card h2 { font-size: 11px; }
+  .accounting-card strong { font-size: 22px; }
+  .accounting-card--orders { gap: 8px; }
+}
