@@ -1,3 +1,5 @@
+import { buildAccountingReportStatements } from './accounting-reports.js';
+
 export const ACCOUNTING_TIMEZONE = 'Europe/Kyiv';
 export const ACCOUNTING_ACCOUNTS = Object.freeze({ google: '4028488894', meta: '1354524650161143' });
 // This Meta account is shared with another business. Its full-account total is
@@ -146,9 +148,13 @@ export async function persistAdSpendSnapshot(db, input, { now = new Date() } = {
       .bind(snapshot.provider, snapshot.account_id, day.date, day.spend_minor, 'UAH', ACCOUNTING_TIMEZONE,
         snapshot.scope, snapshot.coverage, day.is_final ? 1 : 0, snapshot.fetched_at, snapshot.source, snapshot.source_ref, runId));
   }
+  // Archive only the validated, allowlisted data—not arbitrary request fields
+  // or credentials. Evidence and spend are saved in the same transaction.
+  const report = await buildAccountingReportStatements(db, snapshot, runId, { now });
+  statements.push(...report.statements);
   const results = await db.batch(statements);
   return { ok: true, run_id: runId, days_received: snapshot.days.length,
-    days_imported: results.slice(1).reduce((sum, result) => sum + Number(result.meta?.changes || 0), 0) };
+    days_imported: results.slice(1, 1 + snapshot.days.length).reduce((sum, result) => sum + Number(result.meta?.changes || 0), 0) };
 }
 
 /** A sanitized failed attempt never changes known spend or invents a zero day. */

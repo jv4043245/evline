@@ -17,6 +17,7 @@ function database({ migrateBusinessScope = true } = {}) {
   sqlite.exec('CREATE TABLE orders(id TEXT PRIMARY KEY, created_at TEXT, source TEXT, status TEXT); CREATE TABLE ad_costs(cost_date TEXT, platform TEXT, source TEXT, medium TEXT, spend_uah REAL, notes TEXT, created_at TEXT, updated_at TEXT);');
   sqlite.exec(readFileSync(new URL('../migrations/0031_accounting.sql', import.meta.url), 'utf8'));
   if (migrateBusinessScope) sqlite.exec(readFileSync(new URL('../migrations/0032_accounting_business_scope.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0034_accounting_reports.sql', import.meta.url), 'utf8'));
   const db = { prepare(sql) {
     return { bind(...args) {
       return { sql, args, async all() { return { results: sqlite.prepare(sql).all(...args) }; },

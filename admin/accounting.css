@@ -67,3 +67,6 @@
   .accounting-card strong { font-size: 22px; }
   .accounting-card--orders { gap: 8px; }
 }
+.accounting-card--link { color: inherit; text-decoration: none; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.accounting-card--link:hover { border-color: #9bb9de; box-shadow: 0 3px 14px #20354d0b; }
+.accounting-card--link:focus-visible { outline: 2px solid #3573cf; outline-offset: 3px; }

@@ -1,0 +1,54 @@
+.accounting-provider { max-width: 1080px; margin: 0 auto; }
+.accounting-provider__back { padding: 5px 0; border: 0; background: none; color: #536171; font: inherit; font-size: 13px; cursor: pointer; }
+.accounting-provider__heading { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 15px; margin: 14px 0 20px; }
+.accounting-provider__heading h1 { margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -.035em; }
+.accounting-provider__heading p { margin: 7px 0 0; font-size: 12px; color: #687382; }
+.accounting-provider__message { margin: 0 0 14px; font-size: 12px; color: #687382; }
+.accounting-provider__message:empty { display: none; }
+.accounting-provider__message[data-error="true"] { color: #9b351f; }
+.accounting-provider__summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px 18px; padding: 23px; margin-bottom: 18px; border: 1px solid #e2e5e9; border-radius: 14px; background: white; }
+.accounting-provider__summary > span { color: #536171; font-size: 13px; }
+.accounting-provider__summary > strong { font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.accounting-provider__summary > small { margin-left: auto; color: #687382; font-size: 12px; }
+.accounting-provider__panel { border: 1px solid #e2e5e9; border-radius: 14px; background: white; margin-bottom: 18px; overflow: hidden; }
+.accounting-provider__panel-heading { padding: 20px 23px 13px; }
+.accounting-provider__panel-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.accounting-provider__table-wrap { overflow: auto; max-height: 440px; scrollbar-width: thin; }
+.accounting-provider__table { width: 100%; }
+.accounting-provider__table th, .accounting-provider__table td { padding: 12px 23px; font-variant-numeric: tabular-nums; font-size: 13px; }
+.accounting-provider__table th { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.accounting-provider__table th:last-child, .accounting-provider__table td:last-child { text-align: right; }
+.accounting-provider__table thead { position: sticky; top: 0; background: white; }
+.accounting-provider__table thead th { color: #687382; font-size: 11px; }
+.accounting-provider__table small { display: block; margin-top: 4px; font-size: 10px; font-weight: 400; color: #895b13; }
+.accounting-provider__table .accounting-provider__empty { text-align: center; color: #687382; padding: 30px; }
+.accounting-provider__archive > .accounting-provider__message { margin: 0 23px 15px; }
+.accounting-provider__file-row { display: flex; align-items: center; gap: 16px; justify-content: space-between; padding: 16px 23px; border-top: 1px solid #eef0f2; }
+.accounting-provider__file-row > div { min-width: 0; }
+.accounting-provider__file-row strong { display: block; font-size: 13px; font-weight: 550; overflow-wrap: anywhere; }
+.accounting-provider__file-row small { display: block; margin-top: 5px; font-size: 11px; color: #687382; }
+.accounting-provider__file-row button { flex-shrink: 0; }
+.accounting-provider__more { margin: 8px 23px 18px; }
+.accounting-provider__upload { border-top: 1px solid #e2e5e9; padding: 18px 23px; }
+.accounting-provider__upload > summary { font-size: 13px; color: #536171; cursor: pointer; }
+.accounting-provider__upload form { margin-top: 20px; }
+.accounting-provider__upload label { display: grid; gap: 7px; font-size: 12px; color: #536171; }
+.accounting-provider__upload input:not([type="checkbox"]), .accounting-provider__upload select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 39px; padding: 8px 10px; border: 1px solid #dce2e8; border-radius: 8px; color: #243746; background: white; font: inherit; }
+.accounting-provider__upload small { font-size: 11px; color: #687382; }
+.accounting-provider__fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 18px 0; }
+.accounting-provider__upload .accounting-provider__confirm { display: flex; align-items: center; gap: 9px; }
+.accounting-provider__upload-footer { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin: 18px 0 12px; }
+.accounting-provider button:focus-visible, .accounting-provider input:focus-visible, .accounting-provider select:focus-visible, .accounting-provider summary:focus-visible { outline: 2px solid #3573cf; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .accounting-provider__heading h1 { font-size: 24px; }
+  .accounting-provider__summary { padding: 18px 16px; }
+  .accounting-provider__summary > strong { font-size: 27px; }
+  .accounting-provider__summary > small { flex-basis: 100%; margin-left: 0; }
+  .accounting-provider__panel-heading, .accounting-provider__table th, .accounting-provider__table td { padding-left: 16px; padding-right: 16px; }
+  .accounting-provider__file-row, .accounting-provider__upload { padding: 16px; }
+  .accounting-provider__file-row { align-items: flex-start; }
+  .accounting-provider__archive > .accounting-provider__message { margin-left: 16px; margin-right: 16px; }
+  .accounting-provider__fields { grid-template-columns: 1fr 1fr; }
+  .accounting-provider__fields label:last-child { grid-column: 1 / -1; }
+  .accounting-provider__upload-footer { flex-wrap: wrap; }
+}
