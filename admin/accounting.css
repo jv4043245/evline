@@ -1,5 +1,7 @@
 .admin-shell[data-admin-tab="accounting"] { background: #f5f6f8; }
 .accounting-view { --accounting-google: #3573cf; --accounting-meta: #8660bc; --accounting-orders: #18846b; }
+.accounting-subnav { margin: 0 0 16px; }
+.accounting-subnav button { min-height: 36px; }
 .accounting-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; margin: 10px 0 20px; }
 .accounting-heading h1 { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.035em; }
 .accounting-heading p { margin: 0; font-size: 13px; }

@@ -7,6 +7,7 @@ import { icon as documentIcon } from "./documents/icons.js";
 import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261009-history";
+import { createAccountingProfitView } from "./accounting-profit.js?v=20261009-profit";
 
 const state = {
   range: "30d",
@@ -369,6 +370,8 @@ const keywordLevelLabels = {
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting"]);
 const accountingView = createAccountingView(document, api);
 const accountingPeriods = createAccountingPeriodState(localStorage);
+const accountingProfitView = createAccountingProfitView(document.querySelector('[data-accounting-profit]'), api);
+let accountingPanel = localStorage.getItem('evline_accounting_panel') === 'profit' ? 'profit' : 'advertising';
 const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "history"]);
 
 let orderFormBaseline = "";
@@ -404,7 +407,7 @@ function updateOrderSaveState() {
   footer.querySelector("[data-save-state]").textContent = saving ? "Збереження..." : files ? (orderFieldsAreDirty() ? "Є незбережені зміни та файли" : "Є незбережені файли") : dirty ? "Є незбережені зміни" : "Усі зміни збережено";
 }
 window.addEventListener("beforeunload", (event) => {
-  if (orderIsDirty() || orderSaving || orderDocumentsController?.isBusy()) { event.preventDefault(); event.returnValue = ""; }
+  if (orderIsDirty() || orderSaving || orderDocumentsController?.isBusy() || accountingProfitView.hasChanges() || accountingProfitView.isBusy()) { event.preventDefault(); event.returnValue = ""; }
 });
 
 const money = new Intl.NumberFormat("uk-UA", {
@@ -530,6 +533,7 @@ function setAuthVisible(visible) {
 function setActiveTab(tab) {
   const nextTab = adminTabs.has(tab) ? tab : "orders";
   if (nextTab !== state.activeTab && !allowDiscardOrder()) return false;
+  if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
   const rangeInput = document.querySelector("#range");
   if (rangeInput) rangeInput.value = accountingPeriods.enter(nextTab, rangeInput.value);
   state.activeTab = nextTab;
@@ -560,11 +564,33 @@ function setActiveTab(tab) {
     stopChinaAutoRefresh();
   }
   if (nextTab === "delivery") renderShippingDirectory();
+  syncAccountingPanel();
   if (nextTab === "accounting" && adminToken()) {
-    accountingView.load(accountingPeriods.accounting()).catch(() => {});
+    loadAccountingPanel().catch(() => {});
   }
   return true;
 }
+
+function syncAccountingPanel() {
+  document.querySelectorAll('[data-accounting-tab]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.accountingTab === accountingPanel)));
+  document.querySelectorAll('[data-accounting-panel]').forEach(panel => { panel.hidden = panel.dataset.accountingPanel !== accountingPanel; });
+  const range = document.querySelector('#range');
+  if (range) range.hidden = state.activeTab === 'accounting' && accountingPanel === 'profit';
+}
+
+function loadAccountingPanel() {
+  return accountingPanel === 'profit' ? accountingProfitView.load() : accountingView.load(accountingPeriods.accounting());
+}
+
+document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => {
+  const next = button.dataset.accountingTab;
+  if (next === accountingPanel || !['advertising', 'profit'].includes(next)) return;
+  if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return;
+  accountingPanel = next;
+  localStorage.setItem('evline_accounting_panel', next);
+  syncAccountingPanel();
+  if (state.activeTab === 'accounting' && adminToken()) loadAccountingPanel().catch(() => {});
+}));
 
 function renderSummary(data) {
   state.campaignReport = data.campaigns || [];
@@ -3993,7 +4019,7 @@ async function refresh() {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
     await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
-      state.activeTab === "accounting" ? accountingView.load(accountingPeriods.accounting()) : Promise.resolve(),
+      state.activeTab === "accounting" ? loadAccountingPanel() : Promise.resolve(),
     ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {

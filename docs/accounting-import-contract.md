@@ -44,3 +44,36 @@ those rows, never relabel account totals as EVLine campaign costs.
 The prepared Meta Worker is not activated until dedicated read credentials,
 campaign parent identity, UAH/Kyiv settings, exact campaign scope and one live
 daily reconciliation have been verified. It never writes advertising settings.
+
+## Monthly manager calculation
+
+`/api/admin/accounting/profit?month=YYYY-MM` reads a monthly draft. Authenticated
+PUT saves explicit manual inputs with `expected_revision`; concurrent edits
+return 409 instead of replacing another administrator's values. Migration0033
+adds draft and immutable revision tables without changing orders or payments.
+
+The owner confirmed recognition after **both full customer payment and actual
+handover to the customer**. Revenue, purchase and shipping must describe those
+same recognized orders, regardless of when a supplier was paid. Advertising is
+the entire selected month's verified EVLine cost, subtracted once. Other costs
+are entered with a description. Values are UAH integer kopecks, not CNY totals
+or supplier receipt amounts without actual exchange-rate evidence.
+
+`profit = revenue - purchase - shipping - advertising - other`
+
+Manager estimate is 15% of positive profit, rounded half-up to one kopeck;
+otherwise zero. Remaining profit is profit less that estimate. Missing inputs
+or incomplete advertising coverage leave the result unknown, never zero.
+Current-month advertising stops at yesterday and is explicitly provisional.
+Saved drafts are not approved payroll, payouts, or a month-closing ledger.
+
+Initial CRM audit found zero/default revenue and cost fields, unknown customer
+payment statuses, and supplier-payment workflow dates rather than reliable
+customer-payment/handover events. Therefore no historical order profit is
+inferred automatically. Confirmed monthly totals are manual until those events
+and costs become reliable. Do not subtract legacy per-order `ad_cost` again.
+
+Advertising cadence: refresh completed days daily with a trailing correction
+window, then reconcile the whole month before settlement. Google already has
+the daily script. Meta daily ingestion remains pending the dedicated read
+credentials described above; historical imported facts remain usable.

@@ -33,7 +33,13 @@ test("accounting adds one primary section without removing existing admin featur
   assert.ok(root.querySelector('[data-admin-view="accounting"]').hidden);
   assert.equal(root.querySelector("#range").getAttribute("aria-label"), "Період звіту");
   assert.match(source, /createAccountingView\(document, api\)/);
-  assert.match(source, /state\.activeTab === "accounting" \? accountingView\.load\(accountingPeriods\.accounting\(\)\)/);
+  assert.match(source, /state\.activeTab === "accounting" \? loadAccountingPanel\(\)/);
+  assert.equal(root.querySelectorAll('[data-accounting-tab]').length, 2);
+  assert.ok(root.querySelector('[data-accounting-panel="advertising"] [data-accounting-content]'));
+  assert.ok(root.querySelector('[data-accounting-panel="profit"] [data-accounting-profit]'));
+  assert.ok(root.querySelector('[data-accounting-panel="profit"]').hidden);
+  assert.match(source, /accountingProfitView\.hasChanges\(\)/);
+  assert.match(source, /accountingProfitView\.canLeave\(\)/);
 });
 
 test("period includes completed Kyiv days only, including UTC boundary and both DST changes", () => {
