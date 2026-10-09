@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { accountingDay, accountingRange, buildAccountingReport, legacyGoogleDays, persistAdSpendSnapshot, readAccounting, recordAdSpendImportFailure, validateAdSpendSnapshot } from '../functions/_lib/accounting.js';
+import { ACCOUNTING_META_SCOPE, accountingDay, accountingRange, aggregateAccountingMonths, buildAccountingReport, legacyGoogleDays, persistAdSpendSnapshot, readAccounting, recordAdSpendImportFailure, validateAdSpendSnapshot } from '../functions/_lib/accounting.js';
 import { onRequestGet } from '../functions/api/admin/accounting.js';
 
 const now = new Date('2026-10-09T10:00:00.000Z');
@@ -12,10 +12,11 @@ function snapshot(patch = {}) {
     scope: 'account', coverage: 'complete', source: 'google_ads_script',
     days: [{ date: '2026-10-07', spend_minor: 12345, is_final: true }, { date: '2026-10-08', spend_minor: 0, is_final: true }], ...patch };
 }
-function database() {
+function database({ migrateBusinessScope = true } = {}) {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('CREATE TABLE orders(id TEXT PRIMARY KEY, created_at TEXT, source TEXT, status TEXT); CREATE TABLE ad_costs(cost_date TEXT, platform TEXT, source TEXT, medium TEXT, spend_uah REAL, notes TEXT, created_at TEXT, updated_at TEXT);');
   sqlite.exec(readFileSync(new URL('../migrations/0031_accounting.sql', import.meta.url), 'utf8'));
+  if (migrateBusinessScope) sqlite.exec(readFileSync(new URL('../migrations/0032_accounting_business_scope.sql', import.meta.url), 'utf8'));
   const db = { prepare(sql) {
     return { bind(...args) {
       return { sql, args, async all() { return { results: sqlite.prepare(sql).all(...args) }; },
@@ -27,6 +28,11 @@ function database() {
     catch (error) { sqlite.exec('ROLLBACK'); throw error; }
   } };
   return { db, sqlite };
+}
+function metaSnapshot(patch = {}) {
+  return snapshot({ provider: 'meta', account_id: ACCOUNTING_META_SCOPE.account_id,
+    scope: ACCOUNTING_META_SCOPE.scope, source_ref: ACCOUNTING_META_SCOPE.source_ref,
+    source: 'meta_ads_manager_csv', ...patch });
 }
 function historic(date = '2026-10-08', campaign = '123', amount = 10, patch = {}) {
   return { cost_date: date, platform: 'google', source: 'google', medium: 'cpc', spend_uah: amount,
@@ -99,10 +105,37 @@ test('report distinguishes known zero, missing and legacy partial, and canonical
   assert.equal(report.daily[1].meta_uah, null);
   assert.equal(report.totals.meta_uah, null);
   assert.equal(report.sources.google.status, 'complete');
+  assert.equal(report.daily[1].google_coverage, 'complete');
+  assert.equal(report.daily[1].meta_coverage, 'missing');
+  assert.equal(report.monthly[0].google_uah, report.totals.google_uah);
+  assert.equal(report.monthly[0].google_coverage, 'complete');
   const partial = buildAccountingReport({ from: '2026-10-07', to: '2026-10-08', legacy: [historic()], now });
   assert.equal(partial.sources.google.status, 'partial');
   assert.equal(partial.sources.google.days_present, 1);
   assert.equal(partial.daily[0].google_uah, null);
+  assert.equal(partial.daily[1].google_coverage, 'partial');
+  assert.equal(partial.monthly[0].google_days_complete, 0);
+  assert.equal(partial.monthly[0].google_days_present, 1);
+  assert.equal(partial.monthly[0].google_coverage, 'partial');
+});
+
+test('monthly rollup uses integer cents, keeps zero/missing distinct and respects clipped month boundaries', () => {
+  const months = aggregateAccountingMonths([
+    { date: '2025-01-31', google_uah: 0.1, meta_uah: null, google_coverage: 'complete', meta_coverage: 'missing', orders: 2 },
+    { date: '2025-02-01', google_uah: 0.1, meta_uah: 0, google_coverage: 'complete', meta_coverage: 'complete', orders: 1 },
+    { date: '2025-02-02', google_uah: 0.2, meta_uah: null, google_coverage: 'partial', meta_coverage: 'missing', orders: 0 },
+  ]);
+  assert.equal(months.length, 2);
+  assert.equal(months[0].days_expected, 1);
+  assert.equal(months[0].from, '2025-01-31');
+  assert.equal(months[0].to, '2025-01-31');
+  assert.equal(months[0].meta_uah, null);
+  assert.equal(months[1].google_uah, 0.3);
+  assert.equal(months[1].google_coverage, 'partial');
+  assert.equal(months[1].google_days_complete, 1);
+  assert.equal(months[1].meta_uah, 0);
+  assert.equal(months[1].meta_coverage, 'partial');
+  assert.equal(months[1].days_expected, 2);
 });
 
 test('read aggregates beyond 200 campaign rows and includes canceled intake but not synthetic tests', async () => {
@@ -158,4 +191,63 @@ test('all-time resolves earliest data, supports API selection, and declares boun
   const bounded = await readAccounting(db, { range: 'all', to: '2026-10-08', now });
   assert.equal(bounded.daily.length, 1827);
   assert.equal(bounded.range_limited, true);
+});
+
+test('Meta complete means reviewed EVLine campaign only; shared account and Bolotov campaign are rejected', async () => {
+  const { db } = database();
+  assert.equal(validateAdSpendSnapshot(metaSnapshot(), { now }).coverage, 'complete');
+  for (const patch of [{ scope: 'account' }, { source_ref: '' },
+    { source_ref: 'evline_campaign_120252865188010454' }, { source: 'unknown_import' },
+    { coverage: 'partial', scope: 'account' }]) {
+    assert.throws(() => validateAdSpendSnapshot(metaSnapshot(patch), { now }), /invalid_meta_business_scope/);
+  }
+  await persistAdSpendSnapshot(db, metaSnapshot(), { now });
+  const report = await readAccounting(db, { from: '2026-10-07', to: '2026-10-08', now });
+  assert.equal(report.totals.meta_uah, 123.45);
+  assert.equal(report.sources.meta.status, 'complete');
+  assert.equal(report.sources.meta.scope, 'campaign');
+  assert.deepEqual(report.sources.meta.campaign_ids, ['120251518463770454']);
+  assert.equal(report.daily[1].meta_coverage, 'complete');
+  assert.equal(report.monthly[0].meta_coverage, 'complete');
+  await assert.rejects(persistAdSpendSnapshot(db, metaSnapshot({ scope: 'account', fetched_at: '2026-10-09T06:00:00.000Z', days: snapshot().days.map(day => ({ ...day, spend_minor: 999999 })) }), { now }));
+  assert.equal((await readAccounting(db, { from: '2026-10-07', to: '2026-10-08', now })).totals.meta_uah, 123.45);
+});
+
+test('report independently rejects historic shared-account, foreign-campaign and unsupported-source Meta facts', () => {
+  const trusted = { provider: 'meta', account_id: ACCOUNTING_META_SCOPE.account_id,
+    stat_date: '2026-10-08', spend_minor: 100, currency: 'UAH', timezone: 'Europe/Kyiv',
+    coverage: 'complete', is_final: 1, fetched_at: '2026-10-09T05:00:00.000Z',
+    scope: 'campaign', source_ref: ACCOUNTING_META_SCOPE.source_ref, source: 'meta_insights' };
+  for (const patch of [{ scope: 'account' }, { source_ref: 'evline_campaign_120252865188010454' }, { source: 'manual' }]) {
+    const report = buildAccountingReport({ from: '2026-10-08', to: '2026-10-08', canonical: [{ ...trusted, ...patch }], now });
+    assert.equal(report.totals.meta_uah, null);
+    assert.equal(report.sources.meta.status, 'missing');
+    assert.equal(report.monthly[0].meta_uah, null);
+  }
+});
+
+test('0032 atomically preserves all Google rows and recoverable old table, while schema rejects shared Meta totals', async () => {
+  const { db, sqlite } = database({ migrateBusinessScope: false });
+  await persistAdSpendSnapshot(db, snapshot(), { now });
+  const before = sqlite.prepare('SELECT * FROM accounting_ad_daily ORDER BY stat_date').all();
+  const migration = readFileSync(new URL('../migrations/0032_accounting_business_scope.sql', import.meta.url), 'utf8');
+  sqlite.exec('BEGIN;\n' + migration + '\nCOMMIT;');
+  assert.deepEqual(sqlite.prepare('SELECT * FROM accounting_ad_daily ORDER BY stat_date').all(), before);
+  assert.deepEqual(sqlite.prepare('SELECT * FROM accounting_ad_daily_pre_business_scope ORDER BY stat_date').all(), before);
+  assert.throws(() => sqlite.prepare(`INSERT INTO accounting_ad_daily
+    SELECT 'meta','1354524650161143',stat_date,spend_minor,currency,timezone,'account',coverage,is_final,fetched_at,'meta_insights','',run_id
+    FROM accounting_ad_daily_pre_business_scope`).run());
+  await persistAdSpendSnapshot(db, metaSnapshot(), { now });
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM accounting_ad_daily_pre_business_scope').get().n, 2);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM accounting_ad_daily').get().n, 4);
+});
+
+test('0032 incompatible old Meta facts abort a transactional migration without losing the original table', () => {
+  const { sqlite } = database({ migrateBusinessScope: false });
+  sqlite.exec(`INSERT INTO accounting_ad_daily VALUES('meta','1354524650161143','2026-10-08',99999,'UAH','Europe/Kyiv','account','complete',1,'2026-10-09T05:00:00.000Z','meta_insights','','oldrun')`);
+  sqlite.exec('BEGIN');
+  assert.throws(() => sqlite.exec(readFileSync(new URL('../migrations/0032_accounting_business_scope.sql', import.meta.url), 'utf8')));
+  sqlite.exec('ROLLBACK');
+  assert.equal(sqlite.prepare('SELECT spend_minor FROM accounting_ad_daily').get().spend_minor, 99999);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='accounting_ad_daily_pre_business_scope'").get().n, 0);
 });

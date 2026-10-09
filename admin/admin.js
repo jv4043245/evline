@@ -6,7 +6,7 @@ import { finishMarketWork, marketProgressText } from "../assets/js/market-progre
 import { icon as documentIcon } from "./documents/icons.js";
 import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
-import { createAccountingView } from "./accounting.js?v=20261009";
+import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261009-history";
 
 const state = {
   range: "30d",
@@ -368,6 +368,7 @@ const keywordLevelLabels = {
 
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting"]);
 const accountingView = createAccountingView(document, api);
+const accountingPeriods = createAccountingPeriodState(localStorage);
 const orderEditorTabs = new Set(["main", "market", "suppliers", "delivery", "payment", "history"]);
 
 let orderFormBaseline = "";
@@ -529,6 +530,8 @@ function setAuthVisible(visible) {
 function setActiveTab(tab) {
   const nextTab = adminTabs.has(tab) ? tab : "orders";
   if (nextTab !== state.activeTab && !allowDiscardOrder()) return false;
+  const rangeInput = document.querySelector("#range");
+  if (rangeInput) rangeInput.value = accountingPeriods.enter(nextTab, rangeInput.value);
   state.activeTab = nextTab;
   localStorage.setItem("evline_admin_tab", nextTab);
   document.body.dataset.adminTab = nextTab;
@@ -558,7 +561,7 @@ function setActiveTab(tab) {
   }
   if (nextTab === "delivery") renderShippingDirectory();
   if (nextTab === "accounting" && adminToken()) {
-    accountingView.load(document.querySelector("#range")?.value || state.range).catch(() => {});
+    accountingView.load(accountingPeriods.accounting()).catch(() => {});
   }
   return true;
 }
@@ -3977,7 +3980,9 @@ async function refresh() {
   const errorBox = document.querySelector("[data-admin-error]");
   if (errorBox) errorBox.hidden = true;
   try {
-    state.range = document.querySelector("#range")?.value || "30d";
+    const visibleRange = document.querySelector("#range")?.value || "30d";
+    accountingPeriods.remember(state.activeTab, visibleRange);
+    if (state.activeTab !== "accounting") state.range = visibleRange;
     const exportLink = document.querySelector("[data-export]");
     if (exportLink) exportLink.href = orderExportUrl();
     const googleAdsExport = document.querySelector("[data-google-ads-export]");
@@ -3988,7 +3993,7 @@ async function refresh() {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
     await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
-      state.activeTab === "accounting" ? accountingView.load(state.range) : Promise.resolve(),
+      state.activeTab === "accounting" ? accountingView.load(accountingPeriods.accounting()) : Promise.resolve(),
     ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {

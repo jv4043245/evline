@@ -2,20 +2,23 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { fetchMetaAdSpendSnapshot, metaCompletedWindow, META_ACCOUNT_ID, safeMetaErrorCode } from "../functions/_lib/accounting-meta.js";
+import { fetchMetaAdSpendSnapshot, metaCompletedWindow, META_ACCOUNT_ID, META_CAMPAIGN_ID, safeMetaErrorCode } from "../functions/_lib/accounting-meta.js";
+import { ACCOUNTING_META_SCOPE } from "../functions/_lib/accounting.js";
 import worker, { runAccountingMetaSync } from "../workers/accounting-meta/index.js";
 
 const now = new Date("2026-10-09T05:45:00Z");
 const env = { META_GRAPH_API_VERSION: "v24.0", META_ADS_INSIGHTS_ACCESS_TOKEN: "test-access-token-".repeat(4) };
 const account = { id: `act_${META_ACCOUNT_ID}`, account_id: META_ACCOUNT_ID, currency: "UAH", timezone_name: "Europe/Kyiv" };
-const row = (date = "2026-10-08", spend = "12.34") => ({ account_id: META_ACCOUNT_ID, account_currency: "UAH", date_start: date, date_stop: date, spend });
+const campaign = { id: META_CAMPAIGN_ID, account_id: META_ACCOUNT_ID };
+const filtering = [{ field: "campaign.id", operator: "IN", value: [META_CAMPAIGN_ID] }];
+const row = (date = "2026-10-08", spend = "12.34") => ({ account_id: META_ACCOUNT_ID, account_currency: "UAH", campaign_id: META_CAMPAIGN_ID, date_start: date, date_stop: date, spend });
 const response = value => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });
-function mock(values) {
+function mock(values, campaignMetadata = campaign) {
   const calls = [];
   return { calls, fetchImpl: async (url, options) => {
     calls.push({ url: new URL(url), options });
     assert.equal(options.method, "GET"); assert.equal(options.redirect, "error");
-    const value = values.shift();
+    const value = new URL(url).pathname === `/v24.0/${META_CAMPAIGN_ID}` ? campaignMetadata : values.shift();
     if (value instanceof Error) throw value;
     assert.notEqual(value, undefined, "Unexpected network request");
     return value instanceof Response ? value : response(value);
@@ -32,16 +35,20 @@ test("30 completed Kyiv dates, including local midnight and DST boundaries", () 
   assert.deepEqual(metaCompletedWindow(new Date("2026-10-08T21:30:00Z")), { from: "2026-09-09", to: "2026-10-08" });
   assert.deepEqual(metaCompletedWindow(new Date("2026-10-26T00:30:00Z")), { from: "2026-09-26", to: "2026-10-25" });
 });
-test("account-wide complete snapshot is minor-unit precise and explicitly fills completed zero days", async () => {
+test("EVLine campaign-only complete snapshot is minor-unit precise and fills only its completed zero days", async () => {
   const { result, calls } = await collect([account, { data: [row()] }]);
   assert.equal(result.days.length, 30); assert.equal(result.days.at(-1).spend_minor, 1234);
   assert.equal(result.days[0].spend_minor, 0); assert.ok(result.days.every(day => day.is_final));
-  assert.equal(result.account_id, META_ACCOUNT_ID); assert.equal(result.scope, "account");
+  assert.equal(result.account_id, META_ACCOUNT_ID); assert.equal(result.scope, "campaign");
+  assert.equal(result.source_ref, "evline_campaign_120251518463770454");
+  assert.equal(result.source_ref, ACCOUNTING_META_SCOPE.source_ref);
   assert.equal(result.coverage, "complete"); assert.equal(result.source, "meta_insights");
-  const url = calls[1].url;
-  assert.equal(url.searchParams.get("level"), "account"); assert.equal(url.searchParams.get("time_increment"), "1");
+  const url = calls[2].url;
+  assert.equal(calls[1].url.pathname, `/v24.0/${META_CAMPAIGN_ID}`);
+  assert.equal(url.searchParams.get("level"), "campaign"); assert.equal(url.searchParams.get("time_increment"), "1");
+  assert.deepEqual(JSON.parse(url.searchParams.get("filtering")), filtering);
   assert.deepEqual(JSON.parse(url.searchParams.get("time_range")), { since: "2026-09-09", until: "2026-10-08" });
-  for (const key of ["filtering", "breakdowns", "campaign_id", "access_token"]) assert.equal(url.searchParams.has(key), false);
+  for (const key of ["breakdowns", "campaign_id", "access_token"]) assert.equal(url.searchParams.has(key), false);
   assert.equal(calls[0].options.headers.authorization, `Bearer ${env.META_ADS_INSIGHTS_ACCESS_TOKEN}`);
 });
 test("Europe/Kiev metadata alias is accepted and normalized", async () => {
@@ -52,14 +59,14 @@ test("all pages succeed before zero coverage and next URLs are not followed", as
   const paging = next("CURSOR1"); paging.next += "&filtering=evil&access_token=wrong";
   const { result, calls } = await collect([account, { data: [row()], paging }, { data: [row("2026-10-07", "20")] }]);
   assert.equal(result.days.at(-2).spend_minor, 2000);
-  assert.equal(calls[2].url.searchParams.get("after"), "CURSOR1");
-  assert.equal(calls[2].url.searchParams.has("filtering"), false);
-  assert.equal(calls[2].url.searchParams.has("access_token"), false);
+  assert.equal(calls[3].url.searchParams.get("after"), "CURSOR1");
+  assert.deepEqual(JSON.parse(calls[3].url.searchParams.get("filtering")), filtering);
+  assert.equal(calls[3].url.searchParams.has("access_token"), false);
 });
 test("foreign pagination origins fail without transmitting any next request", async () => {
   const m = mock([account, { data: [], paging: { ...next("A"), next: "https://evil.example/steal?after=A" } }]);
   await assert.rejects(fetchMetaAdSpendSnapshot(env, { now, fetchImpl: m.fetchImpl }), /meta_pagination_invalid/);
-  assert.equal(m.calls.length, 2);
+  assert.equal(m.calls.length, 3);
 });
 test("foreign account pagination path is rejected", async () => {
   await assert.rejects(collect([account, { data: [], paging: { ...next("A"), next: "https://graph.facebook.com/v24.0/act_999/insights?after=A" } }]), /meta_pagination_invalid/);
@@ -83,13 +90,28 @@ test("foreign insight account or currency rejects full snapshot", async () => {
   await assert.rejects(collect([account, { data: [{ ...row(), account_id: "999" }] }]), /meta_account_mismatch/);
   await assert.rejects(collect([account, { data: [{ ...row(), account_currency: "USD" }] }]), /meta_currency_mismatch/);
 });
+test("campaign identity and account ownership are verified even when Insights would be empty", async () => {
+  for (const metadata of [{ ...campaign, id: "120252865188010454" }, { ...campaign, account_id: "999" }, {}]) {
+    const m = mock([account, { data: [] }], metadata);
+    await assert.rejects(fetchMetaAdSpendSnapshot(env, { now, fetchImpl: m.fetchImpl }), /meta_campaign_mismatch/);
+    assert.equal(m.calls.length, 2);
+  }
+});
 test("duplicate, out-of-window, malformed or non-daily dates are rejected", async () => {
   for (const data of [[row(), row()], [row("2026-10-09")], [row("2026-09-08")], [row("2026-02-30")], [{ ...row(), date_stop: "2026-10-09" }]]) {
     await assert.rejects(collect([account, { data }]), /meta_response_invalid/);
   }
 });
-test("campaign/ad-set/ad rows cannot masquerade as account total", async () => {
-  for (const key of ["campaign_id", "adset_id", "ad_id"]) {
+test("foreign or absent campaign IDs cannot enter EVLine totals on any page", async () => {
+  for (const id of ["120252865188010454", "999", undefined]) {
+    await assert.rejects(collect([account, { data: [{ ...row(), campaign_id: id }] }]), /meta_campaign_mismatch/);
+  }
+  await assert.rejects(collect([account, { data: [row()], paging: next("A") }, {
+    data: [{ ...row("2026-10-07"), campaign_id: "120252865188010454" }],
+  }]), /meta_campaign_mismatch/);
+});
+test("ad-set/ad rows cannot masquerade as campaign total", async () => {
+  for (const key of ["adset_id", "ad_id"]) {
     await assert.rejects(collect([account, { data: [{ ...row(), [key]: "123" }] }]), /meta_response_invalid/);
   }
 });

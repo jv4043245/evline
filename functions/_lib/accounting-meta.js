@@ -1,5 +1,8 @@
-// Account-wide, GET-only Meta Insights reader. No advertising mutations.
-export const META_ACCOUNT_ID = "1354524650161143";
+// EVLine-only, GET-only Meta Insights reader. This ad account is shared with BB.
+import { ACCOUNTING_META_SCOPE } from "./accounting.js";
+
+export const META_ACCOUNT_ID = ACCOUNTING_META_SCOPE.account_id;
+export const META_CAMPAIGN_ID = ACCOUNTING_META_SCOPE.campaign_ids[0];
 const ORIGIN = "https://graph.facebook.com";
 const TIMEZONE = "Europe/Kyiv";
 const MAX_BYTES = 128 * 1024;
@@ -8,6 +11,7 @@ const CODES = new Set([
   "meta_configuration_unavailable", "meta_network_unavailable", "meta_api_unavailable",
   "meta_response_invalid", "meta_account_mismatch", "meta_currency_mismatch",
   "meta_timezone_mismatch", "meta_pagination_invalid", "meta_spend_invalid",
+  "meta_campaign_mismatch",
 ]);
 
 function fail(code) { throw Object.assign(new Error(code), { code }); }
@@ -92,6 +96,9 @@ export async function fetchMetaAdSpendSnapshot(env, { fetchImpl = fetch, now = n
   const appSecret = String(env.META_ADS_INSIGHTS_APP_SECRET || "").trim();
   if (!/^v\d{1,2}\.0$/.test(version) || token.length < 32 || /\s/.test(token)
       || (appSecret && (appSecret.length < 32 || appSecret === token))) fail("meta_configuration_unavailable");
+  // A future multi-campaign scope needs deliberate aggregation and source review.
+  if (ACCOUNTING_META_SCOPE.campaign_ids.length !== 1 || !/^\d+$/.test(META_CAMPAIGN_ID)
+      || ACCOUNTING_META_SCOPE.scope !== "campaign") fail("meta_configuration_unavailable");
   const { from, to } = metaCompletedWindow(now);
   const appProof = appSecret ? await proof(token, appSecret) : null;
   const basePath = `/${version}/act_${META_ACCOUNT_ID}`;
@@ -116,13 +123,16 @@ export async function fetchMetaAdSpendSnapshot(env, { fetchImpl = fetch, now = n
   if (account.id !== `act_${META_ACCOUNT_ID}` || account.account_id !== META_ACCOUNT_ID) fail("meta_account_mismatch");
   if (account.currency !== "UAH") fail("meta_currency_mismatch");
   if (!["Europe/Kyiv", "Europe/Kiev"].includes(account.timezone_name)) fail("meta_timezone_mismatch");
+  const campaign = await request(`/${version}/${META_CAMPAIGN_ID}`, { fields: "id,account_id" });
+  if (campaign.id !== META_CAMPAIGN_ID || campaign.account_id !== META_ACCOUNT_ID) fail("meta_campaign_mismatch");
   const path = `${basePath}/insights`;
   const amounts = new Map();
   const seen = new Set();
   let cursor = null;
   for (let page = 0; page < MAX_PAGES; page++) {
     const body = await request(path, {
-      fields: "account_id,account_currency,date_start,date_stop,spend", level: "account",
+      fields: "account_id,account_currency,campaign_id,date_start,date_stop,spend", level: "campaign",
+      filtering: JSON.stringify([{ field: "campaign.id", operator: "IN", value: [META_CAMPAIGN_ID] }]),
       time_increment: "1", time_range: JSON.stringify({ since: from, until: to }), limit: "100",
       ...(cursor ? { after: cursor } : {}),
     });
@@ -131,23 +141,24 @@ export async function fetchMetaAdSpendSnapshot(env, { fetchImpl = fetch, now = n
       if (!row || typeof row !== "object" || Array.isArray(row)) fail("meta_response_invalid");
       if (row.account_id !== META_ACCOUNT_ID) fail("meta_account_mismatch");
       if (row.account_currency !== "UAH") fail("meta_currency_mismatch");
+      if (row.campaign_id !== META_CAMPAIGN_ID) fail("meta_campaign_mismatch");
       if (!dateValid(row.date_start) || row.date_stop !== row.date_start
           || row.date_start < from || row.date_start > to || amounts.has(row.date_start)
-          || row.campaign_id !== undefined || row.adset_id !== undefined || row.ad_id !== undefined) fail("meta_response_invalid");
+          || row.adset_id !== undefined || row.ad_id !== undefined) fail("meta_response_invalid");
       amounts.set(row.date_start, minorUnits(row.spend));
     }
     cursor = nextCursor(body, path, seen);
     if (!cursor) break;
     if (page === MAX_PAGES - 1) fail("meta_pagination_invalid");
   }
-  // Missing days mean zero only after verified account identity and every page succeeds.
+  // Zero applies only to this verified EVLine campaign, never the shared account.
   const days = [];
   for (let date = from; date <= to; date = shift(date, 1)) {
     days.push({ date, spend_minor: amounts.get(date) ?? 0, is_final: true });
   }
   return {
     provider: "meta", account_id: META_ACCOUNT_ID, currency: "UAH", timezone: TIMEZONE,
-    from, to, fetched_at: now.toISOString(), scope: "account", coverage: "complete",
-    source: "meta_insights", days,
+    from, to, fetched_at: now.toISOString(), scope: ACCOUNTING_META_SCOPE.scope, coverage: "complete",
+    source: "meta_insights", source_ref: ACCOUNTING_META_SCOPE.source_ref, days,
   };
 }

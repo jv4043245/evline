@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20261005-payment-source">
     <link rel="stylesheet" href="/admin/supplier-documents.css?v=20261005">
-    <link rel="stylesheet" href="/admin/accounting.css?v=20261009">
-    <script type="module" src="/admin/admin.js?v=20261009-accounting"></script>
+    <link rel="stylesheet" href="/admin/accounting.css?v=20261009-history">
+    <script type="module" src="/admin/admin.js?v=20261009-accounting-history"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -669,7 +669,13 @@
       <section class="admin-view accounting-view" data-admin-view="accounting" hidden aria-labelledby="accounting-title">
         <div class="accounting-heading">
           <h1 id="accounting-title">Реклама</h1>
-          <p class="muted" data-accounting-period></p>
+          <div class="accounting-controls">
+            <p class="muted" data-accounting-period></p>
+            <div class="accounting-segmented" role="group" aria-label="Групування витрат">
+              <button type="button" data-accounting-granularity="months" aria-pressed="true">Місяці</button>
+              <button type="button" data-accounting-granularity="days" aria-pressed="false">Дні</button>
+            </div>
+          </div>
         </div>
         <p class="accounting-message" data-accounting-message role="status" aria-live="polite" hidden></p>
         <div data-accounting-content aria-busy="false">
@@ -695,10 +701,10 @@
             <div class="accounting-chart" data-accounting-chart></div>
           </section>
           <section class="admin-panel accounting-history" aria-labelledby="accounting-history-title">
-            <div class="admin-panel__head"><h2 id="accounting-history-title">За днями</h2></div>
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Щоденні витрати та замовлення">
+            <div class="admin-panel__head"><h2 id="accounting-history-title">За місяцями</h2></div>
+            <div class="table-wrap" data-accounting-table-region tabindex="0" role="region" aria-label="Щомісячні витрати та замовлення">
               <table class="orders-table accounting-table">
-                <thead><tr><th scope="col">Дата</th><th scope="col">Google, грн</th><th scope="col">Meta, грн</th><th scope="col">Замовлення</th></tr></thead>
+                <thead><tr><th scope="col" data-accounting-date-heading>Місяць</th><th scope="col">Google, грн</th><th scope="col">Meta, грн</th><th scope="col">Замовлення</th></tr></thead>
                 <tbody data-accounting-daily><tr><td colspan="4" class="muted accounting-empty">Дані ще не завантажено.</td></tr></tbody>
               </table>
             </div>
