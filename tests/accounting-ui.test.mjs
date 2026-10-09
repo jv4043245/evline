@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
-import { accountingPeriod, accountingMonths, accountingSpendTotal, createAccountingPeriodState, renderAccounting, createAccountingView } from "../admin/accounting.js";
+import { accountingPeriod, accountingMonths, accountingChartMonths, accountingSpendTotal, createAccountingPeriodState, renderAccounting, createAccountingView } from "../admin/accounting.js";
 
 const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../admin/admin.js", import.meta.url), "utf8");
@@ -92,18 +92,19 @@ test("latest import failure is visible without discarding known costs or exposin
   assert.doesNotMatch(root.querySelector('[data-admin-view="accounting"]').textContent, /upstream_unavailable/);
 });
 
-test("separate chart units share time, and missing costs break the line rather than implying zero", t => {
+test("three lines use explicit separate units, and missing costs break the line rather than implying zero", t => {
   const root = documentFor(t);
   daysMode(root);
   renderAccounting(root, fixture());
   const svg = root.querySelector("[data-accounting-chart] svg");
-  assert.equal(svg.getAttribute("role"), "img");
+  assert.equal(svg.getAttribute("role"), "group");
   assert.ok(svg.querySelector("title").textContent);
-  assert.match(svg.querySelector("desc").textContent, /Два окремі графіки/);
+  assert.match(svg.querySelector("desc").textContent, /Ліва шкала.*гривнях; права.*штуках/);
   assert.equal(svg.querySelectorAll("polyline.accounting-chart__google").length, 2);
   assert.equal(svg.querySelectorAll("polyline.accounting-chart__meta").length, 0);
   assert.equal(svg.querySelectorAll("polyline.accounting-chart__orders").length, 1);
-  assert.match(svg.querySelector(".accounting-chart__label").textContent, /^Google, грн$/);
+  assert.equal(svg.querySelector('[data-chart-axis="spend"]').textContent, "Реклама, грн");
+  assert.equal(svg.querySelector('[data-chart-axis="orders"]').textContent, "Замовлення, шт.");
 });
 
 test("chart uses the container width on a phone rather than shrinking 800px labels", t => {
@@ -111,7 +112,7 @@ test("chart uses the container width on a phone rather than shrinking 800px labe
   daysMode(root);
   Object.defineProperty(root.querySelector("[data-accounting-chart]"), "clientWidth", { value: 330 });
   renderAccounting(root, fixture());
-  assert.equal(root.querySelector("[data-accounting-chart] svg").getAttribute("viewBox"), "0 0 330 260");
+  assert.equal(root.querySelector("[data-accounting-chart] svg").getAttribute("viewBox"), "0 0 330 270");
 });
 
 test("empty data and invalid rows are safe and never invent zero balances or display a chart", t => {
@@ -295,4 +296,95 @@ test("server monthly rows drive history; charts mark an unfinished month instead
   assert.equal(root.querySelector("[data-accounting-daily] td").textContent, "200,00");
   assert.equal(root.querySelector("polyline.accounting-chart__google").getAttribute("stroke-dasharray"), "4 4");
   assert.match(root.querySelector("[data-accounting-chart] title").textContent, /за місяцями/);
+});
+
+const yearlyFixture = () => ({ ...fixture(), monthly: [
+  { month: "2025-09", from: "2025-09-01", to: "2025-09-30", google_uah: 0, meta_uah: 0, orders: 0, google_coverage: "complete", meta_coverage: "complete" },
+  { month: "2026-08", from: "2026-08-01", to: "2026-08-31", google_uah: 30573.71, meta_uah: 6753.04, orders: 49, google_coverage: "complete", meta_coverage: "complete" },
+  { month: "2026-09", from: "2026-09-01", to: "2026-09-30", google_uah: 5774.67, meta_uah: 12406.57, orders: 106, google_coverage: "complete", meta_coverage: "complete" },
+  { month: "2026-10", from: "2026-10-01", to: "2026-10-08", google_uah: 3348.19, meta_uah: 3646.34, orders: 35, google_coverage: "complete", meta_coverage: "complete" },
+] });
+
+test("calendar contains exactly Jan–Dec of selected year; absent months stay unknown while confirmed zero survives", () => {
+  const data = yearlyFixture();
+  const rows = accountingChartMonths(data.monthly, "2026");
+  assert.equal(rows.length, 12);
+  assert.equal(rows[0].month, "2026-01");
+  assert.equal(rows[11].month, "2026-12");
+  assert.equal(rows[9].google_uah, 3348.19);
+  assert.equal(rows[9].to, "2026-10-08");
+  for (const index of [0, 10, 11]) for (const key of ["google_uah", "meta_uah", "orders"]) assert.equal(rows[index][key], null);
+  assert.equal(accountingChartMonths(data.monthly, "2025")[8].orders, 0);
+});
+
+test("chart year defaults to latest and switches without changing table, cards or refetching", async t => {
+  const root = documentFor(t), urls = [];
+  const view = createAccountingView(root, async url => { urls.push(url); return yearlyFixture(); }, now);
+  await view.load("all");
+  const select = root.querySelector('[data-accounting-chart-year]');
+  assert.equal(select.value, "2026");
+  assert.deepEqual([...select.options].map(option => option.value), ["2026", "2025"]);
+  assert.equal(root.querySelectorAll('[data-chart-month]').length, 12);
+  assert.equal(root.querySelector('[data-chart-month="2026-01"]').textContent, "Січ");
+  assert.equal(root.querySelector('[data-chart-month="2026-10"]').textContent, "Жов*");
+  assert.equal(root.querySelectorAll('[data-chart-point$="2026-11"]').length, 0);
+  const table = root.querySelector('[data-accounting-daily]').textContent;
+  select.value = "2025"; select.dispatchEvent(new root.defaultView.Event('change'));
+  assert.equal(root.querySelectorAll('[data-chart-point]').length, 3);
+  assert.ok(root.querySelector('[data-chart-point="orders:2025-09"]'));
+  assert.equal(root.querySelector('[data-accounting-daily]').textContent, table);
+  assert.equal(root.querySelector('[data-accounting-total="orders"]').textContent, "4");
+  assert.equal(urls.length, 1);
+  root.querySelector('[data-accounting-granularity="days"]').click();
+  assert.equal(select.hidden, true);
+  root.querySelector('[data-accounting-granularity="months"]').click();
+  assert.equal(select.value, "2025");
+});
+
+test("all three series share calendar positions and spending shares one scale; order ticks are exact integers", t => {
+  const root = documentFor(t), data = yearlyFixture();
+  data.monthly = [{ ...data.monthly[1], google_uah: 9, meta_uah: 9, orders: 9 }];
+  renderAccounting(root, data);
+  const google = root.querySelector('[data-chart-point="google:2026-08"]');
+  const meta = root.querySelector('[data-chart-point="meta:2026-08"]');
+  const orders = root.querySelector('[data-chart-point="orders:2026-08"]');
+  assert.equal(Number(google.getAttribute('cx')), Number(meta.getAttribute('x')) + 3);
+  assert.equal(Number(google.getAttribute('cy')), Number(meta.getAttribute('y')) + 3);
+  assert.equal(google.getAttribute('cx'), orders.getAttribute('cx'));
+  assert.deepEqual([...root.querySelectorAll('[data-chart-tick="orders"]')].map(el => el.textContent), ['0', '3', '6', '9', '12']);
+  assert.deepEqual([...root.querySelectorAll('[data-chart-tick="spend"]')].map(el => el.textContent), ['0', '2,5', '5', '7,5', '10']);
+});
+
+test("tooltips show exact monthly values, all-source orders and partial dates through tap and keyboard", t => {
+  const root = documentFor(t); renderAccounting(root, yearlyFixture());
+  const october = root.querySelector('[data-chart-date="2026-10"]');
+  assert.match(october.getAttribute('aria-label'), /Замовлення з усіх джерел/);
+  assert.equal(root.querySelectorAll('.accounting-chart__hit[tabindex="0"]').length, 1);
+  october.dispatchEvent(new root.defaultView.Event('click'));
+  const tooltip = root.querySelector('[role="tooltip"]');
+  assert.equal(tooltip.hidden, false);
+  assert.match(tooltip.textContent, /3\s348,19/);
+  assert.match(tooltip.textContent, /3\s646,34/);
+  assert.match(tooltip.textContent, /01\.10–08\.10/);
+  const leave = new root.defaultView.Event('pointerleave'); Object.defineProperty(leave, 'pointerType', { value: 'touch' });
+  root.querySelector('[data-accounting-chart] svg').dispatchEvent(leave);
+  assert.equal(tooltip.hidden, false);
+  october.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+  assert.equal(root.activeElement.getAttribute('data-chart-date'), '2026-09');
+  assert.match(tooltip.textContent, /5\s774,67/);
+  assert.match(tooltip.textContent, /106/);
+  root.activeElement.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'End' }));
+  assert.equal(root.activeElement.getAttribute('data-chart-date'), '2026-12');
+  assert.match(tooltip.textContent, /Немає даних/);
+  root.activeElement.dispatchEvent(new root.defaultView.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(tooltip.hidden, true);
+});
+
+test("all twelve mobile month labels remain visible without extending lines into missing months", t => {
+  const root = documentFor(t);
+  Object.defineProperty(root.querySelector('[data-accounting-chart]'), 'clientWidth', { value: 330 });
+  renderAccounting(root, yearlyFixture());
+  assert.deepEqual([...root.querySelectorAll('[data-chart-month]')].map(el => el.textContent), ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10*', '11', '12']);
+  assert.equal(root.querySelectorAll('[data-chart-point]').length, 9);
+  assert.match(root.querySelector('[data-accounting-chart-note]').textContent, /неповний період/);
 });

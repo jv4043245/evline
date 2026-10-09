@@ -23,7 +23,11 @@
 .accounting-dot--orders { background: var(--accounting-orders); }
 .accounting-view .admin-panel__head { padding: 19px 22px 13px; }
 .accounting-view .admin-panel__head h2 { font-size: 15px; font-weight: 600; }
-.accounting-chart { padding: 0 14px 12px; }
+.accounting-trend .admin-panel__head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+.accounting-trend select { width: auto; min-height: 32px; padding: 4px 28px 4px 10px; font-size: 13px; border: 1px solid #e2e5e9; border-radius: 7px; background-color: #fff; }
+.accounting-chart-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 0 22px 14px; font-size: 12px; color: #536171; }
+.accounting-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.accounting-chart { position: relative; padding: 0 14px; }
 .accounting-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .accounting-chart text { font: 11px system-ui, sans-serif; fill: #6b7280; }
 .accounting-chart .accounting-chart__label { font-weight: 550; fill: #536171; }
@@ -31,6 +35,14 @@
 .accounting-chart__meta { stroke: var(--accounting-meta); fill: var(--accounting-meta); }
 .accounting-chart__orders { stroke: var(--accounting-orders); fill: var(--accounting-orders); }
 .accounting-chart__grid { stroke: #edf0f3; stroke-width: 1; }
+.accounting-chart__cursor { stroke: #aab4c1; stroke-width: 1; stroke-dasharray: 3 4; pointer-events: none; }
+.accounting-chart__hit { fill: transparent; cursor: crosshair; outline: none; }
+.accounting-chart__hit:focus-visible { fill: #3573cf08; stroke: #3573cf; stroke-width: 1; }
+.accounting-chart-tooltip { position: absolute; z-index: 2; top: 32px; width: 235px; max-width: calc(100% - 24px); padding: 12px 14px; border: 1px solid #e2e5e9; border-radius: 10px; background: #fff; color: #243746; box-shadow: 0 5px 20px #24374615; font-size: 12px; pointer-events: none; }
+.accounting-chart-tooltip strong { display: block; margin-bottom: 8px; font-size: 13px; }
+.accounting-chart-tooltip div { display: flex; justify-content: space-between; gap: 12px; margin: 5px 0; font-variant-numeric: tabular-nums; }
+.accounting-chart-tooltip small { display: block; margin-top: 8px; color: #6b7280; }
+.accounting-chart-note { margin: 0; padding: 3px 22px 17px; color: #6b7280; font-size: 11px; line-height: 1.5; }
 .accounting-table th, .accounting-table td { padding: 13px 22px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .accounting-table th { font-size: 11px; font-weight: 550; text-transform: none; letter-spacing: 0; }
 .accounting-table th:not(:first-child), .accounting-table td:not(:first-child) { text-align: right; }
@@ -58,7 +70,9 @@
   .accounting-card--orders strong { margin: 0 0 0 auto; font-size: 24px; }
   .accounting-card--orders small { margin-left: 2px; }
   .accounting-table th, .accounting-table td { padding: 12px 13px; }
-  .accounting-chart { padding: 0 7px 9px; }
+  .accounting-chart { padding: 0 7px; }
+  .accounting-chart-legend { gap: 7px 14px; padding: 0 14px 12px; font-size: 11px; }
+  .accounting-chart-note { padding: 3px 14px 14px; }
   .accounting-view .admin-panel__head { padding: 17px 14px 10px; }
 }
 @media (max-width: 390px) {

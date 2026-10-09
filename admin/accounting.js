@@ -3,6 +3,7 @@ const DAY = 86_400_000;
 const money = new Intl.NumberFormat("uk-UA", { style: "currency", currency: "UAH", maximumFractionDigits: 2 });
 const decimal = new Intl.NumberFormat("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const integer = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
+const axisNumber = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
 const shortDate = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 const fullDate = new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 const monthDate = new Intl.DateTimeFormat("uk-UA", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -136,29 +137,63 @@ function svgElement(document, tag, attributes = {}, text) {
   return node;
 }
 
-function renderChart(root, rows, mode) {
+// Calendar slots are deliberately empty outside the loaded report period.
+export function accountingChartMonths(rows, year) {
+  const byMonth = new Map(rows.map(row => [row.month, row]));
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+    return byMonth.get(month) || { month, from: `${month}-01`, to: monthEnd(month), google_uah: null, meta_uah: null, orders: null };
+  });
+}
+
+function chartCeiling(value, whole = false) {
+  const roughStep = Math.max(1, value) / 4;
+  const power = 10 ** Math.floor(Math.log10(roughStep));
+  const step = Math.max(1, [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(n => n * power >= roughStep) * power);
+  return (whole ? Math.ceil(step) : step) * 4;
+}
+
+function renderChart(root, inputRows, mode) {
   const panel = root.querySelector("[data-accounting-trend]");
   const mount = root.querySelector("[data-accounting-chart]");
+  const yearSelect = root.querySelector("[data-accounting-chart-year]");
   mount.replaceChildren();
-  panel.hidden = rows.length < 2 || !rows.some(row => known(row.google_uah) || known(row.meta_uah));
+  panel.hidden = !inputRows.some(row => known(row.google_uah) || known(row.meta_uah) || known(row.orders));
   if (panel.hidden) return;
   const document = root.ownerDocument || root;
-  const width = Math.max(280, mount.clientWidth || 800);
-  const svg = svgElement(document, "svg", { viewBox: `0 0 ${width} 260`, role: "img", "aria-labelledby": "accounting-chart-title accounting-chart-description" });
-  svg.append(svgElement(document, "title", { id: "accounting-chart-title" }, `Витрати на рекламу та замовлення ${mode === "months" ? "за місяцями" : "за днями"}`));
-  svg.append(svgElement(document, "desc", { id: "accounting-chart-description" }, "Два окремі графіки зі спільними датами. Вгорі — Google синім і Meta фіолетовим у гривнях; унизу — усі замовлення CRM зеленим. Пропуски означають відсутні дані, пунктир — неповні дані або частину місяця. Точні значення наведено в таблиці нижче."));
-  const left = 57, right = width - 12, x = index => left + index * (right - left) / Math.max(1, rows.length - 1);
-  const costMax = Math.max(1, ...rows.flatMap(row => [row.google_uah, row.meta_uah]).filter(known));
-  const ordersMax = Math.max(1, ...rows.map(row => row.orders).filter(known));
-  const costLabels = [["google_uah", "Google"], ["meta_uah", "Meta"]].filter(([key]) => rows.some(row => known(row[key]))).map(([, label]) => label).join(" · ");
-  for (const [top, bottom, max, label] of [[24, 132, costMax, `${costLabels}, грн`], [175, 229, ordersMax, "Замовлення"]]) {
-    svg.append(svgElement(document, "text", { x: left, y: top - 11, class: "accounting-chart__label" }, label));
-    for (const [y, value] of [[top, max], [bottom, 0]]) {
-      svg.append(svgElement(document, "line", { x1: left, x2: right, y1: y, y2: y, class: "accounting-chart__grid" }));
-      svg.append(svgElement(document, "text", { x: left - 10, y: y + 4, "text-anchor": "end" }, integer.format(value)));
-    }
+  yearSelect.hidden = mode !== "months";
+  let rows = inputRows;
+  if (mode === "months") {
+    const years = [...new Set(rows.map(row => row.month.slice(0, 4)))].sort().reverse();
+    const selected = years.includes(yearSelect.value) ? yearSelect.value : years[0];
+    yearSelect.replaceChildren(...years.map(year => {
+      const option = document.createElement("option"); option.value = year; option.textContent = year; return option;
+    }));
+    yearSelect.value = selected;
+    rows = accountingChartMonths(rows, selected);
   }
-  for (const [key, series, top, bottom, max] of [["google_uah", "google", 24, 132, costMax], ["meta_uah", "meta", 24, 132, costMax], ["orders", "orders", 175, 229, ordersMax]]) {
+  const padding = mount.clientWidth && document.defaultView ? parseFloat(document.defaultView.getComputedStyle(mount).paddingLeft) + parseFloat(document.defaultView.getComputedStyle(mount).paddingRight) : 0;
+  const width = Math.max(280, (mount.clientWidth || 800) - (padding || 0));
+  const height = width < 500 ? 270 : 290;
+  const svg = svgElement(document, "svg", { viewBox: `0 0 ${width} ${height}`, role: "group", "aria-labelledby": "accounting-chart-title accounting-chart-description" });
+  svg.append(svgElement(document, "title", { id: "accounting-chart-title" }, `Витрати на рекламу та замовлення ${mode === "months" ? "за місяцями" : "за днями"}`));
+  svg.append(svgElement(document, "desc", { id: "accounting-chart-description" }, "Три лінії. Ліва шкала — Google Ads і Facebook / Instagram у гривнях; права — створені замовлення CRM з усіх джерел, у штуках. Шкали різні, обидві починаються з нуля. Порожні місяці не означають нуль. Пунктир і зірочка — неповний період або дані. Стрілки перемикають дати; точні значення доступні при наведенні, натисканні або фокусі."));
+  const left = width < 500 ? 52 : 62, right = width - (width < 500 ? 31 : 45), top = 28, bottom = height - 35;
+  const x = index => left + (rows.length === 1 ? .5 : index / (rows.length - 1)) * (right - left);
+  const costMax = chartCeiling(Math.max(0, ...rows.flatMap(row => [row.google_uah, row.meta_uah]).filter(known)));
+  const ordersMax = chartCeiling(Math.max(0, ...rows.map(row => row.orders).filter(known)), true);
+  const seriesConfig = [["google_uah", "google", "Google Ads", costMax], ["meta_uah", "meta", "Facebook / Instagram", costMax], ["orders", "orders", "Замовлення CRM", ordersMax]];
+  const isPartial = (row, series) => (mode === "months" && partialMonth(row)) || (series !== "orders" && row[`${series}_coverage`] !== "complete");
+  svg.append(svgElement(document, "text", { x: left, y: 13, class: "accounting-chart__label", "data-chart-axis": "spend" }, "Реклама, грн"));
+  svg.append(svgElement(document, "text", { x: right, y: 13, "text-anchor": "end", class: "accounting-chart__label", "data-chart-axis": "orders" }, "Замовлення, шт."));
+  for (let tick = 0; tick <= 4; tick++) {
+    const y = bottom - tick / 4 * (bottom - top), cost = costMax * tick / 4;
+    svg.append(svgElement(document, "line", { x1: left, x2: right, y1: y, y2: y, class: "accounting-chart__grid" }));
+    const costLabel = width < 500 && cost >= 1000 ? `${axisNumber.format(cost / 1000)} тис.` : axisNumber.format(cost);
+    svg.append(svgElement(document, "text", { x: left - 8, y: y + 4, "text-anchor": "end", "data-chart-tick": "spend" }, costLabel));
+    svg.append(svgElement(document, "text", { x: right + 8, y: y + 4, "data-chart-tick": "orders" }, integer.format(ordersMax * tick / 4)));
+  }
+  for (const [key, series, , max] of seriesConfig) {
     let points = [], previousPartial = false, strokePartial = false;
     const flush = () => {
       if (!points.length) return;
@@ -168,7 +203,7 @@ function renderChart(root, rows, mode) {
     };
     rows.forEach((row, index) => {
       if (!known(row[key])) return flush();
-      const partial = (mode === "months" && partialMonth(row)) || (series !== "orders" && row[`${series}_coverage`] !== "complete");
+      const partial = isPartial(row, series);
       const point = [x(index), bottom - Math.max(0, row[key]) / max * (bottom - top)];
       const nextStrokePartial = points.length ? partial || previousPartial : partial;
       if (points.length > 1 && nextStrokePartial !== strokePartial) {
@@ -179,18 +214,66 @@ function renderChart(root, rows, mode) {
       strokePartial = nextStrokePartial;
       previousPartial = partial;
       points.push(point);
-      if (partial) {
-        const marker = svgElement(document, "circle", { cx: point[0], cy: point[1], r: 3, class: `accounting-chart__${series}`, style: "fill:white", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" });
-        marker.append(svgElement(document, "title", {}, `${periodLabel(row, mode)} · Неповні дані`));
+      if (mode === "months" || partial || rows.length <= 31) {
+        const marker = svgElement(document, series === "meta" ? "rect" : "circle", { ...(series === "meta" ? { x: point[0] - 3, y: point[1] - 3, width: 6, height: 6 } : { cx: point[0], cy: point[1], r: series === "orders" ? 2.5 : 4 }), class: `accounting-chart__${series}`, "data-chart-point": `${series}:${row.month || row.date}`, style: partial || series === "google" ? "fill:white" : "", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" });
+        marker.append(svgElement(document, "title", {}, `${periodLabel(row, mode)}${partial ? " · Неповні дані" : ""}`));
         svg.append(marker);
       }
     });
     flush();
   }
-  for (const index of new Set([0, Math.floor((rows.length - 1) / 2), rows.length - 1])) {
-    svg.append(svgElement(document, "text", { x: x(index), y: 251, "text-anchor": index === 0 ? "start" : index === rows.length - 1 ? "end" : "middle" }, periodLabel(rows[index], mode, true)));
+  const months = ["Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру"];
+  const tickCount = Math.min(rows.length, width < 500 ? 3 : 7);
+  const tickIndices = mode === "months" ? rows.map((_, i) => i) : [...new Set(Array.from({ length: tickCount }, (_, i) => Math.round(i * (rows.length - 1) / Math.max(1, tickCount - 1))))];
+  for (const index of tickIndices) {
+    const row = rows[index], partial = mode === "months" && seriesConfig.some(([key, series]) => known(row[key]) && isPartial(row, series));
+    const label = mode === "months" ? width < 500 ? String(index + 1).padStart(2, "0") : months[index] : periodLabel(row, mode, true);
+    svg.append(svgElement(document, "text", { x: x(index), y: height - 12, "text-anchor": "middle", "data-chart-month": row.month || "" }, `${label}${partial ? "*" : ""}`));
   }
-  mount.append(svg);
+  const tooltip = document.createElement("div"); tooltip.className = "accounting-chart-tooltip"; tooltip.hidden = true;
+  tooltip.setAttribute("role", "tooltip"); tooltip.id = "accounting-chart-tooltip";
+  const cursor = svgElement(document, "line", { y1: top, y2: bottom, class: "accounting-chart__cursor", visibility: "hidden" });
+  svg.append(cursor);
+  const valueLabel = (row, key, series) => known(row[key]) ? `${key === "orders" ? integer.format(row[key]) : money.format(row[key])}${isPartial(row, series) ? " *" : ""}` : "Немає даних";
+  const hide = () => { tooltip.hidden = true; cursor.setAttribute("visibility", "hidden"); };
+  const show = index => {
+    const row = rows[index]; tooltip.replaceChildren();
+    const heading = document.createElement("strong"); heading.textContent = periodLabel(row, mode); tooltip.append(heading);
+    for (const [key, series, label] of seriesConfig) {
+      const line = document.createElement("div"), name = document.createElement("span"), amount = document.createElement("span");
+      name.textContent = label; amount.textContent = valueLabel(row, key, series); line.append(name, amount); tooltip.append(line);
+    }
+    const partial = seriesConfig.some(([key, series]) => known(row[key]) && isPartial(row, series));
+    if (partial) {
+      const note = document.createElement("small");
+      note.textContent = mode === "months" ? `${shortDate.format(dateValue(row.from))}–${shortDate.format(dateValue(row.to))} · неповний місяць або дані` : "* Неповні дані";
+      tooltip.append(note);
+    }
+    const pointX = x(index) + (padding || 0) / 2;
+    tooltip.style.left = `${Math.max(12, Math.min(width - 247, pointX > width / 2 ? pointX - 247 : pointX + 12))}px`;
+    tooltip.hidden = false;
+    cursor.setAttribute("x1", x(index)); cursor.setAttribute("x2", x(index)); cursor.setAttribute("visibility", "visible");
+  };
+  const targets = [], latest = rows.findLastIndex(row => seriesConfig.some(([key]) => known(row[key])));
+  rows.forEach((row, index) => {
+    const edgeLeft = index ? (x(index - 1) + x(index)) / 2 : left - 7;
+    const edgeRight = index < rows.length - 1 ? (x(index) + x(index + 1)) / 2 : right + 7;
+    const target = svgElement(document, "rect", { x: edgeLeft, y: top, width: edgeRight - edgeLeft, height: height - top, class: "accounting-chart__hit", role: "button", tabindex: index === latest ? "0" : "-1", "data-chart-date": row.month || row.date, "aria-label": `${periodLabel(row, mode)}. ${seriesConfig.map(([key, series, label]) => `${label}: ${valueLabel(row, key, series)}`).join(". ")}. Замовлення з усіх джерел.`, "aria-describedby": "accounting-chart-tooltip" });
+    for (const event of ["pointerenter", "focus", "click"]) target.addEventListener(event, () => show(index));
+    target.addEventListener("blur", hide);
+    target.addEventListener("keydown", event => {
+      if (event.key === "Escape") { hide(); return; }
+      if (["Enter", " "].includes(event.key)) { event.preventDefault(); show(index); return; }
+      const next = { ArrowLeft: Math.max(0, index - 1), ArrowRight: Math.min(rows.length - 1, index + 1), Home: 0, End: rows.length - 1 }[event.key];
+      if (next === undefined) return;
+      event.preventDefault(); targets.forEach((item, i) => item.setAttribute("tabindex", i === next ? "0" : "-1")); targets[next].focus();
+    });
+    targets.push(target); svg.append(target);
+  });
+  svg.addEventListener("pointerleave", event => { if (event.pointerType !== "touch") hide(); });
+  const partial = rows.some(row => seriesConfig.some(([key, series]) => known(row[key]) && isPartial(row, series)));
+  root.querySelector("[data-accounting-chart-note]").textContent = `Замовлення CRM — усі джерела.${partial ? " * Пунктир — неповний період або дані." : ""}`;
+  mount.append(svg, tooltip);
 }
 
 export function renderAccounting(root, data = {}) {
@@ -255,6 +338,9 @@ export function createAccountingView(root, api, now = () => new Date()) {
       root.querySelectorAll("[data-accounting-granularity]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
       renderAccounting(root, displayedData || {});
     });
+  });
+  root.querySelector("[data-accounting-chart-year]")?.addEventListener("change", () => {
+    if (displayedData) renderChart(root, viewRows(displayedData, "months"), "months");
   });
   const Resize = (root.ownerDocument || root).defaultView?.ResizeObserver;
   if (content && Resize) {

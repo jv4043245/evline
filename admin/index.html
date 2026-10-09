@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20261005-payment-source">
     <link rel="stylesheet" href="/admin/supplier-documents.css?v=20261005">
-    <link rel="stylesheet" href="/admin/accounting.css?v=20261009-compact-cards">
+    <link rel="stylesheet" href="/admin/accounting.css?v=20261009-year-chart">
     <link rel="stylesheet" href="/admin/accounting-profit.css?v=20261009-profit">
     <link rel="stylesheet" href="/admin/accounting-provider.css?v=20261009-reports-mobile">
-    <script type="module" src="/admin/admin.js?v=20261009-accounting-reports"></script>
+    <script type="module" src="/admin/admin.js?v=20261009-year-chart"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -705,8 +705,14 @@
             </article>
           </section>
           <section class="admin-panel accounting-trend" data-accounting-trend hidden aria-labelledby="accounting-trend-title">
-            <div class="admin-panel__head"><h2 id="accounting-trend-title">Динаміка</h2></div>
+            <div class="admin-panel__head"><h2 id="accounting-trend-title">Динаміка</h2><select data-accounting-chart-year aria-label="Рік графіка"></select></div>
+            <div class="accounting-chart-legend" aria-label="Лінії графіка">
+              <span><i class="accounting-dot accounting-dot--google" aria-hidden="true"></i>Google Ads</span>
+              <span><i class="accounting-dot accounting-dot--meta" aria-hidden="true"></i>Facebook / Instagram</span>
+              <span><i class="accounting-dot accounting-dot--orders" aria-hidden="true"></i>Замовлення CRM</span>
+            </div>
             <div class="accounting-chart" data-accounting-chart></div>
+            <p class="accounting-chart-note" data-accounting-chart-note></p>
           </section>
           <section class="admin-panel accounting-history" aria-labelledby="accounting-history-title">
             <div class="admin-panel__head"><h2 id="accounting-history-title">За місяцями</h2></div>
