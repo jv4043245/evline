@@ -12,10 +12,10 @@
 .accounting-segmented button:focus-visible { outline: 2px solid var(--accounting-google); outline-offset: 2px; }
 .accounting-cards { display: grid; grid-template-columns: 1fr 1fr .8fr; gap: 14px; margin-bottom: 18px; }
 .accounting-card, .accounting-view .admin-panel { box-shadow: none; border-color: #e2e5e9; border-radius: 14px; }
-.accounting-card { min-width: 0; padding: 22px; }
-.accounting-card h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; font-weight: 550; color: #536171; }
-.accounting-card strong { margin: 16px 0 12px; font-size: clamp(23px, 2.6vw, 34px); font-weight: 650; line-height: 1.1; letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.accounting-card small { min-height: 17px; font-size: 12px; line-height: 1.5; }
+.accounting-card { min-width: 0; padding: 7px 22px; }
+.accounting-card h2 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; font-weight: 550; line-height: 1.2; color: #536171; }
+.accounting-card strong { margin: 3px 0 2px; font-size: 24px; font-weight: 650; line-height: 1.1; letter-spacing: -.035em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.accounting-card small { min-height: 0; font-size: 12px; line-height: 1.25; }
 .accounting-card small[data-status="partial"], .accounting-card small[data-status="error"] { color: #895b13; }
 .accounting-dot { display: inline-block !important; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; }
 .accounting-dot--google { background: var(--accounting-google); }
@@ -51,10 +51,10 @@
   .accounting-heading h1 { font-size: 25px; }
   .accounting-controls { justify-content: flex-start; }
   .accounting-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .accounting-card { padding: 17px 14px; }
+  .accounting-card { padding: 7px 14px; }
   .accounting-card h2 { font-size: 12px; }
-  .accounting-card strong { font-size: 25px; }
-  .accounting-card--orders { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .accounting-card strong { font-size: 23px; }
+  .accounting-card--orders { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 7px 14px; }
   .accounting-card--orders strong { margin: 0 0 0 auto; font-size: 24px; }
   .accounting-card--orders small { margin-left: 2px; }
   .accounting-table th, .accounting-table td { padding: 12px 13px; }
@@ -62,7 +62,7 @@
   .accounting-view .admin-panel__head { padding: 17px 14px 10px; }
 }
 @media (max-width: 390px) {
-  .accounting-card { padding: 16px 11px; }
+  .accounting-card { padding: 7px 11px; }
   .accounting-card h2 { font-size: 11px; }
   .accounting-card strong { font-size: 22px; }
   .accounting-card--orders { gap: 8px; }
