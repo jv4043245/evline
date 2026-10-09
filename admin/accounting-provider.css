@@ -46,7 +46,8 @@
   .accounting-provider__summary > small { flex-basis: 100%; margin-left: 0; }
   .accounting-provider__panel-heading, .accounting-provider__table th, .accounting-provider__table td { padding-left: 16px; padding-right: 16px; }
   .accounting-provider__file-row, .accounting-provider__upload { padding: 16px; }
-  .accounting-provider__file-row { align-items: flex-start; }
+  .accounting-provider__file-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .accounting-provider__file-row button { align-self: flex-start; width: auto; }
   .accounting-provider__archive > .accounting-provider__message { margin-left: 16px; margin-right: 16px; }
   .accounting-provider__fields { grid-template-columns: 1fr 1fr; }
   .accounting-provider__fields label:last-child { grid-column: 1 / -1; }
