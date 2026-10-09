@@ -52,6 +52,22 @@ export function createAccountingPeriodState(storage) {
 const monthEnd = month => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).toISOString().slice(0, 10);
 const partialMonth = row => row.from !== `${row.month}-01` || row.to !== monthEnd(row.month);
 
+// Both channels must be known. Sum integer kopecks and retain partial coverage.
+export function accountingSpendTotal(row = {}) {
+  const missing = { total_uah: null, total_coverage: "missing" };
+  const amounts = [];
+  for (const provider of ["google", "meta"]) {
+    const value = row[`${provider}_uah`];
+    if (!known(value) || value < 0 || !["complete", "partial"].includes(row[`${provider}_coverage`])) return missing;
+    const minor = Math.round(value * 100);
+    if (!Number.isSafeInteger(minor)) return missing;
+    amounts.push(minor);
+  }
+  const total = amounts[0] + amounts[1];
+  if (!Number.isSafeInteger(total)) return missing;
+  return { total_uah: total / 100, total_coverage: row.google_coverage === "complete" && row.meta_coverage === "complete" ? "complete" : "partial" };
+}
+
 // Compatibility during rolling deploys: aggregate integer kopecks, never round
 // each floating-point addition, and do not turn absent days into zero expense.
 export function accountingMonths(daily, { from, to } = {}) {
@@ -198,7 +214,7 @@ export function renderAccounting(root, data = {}) {
   tbody.replaceChildren();
   if (!rows.length) {
     const row = document.createElement("tr"), cell = document.createElement("td");
-    cell.colSpan = 4; cell.className = "muted accounting-empty"; cell.textContent = "За цей період даних немає.";
+    cell.colSpan = 5; cell.className = "muted accounting-empty"; cell.textContent = "За цей період даних немає.";
     row.append(cell); tbody.append(row);
   }
   for (const item of rows.slice().reverse()) {
@@ -210,11 +226,13 @@ export function renderAccounting(root, data = {}) {
       note.textContent = `${shortDate.format(dateValue(item.from))}–${shortDate.format(dateValue(item.to))}`;
       date.append(note);
     }
-    for (const key of ["google_uah", "meta_uah", "orders"]) {
+    const values = { ...item, ...accountingSpendTotal(item) };
+    for (const key of ["google_uah", "meta_uah", "total_uah", "orders"]) {
       const cell = document.createElement("td");
-      cell.textContent = known(item[key]) ? (key === "orders" ? integer : decimal).format(item[key]) : "—";
-      if (!known(item[key])) cell.setAttribute("aria-label", "Немає даних");
-      if (known(item[key]) && key !== "orders" && item[`${key.replace("_uah", "")}_coverage`] !== "complete") {
+      cell.dataset.accountingCell = key;
+      cell.textContent = known(values[key]) ? (key === "orders" ? integer : decimal).format(values[key]) : "—";
+      if (!known(values[key])) cell.setAttribute("aria-label", "Немає даних");
+      if (known(values[key]) && key !== "orders" && values[`${key.replace("_uah", "")}_coverage`] !== "complete") {
         const provider = key.replace("_uah", ""), note = document.createElement("small");
         note.className = "accounting-coverage-note";
         note.textContent = "Неповні дані";

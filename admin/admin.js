@@ -6,7 +6,7 @@ import { finishMarketWork, marketProgressText } from "../assets/js/market-progre
 import { icon as documentIcon } from "./documents/icons.js";
 import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
-import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261009-history";
+import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261009-total";
 import { createAccountingProfitView } from "./accounting-profit.js?v=20261009-andrii";
 
 const state = {

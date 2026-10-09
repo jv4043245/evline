@@ -41,7 +41,7 @@
 .accounting-table tbody tr:last-child > * { border-bottom: 0; }
 .accounting-table tbody tr:hover { background: #fafbfc; }
 .accounting-table .accounting-empty { padding: 32px 22px; text-align: center; }
-.accounting-history .table-wrap { max-height: 490px; scrollbar-width: thin; }
+.accounting-history .table-wrap { max-height: 490px; overflow: auto; scrollbar-width: thin; }
 .accounting-table thead { position: sticky; top: 0; z-index: 1; background: #fff; }
 .accounting-message { margin: 0 0 16px; color: #6b7280; font-size: 13px; }
 .accounting-message[data-state="error"] { color: #9b351f; }

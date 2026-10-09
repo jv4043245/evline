@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
-import { accountingPeriod, accountingMonths, createAccountingPeriodState, renderAccounting, createAccountingView } from "../admin/accounting.js";
+import { accountingPeriod, accountingMonths, accountingSpendTotal, createAccountingPeriodState, renderAccounting, createAccountingView } from "../admin/accounting.js";
 
 const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../admin/admin.js", import.meta.url), "utf8");
@@ -225,6 +225,44 @@ test("monthly fallback fills a missing calendar day as unknown, not certified ze
   assert.equal(month.google_uah, 3);
   assert.equal(month.google_coverage, "partial");
   assert.equal(month.orders, null);
+});
+
+test("combined advertising sums integer kopecks, preserving zero, partial coverage and missing channels", () => {
+  const row = { google_uah: .1, meta_uah: .2, google_coverage: "complete", meta_coverage: "complete" };
+  assert.deepEqual(accountingSpendTotal(row), { total_uah: .3, total_coverage: "complete" });
+  assert.deepEqual(accountingSpendTotal({ ...row, google_uah: 0, meta_uah: 0 }), { total_uah: 0, total_coverage: "complete" });
+  assert.deepEqual(accountingSpendTotal({ ...row, meta_coverage: "partial" }), { total_uah: .3, total_coverage: "partial" });
+  for (const value of [null, undefined, NaN, Infinity, -1, Number.MAX_SAFE_INTEGER]) {
+    assert.deepEqual(accountingSpendTotal({ ...row, meta_uah: value }), { total_uah: null, total_coverage: "missing" });
+  }
+  for (const coverage of [undefined, "missing", "error"]) assert.equal(accountingSpendTotal({ ...row, meta_coverage: coverage }).total_uah, null);
+  assert.equal(accountingSpendTotal({ ...row, google_uah: 60000000000000, meta_uah: 60000000000000 }).total_uah, null);
+});
+
+test("combined column matches the displayed month or day and never replaces a missing channel with zero", t => {
+  const root = documentFor(t), data = fixture();
+  assert.deepEqual([...root.querySelectorAll('.accounting-table thead th')].map(node => node.textContent), ["Місяць", "Google, грн", "Meta, грн", "Разом, грн", "Замовлення"]);
+  data.daily = [
+    { date: "2026-09-29", google_uah: .1, meta_uah: .2, google_coverage: "complete", meta_coverage: "complete", orders: 1 },
+    { date: "2026-09-30", google_uah: 1, meta_uah: 2, google_coverage: "complete", meta_coverage: "partial", orders: 2 },
+  ];
+  renderAccounting(root, data);
+  const total = () => root.querySelector('[data-accounting-cell="total_uah"]');
+  assert.match(total().textContent, /^3,30/);
+  assert.equal(total().querySelector('small').textContent, 'Неповні дані');
+  assert.equal(root.querySelector('[data-accounting-cell="orders"]').textContent, "3");
+  data.monthly = [{ month: "2026-09", from: "2026-09-01", to: "2026-09-30", google_uah: 5774.67, meta_uah: 12406.57, google_coverage: "complete", meta_coverage: "complete", orders: 106 }];
+  renderAccounting(root, data);
+  assert.match(total().textContent, /^18\s181,24$/);
+  assert.equal(total().querySelector('small'), null);
+  daysMode(root); renderAccounting(root, data);
+  assert.match(total().textContent, /^3,00/);
+  data.daily[1].meta_uah = null;
+  renderAccounting(root, data);
+  assert.equal(total().textContent, '—');
+  assert.equal(total().getAttribute('aria-label'), 'Немає даних');
+  renderAccounting(root, {});
+  assert.equal(root.querySelector('[data-accounting-daily] td').colSpan, 5);
 });
 
 test("monthly is the default, partial coverage is explicit and granularity changes never refetch or change totals", async t => {
