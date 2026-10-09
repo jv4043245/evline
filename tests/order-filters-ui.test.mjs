@@ -6,12 +6,24 @@ import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, res
 
 const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
 const source = readFileSync(new URL("../admin/admin.js", import.meta.url), "utf8");
+const css = readFileSync(new URL("../admin/admin.css", import.meta.url), "utf8");
 const dom = (t) => {
   const window = new JSDOM(html).window;
   t.after(() => window.close());
   return window.document;
 };
 const choose = (root, group, value) => selectOrderFilter(root, root.querySelector(`[data-order-filter="${group}"][value="${value}"]`));
+
+test("payment dropdown shares the inset chevron and preserves native high-contrast control", () => {
+  const arrowRule = css.match(/[^{}]*\.order-filter-buttons select\[data-payment-source\][^{}]*\{[^{}]*background-position:[^{}]*\}/)?.[0];
+  assert.ok(arrowRule);
+  assert.match(arrowRule, /appearance:\s*none/);
+  assert.match(arrowRule, /background-position:\s*right 17px center/);
+  assert.match(arrowRule, /background-size:\s*18px 18px/);
+  assert.match(css, /\.order-filter-buttons select\s*\{[^}]*padding:7px 46px 7px 10px/);
+  assert.match(css, /\.order-filter-buttons select:focus-visible/);
+  assert.match(css, /@media \(forced-colors: active\)\s*\{\s*\.order-filter-buttons select\[data-payment-source\]\s*\{[^}]*appearance:auto;[^}]*background-image:none/);
+});
 
 test("payment and delivery controls are independent; shipped-only combines with search and stage", (t) => {
   const root = dom(t);

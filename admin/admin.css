@@ -262,6 +262,7 @@
 
 .admin-header select,
 .filters select,
+.order-filter-buttons select[data-payment-source],
 .manual-order-form select,
 .market-lookup-form select,
 .china-preorder-form select,
@@ -4555,11 +4556,14 @@ body.audit-log-open .audit-log-panel {
 .order-detail-filters fieldset { min-width:0; margin:0; padding:0; border:0; }
 .order-detail-filters legend { margin-bottom:7px; padding:0; color:var(--muted); font-size:12px; font-weight:600; }
 .order-filter-buttons { display:flex; flex-wrap:wrap; gap:6px; }
-.order-filter-buttons select { width:auto; max-width:100%; min-height:40px; padding:7px 30px 7px 10px; border:1px solid var(--line); border-radius:6px; background-color:#fff; font-size:13px; }
+.order-filter-buttons select { width:auto; max-width:100%; min-height:40px; padding:7px 46px 7px 10px; border:1px solid var(--line); border-radius:6px; background-color:#fff; font-size:13px; }
 .order-filter-buttons [hidden] { display:none !important; }
 .order-filter-buttons button { min-height:40px; padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); font-size:13px; cursor:pointer; }
 .order-filter-buttons button[aria-pressed="true"] { background:var(--green-dark); border-color:var(--green-dark); color:#fff; }
-.order-filter-buttons button:focus-visible { outline:2px solid var(--green-dark); outline-offset:3px; }
+.order-filter-buttons button:focus-visible, .order-filter-buttons select:focus-visible { outline:2px solid var(--green-dark); outline-offset:3px; }
+@media (forced-colors: active) {
+  .order-filter-buttons select[data-payment-source] { appearance:auto; -webkit-appearance:auto; background-image:none; }
+}
 .order-filter-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px 20px; width:100%; }
 .order-filter-tools label { display:flex; align-items:center; gap:8px; min-height:40px; font-size:13px; cursor:pointer; }
 .order-filter-tools input[type="checkbox"] { width:18px; height:18px; min-height:0; margin:0; accent-color:var(--green-dark); }
