@@ -54,7 +54,7 @@ function inputText(value) {
 
 const markup = `
   <div class="accounting-profit__heading">
-    <div><h1>Розрахунок менеджера</h1><p>Лише повністю оплачені й видані замовлення.</p></div>
+    <div><h1>Розрахунок Андрія</h1><p>Лише повністю оплачені й видані замовлення.</p></div>
     <label class="accounting-profit__month">Місяць<input type="month" data-profit-month min="2020-01" required aria-label="Місяць розрахунку"></label>
   </div>
   <form class="accounting-profit__panel" data-profit-form novalidate>
@@ -74,7 +74,7 @@ const markup = `
     </section>
     <section class="accounting-profit__results" aria-labelledby="profit-results-title">
       <h3 id="profit-results-title">Попередній розрахунок</h3>
-      <dl><div><dt>Прибуток до винагороди</dt><dd data-profit-result="profit_before_manager_minor">—</dd></div><div class="accounting-profit__manager"><dt>Менеджеру · 15%</dt><dd data-profit-result="manager_minor">—</dd></div><div><dt>Залишок</dt><dd data-profit-result="owner_remaining_minor">—</dd></div></dl>
+      <dl><div><dt>Прибуток до винагороди</dt><dd data-profit-result="profit_before_manager_minor">—</dd></div><div class="accounting-profit__manager"><dt>Андрію · 15%</dt><dd data-profit-result="manager_minor">—</dd></div><div><dt>Залишок</dt><dd data-profit-result="owner_remaining_minor">—</dd></div></dl>
     </section>
     <div class="accounting-profit__footer"><p data-profit-message role="status" aria-live="polite"></p><button class="admin-btn admin-btn--primary" type="submit" data-profit-save disabled>Зберегти</button></div>
   </form>`;

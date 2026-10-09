@@ -80,6 +80,9 @@ test("blank draft shows no imaginary profit, keeps ads read-only and exposes coh
   assert.match(view.container.textContent, /Лише повністю оплачені й видані замовлення/);
   assert.match(view.container.textContent, /Чернетка/);
   assert.match(view.container.textContent, /Попередній розрахунок/);
+  assert.equal(view.container.querySelector('h1').textContent, 'Розрахунок Андрія');
+  assert.match(view.container.textContent, /Андрію · 15%/);
+  assert.doesNotMatch(view.container.textContent, /Розрахунок менеджера|Менеджеру · 15%/);
   assert.equal(view.container.querySelector('input[name="total_minor"]'), null);
   assert.equal(view.controller.hasChanges(), false);
   assert.equal(view.controller.isBusy(), false);
