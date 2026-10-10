@@ -99,6 +99,16 @@ Snapshot example (illustrative IDs, never ready to import):
 `accounting_ad_daily` and its immutable original-report archive remain unchanged.
 Google's existing total includes all campaigns in customer4028488894, so André's
 live monthly calculation subtracts the verified Romanian Google share once.
+The read-only `Реклама за період` block in Andrii's calculation uses
+`/api/admin/accounting/andrii?from=YYYY-MM-DD&to=YYYY-MM-DD` and applies the same
+business exclusion by day. It never uses the general overview total as an
+Andrii total. Bounds are inclusive Kyiv calendar dates, with today explicitly
+excluded as unfinished; requested and effective dates are returned separately.
+Calendar shortcuts cover 1/2/3 months ending in the selected settlement month.
+Arbitrary ranges are supported up to 1827 days. The read-only selection cannot
+change monthly commission drafts, their manual inputs, or the fixed 15% policy.
+Final provider/combined totals are null when coverage is incomplete; known
+subtotals are separately labelled and cannot become settlement inputs.
 An active mapping with missing/partial campaign data or daily cost above the
 inclusive account total makes André's calculation incomplete instead of charging
 Igor's cost to André or producing negative advertising cost. No mappings means

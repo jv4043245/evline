@@ -1,3 +1,5 @@
+import { createAndriiAdvertisingView } from "./accounting-andrii-ads.js?v=20261010-period";
+
 const INPUT_KEYS = ["revenue_minor", "purchase_minor", "shipping_minor", "other_minor"];
 const MAX_MINOR = 100000000000;
 const formatter = new Intl.NumberFormat("uk-UA", { style: "currency", currency: "UAH", minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -57,6 +59,7 @@ const markup = `
     <div><h1>Розрахунок Андрія</h1><p>Лише повністю оплачені й видані замовлення.</p></div>
     <label class="accounting-profit__month">Місяць<input type="month" data-profit-month min="2020-01" required aria-label="Місяць розрахунку"></label>
   </div>
+  <div data-andrii-advertising></div>
   <form class="accounting-profit__panel" data-profit-form novalidate>
     <div class="accounting-profit__panel-heading"><h2>Суми за місяць, грн</h2><span class="accounting-profit__badge">Чернетка</span></div>
     <div class="accounting-profit__inputs">
@@ -90,6 +93,7 @@ export function createAccountingProfitView(container, api, { now = () => new Dat
   let month = defaultProfitMonth(now()), revision = 0, baseline = "", savedInputs = blankInputs();
   let advertising = {}, currentMonth = false, loaded = false, busy = false, conflicted = false, pending = null, sequence = 0;
   monthInput.value = month; monthInput.max = currentKyivMonth(now());
+  const periodAdvertising = createAndriiAdvertisingView(container.querySelector("[data-andrii-advertising]"), api, { now, getMonth: () => month });
 
   const raw = () => ({ ...Object.fromEntries(INPUT_KEYS.map(key => [key, form.elements.namedItem(key).value])), other_note: form.elements.namedItem("other_note").value });
   const hasChanges = () => loaded && JSON.stringify(raw()) !== baseline;
@@ -169,7 +173,11 @@ export function createAccountingProfitView(container, api, { now = () => new Dat
     month = requestedMonth; monthInput.value = month; loaded = false; conflicted = false; advertising = {}; savedInputs = blankInputs(); applyInputs(savedInputs); render(); setBusy(true); setMessage("Завантаження…");
     const task = Promise.resolve().then(() => api(`/api/admin/accounting/profit?${new URLSearchParams({ month: requestedMonth })}`)).then(data => {
       if (requestId !== sequence) return false;
-      accept(validateResponse(data, requestedMonth)); setMessage(); return true;
+      accept(validateResponse(data, requestedMonth)); setMessage();
+      // Period advertising is read-only and never feeds a multi-month amount
+      // into this month's commission draft or changes its manual inputs.
+      periodAdvertising.load(true).catch(() => {});
+      return true;
     }).catch(error => {
       if (requestId !== sequence) return false;
       setMessage(error.status === 401 ? "Увійдіть, щоб відкрити розрахунок." : "Не вдалося завантажити. Натисніть «Оновити».", true);

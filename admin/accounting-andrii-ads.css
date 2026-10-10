@@ -1,0 +1,24 @@
+.andrii-ads { margin-bottom: 20px; border: 1px solid #e2e5e9; border-radius: 12px; background: #fff; }
+.andrii-ads > summary { padding: 14px 18px; cursor: pointer; color: #243746; font-size: 13px; font-weight: 600; }
+.andrii-ads__body { padding: 0 18px 18px; }
+.andrii-ads__anchor { margin: 0 0 8px; color: #687382; font-size: 11px; }
+.andrii-ads__presets { display: flex; gap: 6px; margin: 0 0 14px; }
+.andrii-ads__presets button { border: 1px solid #e2e5e9; border-radius: 7px; background: #fff; color: #536171; padding: 7px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.andrii-ads__presets button[aria-pressed="true"] { background: #edf3fb; border-color: #bfcede; color: #243746; }
+.andrii-ads__dates { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
+.andrii-ads__dates label { display: grid; gap: 5px; font-size: 11px; color: #687382; min-width: 0; }
+.andrii-ads__dates input { min-width: 0; width: 100%; box-sizing: border-box; border: 1px solid #dce2e8; border-radius: 8px; padding: 8px 10px; min-height: 38px; background: #fff; color: #243746; font: inherit; font-size: 13px; }
+.andrii-ads__scope, .andrii-ads__status, .andrii-ads__known { color: #687382; font-size: 11px; line-height: 1.5; margin: 12px 0 0; }
+.andrii-ads__status:empty { display: none; }
+.andrii-ads__status[data-error="true"], .andrii-ads__known { color: #895b13; }
+.andrii-ads__totals { margin-top: 16px !important; padding-top: 7px; border-top: 1px solid #edf0f3; }
+.andrii-ads__totals > div:last-child { padding-top: 10px; border-top: 1px solid #edf0f3; }
+.andrii-ads__totals > div:last-child dt, .andrii-ads__totals > div:last-child dd { font-weight: 600; }
+.andrii-ads__table-wrap { overflow-x: auto; margin-top: 18px; }
+.andrii-ads table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.andrii-ads caption { text-align: left; color: #687382; padding-bottom: 8px; font-size: 11px; }
+.andrii-ads th, .andrii-ads td { text-align: right; padding: 8px 6px; border-bottom: 1px solid #edf0f3; white-space: nowrap; color: #536171; font-variant-numeric: tabular-nums; }
+.andrii-ads th:first-child { text-align: left; padding-left: 0; font-weight: 500; }
+.andrii-ads td:last-child { padding-right: 0; }
+.andrii-ads button:focus-visible, .andrii-ads summary:focus-visible { outline: 2px solid #3573cf; outline-offset: 2px; }
+@media (max-width: 500px) { .andrii-ads__body { padding: 0 13px 15px; } .andrii-ads > summary { padding: 13px; } .andrii-ads__dates label { flex: 1 1 40%; } .andrii-ads__dates button { width: 100%; } .andrii-ads th, .andrii-ads td { font-size: 11px; padding: 7px 5px; } }

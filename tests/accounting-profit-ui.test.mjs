@@ -14,7 +14,7 @@ function mount(t, api, options = {}) {
   t.after(() => window.close());
   const container = window.document.querySelector("#profit");
   const controller = createAccountingProfitView(container, api, { now, confirmDiscard: () => true, ...options });
-  return { window, container, controller, form: container.querySelector("form"), message: container.querySelector("[data-profit-message]"), save: container.querySelector("[data-profit-save]") };
+  return { window, container, controller, form: container.querySelector("[data-profit-form]"), message: container.querySelector("[data-profit-message]"), save: container.querySelector("[data-profit-save]") };
 }
 function input(view, name, value) {
   const field = view.form.elements.namedItem(name);
@@ -112,6 +112,32 @@ test("manual inputs preview live and PUT carries only draft inputs, month and CA
   assert.equal(view.controller.hasChanges(), false);
   assert.equal(view.save.disabled, true);
   assert.equal(view.message.textContent, "Збережено");
+});
+
+test("period advertising never changes the monthly commission inputs or monthly advertising", async t => {
+  const requests = [];
+  const view = mount(t, async (url, options) => {
+    requests.push({ url, options });
+    if (!url.includes('/andrii?')) return fixture(complete());
+    const params = new URL(url, 'https://evline.test').searchParams;
+    return { scope: 'andrii', currency: 'UAH', timezone: 'Europe/Kyiv', from: params.get('from'), to: params.get('to'),
+      effective_to: params.get('to'), is_provisional: false, coverage: 'complete', google_minor: 400000,
+      meta_minor: 200000, total_minor: 600000, google_known_minor: 400000, meta_known_minor: 200000, known_total_minor: 600000, monthly: [] };
+  });
+  await view.controller.load();
+  input(view, 'revenue_minor', '12000');
+  const monthlyBefore = view.container.querySelector('[data-profit-result="manager_minor"]').textContent;
+  const details = view.container.querySelector('[data-andrii-ads-details]');
+  details.open = true; details.dispatchEvent(new view.window.Event('toggle')); await tick();
+  view.container.querySelector('[data-andrii-months="3"]').click(); await tick();
+  assert.equal(view.form.elements.revenue_minor.value, '12000');
+  assert.equal(view.controller.getMonth(), '2026-09');
+  assert.equal(view.controller.hasChanges(), true);
+  assert.equal(view.container.querySelector('[data-profit-result="manager_minor"]').textContent, monthlyBefore);
+  assert.match(view.container.querySelector('[data-profit-ad="total_minor"]').textContent, /30,00/);
+  assert.match(view.container.querySelector('[data-andrii-ads-total="total_minor"]').textContent, /6\s000,00/);
+  assert.ok(requests.some(request => request.url.includes('from=2026-07-01&to=2026-09-30')));
+  assert.ok(requests.every(request => !request.options?.method));
 });
 
 test("other expenses require a description; unknown fields can still be saved as an incomplete draft", async t => {

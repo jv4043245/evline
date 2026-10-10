@@ -81,7 +81,9 @@ export async function persistIgorCampaignSnapshot(db, input, { now = new Date() 
  * null means not launched/configured, never an assumed zero reimbursement.
  */
 export async function readIgorAdvertising(db, { from, to, now = new Date() }) {
-  const range = accountingRange(from, to, now);
+  // Read-only range reports may span the same five-year window as the main
+  // ledger. Snapshot imports still retain their independent 366-day limit.
+  const range = accountingRange(from, to, now, { maxDays: 1827 });
   const [mapped, confirmed, facts] = await Promise.all([
     db.prepare('SELECT provider,account_id,campaign_id,starts_on,ends_on FROM accounting_igor_campaigns ORDER BY provider,campaign_id').all(),
     db.prepare('SELECT provider,date_from,date_to FROM accounting_igor_no_spend_periods WHERE date_from<=? AND date_to>=?').bind(to, from).all(),
