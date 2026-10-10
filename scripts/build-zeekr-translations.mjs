@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { JSDOM } from "jsdom";
 import { withSellerIdentity } from "./lib/seller-identity.mjs";
+import { applyRomanianZeekrSeo } from "./lib/zeekr-ro-seo.mjs";
 
 export const routes = { uk: "/zeekr-9x-8x/", ru: "/ru/zeekr-9x-8x/", ro: "/ro/zeekr-9x-8x/" };
 
@@ -148,6 +149,7 @@ export function translatedPage(source, language) {
     link.removeAttribute("aria-current");
     if (link.lang === language) link.setAttribute("aria-current", "page");
   }
+  if (language === "ro") applyRomanianZeekrSeo(document);
   const result = withSellerIdentity(dom.serialize());
   dom.window.close();
   return result;

@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <!-- Romanian Zeekr services: UA/RU sibling landing pages remain ads-only. -->
+  <url>
+    <loc>https://evline.com.ua/ro/zeekr-9x-8x/</loc>
+    <xhtml:link rel="alternate" hreflang="ro" href="https://evline.com.ua/ro/zeekr-9x-8x/" />
+    <xhtml:link rel="alternate" hreflang="ro-RO" href="https://evline.com.ua/ro/zeekr-9x-8x/" />
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
   <!-- Organic home pages: direct, brand and search traffic. -->
   <url>
     <loc>https://evline.com.ua/</loc>

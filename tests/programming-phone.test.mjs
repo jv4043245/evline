@@ -35,7 +35,9 @@ test('every programming landing page uses the technical phone in calls, visible 
       const json = JSON.parse(script.textContent);
       return json['@graph'] || [json];
     });
-    const businesses = schemas.filter(schema => schema['@type'] === 'AutoRepair');
+    const businesses = schemas.flatMap(schema => schema['@type'] === 'AutoRepair'
+      ? [schema] : schema['@type'] === 'Service' && schema.provider?.['@type'] === 'Organization'
+        ? [schema.provider] : []);
     assert.ok(businesses.length, file);
     for (const business of businesses) assert.equal(business.telephone, phone, file);
     assert.ok(dom.querySelector('a[href*="t.me/evline_tech"]'), file);

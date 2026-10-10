@@ -1,12 +1,31 @@
 # Zeekr 9X / 8X service pages
 
 Routes: `/zeekr-9x-8x/` (Ukrainian), `/ru/zeekr-9x-8x/` (Russian),
-and `/ro/zeekr-9x-8x/` (Romanian). Intentionally unlisted: no external navigation
-or sitemap additions, with `noindex,nofollow`. These are public URLs, not access-controlled pages.
+and `/ro/zeekr-9x-8x/` (Romanian). UA/RU remain intentionally unlisted,
+outside the sitemap, with `noindex,nofollow`. On 2026-10-10 the owner requested
+organic SEO for Romanian clients: RO is now indexable and included in the sitemap.
+These are public URLs, not access-controlled pages.
 The language menu links the three versions and preserves ad attribution.
 Russian is the layout source. After editing it, update the translation table in
 `scripts/build-zeekr-translations.mjs` and run `npm run build:zeekr-languages`.
 Tests check generated pages for drift. Scripts, styles and media are shared.
+The RO-only override in `scripts/lib/zeekr-ro-seo.mjs` runs after translation:
+Romania-focused title/description/headings, six FAQs, self-canonical, Romanian
+`ro`/`ro-RO` alternatives, social metadata and fact-based WebPage/Service JSON-LD.
+No noindexed sibling is advertised as an indexed alternate in the RO head.
+Normal language-menu links and attribution are unchanged. The Service targets
+Romanian clients; it does not claim a Romanian workshop, address, official dealer
+relationship or remote performance of all services. Operating format/location
+still needs the owner's confirmation. The Kyiv AutoRepair schema is not inherited
+by RO. No BYD VDS/calibration/pricing promises are transferred to Zeekr.
+No search-volume or ranking claims are made for the selected phrases. They
+describe the actual services in Romanian; they are not a Keyword Planner export.
+Google references checked for this change:
+https://developers.google.com/search/docs/specialty/international/localized-versions
+and https://developers.google.com/search/docs/crawling-indexing/block-indexing .
+The Ukrainian country domain remains unchanged; Romanian annotations do not
+guarantee Romanian rankings or immediate indexing. No Search Console submission
+is claimed unless separately verified.
 Visible copy and dynamic form/video/cookie states are localized; internal service
 values retain the original CRM labels. Romanian privacy links explicitly lead
 to the existing Ukrainian policy. These service pages intentionally omit the

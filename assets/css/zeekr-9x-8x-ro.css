@@ -1,0 +1,9 @@
+/* Fit the descriptive Romanian search heading without altering UA/RU pages. */
+html[lang="ro"] .hero h1 { font-size: clamp(30px, 3.7vw, 44px); }
+html[lang="ro"] .hero::before { height: 210px; }
+@media (max-width: 760px) {
+  html[lang="ro"] .hero { display: flex; flex-direction: column; height: auto; min-height: 0; max-height: none; background: #f4f6f3; }
+  html[lang="ro"] .hero::before { display: none; }
+  html[lang="ro"] .hero-content { order: 1; padding-bottom: 24px; }
+  html[lang="ro"] .hero-picture { position: relative; inset: auto; order: 2; flex: none; width: 100%; height: 230px; }
+}

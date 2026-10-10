@@ -29,7 +29,11 @@ for (const [language, route] of Object.entries(routes)) {
     const dom = new JSDOM(source);
     const { document } = dom.window;
     assert.equal(document.documentElement.lang, language);
-    assert.equal(document.querySelector('meta[name="robots"]').content, "noindex,nofollow");
+    if (language === "ro") {
+      assert.deepEqual(new Set(document.querySelector('meta[name="robots"]').content.split(/\s*,\s*/)), new Set(["index", "follow", "max-image-preview:large"]));
+    } else {
+      assert.equal(document.querySelector('meta[name="robots"]').content, "noindex,nofollow");
+    }
     assert.equal(document.querySelector('link[rel="canonical"]').href, `https://evline.com.ua${route}`);
     const menu = document.querySelector(".language-switch");
     assert.equal(menu.querySelectorAll("a").length, 3);
@@ -37,7 +41,11 @@ for (const [language, route] of Object.entries(routes)) {
     assert.equal(menu.querySelector('[aria-current="page"]').lang, language);
     for (const [lang, destination] of Object.entries(routes)) {
       assert.equal(menu.querySelector(`[lang="${lang}"]`).getAttribute("href"), destination);
-      assert.equal(document.querySelector(`link[hreflang="${lang}"]`).href, `https://evline.com.ua${destination}`);
+      if (language !== "ro") assert.equal(document.querySelector(`link[hreflang="${lang}"]`).href, `https://evline.com.ua${destination}`);
+    }
+    if (language === "ro") {
+      const alternates = [...document.querySelectorAll('head link[rel="alternate"][hreflang]')].map(link => [link.hreflang, link.href]).sort();
+      assert.deepEqual(alternates, [["ro", `https://evline.com.ua${routes.ro}`], ["ro-RO", `https://evline.com.ua${routes.ro}`]]);
     }
     assert.equal(document.querySelectorAll(".service").length, 4);
     assert.equal(document.querySelector("footer").dataset.sellerIdentityPolicy, "omit");
@@ -49,7 +57,7 @@ for (const [language, route] of Object.entries(routes)) {
     assert.equal(hero.querySelector("img").getAttribute("fetchpriority"), "high");
     assert.equal(document.querySelector('.hero-credit a[rel*="license"]').href, "https://creativecommons.org/licenses/by/3.0/");
     assert.ok(document.querySelector(".hero-credit").textContent.includes("AutoLab"));
-    assert.equal(document.querySelectorAll(".faq-list details").length, 4);
+    assert.equal(document.querySelectorAll(".faq-list details").length, language === "ro" ? 6 : 4);
     assert.equal(document.querySelector("video source").getAttribute("src"), "/assets/video/zeekr-9x-8x/evline-demo.mp4");
     for (const button of document.querySelectorAll("[data-service]")) {
       assert.ok([...document.querySelectorAll('select[name="service"] option')].some(option => option.value === button.dataset.service));
@@ -223,7 +231,8 @@ test("page is Russian, unlisted, and uses real local model/video assets", () => 
   const { document } = new JSDOM(html).window;
   assert.equal(document.documentElement.lang, "ru");
   assert.equal(document.querySelector('meta[name="robots"]').content, "noindex,nofollow");
-  assert.ok(!readFileSync("sitemap.xml", "utf8").includes("zeekr-9x-8x"));
+  const sitemap = readFileSync("sitemap.xml", "utf8");
+  for (const route of [routes.uk, routes.ru]) assert.ok(!sitemap.includes(`<loc>https://evline.com.ua${route}</loc>`));
   for (const node of document.querySelectorAll("[src],link[href],use[href]")) {
     const url = node.getAttribute("src") || node.getAttribute("href");
     if (url.startsWith("/")) assert.ok(existsSync(path.join(root, url.split(/[?#]/)[0])), url);
