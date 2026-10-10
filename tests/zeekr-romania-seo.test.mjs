@@ -122,3 +122,17 @@ test("Romanian content adds audience and scope FAQs without changing the program
   assert.equal(form.elements.topic.value, "programming-zeekr-9x-8x");
   assert.deepEqual([...form.elements.model.options].map(option => option.value), ["Zeekr 9X", "Zeekr 8X"]);
 });
+
+test("Romanian copy confirms in-person work in Romania without inventing a permanent location", t => {
+  const document = page(t);
+  assert.match(document.title, /în România/);
+  assert.match(meta(document, "description"), /la fața locului în România/);
+  assert.match(document.querySelector("#services .section-heading").textContent, /direct la mașină, în România/);
+  const faq = [...document.querySelectorAll(".faq-list details")].find(node => /în România/.test(node.querySelector("summary").textContent));
+  assert.ok(faq);
+  assert.match(faq.textContent, /fizic, în România/);
+  assert.match(faq.textContent, /nu este nevoie să aduci mașina în Ucraina/);
+  assert.match(faq.textContent, /stabilim orașul, locul întâlnirii, data și prețul/);
+  const graph = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent)["@graph"];
+  assert.match(graph.find(node => node["@type"] === "Service").description, /direct la mașină, în România/);
+});

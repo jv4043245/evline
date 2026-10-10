@@ -4,8 +4,8 @@
 export function applyRomanianZeekrSeo(document) {
   const url = 'https://evline.com.ua/ro/zeekr-9x-8x/';
   const image = 'https://evline.com.ua/assets/images/zeekr-9x-8x/9x-interior.webp';
-  const title = 'Programare Zeekr 9X și 8X pentru România | EVLine';
-  const description = 'Programare software și configurare Zeekr 9X și 8X pentru clienți din România: aplicații, Waze, Google Maps, SIM și aplicația Zeekr. Verificăm compatibilitatea.';
+  const title = 'Programare Zeekr 9X și 8X în România | EVLine';
+  const description = 'Programare software Zeekr 9X și 8X, la fața locului în România: aplicații, Waze, Google Maps, SIM și aplicația Zeekr. Stabilim locul și data în prealabil.';
   const meta = (attribute, key, value) => {
     let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
     if (!element) { element = document.createElement('meta'); element.setAttribute(attribute, key); document.head.append(element); }
@@ -39,12 +39,12 @@ export function applyRomanianZeekrSeo(document) {
   })) meta('name', key, value);
 
   document.querySelector('#page-title').textContent = 'Programare software Zeekr 9X / 8X';
-  document.querySelector('.hero .eyebrow').textContent = 'EVLine · pentru clienți din România';
+  document.querySelector('.hero .eyebrow').textContent = 'EVLine · configurare în România';
   document.querySelector('.hero-lead').textContent = 'Aplicații, navigație și conectivitate pentru Zeekr-ul tău.';
   document.querySelector('#services-title').textContent = 'Configurare software și aplicații Zeekr';
   const services = document.querySelector('#services .section-heading');
   const introduction = document.createElement('p');
-  introduction.textContent = 'Pentru proprietarii de Zeekr 9X și 8X din România: verificăm versiunea software și opțiunile compatibile, apoi stabilim serviciile și costul.';
+  introduction.textContent = 'Lucrările se efectuează direct la mașină, în România. Verificăm compatibilitatea și stabilim serviciile, locul, data și costul în prealabil.';
   services.append(introduction);
   const cards = [...document.querySelectorAll('.service')];
   cards[0].querySelector('h3').textContent = 'Instalare aplicații Zeekr';
@@ -56,7 +56,7 @@ export function applyRomanianZeekrSeo(document) {
   const faq = document.querySelector('.faq-list');
   for (const [question, answer] of [
     ['Ce include programarea software Zeekr 9X și 8X?', 'Pe această pagină, programarea înseamnă configurarea sistemului multimedia, instalarea aplicațiilor și conectarea serviciilor disponibile. Lucrările depind de model, versiunea software și compatibilitate; nu promitem aceleași funcții pentru toate mașinile.'],
-    ['Cum solicit configurarea unui Zeekr din România?', 'Trimite modelul, versiunea software, dacă o cunoști, și funcțiile dorite. Verificăm opțiunile, apoi stabilim modul de efectuare a lucrărilor și prețul înainte de începere. Nu trimite parole sau coduri de autentificare.'],
+    ['Cum solicit configurarea unui Zeekr în România?', 'Lucrările se efectuează fizic, în România; nu este nevoie să aduci mașina în Ucraina. Trimite modelul, versiunea software, dacă o cunoști, și funcțiile dorite. Verificăm opțiunile, apoi stabilim orașul, locul întâlnirii, data și prețul înainte de începere. Nu trimite parole sau coduri de autentificare.'],
   ]) {
     const details = document.createElement('details'), summary = document.createElement('summary'), paragraph = document.createElement('p');
     summary.textContent = question; paragraph.textContent = answer; details.append(summary, paragraph); faq.append(details);
@@ -71,7 +71,7 @@ export function applyRomanianZeekrSeo(document) {
       { '@type': 'Service', '@id': serviceId, url: `${url}#services`,
         name: 'Programare software și configurare Zeekr 9X și 8X',
         serviceType: 'Configurare multimedia, instalare aplicații și conectivitate auto',
-        description: 'Configurare software pentru Zeekr 9X și 8X: aplicații, SIM și internet, protecție regională disponibilă și aplicația Zeekr prin MA/FA. Compatibilitatea se verifică înainte de lucrări.',
+        description: 'Configurare software pentru Zeekr 9X și 8X: aplicații, SIM și internet, protecție regională disponibilă și aplicația Zeekr prin MA/FA. Lucrările se efectuează direct la mașină, în România. Compatibilitatea, locul și data se stabilesc în prealabil.',
         areaServed: { '@type': 'Country', name: 'Romania' },
         provider: { '@type': 'Organization', name: 'EVLine', url, telephone: '+380630630304' },
         mainEntityOfPage: { '@id': `${url}#webpage` } },

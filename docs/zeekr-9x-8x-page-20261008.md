@@ -15,8 +15,12 @@ Romania-focused title/description/headings, six FAQs, self-canonical, Romanian
 No noindexed sibling is advertised as an indexed alternate in the RO head.
 Normal language-menu links and attribution are unchanged. The Service targets
 Romanian clients; it does not claim a Romanian workshop, address, official dealer
-relationship or remote performance of all services. Operating format/location
-still needs the owner's confirmation. The Kyiv AutoRepair schema is not inherited
+relationship or remote performance of all services. On 2026-10-10 the owner
+confirmed that Igor travels to Romania and works are performed there in person.
+RO title, description, service introduction, FAQ and Service description reflect
+this. City, meeting place, date and price are agreed in advance; no permanent
+workshop, street address, operating schedule or availability date is claimed.
+The Kyiv AutoRepair schema is not inherited
 by RO. No BYD VDS/calibration/pricing promises are transferred to Zeekr.
 No search-volume or ranking claims are made for the selected phrases. They
 describe the actual services in Romanian; they are not a Keyword Planner export.
