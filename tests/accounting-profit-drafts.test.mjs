@@ -11,7 +11,7 @@ const payload = (patch = {}) => ({ month: '2026-09', expected_revision: 0, input
 function database() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('CREATE TABLE orders(id TEXT PRIMARY KEY, created_at TEXT, source TEXT, status TEXT); CREATE TABLE ad_costs(cost_date TEXT, platform TEXT, source TEXT, medium TEXT, spend_uah REAL, notes TEXT, created_at TEXT, updated_at TEXT);');
-  for (const file of ['0031_accounting.sql', '0032_accounting_business_scope.sql', '0033_accounting_profit_drafts.sql']) sqlite.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
+  for (const file of ['0031_accounting.sql', '0032_accounting_business_scope.sql', '0033_accounting_profit_drafts.sql', '0035_accounting_igor.sql']) sqlite.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
   const db = { prepare(sql) {
     return { bind(...args) { return { sql, args, async all() { return { results: sqlite.prepare(sql).all(...args) }; } }; },
       async all() { return { results: sqlite.prepare(sql).all() }; } };

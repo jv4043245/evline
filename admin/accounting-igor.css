@@ -1,0 +1,50 @@
+.accounting-igor { max-width: 800px; margin: 4px auto 0; }
+.accounting-igor__heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.accounting-igor__heading h1 { margin: 0; font-size: 25px; font-weight: 650; letter-spacing: -.035em; }
+.accounting-igor__heading p { margin: 7px 0 0; color: #687382; font-size: 12px; }
+.accounting-igor__month { display: grid; gap: 5px; color: #687382; font-size: 11px; }
+.accounting-igor__month input { min-height: 40px; max-width: 200px; border: 1px solid #dce2e8; border-radius: 9px; padding: 7px 10px; background: #fff; color: #243746; font: inherit; font-size: 14px; }
+.accounting-igor__panel { border: 1px solid #e2e5e9; border-radius: 14px; background: #fff; padding: 24px; }
+.accounting-igor__panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.accounting-igor__panel-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.accounting-igor__badge { border-radius: 6px; background: #f1f3f5; color: #687382; padding: 4px 7px; font-size: 11px; }
+.accounting-igor dl { margin: 0; }
+.accounting-igor dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 14px; margin-top: 12px; }
+.accounting-igor dl > div:first-child { margin-top: 0; }
+.accounting-igor dt { color: #536171; font-size: 13px; }
+.accounting-igor dd { margin: 0 0 0 auto; color: #243746; font-size: 14px; font-weight: 550; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.accounting-igor__advertising { padding: 17px 18px; border-radius: 10px; background: #f8f9fb; }
+.accounting-igor__ad-status { margin: 12px 0 0; color: #895b13; font-size: 11px; }
+.accounting-igor__ad-status:empty { display: none; }
+.accounting-igor__inputs { display: grid; gap: 14px; margin-top: 22px; }
+.accounting-igor__inputs label { display: grid; gap: 7px; min-width: 0; color: #536171; font-size: 12px; }
+.accounting-igor__inputs .accounting-igor__fees { grid-template-columns: 1fr minmax(120px, 200px); align-items: center; gap: 14px; }
+.accounting-igor__inputs input, .accounting-igor__inputs textarea { box-sizing: border-box; width: 100%; border: 1px solid #dce2e8; border-radius: 9px; padding: 10px 12px; font: inherit; color: #243746; background: #fff; }
+.accounting-igor__inputs input { text-align: right; font-size: 17px; font-variant-numeric: tabular-nums; }
+.accounting-igor__inputs textarea { font-size: 13px; line-height: 1.5; resize: vertical; }
+.accounting-igor__inputs input::placeholder { color: #a2abb4; }
+.accounting-igor input:focus-visible, .accounting-igor textarea:focus-visible { outline: 2px solid #3573cf; outline-offset: 1px; }
+.accounting-igor [aria-invalid="true"] { border-color: #b4432d; }
+.accounting-igor__hint { margin: 11px 0 20px; color: #78828c; font-size: 11px; line-height: 1.5; }
+.accounting-igor__result { padding: 18px 0; border-top: 1px solid #e2e5e9; border-bottom: 1px solid #e2e5e9; }
+.accounting-igor__result dt { color: #243746; font-size: 15px; font-weight: 550; }
+.accounting-igor__result dd { font-size: 26px; font-weight: 650; letter-spacing: -.025em; }
+.accounting-igor__footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 22px; }
+.accounting-igor__footer p { margin: 0; min-height: 18px; color: #687382; font-size: 12px; }
+.accounting-igor__footer p[data-state="error"] { color: #9b351f; }
+.accounting-igor__footer button { flex-shrink: 0; }
+.accounting-igor [aria-busy="true"] { opacity: .7; }
+.accounting-igor [hidden] { display: none; }
+@media (max-width: 600px) {
+  .accounting-igor__heading h1 { font-size: 22px; }
+  .accounting-igor__month input { min-height: 44px; font-size: 16px; }
+  .accounting-igor__panel { padding: 20px 16px; }
+  .accounting-igor__advertising { padding: 15px 13px; }
+  .accounting-igor__inputs .accounting-igor__fees { grid-template-columns: 1fr minmax(100px, 150px); }
+  .accounting-igor__inputs textarea { font-size: 16px; }
+  .accounting-igor__footer { align-items: flex-end; }
+}
+@media (max-width: 380px) {
+  .accounting-igor__result dd { font-size: 22px; }
+  .accounting-igor__inputs .accounting-igor__fees { grid-template-columns: 1fr; }
+}

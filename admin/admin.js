@@ -8,6 +8,7 @@ import { mountSupplierDocuments } from './supplier-documents.js?v=20261007-save'
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261010-calendar";
 import { createAccountingProfitView } from "./accounting-profit.js?v=20261009-andrii";
+import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 
 const state = {
@@ -372,7 +373,8 @@ const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery
 const accountingView = createAccountingView(document, api);
 const accountingPeriods = createAccountingPeriodState(localStorage);
 const accountingProfitView = createAccountingProfitView(document.querySelector('[data-accounting-profit]'), api);
-let accountingPanel = localStorage.getItem('evline_accounting_panel') === 'profit' ? 'profit' : 'advertising';
+const accountingIgorView = createAccountingIgorView(document.querySelector('[data-accounting-igor]'), api);
+let accountingPanel = ['profit', 'igor'].includes(localStorage.getItem('evline_accounting_panel')) ? localStorage.getItem('evline_accounting_panel') : 'advertising';
 let accountingProvider = /^#accounting\/(google|meta)$/.exec(location.hash)?.[1] || null;
 if (accountingProvider) { state.activeTab = 'accounting'; accountingPanel = 'advertising'; }
 const accountingProviderView = createAccountingProviderView(document.querySelector('[data-accounting-provider-view]'), {
@@ -414,7 +416,7 @@ function updateOrderSaveState() {
   footer.querySelector("[data-save-state]").textContent = saving ? "Збереження..." : files ? (orderFieldsAreDirty() ? "Є незбережені зміни та файли" : "Є незбережені файли") : dirty ? "Є незбережені зміни" : "Усі зміни збережено";
 }
 window.addEventListener("beforeunload", (event) => {
-  if (orderIsDirty() || orderSaving || orderDocumentsController?.isBusy() || accountingProfitView.hasChanges() || accountingProfitView.isBusy() || accountingProviderView.hasChanges() || accountingProviderView.isBusy()) { event.preventDefault(); event.returnValue = ""; }
+  if (orderIsDirty() || orderSaving || orderDocumentsController?.isBusy() || accountingProfitView.hasChanges() || accountingProfitView.isBusy() || accountingIgorView.hasChanges() || accountingIgorView.isBusy() || accountingProviderView.hasChanges() || accountingProviderView.isBusy()) { event.preventDefault(); event.returnValue = ""; }
 });
 
 const money = new Intl.NumberFormat("uk-UA", {
@@ -553,6 +555,7 @@ function setActiveTab(tab) {
   const nextTab = adminTabs.has(tab) ? tab : "orders";
   if (nextTab !== state.activeTab && !allowDiscardOrder()) return false;
   if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
+  if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingPanel === 'igor' && !accountingIgorView.canLeave()) return false;
   if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingProvider && !accountingProviderView.canLeave()) return false;
   if (nextTab !== 'accounting' && accountingProvider) {
     accountingProvider = null;
@@ -601,11 +604,11 @@ function syncAccountingPanel() {
   document.querySelector('[data-accounting-overview]').hidden = Boolean(accountingProvider);
   document.querySelector('[data-accounting-provider-view]').hidden = !accountingProvider;
   const range = document.querySelector('#range');
-  if (range) range.hidden = state.activeTab === 'accounting' && accountingPanel === 'profit';
+  if (range) range.hidden = state.activeTab === 'accounting' && ['profit', 'igor'].includes(accountingPanel);
 }
 
 function loadAccountingPanel() {
-  return accountingPanel === 'profit' ? accountingProfitView.load() : accountingProvider
+  return accountingPanel === 'profit' ? accountingProfitView.load() : accountingPanel === 'igor' ? accountingIgorView.load() : accountingProvider
     ? accountingProviderView.load({ provider: accountingProvider, range: accountingPeriods.accounting() })
     : accountingView.load(accountingPeriods.accounting());
 }
@@ -614,6 +617,7 @@ function navigateAccountingProvider(provider, { writeHistory = true } = {}) {
   if (provider !== null && !['google', 'meta'].includes(provider)) return false;
   if (accountingProvider && !accountingProviderView.canLeave()) return false;
   if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
+  if (accountingPanel === 'igor' && !accountingIgorView.canLeave()) return false;
   if (state.activeTab !== 'accounting' && !allowDiscardOrder()) return false;
   accountingProvider = provider; accountingPanel = 'advertising';
   localStorage.setItem('evline_accounting_panel', 'advertising');
@@ -636,8 +640,9 @@ window.addEventListener('hashchange', () => {
 
 document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => {
   const next = button.dataset.accountingTab;
-  if (next === accountingPanel || !['advertising', 'profit'].includes(next)) return;
+  if (next === accountingPanel || !['advertising', 'profit', 'igor'].includes(next)) return;
   if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return;
+  if (accountingPanel === 'igor' && !accountingIgorView.canLeave()) return;
   if (accountingProvider && !accountingProviderView.canLeave()) return;
   if (accountingProvider) { accountingProvider = null; history.replaceState(null, '', location.pathname + location.search); }
   accountingPanel = next;

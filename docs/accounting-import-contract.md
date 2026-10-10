@@ -55,7 +55,11 @@ adds draft and immutable revision tables without changing orders or payments.
 The owner confirmed recognition after **both full customer payment and actual
 handover to the customer**. Revenue, purchase and shipping must describe those
 same recognized orders, regardless of when a supplier was paid. Advertising is
-the entire selected month's verified EVLine cost, subtracted once. Other costs
+the selected month's verified EVLine cost assigned to Andrii, subtracted once.
+Verified Romania Google campaign costs assigned to Igor are excluded from the
+inclusive Google account total; the separate Romania Meta campaigns are not
+part of the existing Ukrainian Meta scope. See `accounting-igor-setup.md`.
+Other costs
 are entered with a description. Values are UAH integer kopecks, not CNY totals
 or supplier receipt amounts without actual exchange-rate evidence.
 

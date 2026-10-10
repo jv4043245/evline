@@ -1,5 +1,6 @@
 import { ACCOUNTING_TIMEZONE, accountingDay, readAccounting } from './accounting.js';
 import { calculateMonthlyManagerPreview } from './accounting-profit.js';
+import { readIgorGoogleAllocation } from './accounting-igor.js';
 
 export const PROFIT_BASIS = 'paid_and_delivered';
 export const PROFIT_MAX_INPUT_MINOR = 100000000000;
@@ -47,7 +48,7 @@ function monthWindow(month, now) {
   return { from, through: through < from ? null : through, current: month === today.slice(0, 7) };
 }
 
-async function advertisingForMonth(db, month, now, accountingReader) {
+async function advertisingForMonth(db, month, now, accountingReader, allocationReader) {
   const { from, through } = monthWindow(month, now);
   if (!through) return { google_minor: null, meta_minor: null, total_minor: null, coverage: 'missing', through: null };
   const report = await accountingReader(db, { from, to: through, now });
@@ -67,11 +68,30 @@ async function advertisingForMonth(db, month, now, accountingReader) {
     if (total > BigInt(Number.MAX_SAFE_INTEGER)) throw fail('advertising_total_out_of_range', 503);
     amounts[provider] = Number(total);
   }
+  // Romania Google costs are already inside the account total. Their verified
+  // share is excluded exactly once; an incomplete active share blocks a final
+  // André calculation. Separate Romania Meta campaigns were never part of the
+  // explicitly scoped Ukrainian Meta total and are NOT subtracted from it.
+  const allocation = await allocationReader(db, { from, to: through, now });
+  let allocationStatus = null;
+  if (allocation.active) {
+    const mainDays = new Map(report.daily.map(row => [row.date, row]));
+    const reconciled = allocation.coverage === 'complete' && Number.isSafeInteger(allocation.total_minor)
+      && allocation.total_minor >= 0 && amounts.google !== null && allocation.total_minor <= amounts.google
+      && allocation.daily.every(row => {
+        const main = mainDays.get(row.date);
+        return main?.google_coverage === 'complete' && Number.isSafeInteger(row.spend_minor) && row.spend_minor >= 0
+          && row.spend_minor <= Math.round(main.google_uah * 100);
+      });
+    allocationStatus = reconciled ? 'complete' : 'incomplete';
+    amounts.google = reconciled ? amounts.google - allocation.total_minor : null;
+  }
   const complete = amounts.google !== null && amounts.meta !== null;
   const total = complete ? amounts.google + amounts.meta : null;
   if (complete && !Number.isSafeInteger(total)) throw fail('advertising_total_out_of_range', 503);
   return { google_minor: amounts.google, meta_minor: amounts.meta, total_minor: total,
-    coverage: complete ? 'complete' : (report.sources.google.status === 'missing' && report.sources.meta.status === 'missing' ? 'missing' : 'partial'), through };
+    coverage: complete ? 'complete' : (report.sources.google.status === 'missing' && report.sources.meta.status === 'missing' ? 'missing' : 'partial'), through,
+    ...(allocation.active ? { igor_allocation: allocationStatus, igor_google_excluded_minor: allocationStatus === 'complete' ? allocation.total_minor : null } : {}) };
 }
 
 function draftResponse(month, row, advertising, now) {
@@ -82,10 +102,10 @@ function draftResponse(month, row, advertising, now) {
     is_provisional: current, current_month: current, updated_at: row?.updated_at || null };
 }
 
-export async function readProfitDraft(db, month, { now = new Date(), accountingReader = readAccounting } = {}) {
+export async function readProfitDraft(db, month, { now = new Date(), accountingReader = readAccounting, allocationReader = readIgorGoogleAllocation } = {}) {
   validateProfitMonth(month, now);
   const rows = await db.prepare('SELECT * FROM accounting_profit_drafts WHERE month = ?').bind(month).all();
-  const advertising = await advertisingForMonth(db, month, now, accountingReader);
+  const advertising = await advertisingForMonth(db, month, now, accountingReader, allocationReader);
   return draftResponse(month, rows.results?.[0], advertising, now);
 }
 
@@ -93,10 +113,10 @@ export async function readProfitDraft(db, month, { now = new Date(), accountingR
  * A unique per-save ID binds the audit to this request even under concurrent
  * writes; a missing month cannot be created with expected_revision > 0.
  */
-export async function saveProfitDraft(db, payload, actorId, { now = new Date(), accountingReader = readAccounting } = {}) {
+export async function saveProfitDraft(db, payload, actorId, { now = new Date(), accountingReader = readAccounting, allocationReader = readIgorGoogleAllocation } = {}) {
   const { month, expected_revision, inputs } = validateProfitDraftInput(payload, now);
   if (typeof actorId !== 'string' || !actorId.trim() || actorId.length > 200) throw fail('invalid_profit_actor', 401);
-  const advertising = await advertisingForMonth(db, month, now, accountingReader);
+  const advertising = await advertisingForMonth(db, month, now, accountingReader, allocationReader);
   const updated_at = new Date(now).toISOString();
   const saveId = crypto.randomUUID();
   const row = { ...inputs, revision: expected_revision + 1, updated_at };
