@@ -10,7 +10,7 @@ import { createAccountingView, createAccountingPeriodState } from "./accounting.
 import { createAccountingProfitView } from "./accounting-profit.js?v=20261010-period";
 import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
-import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-bank";
+import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 
 const state = {
@@ -379,7 +379,7 @@ const accountingIgorView = createAccountingIgorView(document.querySelector('[dat
 const accountingBankViews = {
   igor: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-igor]'), api, { category: 'igor_china', title: 'Витрати Ігоря · Китай', subtitle: 'Особисті витрати під час поїздки · оплати карткою Жені' }),
   alipay: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-alipay]'), api, { category: 'zhenia_alipay', title: 'Женя · Alipay', subtitle: 'Оплати запчастин для замовлень · фактичні списання з картки' }),
-  delivery: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-delivery]'), api, { category: 'zhenia_delivery', title: 'Женя · доставка', subtitle: 'Meest · оплати доставки та деталі банківських операцій' }),
+  delivery: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-delivery]'), api, { category: 'zhenia_delivery', title: 'Женя · доставка', subtitle: 'Meest · оплати доставки та підтвердження' }),
   other: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-other]'), api, { category: 'order_other', title: 'Інші оплати за замовленнями', subtitle: 'Підтверджені витрати Женя · окремо від запчастин і Meest' }),
 };
 const accountingBankSourcesView = createAccountingBankSourcesView(document.querySelector('[data-accounting-bank-sources]'), {

@@ -22,7 +22,8 @@ const ROW_FIELDS = ['id', 'category', 'payer', 'beneficiary', 'trip_from', 'trip
 const COLUMNS = ['id', 'content_hash', 'category', 'payer', 'beneficiary', 'trip_from', 'trip_to', 'transaction_at', 'transaction_date',
   'description', 'amount_minor', 'original_amount_minor', 'original_currency', 'bank_rate', 'mcc', 'source_id', 'source_filename',
   'source_sheet', 'source_row', 'classification_note', 'possible_duplicate', 'imported_at', 'batch_id'];
-const PUBLIC_COLUMNS = COLUMNS.filter(key => key !== 'content_hash').join(',');
+const PUBLIC_COLUMNS = [...COLUMNS.filter(key => key !== 'content_hash'), 'source_kind', 'time_precision', 'date_basis', 'service_original_minor',
+  'fee_original_minor', 'fee_included', 'uah_status', 'confirmation_source_kind', 'confirmation_source_id', 'confirmation_source_filename', 'confirmation_note', 'confirmed_at'].join(',');
 const INSERT_ROW = `INSERT INTO accounting_bank_expenses (${COLUMNS.join(',')}) VALUES (${COLUMNS.map(() => '?').join(',')}) ON CONFLICT DO NOTHING`;
 
 async function hash(value) {
@@ -123,11 +124,12 @@ export function bankExpenseFilters(params) {
   return { category, from, to, q, page: positive(params.get('page'), 1, 1000000), page_size: positive(params.get('page_size'), 50, 100) };
 }
 
-const emptyTotals = () => ({ count: 0, debit_count: 0, refund_count: 0, debit_minor: 0, refund_minor: 0, net_minor: 0, possible_duplicate_count: 0 });
+const emptyTotals = () => ({ count: 0, debit_count: 0, refund_count: 0, debit_minor: 0, refund_minor: 0, net_minor: 0, possible_duplicate_count: 0, pending_uah_count: 0, receipt_count: 0 });
 const totalKeys = Object.keys(emptyTotals());
 function totals(row) {
   const result = Object.fromEntries(totalKeys.map(key => [key, Number(row?.[key] || 0)]));
-  if (Object.values(result).some(value => !Number.isSafeInteger(value)) || result.debit_minor - result.refund_minor !== result.net_minor) throw fail('accounting_bank_expenses_invalid_totals', 503);
+  if (Object.values(result).some(value => !Number.isSafeInteger(value)) || result.debit_minor - result.refund_minor !== result.net_minor
+      || result.pending_uah_count > result.receipt_count || result.receipt_count > result.count) throw fail('accounting_bank_expenses_invalid_totals', 503);
   return result;
 }
 
@@ -138,26 +140,44 @@ export async function readBankExpenses(db, params = new URLSearchParams()) {
   if (filters.to) { predicates.push('transaction_date<=?'); args.push(filters.to); }
   if (filters.q) {
     const term = `%${filters.q.replace(/[\\%_]/g, '\\$&')}%`;
-    predicates.push("(description LIKE ? ESCAPE '\\' OR classification_note LIKE ? ESCAPE '\\' OR source_filename LIKE ? ESCAPE '\\')");
-    args.push(term, term, term);
+    predicates.push("(description LIKE ? ESCAPE '\\' OR classification_note LIKE ? ESCAPE '\\' OR source_filename LIKE ? ESCAPE '\\' OR confirmation_note LIKE ? ESCAPE '\\' OR confirmation_source_filename LIKE ? ESCAPE '\\')");
+    args.push(term, term, term, term, term);
   }
   const where = predicates.length ? `WHERE ${predicates.join(' AND ')}` : '';
-  const [summaryResult, rowsResult] = await Promise.all([
-    db.prepare(`SELECT category,COUNT(*) AS count,SUM(amount_minor>0) AS debit_count,SUM(amount_minor<0) AS refund_count,
+  const [summaryResult, rowsResult, pendingResult] = await Promise.all([
+    db.prepare(`SELECT category,COUNT(*) AS count,SUM(CASE WHEN amount_minor>0 OR amount_minor IS NULL THEN 1 ELSE 0 END) AS debit_count,SUM(amount_minor<0) AS refund_count,
       SUM(CASE WHEN amount_minor>0 THEN amount_minor ELSE 0 END) AS debit_minor,
-      SUM(CASE WHEN amount_minor<0 THEN -amount_minor ELSE 0 END) AS refund_minor,SUM(amount_minor) AS net_minor,
-      SUM(possible_duplicate) AS possible_duplicate_count,MIN(transaction_date) AS date_from,MAX(transaction_date) AS date_to
-      FROM accounting_bank_expenses ${where} GROUP BY category`).bind(...args).all(),
-    db.prepare(`SELECT ${PUBLIC_COLUMNS} FROM accounting_bank_expenses ${where} ORDER BY transaction_at DESC,id DESC LIMIT ? OFFSET ?`)
+      SUM(CASE WHEN amount_minor<0 THEN -amount_minor ELSE 0 END) AS refund_minor,SUM(COALESCE(amount_minor,0)) AS net_minor,
+      SUM(possible_duplicate) AS possible_duplicate_count,SUM(amount_minor IS NULL) AS pending_uah_count,SUM(source_kind='receipt_image') AS receipt_count,
+      MIN(transaction_date) AS date_from,MAX(transaction_date) AS date_to
+      FROM accounting_bank_expense_read_model ${where} GROUP BY category`).bind(...args).all(),
+    db.prepare(`SELECT ${PUBLIC_COLUMNS} FROM accounting_bank_expense_read_model ${where} ORDER BY transaction_date DESC,transaction_at DESC,id DESC LIMIT ? OFFSET ?`)
       .bind(...args, filters.page_size, (filters.page - 1) * filters.page_size).all(),
+    db.prepare(`SELECT category,original_currency AS currency,SUM(original_amount_minor) AS amount_minor,COUNT(*) AS count
+      FROM accounting_bank_expense_read_model ${where ? `${where} AND` : 'WHERE'} amount_minor IS NULL GROUP BY category,original_currency`).bind(...args).all(),
   ]);
   const grouped = summaryResult.results || [], summary = emptyTotals();
   for (const row of grouped) for (const [key, value] of Object.entries(totals(row))) summary[key] += value;
   totals(summary);
-  const categories = Object.entries(BANK_EXPENSE_CATEGORIES).map(([category, label]) => ({ category, label, ...totals(grouped.find(row => row.category === category)) }));
+  const pending = pendingResult.results || [];
+  if (pending.some(row => typeof row.currency !== 'string' || !/^[A-Z]{3}$/.test(row.currency) || !Number.isSafeInteger(row.amount_minor) || row.amount_minor <= 0 || !Number.isSafeInteger(row.count) || row.count < 1)) throw fail('accounting_bank_expenses_invalid_totals', 503);
+  const pendingTotals = category => {
+    const values = new Map();
+    for (const row of pending.filter(row => !category || row.category === category)) {
+      const value = values.get(row.currency) || { currency: row.currency, amount_minor: 0, count: 0 };
+      value.amount_minor += row.amount_minor; value.count += row.count;
+      if (!Number.isSafeInteger(value.amount_minor) || !Number.isSafeInteger(value.count)) throw fail('accounting_bank_expenses_invalid_totals', 503);
+      values.set(row.currency, value);
+    }
+    return [...values.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+  };
+  summary.pending_original_totals = pendingTotals();
+  const categories = Object.entries(BANK_EXPENSE_CATEGORIES).map(([category, label]) => ({ category, label,
+    ...totals(grouped.find(row => row.category === category)), pending_original_totals: pendingTotals(category) }));
   const rows = (rowsResult.results || []).map(row => ({ ...row, date: row.transaction_date,
     possible_duplicate: Number(row.possible_duplicate) === 1,
-    derived_rate: row.original_amount_minor ? Math.abs(row.amount_minor / row.original_amount_minor) : null }));
+    fee_included: row.fee_included === null ? null : Number(row.fee_included) === 1,
+    derived_rate: row.amount_minor !== null && row.original_amount_minor ? Math.abs(row.amount_minor / row.original_amount_minor) : null }));
   return { currency: 'UAH', timezone: 'Europe/Kyiv', filters, summary, categories,
     coverage: { from: grouped.map(row => row.date_from).sort()[0] ?? null, to: grouped.map(row => row.date_to).sort().at(-1) ?? null },
     pagination: { page: filters.page, page_size: filters.page_size, total_count: summary.count, total_pages: Math.ceil(summary.count / filters.page_size) },

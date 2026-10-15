@@ -22,33 +22,53 @@ function validDate(value) {
 const dateText = value => validDate(value) ? `${value.slice(8, 10)}.${value.slice(5, 7)}.${value.slice(0, 4)}` : '—';
 const timeText = value => typeof value === 'string' ? value.match(/[T ](\d{2}:\d{2})(?::(\d{2}))?/)?.[0].trim().replace(/^T/, '') || '' : '';
 const periodText = (from, to) => `${dateText(from)} — ${dateText(to)}`;
+const receiptRow = row => row?.source_kind === 'receipt_image';
+const pendingRow = row => receiptRow(row) && row.amount_minor === null && row.uah_status === 'pending';
+const originalMoney = (value, currency) => minor(value) && currency ? `${decimal.format(value / 100)} ${currency}` : '—';
+const paymentWord = count => count % 10 === 1 && count % 100 !== 11 ? 'оплата' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'оплати' : 'оплат';
+
+function validRow(row, category) {
+  if (!row || row.category !== category || typeof row.id !== 'string' || !validDate(row.date) || typeof row.description !== 'string') return false;
+  if (!receiptRow(row)) return minor(row.amount_minor) && (row.original_amount_minor === null || row.original_amount_minor === undefined || minor(row.original_amount_minor));
+  return row.transaction_at === null && row.time_precision === 'date' &&
+    (pendingRow(row) || (row.uah_status === 'confirmed' && minor(row.amount_minor) && row.amount_minor > 0)) &&
+    minor(row.original_amount_minor) && row.original_amount_minor > 0 && /^[A-Z]{3}$/.test(row.original_currency) &&
+    minor(row.service_original_minor) && row.service_original_minor > 0 && nonnegative(row.fee_original_minor) &&
+    row.service_original_minor + row.fee_original_minor === row.original_amount_minor && row.fee_included === true &&
+    (row.source_row === null || row.source_row === undefined) && (row.source_sheet === null || row.source_sheet === undefined);
+}
 
 function validateResponse(data, category) {
   const summary = data?.summary, page = data?.pagination;
+  const pendingCount = summary?.pending_uah_count ?? 0, pendingTotals = summary?.pending_original_totals ?? [];
   if (data?.currency !== 'UAH' || !summary || !page || !Array.isArray(data.rows) ||
       !['count', 'debit_count', 'refund_count', 'debit_minor', 'refund_minor', 'possible_duplicate_count'].every(key => nonnegative(summary[key])) ||
       !minor(summary.net_minor) || summary.net_minor !== summary.debit_minor - summary.refund_minor ||
       summary.debit_count + summary.refund_count > summary.count || summary.possible_duplicate_count > summary.count ||
+      !nonnegative(pendingCount) || pendingCount > summary.debit_count || !Array.isArray(pendingTotals) ||
+      pendingTotals.some(total => !total || !/^[A-Z]{3}$/.test(total.currency) || !minor(total.amount_minor) || total.amount_minor <= 0 || !minor(total.count) || total.count <= 0) ||
+      pendingTotals.reduce((sum, total) => sum + total.count, 0) !== pendingCount ||
+      (summary.receipt_count !== undefined && (!nonnegative(summary.receipt_count) || summary.receipt_count > summary.count || summary.receipt_count < pendingCount)) ||
       !nonnegative(page.total_count) || page.total_count !== summary.count || !nonnegative(page.total_pages) ||
       !minor(page.page) || page.page < 1 || !minor(page.page_size) || page.page_size < 1 || data.rows.length > page.page_size ||
       (page.total_pages > 0 && page.page > page.total_pages) ||
-      data.rows.some(row => !row || row.category !== category || typeof row.id !== 'string' || !validDate(row.date) ||
-        typeof row.description !== 'string' || !minor(row.amount_minor) ||
-        (row.original_amount_minor !== null && row.original_amount_minor !== undefined && !minor(row.original_amount_minor)))) {
+      data.rows.some(row => !validRow(row, category)) || data.rows.filter(pendingRow).length > pendingCount ||
+      (summary.receipt_count !== undefined && data.rows.filter(receiptRow).length > summary.receipt_count)) {
     throw new Error('invalid_bank_expenses_response');
   }
   return data;
 }
 
 const markup = `
-  <div class="accounting-bank__heading"><div><h1 data-bank-title></h1><p data-bank-subtitle></p></div><span class="accounting-bank__source">Банківські виписки</span></div>
+  <div class="accounting-bank__heading"><div><h1 data-bank-title></h1><p data-bank-subtitle></p></div><span class="accounting-bank__source" data-bank-source>Банківські виписки</span></div>
   <p class="accounting-bank__scope" data-bank-scope></p>
   <section class="accounting-bank__summary" aria-label="Підсумки всіх операцій за вибраними умовами">
-    <div class="accounting-bank__metric accounting-bank__metric--net"><span>Витрати після повернень</span><strong data-bank-net>—</strong><small>Усі операції за вибраними умовами</small></div>
+    <div class="accounting-bank__metric accounting-bank__metric--net"><span data-bank-net-label>Витрати після повернень</span><strong data-bank-net>—</strong><small data-bank-net-note>Усі операції за вибраними умовами</small></div>
     <div class="accounting-bank__metric"><span>Списання</span><strong data-bank-debit>—</strong><small data-bank-debit-count></small></div>
     <div class="accounting-bank__metric"><span>Повернення</span><strong data-bank-refund>—</strong><small data-bank-refund-count></small></div>
     <div class="accounting-bank__metric"><span>Операцій</span><strong data-bank-count>—</strong><small data-bank-duplicates></small></div>
   </section>
+  <aside class="accounting-bank__pending" data-bank-pending role="note" hidden><strong data-bank-pending-title></strong><span data-bank-pending-original></span><small>Не перераховано до гривень і не включено до гривневого підсумку.</small></aside>
   <section class="accounting-bank__panel" aria-label="Реєстр банківських оплат">
     <form class="accounting-bank__filters" data-bank-form novalidate>
       <label>Від<input name="from" type="date" aria-label="Оплати від дати"></label><label>До<input name="to" type="date" aria-label="Оплати до дати"></label>
@@ -60,7 +80,7 @@ const markup = `
     <div class="accounting-bank__table-wrap" data-bank-list aria-busy="false"><table class="orders-table accounting-bank__table"><caption class="visually-hidden">Дата, отримувач і суми банківських оплат</caption><thead><tr><th scope="col">Дата й час</th><th scope="col">Отримувач</th><th scope="col">Сума, грн</th><th scope="col">Валюта операції</th><th scope="col"><span class="visually-hidden">Деталі</span></th></tr></thead><tbody data-bank-rows></tbody></table></div>
     <nav class="accounting-bank__pagination" aria-label="Сторінки оплат"><p data-bank-page-info></p><div><button class="admin-btn admin-btn--small" type="button" data-bank-prev disabled>← Назад</button><span data-bank-page></span><button class="admin-btn admin-btn--small" type="button" data-bank-next disabled>Далі →</button></div></nav>
   </section>
-  <p class="accounting-bank__footnote">Суми в гривнях — фактичні списання з картки. Повернення зменшують витрати. Час наведено як у виписці. Джерело та пояснення — у деталях кожного платежу.</p>`;
+  <p class="accounting-bank__footnote" data-bank-footnote>Суми в гривнях — фактичні списання з картки. Повернення зменшують витрати. Час наведено як у виписці. Джерело та пояснення — у деталях кожного платежу.</p>`;
 
 export function createAccountingBankExpensesView(container, api, { category, title, subtitle } = {}) {
   const noop = { load: async () => false, hide() {}, hasChanges: () => false, isDirty: () => false, isBusy: () => false, canLeave: () => true };
@@ -95,6 +115,7 @@ export function createAccountingBankExpensesView(container, api, { category, tit
   function clearResults(text) {
     for (const name of ['net', 'debit', 'refund', 'count']) find(`[data-bank-${name}]`).textContent = '—';
     for (const name of ['debit-count', 'refund-count', 'duplicates', 'page', 'page-info']) find(`[data-bank-${name}]`).textContent = '';
+    find('[data-bank-pending]').hidden = true;
     renderPlaceholder(text);
   }
   function periodLabel() {
@@ -108,17 +129,37 @@ export function createAccountingBankExpensesView(container, api, { category, tit
       const item = element('div'); if (wide) item.className = 'accounting-bank__detail-wide';
       item.append(element('dt', label), element('dd', String(value))); list.append(item);
     }
-    add('Опис у виписці', row.description, true);
+    const receipt = receiptRow(row);
+    if (receipt) add('Джерело оплати', 'Квитанція · зображення');
+    add(receipt ? 'Опис квитанції' : 'Опис у виписці', row.description, true);
     add('Призначення', row.classification_note, true);
     add('Платник', row.payer === 'zhenia' ? 'Женя' : row.payer);
     add('На кого віднесено', row.beneficiary === 'igor' ? 'Ігор · поїздка до Китаю' : row.beneficiary === 'evline' ? 'EVLine · замовлення' : row.beneficiary);
-    add('Дата й час у виписці', `${dateText(row.date)}${timeText(row.transaction_at) ? ` ${timeText(row.transaction_at)}` : ''}`);
+    add(receipt ? 'Дата оплати' : 'Дата й час у виписці', `${dateText(row.date)}${timeText(row.transaction_at) ? ` ${timeText(row.transaction_at)}` : ''}`);
+    if (receipt) {
+      add('Час оплати', 'Не зазначено');
+      if (row.date_basis === 'user_confirmation') add('Джерело дати', 'Дата підтверджена власником картки');
+      else if (row.date_basis === 'receipt_image') add('Джерело дати', 'Дата зазначена у квитанції');
+      add('Сума у гривнях', pendingRow(row) ? 'Очікується підтвердження фактичного списання' : money(row.amount_minor));
+      add('Послуга доставки', originalMoney(row.service_original_minor, row.original_currency));
+      add('Комісія', originalMoney(row.fee_original_minor, row.original_currency));
+      add('Сплачено разом, включно з комісією', originalMoney(row.original_amount_minor, row.original_currency));
+      add('Облік комісії', 'Комісію вже включено до загальної суми квитанції.', true);
+    }
     add('Тип операції', row.amount_minor < 0 ? 'Повернення коштів' : 'Списання');
     if (row.bank_rate !== null && row.bank_rate !== undefined && Number.isFinite(Number(row.bank_rate))) add('Курс у виписці', rate.format(Number(row.bank_rate)));
     if (row.derived_rate !== null && row.derived_rate !== undefined && Number.isFinite(Number(row.derived_rate))) add('Фактичний курс, грн / од. валюти', rate.format(Number(row.derived_rate)));
     add('MCC', row.mcc);
-    add('Файл виписки', row.source_filename, true);
-    add('Аркуш', row.source_sheet); add('Рядок у джерелі', row.source_row);
+    add(receipt ? 'Файл квитанції' : 'Файл виписки', row.source_filename, true);
+    if (receipt) {
+      if (/^[a-f0-9]{64}$/.test(row.source_id)) add('SHA-256 квитанції', row.source_id, true);
+      if (row.confirmation_source_kind === 'bank_screenshot') add('Підтвердження гривневої суми', 'Банківський знімок');
+      else if (row.confirmation_source_kind === 'owner_confirmation') add('Підтвердження гривневої суми', 'Власник картки');
+      add('Файл підтвердження', row.confirmation_source_filename, true);
+      add('Пояснення підтвердження', row.confirmation_note, true);
+      if (/^[a-f0-9]{64}$/.test(row.confirmation_source_id)) add('SHA-256 підтвердження', row.confirmation_source_id, true);
+    }
+    if (!receipt) { add('Аркуш', row.source_sheet); add('Рядок у джерелі', row.source_row); }
     if (row.possible_duplicate) add('Перевірка', 'Схожий платіж: включено до суми, потрібне звіряння.', true);
     return list;
   }
@@ -130,13 +171,16 @@ export function createAccountingBankExpensesView(container, api, { category, tit
       const date = element('td', undefined, 'accounting-bank__date');
       date.append(element('span', dateText(payment.date)));
       if (timeText(payment.transaction_at)) date.append(element('small', timeText(payment.transaction_at)));
+      else if (receiptRow(payment)) date.append(element('small', 'Час не зазначено'));
       const recipient = element('th', undefined, 'accounting-bank__recipient'); recipient.scope = 'row'; recipient.append(element('strong', payment.description));
+      if (receiptRow(payment)) recipient.append(element('span', 'Квитанція', 'accounting-bank__badge accounting-bank__badge--receipt'));
       if (payment.amount_minor < 0) recipient.append(element('span', 'Повернення', 'accounting-bank__badge accounting-bank__badge--refund'));
       if (payment.possible_duplicate) recipient.append(element('span', 'Схожий платіж', 'accounting-bank__badge accounting-bank__badge--review'));
-      const amount = element('td', decimal.format(payment.amount_minor / 100), 'accounting-bank__amount'); amount.dataset.label = 'Сума, грн';
+      const amount = element('td', pendingRow(payment) ? 'Очікується сума в гривнях' : decimal.format(payment.amount_minor / 100), 'accounting-bank__amount'); amount.dataset.label = 'Сума, грн';
+      if (pendingRow(payment)) amount.classList.add('accounting-bank__amount--pending');
       if (payment.amount_minor < 0) amount.classList.add('accounting-bank__amount--refund');
       const original = element('td', undefined, 'accounting-bank__original'); original.dataset.label = 'Валюта операції';
-      original.textContent = minor(payment.original_amount_minor) && payment.original_currency ? `${decimal.format(payment.original_amount_minor / 100)} ${payment.original_currency}` : '—';
+      original.textContent = originalMoney(payment.original_amount_minor, payment.original_currency);
       const control = element('td', undefined, 'accounting-bank__control'), toggle = element('button', 'Деталі', 'accounting-bank__detail-toggle');
       toggle.type = 'button'; toggle.dataset.bankDetails = ''; toggle.setAttribute('aria-expanded', 'false');
       toggle.setAttribute('aria-label', `Деталі платежу: ${payment.description}, ${dateText(payment.date)}`);
@@ -149,15 +193,23 @@ export function createAccountingBankExpensesView(container, api, { category, tit
   }
   function render() {
     const summary = data.summary, pagination = data.pagination;
-    find('[data-bank-net]').textContent = money(summary.net_minor);
-    find('[data-bank-debit]').textContent = money(summary.debit_minor);
+    const pendingCount = summary.pending_uah_count || 0, hasReceipts = Boolean(summary.receipt_count || pendingCount || data.rows.some(receiptRow));
+    find('[data-bank-net-label]').textContent = pendingCount ? 'Підтверджено в гривнях' : 'Витрати після повернень';
+    find('[data-bank-net-note]').textContent = pendingCount ? 'Після повернень · оплати без гривневої суми окремо' : 'Усі операції за вибраними умовами';
+    find('[data-bank-net]').textContent = pendingCount && summary.count === pendingCount ? '—' : money(summary.net_minor);
+    find('[data-bank-debit]').textContent = pendingCount && summary.debit_count === pendingCount ? '—' : money(summary.debit_minor);
     find('[data-bank-refund]').textContent = money(summary.refund_minor);
     find('[data-bank-count]').textContent = whole.format(summary.count);
-    find('[data-bank-debit-count]').textContent = `Операцій: ${whole.format(summary.debit_count)}`;
+    find('[data-bank-debit-count]').textContent = pendingCount ? `У гривнях: ${whole.format(summary.debit_count - pendingCount)} · очікує: ${whole.format(pendingCount)}` : `Операцій: ${whole.format(summary.debit_count)}`;
     find('[data-bank-refund-count]').textContent = `Операцій: ${whole.format(summary.refund_count)}`;
     find('[data-bank-duplicates]').textContent = summary.possible_duplicate_count ? `Схожих платежів: ${whole.format(summary.possible_duplicate_count)}` : 'За вибраними умовами';
     find('[data-bank-period]').textContent = periodLabel();
-    const coverage = validDate(data.coverage?.from) && validDate(data.coverage?.to) ? `Виписки: ${periodText(data.coverage.from, data.coverage.to)}` : '';
+    find('[data-bank-source]').textContent = hasReceipts ? 'Банківські виписки та квитанції' : 'Банківські виписки';
+    find('[data-bank-pending]').hidden = !pendingCount;
+    find('[data-bank-pending-title]').textContent = pendingCount ? `${whole.format(pendingCount)} ${paymentWord(pendingCount)} ${paymentWord(pendingCount) === 'оплата' ? 'очікує' : 'очікують'} суми в гривнях` : '';
+    find('[data-bank-pending-original]').textContent = (summary.pending_original_totals || []).map(total => originalMoney(total.amount_minor, total.currency)).join(' · ');
+    find('[data-bank-footnote]').textContent = hasReceipts ? 'Суми в гривнях — підтверджені списання з картки. Повернення зменшують витрати. Для квитанцій час показано лише за наявності. Джерело та пояснення — у деталях кожного платежу.' : 'Суми в гривнях — фактичні списання з картки. Повернення зменшують витрати. Час наведено як у виписці. Джерело та пояснення — у деталях кожного платежу.';
+    const coverage = validDate(data.coverage?.from) && validDate(data.coverage?.to) ? `${hasReceipts ? 'Джерела' : 'Виписки'}: ${periodText(data.coverage.from, data.coverage.to)}` : '';
     const trip = category === 'igor_china' && validDate(data.trip?.from) && validDate(data.trip?.to) ? `Поїздка: ${periodText(data.trip.from, data.trip.to)} включно` : '';
     find('[data-bank-scope]').textContent = [trip, coverage].filter(Boolean).join(' · ');
     renderRows();

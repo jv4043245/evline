@@ -16,6 +16,7 @@ function database() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys=ON; CREATE TABLE unrelated_accounting_balance(amount_minor INTEGER); INSERT INTO unrelated_accounting_balance VALUES(76543);');
   sqlite.exec(readFileSync(new URL('../migrations/0036_accounting_bank_expenses.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0038_accounting_bank_receipts.sql', import.meta.url), 'utf8'));
   const prepared = (sql, args = []) => ({ sql, args, bind(...bound) { return prepared(sql, bound); }, async all() { return { results: sqlite.prepare(sql).all(...args) }; } });
   const db = { prepare: prepared, async batch(statements) {
     sqlite.exec('BEGIN');
@@ -93,7 +94,7 @@ test('summary aggregates all filtered payments before pagination, with refund ma
   ]), { now });
   const report = await readBankExpenses(db, new URLSearchParams({ page_size: '1', page: '2' }));
   assert.equal(report.rows.length, 1); assert.equal(report.rows[0].description, 'Meest China');
-  assert.deepEqual(report.summary, { count: 4, debit_count: 3, refund_count: 1, debit_minor: 82500, refund_minor: 1930, net_minor: 80570, possible_duplicate_count: 1 });
+  assert.deepEqual(report.summary, { count: 4, debit_count: 3, refund_count: 1, debit_minor: 82500, refund_minor: 1930, net_minor: 80570, possible_duplicate_count: 1, pending_uah_count: 0, receipt_count: 0, pending_original_totals: [] });
   assert.deepEqual(report.pagination, { page: 2, page_size: 1, total_count: 4, total_pages: 4 });
   assert.deepEqual(report.coverage, { from: '2026-04-10', to: '2026-05-20' });
   const igor = await readBankExpenses(db, new URLSearchParams({ category: 'igor_china', from: '2026-04-10', to: '2026-04-28' }));

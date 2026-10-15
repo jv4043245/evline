@@ -143,3 +143,80 @@ test('malformed totals or rows from another category cannot show financial amoun
   await assert.rejects(view.controller.load(), error => error.status === 401);
   assert.match(view.get('message').textContent, /Увійдіть/); assert.equal(view.controller.isBusy(), false);
 });
+
+// Receipt examples below are synthetic; no private payment evidence belongs in tests.
+const receipt = (extra = {}) => payment({
+  id: 'synthetic-delivery-receipt', category: 'zhenia_delivery', payer: 'zhenia', beneficiary: 'evline',
+  date: '2027-08-19', transaction_at: null, time_precision: 'date', description: 'Meest China',
+  source_kind: 'receipt_image', source_filename: 'synthetic-receipt.png', source_sheet: null, source_row: null,
+  source_id: 'a'.repeat(64), date_basis: 'user_confirmation',
+  amount_minor: 70000, uah_status: 'confirmed', original_amount_minor: 10300, original_currency: 'CNY',
+  service_original_minor: 10000, fee_original_minor: 300, fee_included: true, bank_rate: null, derived_rate: null, mcc: null,
+  classification_note: 'Дата 19.08.2027 підтверджена власником картки; гривнева сума підтверджена другим знімком банку.', ...extra,
+});
+const delivery = (extra = {}) => fixture({
+  summary: { count: 6, debit_count: 6, refund_count: 0, debit_minor: 270000, refund_minor: 0, net_minor: 270000, possible_duplicate_count: 0, receipt_count: 1, pending_uah_count: 0, pending_original_totals: [] },
+  pagination: { page: 1, page_size: 25, total_count: 6, total_pages: 1 },
+  coverage: { from: '2027-02-12', to: '2027-08-19' }, rows: [receipt()], ...extra,
+});
+
+test('confirmed image receipt adds its UAH once and preserves date-only provenance, service and included fee', async t => {
+  const confirmation = { confirmation_source_kind: 'bank_screenshot', confirmation_source_id: 'b'.repeat(64), confirmation_source_filename: 'synthetic-bank-confirmation.png', confirmation_note: '700,00 грн — фактичне списання за доставку з комісією.', confirmed_at: '2027-08-19T16:42:00Z' };
+  const view = mount(t, async () => delivery({ rows: [receipt(confirmation)] }), { category: 'zhenia_delivery' });
+  assert.equal(await view.controller.load(), true);
+  assert.match(view.get('net').textContent, /2[\s\u00a0]700,00/); assert.equal(view.get('count').textContent, '6');
+  assert.equal(view.get('pending').hidden, true); assert.equal(view.get('net-label').textContent, 'Витрати після повернень');
+  assert.equal(view.get('source').textContent, 'Банківські виписки та квитанції'); assert.match(view.get('scope').textContent, /^Джерела:.*19\.08\.2027/);
+  const row = view.root.querySelector('[data-bank-row]');
+  assert.match(row.querySelector('.accounting-bank__amount').textContent, /700,00/);
+  assert.match(row.textContent, /19\.08\.2027Час не зазначено/); assert.match(row.textContent, /Квитанція/);
+  assert.doesNotMatch(row.textContent, /00:00|16:42/); assert.match(row.querySelector('.accounting-bank__original').textContent, /103,00 CNY/);
+  view.get('details').click(); const details = view.root.querySelector('.accounting-bank__details-row');
+  assert.match(details.textContent, /Квитанція · зображення/); assert.match(details.textContent, /Файл квитанціїsynthetic-receipt\.png/);
+  assert.match(details.textContent, /Послуга доставки100,00 CNYКомісія3,00 CNY/);
+  assert.match(details.textContent, /Сплачено разом, включно з комісією103,00 CNY/);
+  assert.match(details.textContent, /Комісію вже включено/); assert.match(details.textContent, /Дата 19\.08\.2027 підтверджена власником/);
+  assert.match(details.textContent, /Джерело датиДата підтверджена власником картки/);
+  assert.match(details.textContent, /Підтвердження гривневої сумиБанківський знімок/);
+  assert.match(details.textContent, /Файл підтвердженняsynthetic-bank-confirmation\.png/); assert.match(details.textContent, /Пояснення підтвердження700,00 грн/);
+  assert.ok(details.textContent.includes('a'.repeat(64))); assert.ok(details.textContent.includes('b'.repeat(64)));
+  assert.doesNotMatch(details.textContent, /Аркуш|Рядок у джерелі|00:00|16:42|Файл виписки/);
+});
+
+test('source caption uses filtered receipt count even when a confirmed receipt is on another page', async t => {
+  const bank = payment({ category: 'zhenia_delivery' });
+  const view = mount(t, async () => delivery({ rows: [bank] }), { category: 'zhenia_delivery' });
+  await view.controller.load(); assert.equal(view.get('source').textContent, 'Банківські виписки та квитанції');
+  assert.equal(view.root.querySelector('.accounting-bank__badge--receipt'), null); assert.equal(view.get('pending').hidden, true);
+});
+
+test('pending receipt keeps known UAH net separate and shows CNY gross across filters and pages', async t => {
+  const waiting = receipt({ amount_minor: null, uah_status: 'pending' });
+  const summary = { ...delivery().summary, debit_minor: 200000, net_minor: 200000, pending_uah_count: 1, pending_original_totals: [{ currency: 'CNY', amount_minor: 10300, count: 1 }] };
+  const view = mount(t, async url => {
+    const query = new URL(url, 'https://evline.test').searchParams;
+    if (query.get('from')) return delivery({ summary: { ...summary, count: 1, debit_count: 1, debit_minor: 0, net_minor: 0 }, pagination: { page: 1, page_size: 25, total_count: 1, total_pages: 1 }, rows: [waiting] });
+    return delivery({ summary, rows: [payment({ category: 'zhenia_delivery' })] });
+  }, { category: 'zhenia_delivery' });
+  await view.controller.load();
+  assert.match(view.get('net').textContent, /2[\s\u00a0]000,00/); assert.equal(view.get('net-label').textContent, 'Підтверджено в гривнях');
+  assert.equal(view.get('pending').hidden, false); assert.match(view.get('pending-title').textContent, /1 оплата очікує суми в гривнях/);
+  assert.match(view.get('pending-original').textContent, /103,00 CNY/); assert.match(view.get('pending').textContent, /не включено до гривневого підсумку/);
+  assert.match(view.get('debit-count').textContent, /У гривнях: 5 · очікує: 1/);
+  view.form.elements.from.value = '2027-08-19'; view.form.elements.to.value = '2027-08-19'; submit(view); await tick();
+  assert.equal(view.get('net').textContent, '—'); assert.equal(view.get('debit').textContent, '—');
+  const amount = view.root.querySelector('.accounting-bank__amount'); assert.equal(amount.textContent, 'Очікується сума в гривнях');
+  assert.ok(amount.classList.contains('accounting-bank__amount--pending')); assert.doesNotMatch(amount.textContent, /0,00/);
+  view.get('details').click(); assert.match(view.root.querySelector('.accounting-bank__details-row').textContent, /Очікується підтвердження фактичного списання/);
+});
+
+test('receipt validation rejects fabricated time, zero confirmation, missing UAH status and inconsistent fee totals', async t => {
+  for (const change of [
+    { transaction_at: '2027-08-19T00:00:00' }, { amount_minor: 0 }, { amount_minor: null, uah_status: 'confirmed' },
+    { amount_minor: 0, uah_status: 'pending' }, { original_amount_minor: 0 }, { service_original_minor: 0 },
+    { fee_original_minor: 301 }, { fee_included: false }, { source_row: 1 }, { source_sheet: 'Screenshot' },
+  ]) {
+    const view = mount(t, async () => delivery({ rows: [receipt(change)] }), { category: 'zhenia_delivery' });
+    assert.equal(await view.controller.load(), false); assert.equal(view.get('net').textContent, '—'); assert.match(view.get('message').textContent, /Не вдалося/);
+  }
+});

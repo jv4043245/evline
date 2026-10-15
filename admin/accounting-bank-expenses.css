@@ -13,6 +13,10 @@
 .accounting-bank__metric > strong { display: block; margin-top: 4px; font-size: clamp(20px, 2vw, 25px); font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.03em; white-space: nowrap; }
 .accounting-bank__metric > small { display: block; margin-top: 4px; color: #687382; font-size: 11px; line-height: 1.5; }
 .accounting-bank__panel { overflow: hidden; border: 1px solid #e2e5e9; border-radius: 14px; background: #fff; }
+.accounting-bank__pending { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin: 0 0 16px; padding: 13px 18px; border: 1px solid #eadcbd; border-radius: 11px; background: #fffaf0; color: #805c1b; font-size: 12px; line-height: 1.6; }
+.accounting-bank__pending > strong { font-size: 12px; font-weight: 550; }
+.accounting-bank__pending > span { font-weight: 600; font-variant-numeric: tabular-nums; }
+.accounting-bank__pending > small { flex-basis: 100%; color: #8b744c; font-size: 11px; }
 .accounting-bank__filters { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(130px, .8fr) minmax(180px, 1.6fr) auto; align-items: end; gap: 12px; padding: 14px 22px; border-bottom: 1px solid #eef0f2; background: #fbfcfd; }
 .accounting-bank__filters label { display: grid; min-width: 0; gap: 7px; color: #536171; font-size: 12px; }
 .accounting-bank__filters input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid #dce2e8; border-radius: 8px; background: #fff; color: #243746; font: inherit; font-size: 13px; }
@@ -45,9 +49,11 @@
 .accounting-bank__badge { display: inline-block; margin: 5px 5px 0 0; padding: 3px 6px; border-radius: 5px; font-size: 11px; font-weight: 400; line-height: 1.4; }
 .accounting-bank__badge--refund { color: #16745d; background: #ecf7f2; }
 .accounting-bank__badge--review { color: #895b13; background: #fff5df; }
+.accounting-bank__badge--receipt { color: #4a6e9d; background: #eef4fb; }
 .accounting-bank__table .accounting-bank__amount, .accounting-bank__table .accounting-bank__original { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .accounting-bank__amount { font-weight: 550; }
 .accounting-bank__amount--refund { color: #16745d; }
+.accounting-bank__table .accounting-bank__amount--pending { white-space: normal; color: #895b13; font-size: 12px; font-weight: 400; }
 .accounting-bank__original { color: #687382; }
 .accounting-bank__table .accounting-bank__control { text-align: right; padding-right: 22px !important; }
 .accounting-bank__detail-toggle { margin-top: -7px; min-height: 32px; }
@@ -94,6 +100,8 @@
   .accounting-bank__date small { margin: 0; }
   .accounting-bank__amount { grid-column: 2; grid-row: 1; font-size: 15px !important; }
   .accounting-bank__amount::after { content: ' грн'; font-size: 11px; font-weight: 400; }
+  .accounting-bank__table .accounting-bank__amount--pending { max-width: 150px; font-size: 12px !important; }
+  .accounting-bank__amount--pending::after { content: none; }
   .accounting-bank__recipient { grid-column: 1 / -1; grid-row: 2; }
   .accounting-bank__recipient strong { font-size: 14px; }
   .accounting-bank__table .accounting-bank__original { grid-column: 1; grid-row: 3; text-align: left; }
