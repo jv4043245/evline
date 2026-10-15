@@ -239,18 +239,21 @@ function navigationHarness(t) {
   const profitView = { canLeave: () => guards.profit, load: async () => {} };
   const code = adminSource.slice(adminSource.indexOf('function setActiveTab(tab)'), adminSource.indexOf('function renderSummary(data)'));
   assert.match(code, /function navigateAccountingProvider/);
-  const initialize = new window.Function('state', 'guards', 'accountingProviderView', 'accountingProfitView', 'accountingPeriods', `
+  const initialize = new window.Function('state', 'guards', 'accountingProviderView', 'accountingProfitView', 'accountingPeriods', 'loads', `
     const adminTabs = new Set(['orders','contacts','china','analytics','delivery','accounting']);
-    let accountingProvider = null, accountingPanel = 'advertising';
+    let accountingProvider = null, accountingPanel = 'advertising', accountingIgorSection = 'china';
+    const accountingIgorView = { canLeave: () => guards.igor !== false, load: async () => {} };
+    const bankView = name => ({ hide: () => {}, load: async options => { loads.push({ bank: name, ...options }); } });
+    const accountingBankViews = { igor: bankView('igor'), alipay: bankView('alipay'), delivery: bankView('delivery'), other: bankView('other') };
     const accountingView = { load: async () => {} };
     const adminToken = () => 'test-session', allowDiscardOrder = () => guards.order;
     const setOrderDetailOpen = () => {}, setMarketLookupOpen = () => {}, setChinaRequestPanelOpen = () => {}, setChinaPreorderPanelOpen = () => {};
     const startChinaAutoRefresh = () => {}, stopChinaAutoRefresh = () => {}, loadChinaPreorders = async () => {}, renderShippingDirectory = () => {};
     ${code}
     setActiveTab('accounting');
-    return { setActiveTab, navigateAccountingProvider, state: () => ({provider:accountingProvider,panel:accountingPanel,tab:state.activeTab}) };
+    return { setActiveTab, navigateAccountingProvider, navigateAccountingSection, state: () => ({provider:accountingProvider,panel:accountingPanel,tab:state.activeTab}), igorSection: () => accountingIgorSection };
   `);
-  const navigation = initialize(state, guards, providerView, profitView, createAccountingPeriodState(window.localStorage));
+  const navigation = initialize(state, guards, providerView, profitView, createAccountingPeriodState(window.localStorage), loads);
   return { window, document: window.document, guards, loads, navigation };
 }
 
@@ -296,6 +299,35 @@ test('actual navigation guards hash changes, primary tabs and profit tab against
   assert.equal(navigation.state().provider, 'meta');
   assert.equal(navigation.setActiveTab('orders'), true);
   assert.equal(window.location.hash, '');
+});
+
+test('bank ledgers have independent routes and leave the Romania draft and advertising range intact', async t => {
+  const { document, window, guards, navigation, loads } = navigationHarness(t);
+  document.querySelector('[data-accounting-tab="zhenia-alipay"]').click(); await tick();
+  assert.equal(window.location.hash, '#accounting/zhenia-alipay');
+  assert.equal(navigation.state().panel, 'zhenia-alipay');
+  assert.equal(document.querySelector('#range').hidden, true);
+  assert.equal(loads.at(-1).bank, 'alipay');
+  assert.equal(document.querySelector('[data-accounting-panel="zhenia-alipay"]').hidden, false);
+  assert.equal(navigation.navigateAccountingSection('igor', 'china'), true); await tick();
+  assert.equal(loads.at(-1).bank, 'igor');
+  assert.equal(window.location.hash, '#accounting/igor/china');
+  assert.equal(document.querySelector('[data-igor-section-panel="advertising"]').hidden, true);
+  assert.equal(navigation.navigateAccountingSection('igor', 'advertising'), true);
+  guards.igor = false;
+  assert.equal(navigation.navigateAccountingSection('zhenia-delivery'), false);
+  assert.equal(navigation.igorSection(), 'advertising');
+  assert.equal(navigation.setActiveTab('orders'), false);
+  guards.igor = true;
+  window.history.replaceState(null, '', '#accounting/zhenia-delivery');
+  window.dispatchEvent(new window.HashChangeEvent('hashchange')); await tick();
+  assert.equal(navigation.state().panel, 'zhenia-delivery');
+  assert.equal(loads.at(-1).bank, 'delivery');
+  assert.equal(navigation.setActiveTab('orders'), true);
+  assert.equal(window.location.hash, '');
+  navigation.navigateAccountingProvider(null); await tick();
+  assert.equal(document.querySelector('#range').value, '90d');
+  assert.equal(document.querySelector('#range').hidden, false);
 });
 
 test('authenticated binary helper omits JSON content-type for multipart and never embeds credentials in URLs', async t => {

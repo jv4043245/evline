@@ -14,7 +14,8 @@
     <link rel="stylesheet" href="/admin/accounting-andrii-ads.css?v=20261010-period">
     <link rel="stylesheet" href="/admin/accounting-igor.css?v=20261010-igor">
     <link rel="stylesheet" href="/admin/accounting-provider.css?v=20261009-reports-mobile">
-    <script type="module" src="/admin/admin.js?v=20261010-andrii-period"></script>
+    <link rel="stylesheet" href="/admin/accounting-bank-expenses.css?v=20261015-bank">
+    <script type="module" src="/admin/admin.js?v=20261015-bank"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -675,6 +676,8 @@
           <button type="button" data-accounting-tab="advertising" aria-pressed="true">Реклама</button>
           <button type="button" data-accounting-tab="profit" aria-pressed="false">Розрахунок Андрія</button>
           <button type="button" data-accounting-tab="igor" aria-pressed="false">Розрахунок Ігоря</button>
+          <button type="button" data-accounting-tab="zhenia-alipay" aria-pressed="false">Женя · Alipay</button>
+          <button type="button" data-accounting-tab="zhenia-delivery" aria-pressed="false">Женя · доставка</button>
         </div>
         <div data-accounting-panel="advertising">
         <div data-accounting-overview>
@@ -731,7 +734,22 @@
         <div data-accounting-provider-view hidden></div>
         </div>
         <div data-accounting-panel="profit" hidden><div data-accounting-profit></div></div>
-        <div data-accounting-panel="igor" hidden><div data-accounting-igor></div></div>
+        <div data-accounting-panel="igor" hidden>
+          <div class="accounting-subnav accounting-segmented" role="group" aria-label="Витрати Ігоря">
+            <button type="button" data-igor-section="china" aria-pressed="true">Поїздка до Китаю</button>
+            <button type="button" data-igor-section="advertising" aria-pressed="false">Реклама · Румунія</button>
+          </div>
+          <div data-igor-section-panel="china"><div data-accounting-bank-igor></div></div>
+          <div data-igor-section-panel="advertising" hidden><div data-accounting-igor></div></div>
+        </div>
+        <div data-accounting-panel="zhenia-alipay" hidden>
+          <div data-accounting-bank-alipay></div>
+          <details class="accounting-bank-other" data-accounting-bank-other-panel>
+            <summary>Інші оплати Женя за замовленнями</summary>
+            <div data-accounting-bank-other></div>
+          </details>
+        </div>
+        <div data-accounting-panel="zhenia-delivery" hidden><div data-accounting-bank-delivery></div></div>
       </section>
 
       <section class="admin-view" data-admin-view="delivery" hidden>

@@ -33,8 +33,8 @@ test("accounting adds one primary section without removing existing admin featur
   assert.ok(root.querySelector('[data-admin-view="accounting"]').hidden);
   assert.equal(root.querySelector("#range").getAttribute("aria-label"), "Період звіту");
   assert.match(source, /createAccountingView\(document, api\)/);
-  assert.match(source, /state\.activeTab === "accounting" \? loadAccountingPanel\(\)/);
-  assert.equal(root.querySelectorAll('[data-accounting-tab]').length, 3);
+  assert.match(source, /state\.activeTab === "accounting" \? loadAccountingPanel\(\{ force: true \}\)/);
+  assert.equal(root.querySelectorAll('[data-accounting-tab]').length, 5);
   assert.ok(root.querySelector('[data-accounting-panel="advertising"] [data-accounting-content]'));
   assert.ok(root.querySelector('[data-accounting-panel="profit"] [data-accounting-profit]'));
   assert.ok(root.querySelector('[data-accounting-panel="profit"]').hidden);

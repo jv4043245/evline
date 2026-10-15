@@ -10,6 +10,7 @@ import { createAccountingView, createAccountingPeriodState } from "./accounting.
 import { createAccountingProfitView } from "./accounting-profit.js?v=20261010-period";
 import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
+import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-bank";
 
 const state = {
   range: "30d",
@@ -374,9 +375,22 @@ const accountingView = createAccountingView(document, api);
 const accountingPeriods = createAccountingPeriodState(localStorage);
 const accountingProfitView = createAccountingProfitView(document.querySelector('[data-accounting-profit]'), api);
 const accountingIgorView = createAccountingIgorView(document.querySelector('[data-accounting-igor]'), api);
-let accountingPanel = ['profit', 'igor'].includes(localStorage.getItem('evline_accounting_panel')) ? localStorage.getItem('evline_accounting_panel') : 'advertising';
+const accountingBankViews = {
+  igor: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-igor]'), api, { category: 'igor_china', title: 'Витрати Ігоря · Китай', subtitle: 'Особисті витрати під час поїздки · оплати карткою Жені' }),
+  alipay: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-alipay]'), api, { category: 'zhenia_alipay', title: 'Женя · Alipay', subtitle: 'Оплати запчастин для замовлень · фактичні списання з картки' }),
+  delivery: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-delivery]'), api, { category: 'zhenia_delivery', title: 'Женя · доставка', subtitle: 'Meest · оплати доставки та деталі банківських операцій' }),
+  other: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-other]'), api, { category: 'order_other', title: 'Інші оплати за замовленнями', subtitle: 'Підтверджені витрати Женя · окремо від запчастин і Meest' }),
+};
+let accountingIgorSection = localStorage.getItem('evline_accounting_igor_section') === 'advertising' ? 'advertising' : 'china';
+let accountingPanel = ['profit', 'igor', 'zhenia-alipay', 'zhenia-delivery'].includes(localStorage.getItem('evline_accounting_panel')) ? localStorage.getItem('evline_accounting_panel') : 'advertising';
 let accountingProvider = /^#accounting\/(google|meta)$/.exec(location.hash)?.[1] || null;
 if (accountingProvider) { state.activeTab = 'accounting'; accountingPanel = 'advertising'; }
+const initialBankRoute = /^#accounting\/(zhenia-alipay|zhenia-delivery|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
+if (initialBankRoute) {
+  accountingPanel = initialBankRoute[1].startsWith('igor') ? 'igor' : initialBankRoute[1];
+  if (accountingPanel === 'igor') accountingIgorSection = initialBankRoute[2] || 'china';
+  state.activeTab = 'accounting';
+}
 const accountingProviderView = createAccountingProviderView(document.querySelector('[data-accounting-provider-view]'), {
   api, request: accountingReportsRequest, getRange: () => accountingPeriods.accounting(),
   onBack: () => navigateAccountingProvider(null),
@@ -557,7 +571,7 @@ function setActiveTab(tab) {
   if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
   if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingPanel === 'igor' && !accountingIgorView.canLeave()) return false;
   if (nextTab !== state.activeTab && state.activeTab === 'accounting' && accountingProvider && !accountingProviderView.canLeave()) return false;
-  if (nextTab !== 'accounting' && accountingProvider) {
+  if (nextTab !== 'accounting' && location.hash.startsWith('#accounting')) {
     accountingProvider = null;
     history.replaceState(null, '', location.pathname + location.search);
   }
@@ -604,10 +618,22 @@ function syncAccountingPanel() {
   document.querySelector('[data-accounting-overview]').hidden = Boolean(accountingProvider);
   document.querySelector('[data-accounting-provider-view]').hidden = !accountingProvider;
   const range = document.querySelector('#range');
-  if (range) range.hidden = state.activeTab === 'accounting' && ['profit', 'igor'].includes(accountingPanel);
+  if (range) range.hidden = state.activeTab === 'accounting' && accountingPanel !== 'advertising';
+  document.querySelectorAll('[data-igor-section]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.igorSection === accountingIgorSection)));
+  document.querySelectorAll('[data-igor-section-panel]').forEach(panel => { panel.hidden = panel.dataset.igorSectionPanel !== accountingIgorSection; });
+  const active = state.activeTab === 'accounting';
+  if (!active || accountingPanel !== 'igor' || accountingIgorSection !== 'china') accountingBankViews.igor.hide();
+  if (!active || accountingPanel !== 'zhenia-alipay') { accountingBankViews.alipay.hide(); accountingBankViews.other.hide(); }
+  if (!active || accountingPanel !== 'zhenia-delivery') accountingBankViews.delivery.hide();
 }
 
-function loadAccountingPanel() {
+function loadAccountingPanel({ force = false } = {}) {
+  if (accountingPanel === 'igor' && accountingIgorSection === 'china') return accountingBankViews.igor.load({ force });
+  if (accountingPanel === 'zhenia-alipay') {
+    if (document.querySelector('[data-accounting-bank-other-panel]')?.open) accountingBankViews.other.load({ force }).catch(() => {});
+    return accountingBankViews.alipay.load({ force });
+  }
+  if (accountingPanel === 'zhenia-delivery') return accountingBankViews.delivery.load({ force });
   return accountingPanel === 'profit' ? accountingProfitView.load() : accountingPanel === 'igor' ? accountingIgorView.load() : accountingProvider
     ? accountingProviderView.load({ provider: accountingProvider, range: accountingPeriods.accounting() })
     : accountingView.load(accountingPeriods.accounting());
@@ -630,26 +656,50 @@ document.querySelectorAll('[data-accounting-provider]').forEach(link => link.add
   event.preventDefault(); navigateAccountingProvider(link.dataset.accountingProvider);
 }));
 window.addEventListener('hashchange', () => {
+  const section = /^#accounting\/(zhenia-alipay|zhenia-delivery|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
+  if (section) {
+    const panel = section[1].startsWith('igor') ? 'igor' : section[1];
+    if (!navigateAccountingSection(panel, section[2] || 'china', { writeHistory: false })) history.replaceState(null, '', `${location.pathname}${location.search}${currentAccountingHash()}`);
+    return;
+  }
   const provider = /^#accounting\/(google|meta)$/.exec(location.hash)?.[1] || null;
   if (location.hash.startsWith('#accounting') || accountingProvider) {
     if (!navigateAccountingProvider(provider, { writeHistory: false })) {
-      history.replaceState(null, '', `${location.pathname}${location.search}#accounting${accountingProvider ? `/${accountingProvider}` : ''}`);
+      history.replaceState(null, '', `${location.pathname}${location.search}${currentAccountingHash()}`);
     }
   }
 });
 
+function currentAccountingHash() {
+  return accountingPanel === 'advertising' ? `#accounting${accountingProvider ? `/${accountingProvider}` : ''}` : `#accounting/${accountingPanel}${accountingPanel === 'igor' ? `/${accountingIgorSection}` : ''}`;
+}
+function navigateAccountingSection(next, igorSection = accountingIgorSection, { writeHistory = true } = {}) {
+  if (!['advertising', 'profit', 'igor', 'zhenia-alipay', 'zhenia-delivery'].includes(next) || !['china', 'advertising'].includes(igorSection)) return false;
+  if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
+  if (accountingPanel === 'igor' && !accountingIgorView.canLeave()) return false;
+  if (accountingProvider && !accountingProviderView.canLeave()) return false;
+  if (state.activeTab !== 'accounting' && !allowDiscardOrder()) return false;
+  accountingProvider = null;
+  accountingPanel = next;
+  accountingIgorSection = igorSection;
+  localStorage.setItem('evline_accounting_panel', next);
+  localStorage.setItem('evline_accounting_igor_section', igorSection);
+  if (writeHistory) history.pushState(null, '', `${location.pathname}${location.search}${currentAccountingHash()}`);
+  setActiveTab('accounting');
+  return true;
+}
 document.querySelectorAll('[data-accounting-tab]').forEach(button => button.addEventListener('click', () => {
   const next = button.dataset.accountingTab;
-  if (next === accountingPanel || !['advertising', 'profit', 'igor'].includes(next)) return;
-  if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return;
-  if (accountingPanel === 'igor' && !accountingIgorView.canLeave()) return;
-  if (accountingProvider && !accountingProviderView.canLeave()) return;
-  if (accountingProvider) { accountingProvider = null; history.replaceState(null, '', location.pathname + location.search); }
-  accountingPanel = next;
-  localStorage.setItem('evline_accounting_panel', next);
-  syncAccountingPanel();
-  if (state.activeTab === 'accounting' && adminToken()) loadAccountingPanel().catch(() => {});
+  if (next === accountingPanel) return;
+  navigateAccountingSection(next);
 }));
+document.querySelectorAll('[data-igor-section]').forEach(button => button.addEventListener('click', () => {
+  if (button.dataset.igorSection !== accountingIgorSection) navigateAccountingSection('igor', button.dataset.igorSection);
+}));
+document.querySelector('[data-accounting-bank-other-panel]')?.addEventListener('toggle', event => {
+  if (!event.currentTarget.open) { accountingBankViews.other.hide(); return; }
+  if (state.activeTab === 'accounting' && accountingPanel === 'zhenia-alipay' && adminToken()) accountingBankViews.other.load().catch(() => {});
+});
 
 function renderSummary(data) {
   state.campaignReport = data.campaigns || [];
@@ -4082,7 +4132,7 @@ async function refresh() {
       googleAdsKeywordsExport.href = `/api/admin/google-ads/keywords?format=csv&range=${encodeURIComponent(state.range)}&level=${encodeURIComponent(keywordLevel)}`;
     }
     await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
-      state.activeTab === "accounting" ? loadAccountingPanel() : Promise.resolve(),
+      state.activeTab === "accounting" ? loadAccountingPanel({ force: true }) : Promise.resolve(),
     ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
