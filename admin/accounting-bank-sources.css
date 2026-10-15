@@ -1,0 +1,59 @@
+.accounting-bank-sources { max-width: 1040px; margin: 4px auto 0; color: #243746; }
+.accounting-bank-sources [hidden] { display: none !important; }
+.accounting-bank-sources__heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 14px 20px; margin: 0 0 22px; }
+.accounting-bank-sources__heading h1 { margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -.035em; }
+.accounting-bank-sources__heading p { margin: 8px 0 0; color: #687382; font-size: 13px; line-height: 1.5; }
+.accounting-bank-sources__badge { margin-top: 4px; padding: 6px 9px; border: 1px solid #e2e5e9; border-radius: 7px; background: #fff; color: #687382; font-size: 11px; white-space: nowrap; }
+.accounting-bank-sources__panel { border: 1px solid #e2e5e9; border-radius: 14px; background: #fff; overflow: hidden; }
+.accounting-bank-sources__loading { padding: 24px; color: #687382; font-size: 13px; }
+.accounting-bank-sources__locked { max-width: 620px; padding: 30px; }
+.accounting-bank-sources__lock-mark { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 18px; border: 1px solid #d8e4f3; border-radius: 12px; color: #3573cf; background: #f5f9fe; }
+.accounting-bank-sources__lock-mark svg { width: 24px; height: 24px; }
+.accounting-bank-sources__lock-copy h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.accounting-bank-sources__lock-copy p { max-width: 450px; margin: 10px 0 22px; font-size: 13px; line-height: 1.7; color: #687382; }
+.accounting-bank-sources__unlock-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.accounting-bank-sources__unlock-form label { display: grid; flex: 1 1 240px; gap: 7px; font-size: 12px; color: #536171; }
+.accounting-bank-sources__unlock-form input { box-sizing: border-box; width: 100%; min-height: 42px; border: 1px solid #dce2e8; border-radius: 8px; padding: 9px 11px; background: white; color: #243746; font: inherit; font-size: 15px; }
+.accounting-bank-sources__unlock-form button { min-height: 42px; }
+.accounting-bank-sources__hint { display: block; margin-top: 14px; color: #78828c; font-size: 11px; line-height: 1.6; }
+.accounting-bank-sources__toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 23px 24px 20px; border-bottom: 1px solid #eef0f2; }
+.accounting-bank-sources__toolbar h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.accounting-bank-sources__toolbar p { margin: 7px 0 0; font-size: 12px; color: #687382; }
+.accounting-bank-sources__file { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: start; gap: 16px; padding: 24px; border-bottom: 1px solid #eef0f2; }
+.accounting-bank-sources__file-type { display: grid; place-items: center; min-height: 49px; border: 1px solid #dce6f3; border-radius: 9px; background: #f5f9fe; color: #4a6e9d; font-size: 10px; font-weight: 600; letter-spacing: .03em; }
+.accounting-bank-sources__file-content h3 { margin: 0; color: #243746; font-size: 14px; font-weight: 550; line-height: 1.5; overflow-wrap: anywhere; }
+.accounting-bank-sources__file-content > p { margin: 6px 0; color: #536171; font-size: 12px; font-variant-numeric: tabular-nums; }
+.accounting-bank-sources__file-content > small { display: block; color: #78828c; font-size: 11px; }
+.accounting-bank-sources__file > button { margin-top: 2px; }
+.accounting-bank-sources__file-details { margin-top: 11px; }
+.accounting-bank-sources__file-details summary { display: inline-block; color: #3573cf; cursor: pointer; font-size: 11px; padding: 5px 0; }
+.accounting-bank-sources__file-details summary::after { content: ' +'; }
+.accounting-bank-sources__file-details[open] summary::after { content: ' −'; }
+.accounting-bank-sources__file-details dl { margin: 9px 0 0; padding: 14px; border: 1px solid #e8edf2; border-radius: 8px; background: #f8fafc; }
+.accounting-bank-sources__file-details dl > div + div { margin-top: 12px; }
+.accounting-bank-sources__file-details dt { margin-bottom: 4px; color: #78828c; font-size: 10px; }
+.accounting-bank-sources__file-details dd { margin: 0; color: #536171; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.accounting-bank-sources__file-details .accounting-bank-sources__sha { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.accounting-bank-sources__note { margin: 0; padding: 18px 24px; color: #78828c; font-size: 11px; line-height: 1.7; background: #fbfcfd; }
+.accounting-bank-sources__feedback { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 0 24px; }
+.accounting-bank-sources__feedback p { margin: 0 0 20px; color: #687382; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.accounting-bank-sources__feedback p:empty { display: none; }
+.accounting-bank-sources__feedback p[data-error="true"] { color: #9b351f; }
+.accounting-bank-sources__feedback button { margin-bottom: 20px; }
+.accounting-bank-sources__empty { margin: 0; padding: 28px 24px; color: #687382; font-size: 13px; }
+.accounting-bank-sources button:focus-visible, .accounting-bank-sources input:focus-visible, .accounting-bank-sources summary:focus-visible { outline: 2px solid #3573cf; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .accounting-bank-sources__heading h1 { font-size: 24px; }
+  .accounting-bank-sources__heading p { font-size: 12px; }
+  .accounting-bank-sources__locked { padding: 24px 18px; }
+  .accounting-bank-sources__unlock-form { display: grid; grid-template-columns: 1fr; }
+  .accounting-bank-sources__unlock-form input { min-height: 44px; font-size: 16px; }
+  .accounting-bank-sources__unlock-form button { justify-self: start; min-height: 44px; }
+  .accounting-bank-sources__toolbar { padding: 20px 18px; }
+  .accounting-bank-sources__file { grid-template-columns: 40px minmax(0, 1fr); padding: 20px 18px; gap: 12px; }
+  .accounting-bank-sources__file > button { grid-column: 2; justify-self: start; min-height: 40px; }
+  .accounting-bank-sources__file-type { min-height: 45px; font-size: 9px; }
+  .accounting-bank-sources__file-content h3 { font-size: 13px; }
+  .accounting-bank-sources__note { padding: 16px 18px; }
+  .accounting-bank-sources__feedback { padding: 0 18px; }
+}

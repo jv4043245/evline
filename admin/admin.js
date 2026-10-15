@@ -11,6 +11,7 @@ import { createAccountingProfitView } from "./accounting-profit.js?v=20261010-pe
 import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-bank";
+import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 
 const state = {
   range: "30d",
@@ -381,11 +382,18 @@ const accountingBankViews = {
   delivery: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-delivery]'), api, { category: 'zhenia_delivery', title: 'Женя · доставка', subtitle: 'Meest · оплати доставки та деталі банківських операцій' }),
   other: createAccountingBankExpensesView(document.querySelector('[data-accounting-bank-other]'), api, { category: 'order_other', title: 'Інші оплати за замовленнями', subtitle: 'Підтверджені витрати Женя · окремо від запчастин і Meest' }),
 };
+const accountingBankSourcesView = createAccountingBankSourcesView(document.querySelector('[data-accounting-bank-sources]'), {
+  api, request: accountingReportsRequest,
+  onAccessChange: allowed => {
+    const button = document.querySelector('[data-accounting-tab="bank-sources"]');
+    if (button) button.hidden = !allowed;
+  },
+});
 let accountingIgorSection = localStorage.getItem('evline_accounting_igor_section') === 'advertising' ? 'advertising' : 'china';
-let accountingPanel = ['profit', 'igor', 'zhenia-alipay', 'zhenia-delivery'].includes(localStorage.getItem('evline_accounting_panel')) ? localStorage.getItem('evline_accounting_panel') : 'advertising';
+let accountingPanel = ['profit', 'igor', 'zhenia-alipay', 'zhenia-delivery', 'bank-sources'].includes(localStorage.getItem('evline_accounting_panel')) ? localStorage.getItem('evline_accounting_panel') : 'advertising';
 let accountingProvider = /^#accounting\/(google|meta)$/.exec(location.hash)?.[1] || null;
 if (accountingProvider) { state.activeTab = 'accounting'; accountingPanel = 'advertising'; }
-const initialBankRoute = /^#accounting\/(zhenia-alipay|zhenia-delivery|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
+const initialBankRoute = /^#accounting\/(zhenia-alipay|zhenia-delivery|bank-sources|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
 if (initialBankRoute) {
   accountingPanel = initialBankRoute[1].startsWith('igor') ? 'igor' : initialBankRoute[1];
   if (accountingPanel === 'igor') accountingIgorSection = initialBankRoute[2] || 'china';
@@ -561,6 +569,7 @@ function setAdminUser(name) {
 }
 
 function setAuthVisible(visible) {
+  if (visible) accountingBankSourcesView.reset();
   const panel = document.querySelector("[data-auth-panel]");
   if (panel) panel.hidden = !visible;
 }
@@ -607,6 +616,7 @@ function setActiveTab(tab) {
   if (nextTab === "delivery") renderShippingDirectory();
   syncAccountingPanel();
   if (nextTab === "accounting" && adminToken()) {
+    if (accountingPanel !== 'bank-sources') accountingBankSourcesView.probeAccess().catch(() => {});
     loadAccountingPanel().catch(() => {});
   }
   return true;
@@ -625,9 +635,11 @@ function syncAccountingPanel() {
   if (!active || accountingPanel !== 'igor' || accountingIgorSection !== 'china') accountingBankViews.igor.hide();
   if (!active || accountingPanel !== 'zhenia-alipay') { accountingBankViews.alipay.hide(); accountingBankViews.other.hide(); }
   if (!active || accountingPanel !== 'zhenia-delivery') accountingBankViews.delivery.hide();
+  if (!active || accountingPanel !== 'bank-sources') accountingBankSourcesView.hide();
 }
 
 function loadAccountingPanel({ force = false } = {}) {
+  if (accountingPanel === 'bank-sources') return accountingBankSourcesView.load({ force });
   if (accountingPanel === 'igor' && accountingIgorSection === 'china') return accountingBankViews.igor.load({ force });
   if (accountingPanel === 'zhenia-alipay') {
     if (document.querySelector('[data-accounting-bank-other-panel]')?.open) accountingBankViews.other.load({ force }).catch(() => {});
@@ -656,7 +668,7 @@ document.querySelectorAll('[data-accounting-provider]').forEach(link => link.add
   event.preventDefault(); navigateAccountingProvider(link.dataset.accountingProvider);
 }));
 window.addEventListener('hashchange', () => {
-  const section = /^#accounting\/(zhenia-alipay|zhenia-delivery|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
+  const section = /^#accounting\/(zhenia-alipay|zhenia-delivery|bank-sources|igor(?:\/(china|advertising))?|profit)$/.exec(location.hash);
   if (section) {
     const panel = section[1].startsWith('igor') ? 'igor' : section[1];
     if (!navigateAccountingSection(panel, section[2] || 'china', { writeHistory: false })) history.replaceState(null, '', `${location.pathname}${location.search}${currentAccountingHash()}`);
@@ -674,7 +686,7 @@ function currentAccountingHash() {
   return accountingPanel === 'advertising' ? `#accounting${accountingProvider ? `/${accountingProvider}` : ''}` : `#accounting/${accountingPanel}${accountingPanel === 'igor' ? `/${accountingIgorSection}` : ''}`;
 }
 function navigateAccountingSection(next, igorSection = accountingIgorSection, { writeHistory = true } = {}) {
-  if (!['advertising', 'profit', 'igor', 'zhenia-alipay', 'zhenia-delivery'].includes(next) || !['china', 'advertising'].includes(igorSection)) return false;
+  if (!['advertising', 'profit', 'igor', 'zhenia-alipay', 'zhenia-delivery', 'bank-sources'].includes(next) || !['china', 'advertising'].includes(igorSection)) return false;
   if (accountingPanel === 'profit' && !accountingProfitView.canLeave()) return false;
   if (accountingPanel === 'igor' && !accountingIgorView.canLeave()) return false;
   if (accountingProvider && !accountingProviderView.canLeave()) return false;
@@ -4133,6 +4145,7 @@ async function refresh() {
     }
     await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
       state.activeTab === "accounting" ? loadAccountingPanel({ force: true }) : Promise.resolve(),
+      state.activeTab === 'accounting' && accountingPanel !== 'bank-sources' ? accountingBankSourcesView.probeAccess() : Promise.resolve(),
     ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);
     if (document.body.classList.contains("audit-log-open")) {
@@ -4562,7 +4575,12 @@ document.querySelector("[data-token-form]")?.addEventListener("submit", async (e
   }
 });
 
-document.querySelector("[data-switch-user]")?.addEventListener("click", () => {
+document.querySelector("[data-switch-user]")?.addEventListener("click", async () => {
+  await Promise.race([
+    accountingBankSourcesView.lock().catch(() => {}),
+    new Promise(resolve => setTimeout(resolve, 2000)),
+  ]);
+  accountingBankSourcesView.reset();
   localStorage.removeItem("evline_admin_token");
   state.shippingEvidence = null;
   shippingClassifier.clear();

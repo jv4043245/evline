@@ -15,7 +15,8 @@
     <link rel="stylesheet" href="/admin/accounting-igor.css?v=20261010-igor">
     <link rel="stylesheet" href="/admin/accounting-provider.css?v=20261009-reports-mobile">
     <link rel="stylesheet" href="/admin/accounting-bank-expenses.css?v=20261015-bank">
-    <script type="module" src="/admin/admin.js?v=20261015-bank"></script>
+    <link rel="stylesheet" href="/admin/accounting-bank-sources.css?v=20261015-sources">
+    <script type="module" src="/admin/admin.js?v=20261015-sources"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -678,6 +679,7 @@
           <button type="button" data-accounting-tab="igor" aria-pressed="false">Розрахунок Ігоря</button>
           <button type="button" data-accounting-tab="zhenia-alipay" aria-pressed="false">Женя · Alipay</button>
           <button type="button" data-accounting-tab="zhenia-delivery" aria-pressed="false">Женя · доставка</button>
+          <button type="button" data-accounting-tab="bank-sources" aria-pressed="false" hidden>Банківські виписки</button>
         </div>
         <div data-accounting-panel="advertising">
         <div data-accounting-overview>
@@ -750,6 +752,7 @@
           </details>
         </div>
         <div data-accounting-panel="zhenia-delivery" hidden><div data-accounting-bank-delivery></div></div>
+        <div data-accounting-panel="bank-sources" hidden><div data-accounting-bank-sources></div></div>
       </section>
 
       <section class="admin-view" data-admin-view="delivery" hidden>

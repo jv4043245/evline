@@ -245,6 +245,7 @@ function navigationHarness(t) {
     const accountingIgorView = { canLeave: () => guards.igor !== false, load: async () => {} };
     const bankView = name => ({ hide: () => {}, load: async options => { loads.push({ bank: name, ...options }); } });
     const accountingBankViews = { igor: bankView('igor'), alipay: bankView('alipay'), delivery: bankView('delivery'), other: bankView('other') };
+    const accountingBankSourcesView = { ...bankView('sources'), probeAccess: async () => true, hide: () => { guards.sourceHides = (guards.sourceHides || 0) + 1; } };
     const accountingView = { load: async () => {} };
     const adminToken = () => 'test-session', allowDiscardOrder = () => guards.order;
     const setOrderDetailOpen = () => {}, setMarketLookupOpen = () => {}, setChinaRequestPanelOpen = () => {}, setChinaPreorderPanelOpen = () => {};
@@ -328,6 +329,24 @@ test('bank ledgers have independent routes and leave the Romania draft and adver
   navigation.navigateAccountingProvider(null); await tick();
   assert.equal(document.querySelector('#range').value, '90d');
   assert.equal(document.querySelector('#range').hidden, false);
+});
+
+test('original bank files have their own route and close access when leaving that view', async t => {
+  const { document, window, navigation, loads, guards } = navigationHarness(t);
+  assert.equal(document.querySelector('[data-accounting-tab="bank-sources"]').hidden, true);
+  assert.equal(navigation.navigateAccountingSection('bank-sources'), true); await tick();
+  assert.equal(window.location.hash, '#accounting/bank-sources');
+  assert.equal(loads.at(-1).bank, 'sources');
+  assert.equal(document.querySelector('[data-accounting-panel="bank-sources"]').hidden, false);
+  assert.equal(document.querySelector('#range').hidden, true);
+  const before = guards.sourceHides;
+  navigation.navigateAccountingSection('igor', 'china'); await tick();
+  assert.ok(guards.sourceHides > before);
+  assert.equal(document.querySelector('[data-accounting-panel="bank-sources"]').hidden, true);
+  assert.equal(loads.at(-1).bank, 'igor');
+  navigation.navigateAccountingSection('bank-sources'); await tick();
+  assert.equal(navigation.setActiveTab('orders'), true);
+  assert.equal(window.location.hash, '');
 });
 
 test('authenticated binary helper omits JSON content-type for multipart and never embeds credentials in URLs', async t => {
