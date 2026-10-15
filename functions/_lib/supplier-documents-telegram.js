@@ -1,4 +1,5 @@
 import { adminIdentities } from './auth.js';
+import { recordControlMessageReceipt } from './slavik-support.js';
 import { all, first, run, fail, clean, digest, nowISO, DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, uploadDocument, readOriginal, documentAudit, supplierFollowupText } from './supplier-documents.js';
 
 export async function telegram(env, method, data) {
@@ -47,6 +48,7 @@ export async function sendConnectionMessage(env,user) {
     text:'Telegram підключено до EVLine ✅\nТут надходитимуть нагадування перевірити відправлення через 5 днів після оплати постачальнику. Якщо товар уже відправлено, позначте це в картці. Підключення збережене — повторювати його не потрібно.',
     disable_web_page_preview:true,
   });
+  await recordControlMessageReceipt(env,user,recipient);
 }
 export async function confirmPairing(env,user,telegramId) {
   const pair = await first(env,'SELECT * FROM supplier_document_pairings WHERE admin_id=? AND expires_at>?',user.id,nowISO());

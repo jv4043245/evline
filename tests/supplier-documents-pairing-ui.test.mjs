@@ -13,15 +13,33 @@ async function settle(predicate) {
 function baseSetup(extra={}) {
   return {storage_ready:true,cron_ready:true,user:{id:'andrii',name:'Андрій'},managers:[{id:'andrii',name:'Андрій',telegram_ready:false},{id:'ihor',name:'Ігор',telegram_ready:false}],connected:null,pending:null,pairing:null,...extra};
 }
-async function fixture(t,{initial=baseSetup(),setupHook=null,confirmationDelivered=true,testDelivered=true}={}) {
+async function fixture(t,{initial=baseSetup(),setupHook=null,confirmationDelivered=true,testDelivered=true,supportInitial={session_id:null,state:'none',expires_at:null,link_expires_at:null,pending:null}}={}) {
   const dom=new JSDOM('<section class="sd-panel" id="panel"></section>',{url:'https://fixture.local/admin/',runScripts:'outside-only',pretendToBeVisual:true});
   const w=dom.window,root=w.document.querySelector('#panel'),calls=[],timers=new Map();
   let clock=Date.parse('2026-10-15T10:00:00Z'),timerId=0,current=initial,hook=setupHook,setupCalls=0;
+  let support=supportInitial,supportHook=null;
   w.Date.now=()=>clock;
   w.setTimeout=(fn,ms)=>{const id=++timerId;timers.set(id,{fn,at:clock+ms,ms});return id;};
   w.clearTimeout=id=>timers.delete(id);
   w.icon=icon;w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
   w.fetch=async(url,options={})=>{
+    if(String(url).startsWith('/api/admin/slavik-support')) {
+      const action=new URL(url,w.location.href).searchParams.get('action') || 'status',body=options.body?JSON.parse(options.body):null;
+      calls.push({action:`support-${action}`,body:options.body,signal:options.signal});
+      let result;
+      if(supportHook)result=await supportHook(action,body,support);
+      else if(action==='status')result=structuredClone(support);
+      else if(action==='connect') {
+        support={session_id:'support-1',state:'waiting_start',expires_at:new Date(clock+48*3600000).toISOString(),link_expires_at:new Date(clock+600000).toISOString(),pending:null};
+        result={...support,link:'https://t.me/slavik_office_bot?start=help_synthetic_only'};
+      } else if(action==='confirm') {
+        assert.deepEqual(body,{session_id:support.session_id,telegram_id:support.pending.telegram_id});
+        support={...support,state:'active',pending:null};result=structuredClone(support);
+      } else if(action==='close') {
+        assert.deepEqual(body,{session_id:support.session_id});support={...support,state:'closed',pending:null};result=structuredClone(support);
+      } else throw new Error(`Unexpected support action ${action}`);
+      return {ok:true,json:async()=>result};
+    }
     assert.match(String(url),/^\/api\/admin\/supplier-documents\?/,'No external requests');
     const action=new URL(url,w.location.href).searchParams.get('action');
     calls.push({action,body:options.body,signal:options.signal});
@@ -60,6 +78,7 @@ async function fixture(t,{initial=baseSetup(),setupHook=null,confirmationDeliver
   await tick();
   return {w,root,q,calls,count,idle,click,advance,timers,get controller(){return controller;},
     current:()=>current,setSetup:value=>{current=value;},setHook:value=>{hook=value;},
+    support:()=>support,setSupport:value=>{support=value;},setSupportHook:value=>{supportHook=value;},
     expiry:()=>new Date(clock+600000).toISOString(),remount:()=>{controller=mount();return controller;}};
 }
 
@@ -226,4 +245,86 @@ test('legacy setup pending contract still exposes only explicit confirmation and
   const p=await fixture(t,{initial:baseSetup({pairing:undefined,pending:{telegram_id:'123',display_name:'<img src=x onerror=alert(1)>',expires_at:'2026-10-15T10:10:00Z'}})});
   assert.ok(p.q('[data-sd-action=confirm]'));assert.equal(p.count('confirm'),0);assert.equal(p.q('img'),null);
   assert.match(p.q('[data-sd-connection]').textContent,/<img src=x/);
+});
+
+test('Slavik support is opt-in and visible only to the exact enabled Andrii identity',async t=>{
+  for(const initial of [baseSetup(),baseSetup({support_available:true,user:{id:'ihor',name:'Ігор'}}),baseSetup({support_available:true,user:{id:'Andrii',name:'Андрій'}})]) {
+    const p=await fixture(t,{initial});
+    assert.equal(p.q('[data-sd-support]').hidden,true);assert.equal(p.q('[data-sd-action=support-open]'),null);assert.equal(p.count('support-status'),0);
+  }
+  const p=await fixture(t,{initial:baseSetup({support_available:true})});
+  assert.equal(p.q('[data-sd-support]').hidden,false);assert.ok(p.q('[data-sd-action=support-open]'));
+  assert.equal(p.count('support-status'),0);assert.equal(p.count('support-connect'),0);
+});
+
+test('Slavik support uses a separate Start and explicit confirmation flow without altering reminders or unsaved fields',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true,connected:{display_name:'Reminder manager',telegram_id:'456'}})});
+  const reminder=p.q('[data-sd-connection]').innerHTML,due=p.q('[data-sd-due]'),track=p.q('[data-sd-track]');
+  due.value='2026-11-22T10:30';track.value='unsaved tracking';
+  await p.click('support-open');assert.equal(p.count('support-status'),1);assert.equal(p.count('support-connect'),0);
+  assert.match(p.q('[data-sd-support]').textContent,/Бот нагадувань вище не змінюється/);
+  await p.click('support-connect');assert.match(p.q('[data-sd-support] a').href,/slavik_office_bot\?start=help_/);
+  p.setSupport({...p.support(),state:'confirm',pending:{telegram_id:'123',display_name:'Support manager'}});
+  await p.advance();assert.ok(p.q('[data-sd-action=support-confirm]'));assert.equal(p.count('support-confirm'),0);
+  assert.match(p.q('[data-sd-action=support-confirm]').textContent,/Це мій Telegram — відкрити допомогу/);
+  await p.click('support-confirm');
+  assert.match(p.q('[data-sd-support]').textContent,/Допомогу відкрито до/);
+  assert.equal(p.q('[data-sd-support] a').href,'https://t.me/slavik_office_bot');
+  assert.equal(p.q('[data-sd-connection]').innerHTML,reminder);assert.equal(p.q('[data-sd-due]'),due);
+  assert.equal(due.value,'2026-11-22T10:30');assert.equal(track.value,'unsaved tracking');
+  assert.equal(p.count('connect'),0);assert.equal(p.count('confirm'),0);assert.equal(p.count('send'),0);
+  const statusCalls=p.count('support-status');await p.advance();assert.equal(p.count('support-status'),statusCalls,'active session does not poll');
+  await p.click('support-close');assert.match(p.q('[data-sd-support]').textContent,/Чат допомоги закрито/);
+  assert.equal(p.count('disconnect'),0);assert.equal(p.q('[data-sd-connection]').innerHTML,reminder);
+});
+
+test('Slavik link expires after 10 minutes, independently of 48-hour session access',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true})});await p.click('support-open');await p.click('support-connect');
+  assert.equal(Date.parse(p.support().expires_at)-Date.parse(p.support().link_expires_at),47*3600000+50*60000);
+  const before=p.count('support-status');await p.advance(600000);
+  assert.equal(p.count('support-status'),before);assert.equal(p.q('[data-sd-support] a'),null);
+  assert.match(p.q('[data-sd-support]').textContent,/Час доступу минув/);assert.equal(p.timers.size,0);
+});
+
+test('active Slavik support expires locally without repeated requests or retaining an access link',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true}),supportInitial:{session_id:'active-session',state:'active',expires_at:'2026-10-17T10:00:00Z',link_expires_at:'2026-10-15T10:10:00Z',pending:null}});
+  await p.click('support-open');const before=p.count('support-status');
+  await p.advance(48*3600000);assert.equal(p.count('support-status'),before);assert.equal(p.q('[data-sd-support] a'),null);
+  assert.match(p.q('[data-sd-support]').textContent,/Час доступу минув/);assert.equal(p.timers.size,0);
+});
+
+test('Slavik support state survives via GET but link secrets are never saved or recreated automatically',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true})});await p.click('support-open');await p.click('support-connect');
+  assert.equal(p.w.localStorage.length,0);
+  p.remount();await tick();await tick();assert.equal(p.q('[data-sd-support] a'),null);
+  assert.equal(p.count('support-connect'),1);await p.click('support-open');
+  assert.equal(p.q('[data-sd-support] a'),null);assert.match(p.q('[data-sd-action=support-connect]').textContent,/Отримати посилання/);
+  assert.equal(p.count('support-connect'),1);
+});
+
+test('Slavik poll/focus coalesce; detach cancels requests without affecting main connection',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true})});await p.click('support-open');await p.click('support-connect');
+  let resolve;const deferred=new Promise(done=>{resolve=done;});p.setSupportHook(()=>deferred);
+  const before=p.count('support-status');p.w.dispatchEvent(new p.w.Event('focus'));p.w.dispatchEvent(new p.w.Event('focus'));await p.advance();
+  assert.equal(p.count('support-status'),before+1);
+  p.root.remove();await tick();assert.equal(p.timers.size,0);
+  assert.equal(p.calls.filter(c=>c.action==='support-status').at(-1).signal.aborted,true);
+  resolve({...p.support(),state:'confirm',pending:{telegram_id:'123',display_name:'Late user'}});await tick();
+  assert.equal(p.q('[data-sd-action=support-confirm]'),null);
+});
+
+test('Slavik errors stay in help area and never disable main reminder pairing',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true})});const reminder=p.q('[data-sd-connection]').innerHTML;
+  p.setSupportHook(()=>{throw new Error('Synthetic private failure');});await p.click('support-open');
+  assert.match(p.q('[data-sd-support]').textContent,/Не вдалося перевірити/);assert.doesNotMatch(p.q('[data-sd-support]').textContent,/private/);
+  assert.equal(p.q('[data-sd-connection]').innerHTML,reminder);assert.equal(p.q('[data-sd-notice]').textContent,'');
+  assert.equal(p.q('[data-sd-action=connect]').disabled,false);assert.equal(p.controller.isBusy(),false);
+  await p.click('connect');assert.equal(p.q('[data-sd-telegram]').dataset.connectionState,'waiting_start');assert.equal(p.count('connect'),1);
+});
+
+test('support display names are escaped and unexpected bot URLs are never rendered',async t=>{
+  const p=await fixture(t,{initial:baseSetup({support_available:true}),supportInitial:{session_id:'support-1',state:'confirm',expires_at:'2026-10-17T10:00:00Z',link_expires_at:'2026-10-15T10:10:00Z',pending:{telegram_id:'123',display_name:'<img src=x onerror=alert(1)>'}}});
+  await p.click('support-open');assert.equal(p.q('[data-sd-support] img'),null);assert.match(p.q('[data-sd-support]').textContent,/<img/);
+  await p.click('support-close');p.setSupportHook(()=>({...p.support(),state:'waiting_start',link:'javascript:alert(1)'}));
+  await p.click('support-connect');assert.equal(p.q('[data-sd-support] a'),null);assert.match(p.q('[data-sd-support]').textContent,/Не вдалося отримати посилання/);
 });

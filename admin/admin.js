@@ -4,7 +4,7 @@ import { adminApiError } from "../assets/js/admin-api-errors.js";
 import { recommendShipping, renderShippingRecommendation, classifyShipping, shippingCategories } from "../assets/js/shipping-recommendation.js?v=20260930";
 import { finishMarketWork, marketProgressText } from "../assets/js/market-progress.js?v=20260914-vin";
 import { icon as documentIcon } from "./documents/icons.js";
-import { mountSupplierDocuments } from './supplier-documents.js?v=20261015-telegram';
+import { mountSupplierDocuments } from './supplier-documents.js?v=20261015-slavik-support';
 import { readOrderFilters, orderQuery, selectOrderFilter, syncPaymentSource, resetOrderFilters, createOrderLoader } from "./order-filters.js?v=20261005-payment-source";
 import { createAccountingView, createAccountingPeriodState } from "./accounting.js?v=20261010-calendar";
 import { createAccountingProfitView } from "./accounting-profit.js?v=20261010-period";

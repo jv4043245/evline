@@ -34,6 +34,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   const page=root.ownerDocument,win=page.defaultView;
   const eventAbort=new win.AbortController();
   let disposed=false,pairingLink=null,setupError='',deliveryStatus=null,connectionSignature='',setupFlight=null,setupGeneration=0,setupAbort=null,pollTimer=null;
+  let supportOpened=false,supportState=null,supportLink=null,supportError='',supportBusy=false,supportSignature='',supportFlight=null,supportGeneration=0,supportAbort=null,supportTimer=null;
   const payload=()=>({order_id:order.id,payment_id:root.querySelector('[data-sd-payment]').value,
     supplier_name:root.querySelector('[data-sd-supplier]').value,kind:root.querySelector('[data-sd-kind]').value,
     reference:root.querySelector('[data-sd-reference]').value});
@@ -41,7 +42,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   const options=(rows,current)=>rows.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
   root.innerHTML=`<header class="sd-heading"><strong>Документи постачальника</strong><span data-sd-total></span>${button('refresh','Оновити','RefreshCw')}</header>
     <p class="sd-notice" data-sd-notice role="status" aria-live="polite"></p>
-    <details class="sd-telegram-card" data-sd-telegram open><summary>Мій Telegram · перевіряємо</summary><div data-sd-connection aria-live="polite"><p>Перевіряємо підключення…</p></div></details>
+    <details class="sd-telegram-card" data-sd-telegram open><summary>Мій Telegram · перевіряємо</summary><div data-sd-connection aria-live="polite"><p>Перевіряємо підключення…</p></div><div class="sd-slavik-support" data-sd-support aria-live="polite" hidden></div></details>
     <details data-sd-upload><summary>Додати документ</summary>
       <div class="sd-fields">
         <label>Оплата<select data-sd-payment>${options([['','Без прив’язки до оплати'],...payments.map(p=>[p.id,`${p.payment_number} · ${p.supplier_name}`])],payments.length===1?payments[0].id:'')}</select></label>
@@ -62,11 +63,12 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     <details><summary>Вилучені з цього замовлення <span data-sd-archived-count></span></summary><div data-sd-archive></div></details>
     <details data-sd-followups><summary>Контроль відправлення</summary><div data-sd-followup-list></div></details>`;
   const connectionRoot=root.querySelector('[data-sd-connection]');
+  const supportRoot=root.querySelector('[data-sd-support]');
   function active() {return !disposed && root.isConnected && root.querySelector('[data-sd-connection]')===connectionRoot;}
   function clearPoll() {if(pollTimer!==null){win.clearTimeout(pollTimer);pollTimer=null;}}
   function destroy() {
     if(disposed)return;
-    disposed=true;setupGeneration++;clearPoll();setupAbort?.abort();eventAbort.abort();observer.disconnect();
+    disposed=true;setupGeneration++;supportGeneration++;clearPoll();clearSupportTimer();setupAbort?.abort();supportAbort?.abort();eventAbort.abort();observer.disconnect();
     win.removeEventListener('focus',checkOnReturn);page.removeEventListener('visibilitychange',checkOnReturn);
   }
   function pairingState() {
@@ -92,6 +94,112 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   function checkOnReturn() {
     if(!active()){destroy();return;}
     if(!page.hidden && !busy && (pairingState() || setupError))refreshSetup().catch(()=>{});
+    if(!page.hidden && !busy && !supportBusy && supportOpened && supportAllowed())refreshSupport().catch(()=>{});
+  }
+  function supportAllowed() {return setup?.user?.id==='andrii' && setup?.support_available===true;}
+  const supportFailure=message=>Object.assign(new Error(message),{supportSafe:true});
+  function clearSupportTimer() {if(supportTimer!==null){win.clearTimeout(supportTimer);supportTimer=null;}}
+  function supportView() {
+    if(!supportState)return {state:'none'};
+    const pending=['waiting_start','confirm'].includes(supportState.state);
+    const deadline=Date.parse(pending?supportState.link_expires_at:supportState.expires_at);
+    return (pending || supportState.state==='active') && deadline<=Date.now()?{...supportState,state:'expired',pending:null}:supportState;
+  }
+  function renderSupport() {
+    if(!active())return;
+    if(!supportAllowed()) {
+      supportRoot.hidden=true;supportRoot.innerHTML='';supportSignature='';clearSupportTimer();
+      supportGeneration++;supportAbort?.abort();supportOpened=false;supportState=null;supportLink=null;supportError='';return;
+    }
+    supportRoot.hidden=false;
+    const view=supportView();
+    if(['active','closed','expired','none'].includes(view.state))supportLink=null;
+    const signature=JSON.stringify({supportOpened,view,supportLink,supportError,supportBusy});
+    if(signature===supportSignature)return;
+    supportSignature=signature;
+    if(!supportOpened) {supportRoot.innerHTML=button('support-open','Допомога Славика','Share2');return;}
+    let content='<strong>Допомога Славика</strong><p class="sd-connection-help">Окремий чат для допомоги з підключенням і нагадуваннями. Бот нагадувань вище не змінюється.</p>';
+    if(view.state==='waiting_start') {
+      content+='<p>Відкрийте Славика й натисніть Start. Потім поверніться сюди та підтвердьте свій Telegram.</p>';
+      content+=supportLink?`<a class="admin-btn" href="${esc(supportLink)}" target="_blank" rel="noopener noreferrer">Написати Славику</a>`:button('support-connect','Отримати посилання','Share2');
+      content+=`<p class="sd-connection-help">Перевіряємо автоматично. Посилання діє до ${esc(date(view.link_expires_at))}.</p>`;
+    } else if(view.state==='confirm' && view.pending) {
+      content+=`<p>Це ваш Telegram? <strong>${esc(view.pending.display_name)}</strong> · ID ${esc(view.pending.telegram_id)}</p>${button('support-confirm','Це мій Telegram — відкрити допомогу','Save')}`;
+    } else if(view.state==='active') {
+      content+=`<p>Допомогу відкрито до ${esc(date(view.expires_at))}.</p><div class="sd-toolbar"><a class="admin-btn" href="https://t.me/slavik_office_bot" target="_blank" rel="noopener noreferrer">Написати Славику</a>${button('support-close','Закрити допомогу','X')}</div>`;
+    } else {
+      if(view.state==='closed')content+='<p>Чат допомоги закрито. Нагадування залишилися без змін.</p>';
+      if(view.state==='expired')content+='<p>Час доступу минув. За потреби відкрийте допомогу знову.</p>';
+      content+=button('support-connect','Написати Славику','Share2');
+    }
+    if(['waiting_start','confirm'].includes(view.state))content+=`<div class="sd-toolbar">${button('support-close','Скасувати підключення допомоги','X')}</div>`;
+    if(supportError)content+=`<p class="sd-connection-error" role="status">${esc(supportError)}</p>${button('support-refresh','Повторити перевірку','RefreshCw')}`;
+    supportRoot.innerHTML=content;supportRoot.setAttribute('aria-busy',String(supportBusy));
+    for(const node of supportRoot.querySelectorAll('button'))node.disabled=supportBusy;
+  }
+  function scheduleSupportPoll() {
+    clearSupportTimer();
+    if(!active()){destroy();return;}
+    if(!supportAllowed() || !supportOpened)return;
+    const view=supportView(),pending=['waiting_start','confirm'].includes(view.state);
+    if(!pending && view.state!=='active')return;
+    const remaining=Date.parse(pending?view.link_expires_at:view.expires_at)-Date.now();
+    if(!Number.isFinite(remaining) || remaining<=0)return;
+    supportTimer=win.setTimeout(()=>{
+      supportTimer=null;if(!active()){destroy();return;}
+      if(supportView().state==='expired'){supportLink=null;renderSupport();return;}
+      if(!pending || busy || supportBusy || page.hidden){scheduleSupportPoll();return;}
+      refreshSupport().catch(()=>{});
+    },pending?Math.min(pairingPollMs,remaining):remaining);
+  }
+  async function supportRequest(action=null,data=null,signal) {
+    const response=await fetch(`/api/admin/slavik-support${action?`?action=${encodeURIComponent(action)}`:''}`,{
+      method:action?'POST':'GET',headers:{'content-type':'application/json',...getHeaders()},cache:'no-store',signal,
+      body:action?JSON.stringify(data || {}):undefined,
+    });
+    if(!response.ok)throw supportFailure('Не вдалося зв’язатися зі Славиком. Спробуйте ще раз за хвилину. Підключення нагадувань не змінено.');
+    const result=await response.json();
+    if(!result || !['none','waiting_start','confirm','active','closed','expired'].includes(result.state))throw supportFailure('Не вдалося перевірити стан допомоги. Спробуйте ще раз.');
+    return result;
+  }
+  async function refreshSupport() {
+    if(!active() || !supportAllowed())return;
+    if(supportFlight)return supportFlight;
+    const generation=supportGeneration;supportAbort=new AbortController();
+    supportFlight=(async()=>{
+      try {
+        const result=await supportRequest(null,null,supportAbort.signal);
+        if(!active() || !supportAllowed() || generation!==supportGeneration)return;
+        supportState=result;supportError='';renderSupport();
+      } catch(error) {
+        if(!active() || !supportAllowed() || generation!==supportGeneration)return;
+        supportError='Не вдалося перевірити допомогу Славика. Спробуйте ще раз. Нагадування не змінено.';renderSupport();throw error;
+      } finally {supportFlight=null;supportAbort=null;if(active())scheduleSupportPoll();}
+    })();
+    return supportFlight;
+  }
+  async function supportAction(action) {
+    if(!supportAllowed() || supportBusy)return;
+    supportOpened=true;supportBusy=true;supportError='';renderSupport();
+    try {
+      if(action==='support-open' || action==='support-refresh')await refreshSupport();
+      else {
+        supportGeneration++;clearSupportTimer();supportAbort?.abort();await supportFlight?.catch(()=>{});
+        const view=supportView();let result;
+        if(action==='support-connect')result=await supportRequest('connect',{});
+        else if(action==='support-confirm') {
+          if(view.state!=='confirm' || !view.pending || !view.session_id)throw supportFailure('Час підтвердження минув. Відкрийте допомогу знову.');
+          result=await supportRequest('confirm',{session_id:view.session_id,telegram_id:view.pending.telegram_id});
+        } else if(action==='support-close') {
+          if(!view.session_id)return;
+          result=await supportRequest('close',{session_id:view.session_id});
+        } else return;
+        if(!active() || !supportAllowed())return;
+        if(result.link && !/^https:\/\/t\.me\/slavik_office_bot\?start=help_[A-Za-z0-9_-]+$/.test(result.link))throw supportFailure('Не вдалося отримати посилання Славика. Спробуйте ще раз.');
+        supportState=result;supportLink=result.link || null;renderSupport();
+      }
+    } catch(error) {if(active() && supportAllowed())supportError=error.supportSafe?error.message:'Не вдалося перевірити допомогу Славика. Спробуйте ще раз. Нагадування не змінено.';}
+    finally {supportBusy=false;if(active()){renderSupport();scheduleSupportPoll();}}
   }
   const observer=new win.MutationObserver(()=>{if(!active())destroy();});
   observer.observe(page.documentElement,{childList:true,subtree:true});
@@ -229,7 +337,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
       try {
         const result=await request('setup',{signal:setupAbort.signal});
         if(!active() || generation!==setupGeneration)return;
-        setup=result;setupError='';renderConnection();renderPending();refreshFollowupTelegramLabels();
+        setup=result;setupError='';renderConnection();renderSupport();renderPending();refreshFollowupTelegramLabels();
         if(!setup.storage_ready)notify('Приватне сховище ще не підключене. Завантаження тимчасово недоступне.',true);
       } catch(error) {
         if(!active() || generation!==setupGeneration)return;
@@ -311,6 +419,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     if (!target || busy) return;
     event.preventDefault();
     const action=target.dataset.sdAction,id=target.dataset.id;
+    if(action.startsWith('support-')) {await supportAction(action);return;}
     const doc=documents.find(d=>d.id===id);
     const version=target.dataset.version;
     setBusy(true);target.disabled=true;notify('');

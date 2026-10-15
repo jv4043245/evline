@@ -48,6 +48,10 @@
 .sd-telegram-card p { margin:7px 0; overflow-wrap:anywhere; }
 .sd-telegram-card .sd-connection-help { color:#62736a; font-size:12px; }
 .sd-telegram-card .sd-connection-delivery { color:#176247; font-size:12px; }
+.sd-slavik-support { margin-top:10px; padding-top:9px; border-top:1px solid #e5ece8; }
+.sd-slavik-support[hidden] { display:none; }
+.sd-slavik-support>strong { display:block; font-size:12px; }
+.sd-slavik-support .sd-toolbar { margin-top:7px; }
 .sd-telegram-card .sd-connection-warning,.sd-telegram-card .sd-connection-error { padding:8px 10px; border-radius:5px; font-size:12px; }
 .sd-telegram-card .sd-connection-warning { color:#715215; background:#fff7e2; }
 .sd-telegram-card .sd-connection-error { color:#873d37; background:#fff1f0; }

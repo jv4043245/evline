@@ -2,6 +2,7 @@ import { zipSync } from 'fflate';
 import { adminUser, adminIdentities, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
 import { documentStorageStatus } from '../../_lib/supplier-document-storage.js';
+import { supportAvailable } from '../../_lib/slavik-support.js';
 import { all, first, run, fail, clean, nowISO, digest, DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, orderAndPayment, uploadDocument, listDocuments, documentVersion, selectedDocuments, readOriginal, listFollowups, saveFollowup, documentAudit, supplierFollowupText, watchPayment } from '../../_lib/supplier-documents.js';
 import { boundedBytes, ownTelegram, pairingStatus, createPairing, confirmPairing, sendConnectionMessage, botLink, sendOriginal } from '../../_lib/supplier-documents-telegram.js';
 
@@ -19,7 +20,7 @@ export async function onRequest({request,env}) {
         const linked=new Set((await all(env,'SELECT admin_id FROM supplier_document_telegram')).map(row=>row.admin_id));
         const managers=adminIdentities(env).map(manager=>({...manager,telegram_ready:linked.has(manager.id)}));
         const storage=documentStorageStatus(env);
-        return json({storage_ready:storage.ready,storage_provider:storage.provider,cron_ready:Boolean(cron?.value && Date.now()-Date.parse(cron.value)<86400000),cron_last_run_at:cron?.value || null,user,managers,...await pairingStatus(env,user)});
+        return json({storage_ready:storage.ready,storage_provider:storage.provider,cron_ready:Boolean(cron?.value && Date.now()-Date.parse(cron.value)<86400000),cron_last_run_at:cron?.value || null,user,managers,support_available:supportAvailable(env,user.id),...await pairingStatus(env,user)});
       }
       if (action==='counts') {
         const ids=(url.searchParams.get('ids') || '').split(',').filter(Boolean);
