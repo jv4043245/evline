@@ -3,7 +3,7 @@ import { adminUser, adminIdentities, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
 import { documentStorageStatus } from '../../_lib/supplier-document-storage.js';
 import { all, first, run, fail, clean, nowISO, digest, DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, orderAndPayment, uploadDocument, listDocuments, documentVersion, selectedDocuments, readOriginal, listFollowups, saveFollowup, documentAudit, supplierFollowupText, watchPayment } from '../../_lib/supplier-documents.js';
-import { boundedBytes, ownTelegram, pairingStatus, createPairing, confirmPairing, botLink, sendOriginal } from '../../_lib/supplier-documents-telegram.js';
+import { boundedBytes, ownTelegram, pairingStatus, createPairing, confirmPairing, sendConnectionMessage, botLink, sendOriginal } from '../../_lib/supplier-documents-telegram.js';
 
 function fileResponse(body,mime,filename,inline=false) {
   return new Response(body,{headers:{'content-type':mime,'cache-control':'private, no-store','x-content-type-options':'nosniff','content-security-policy':"sandbox; default-src 'none';",'content-disposition':`${inline?'inline':'attachment'}; filename="document"; filename*=UTF-8''${encodeURIComponent(filename)}`}});
@@ -55,7 +55,12 @@ export async function onRequest({request,env}) {
     }
     const data=bytes.length ? JSON.parse(new TextDecoder().decode(bytes)) : {};
     if (action==='connect') return json(await createPairing(env,user));
-    if (action==='confirm') { await confirmPairing(env,user,data.telegram_id); return json({ok:true}); }
+    if (action==='confirm') return json({ok:true,...await confirmPairing(env,user,data.telegram_id)});
+    if (action==='test-connection') {
+      if (!data || Array.isArray(data) || typeof data!=='object' || Object.keys(data).length) fail('Перевірка Telegram не приймає параметрів.');
+      await sendConnectionMessage(env,user);
+      return json({ok:true,connection_message_sent:true});
+    }
     if (action==='disconnect') {
       await env.DB.batch(['supplier_document_telegram','supplier_document_pairings','supplier_document_intakes'].map(table=>env.DB.prepare(`DELETE FROM ${table} WHERE admin_id=?`).bind(user.id)));
       await documentAudit(env,user,'telegram_disconnect',null,null);

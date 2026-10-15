@@ -18,9 +18,18 @@ order status, or advertising conversions.
    Removing a link is reversible and does not remove it from other orders.
 4. Select files and download a ZIP (up to 10 files / 30 MiB), or send them to your own
    linked Telegram. Carrier export contains only the selected supplier documents.
-5. Under My Telegram, start the bot from the generated link. Return to the admin UI,
-   refresh connection state, verify the displayed numeric Telegram ID/name, then
-   confirm. Each manager must use their own admin token. Pairing expires in 10 minutes.
+5. Under My Telegram, open the generated link and press Start in the bot. Return to
+   the admin UI; connection state refreshes automatically. Verify the displayed
+   Telegram ID/name, then confirm. The UI distinguishes waiting for Start, waiting
+   for confirmation, expired link, and connected states. Each manager must use their
+   own admin token. Pairing expires in 10 minutes; an expired link offers a new one.
+   Starting a replacement never disconnects an existing confirmed Telegram until
+   the replacement is explicitly confirmed. Status responses expose no pairing
+   token/hash or expired candidate identity.
+   Confirmation sends a short fixed instruction message to the manager's own
+   confirmed Telegram. A delivery failure does not undo the connection. The
+   explicit Test message action can repeat that delivery check, accepts no
+   recipient/order parameters, and sends neither files nor due reminders.
 6. To upload from Telegram, select the order/payment/category in the admin UI and
    open Add via Telegram. The private intake session expires in 20 minutes; finish
    with `/docs_done`. An active screenshot-to-lead draft must be closed first.

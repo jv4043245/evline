@@ -20,8 +20,12 @@ export async function ownTelegram(env, adminId) {
 }
 export async function pairingStatus(env, user) {
   const connected = await ownTelegram(env,user.id);
-  const pending = await first(env,'SELECT telegram_id,display_name,expires_at FROM supplier_document_pairings WHERE admin_id=? AND expires_at>?',user.id,nowISO());
-  return { connected, pending:pending?.telegram_id ? pending : null };
+  const pair = await first(env,'SELECT telegram_id,display_name,expires_at FROM supplier_document_pairings WHERE admin_id=?',user.id);
+  const valid = pair && Date.parse(pair.expires_at)>Date.now();
+  // Keep expired candidate identities private; the UI only needs to offer a new link.
+  const pending = valid && pair.telegram_id ? pair : null;
+  const pairing = pair ? {state:valid ? (pending ? 'confirm' : 'waiting_start') : 'expired',expires_at:pair.expires_at} : null;
+  return { connected, pending, pairing };
 }
 export async function botLink(env, parameter) {
   const bot = await telegram(env,'getMe',{});
@@ -31,8 +35,18 @@ export async function botLink(env, parameter) {
 export async function createPairing(env, user) {
   const token = crypto.randomUUID().replaceAll('-','');
   const link = await botLink(env,`sdlink_${token}`);
-  await run(env,`INSERT INTO supplier_document_pairings(admin_id,token_hash,expires_at) VALUES(?,?,?) ON CONFLICT(admin_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at,telegram_id=NULL,display_name=NULL`,user.id,await digest(token),new Date(Date.now()+600000).toISOString());
-  return { link };
+  const expires_at = new Date(Date.now()+600000).toISOString();
+  await run(env,`INSERT INTO supplier_document_pairings(admin_id,token_hash,expires_at) VALUES(?,?,?) ON CONFLICT(admin_id) DO UPDATE SET token_hash=excluded.token_hash,expires_at=excluded.expires_at,telegram_id=NULL,display_name=NULL`,user.id,await digest(token),expires_at);
+  return { link, expires_at };
+}
+export async function sendConnectionMessage(env,user) {
+  const recipient=await ownTelegram(env,user.id);
+  if (!recipient) fail('Спочатку підтвердьте свій Telegram в адмінці.');
+  await telegram(env,'sendMessage',{
+    chat_id:recipient.chat_id,
+    text:'Telegram підключено до EVLine ✅\nТут надходитимуть нагадування перевірити відправлення через 5 днів після оплати постачальнику. Якщо товар уже відправлено, позначте це в картці. Підключення збережене — повторювати його не потрібно.',
+    disable_web_page_preview:true,
+  });
 }
 export async function confirmPairing(env,user,telegramId) {
   const pair = await first(env,'SELECT * FROM supplier_document_pairings WHERE admin_id=? AND expires_at>?',user.id,nowISO());
@@ -45,6 +59,9 @@ export async function confirmPairing(env,user,telegramId) {
     env.DB.prepare('DELETE FROM supplier_document_intakes WHERE admin_id=?').bind(user.id),
   ]);
   await documentAudit(env,user,'telegram_connect',null,null,{ telegram_id:pair.telegram_id });
+  // Delivery is a separate check: a Telegram outage must not undo a confirmed link.
+  const connection_message_sent=await sendConnectionMessage(env,user).then(()=>true,()=>false);
+  return {connection_message_sent};
 }
 export async function sendOriginal(env, chatId, row, caption = '') {
   const object = await readOriginal(env,row);
@@ -93,7 +110,7 @@ export async function handleSupplierDocumentsUpdate(env,update) {
       const pairing=await first(env,'SELECT * FROM supplier_document_pairings WHERE token_hash=? AND expires_at>?',hash,nowISO());
       if (!pairing || !adminIdentities(env).some(u=>u.id===pairing.admin_id)) { await say('Посилання застаріло. Створіть нове в адмінці.'); return {handled:true}; }
       const result=await run(env,'UPDATE supplier_document_pairings SET telegram_id=?,display_name=? WHERE token_hash=? AND telegram_id IS NULL',chatId,clean([from.first_name,from.last_name,from.username ? `@${from.username}` : ''].filter(Boolean).join(' ')),hash);
-      await say(result.meta?.changes ? 'Поверніться в адмінку, оновіть підключення та підтвердьте свій Telegram. До підтвердження файли не надсилатимуться.' : 'Це посилання вже використане. Перевірте підключення в адмінці.');
+      await say(result.meta?.changes ? 'Поверніться в адмінку та підтвердьте Telegram біля свого імені. Після підтвердження сюди надходитимуть документи й нагадування.' : 'Це посилання вже використане. Перевірте підключення в адмінці.');
       return {handled:true};
     }
     if (!user) { await say('Спочатку підключіть особистий Telegram в адмінці: Оплата → Документи постачальника.'); return {handled:true}; }

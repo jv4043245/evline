@@ -6,7 +6,7 @@ import { unzipSync } from 'fflate';
 import { onRequest } from '../functions/api/admin/supplier-documents.js';
 import { onRequestPost as cron } from '../functions/api/cron/supplier-documents.js';
 import { uploadDocument,listDocuments,watchPayment,saveFollowup,documentVersion,selectedDocuments } from '../functions/_lib/supplier-documents.js';
-import { handleSupplierDocumentsUpdate,createPairing,confirmPairing,dispatchSupplierReminders } from '../functions/_lib/supplier-documents-telegram.js';
+import { handleSupplierDocumentsUpdate,createPairing,confirmPairing,pairingStatus,dispatchSupplierReminders } from '../functions/_lib/supplier-documents-telegram.js';
 
 const directory=new URL('../migrations/',import.meta.url);
 const schemas=await Promise.all((await readdir(directory)).filter(f=>f.endsWith('.sql')).sort().map(f=>readFile(new URL(f,directory),'utf8')));
@@ -43,7 +43,7 @@ async function fixture(t) {
 test('authorization is required before DB, storage or parsing',async()=>{
   const env={ADMIN_TOKEN:'secret'};
   Object.defineProperty(env,'DB',{get(){assert.fail('must not access DB');}});
-  for(const method of ['GET','POST']) for(const action of ['file','list','bundle','upload','confirm','send']) {
+  for(const method of ['GET','POST']) for(const action of ['file','list','bundle','upload','confirm','send','test-connection']) {
     const response=await onRequest({env,request:new Request(`https://test/?action=${action}`,{method,...(method==='POST'?{body:'invalid'}:{})})});
     assert.equal(response.status,401);
   }
@@ -188,6 +188,124 @@ test('manager pairing is one-use, expires and requires matching admin confirmati
   assert.equal(db.prepare('SELECT chat_id FROM supplier_document_telegram').get().chat_id,'1001');
   await assert.rejects(()=>confirmPairing(env,user,'1001'));
   assert.equal(db.prepare('SELECT count(*) n FROM supplier_document_pairings').get().n,0);
+});
+test('pairing status distinguishes no link, waiting for Start, and explicit confirmation without leaking tokens',async t=>{
+  const{env,db,request,calls}=await fixture(t);
+  assert.deepEqual(await pairingStatus(env,user),{connected:null,pending:null,pairing:null});
+  const response=await request('connect',{});assert.equal(response.status,200);
+  const {link,expires_at}=await response.json();
+  const stored=db.prepare('SELECT * FROM supplier_document_pairings WHERE admin_id=?').get(user.id);
+  assert.equal(expires_at,stored.expires_at);
+  assert.ok(Date.parse(expires_at)>Date.now());
+  const parameter=new URL(link).searchParams.get('start');
+  const token=parameter.slice('sdlink_'.length);
+  const waiting=await (await request('setup')).json();
+  assert.deepEqual(waiting.pairing,{state:'waiting_start',expires_at});
+  assert.equal(waiting.connected,null);assert.equal(waiting.pending,null);
+  assert.doesNotMatch(JSON.stringify(waiting),new RegExp(`token_hash|${token}|${stored.token_hash}`));
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${parameter}`));
+  const confirmation=await (await request('setup')).json();
+  assert.deepEqual(confirmation.pairing,{state:'confirm',expires_at});
+  assert.deepEqual(confirmation.pending,{telegram_id:'1001',display_name:'Test manager',expires_at});
+  assert.equal(confirmation.connected,null);
+  assert.doesNotMatch(JSON.stringify(confirmation),new RegExp(`token_hash|${token}|${stored.token_hash}`));
+  const botText=calls.find(c=>c.method==='sendMessage').body.text;
+  assert.match(botText,/Поверніться в адмінку.*підтвердьте/);
+  assert.doesNotMatch(botText,/оновіть|перевірити підключення/i);
+  // No other manager can see this link's state or candidate.
+  const otherSetup=await (await request('setup',null,{},'test-ihor')).json();
+  assert.equal(otherSetup.pairing,null);assert.equal(otherSetup.pending,null);
+  await confirmPairing(env,user,'1001');
+  const confirmed=await pairingStatus(env,user);
+  assert.equal(confirmed.connected.telegram_id,'1001');
+  assert.equal(confirmed.pending,null);assert.equal(confirmed.pairing,null);
+});
+test('expired pairing reports recovery state without candidate identity and still rejects confirmation and Start',async t=>{
+  const{env,db,request,calls}=await fixture(t);
+  const {link}=await createPairing(env,user);
+  const parameter=new URL(link).searchParams.get('start');
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${parameter}`));
+  const expiredAt='2020-01-01T00:00:00.000Z';
+  db.prepare('UPDATE supplier_document_pairings SET expires_at=? WHERE admin_id=?').run(expiredAt,user.id);
+  const status=await (await request('setup')).json();
+  assert.deepEqual(status.pairing,{state:'expired',expires_at:expiredAt});
+  assert.equal(status.pending,null);assert.equal(status.connected,null);
+  assert.doesNotMatch(JSON.stringify(status),/1001|Test manager|token_hash|sdlink_/);
+  assert.equal((await request('confirm',{telegram_id:'1001'})).status,409);
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${parameter}`));
+  assert.match(calls.filter(c=>c.method==='sendMessage').at(-1).body.text,/Посилання застаріло/);
+  assert.equal(db.prepare('SELECT count(*) n FROM supplier_document_telegram').get().n,0);
+});
+test('existing confirmed Telegram stays usable during a replacement, including its expiration',async t=>{
+  const{env,db,connect}=await fixture(t);connect(user.id,'9001');
+  const original=(await pairingStatus(env,user)).connected;
+  const {link}=await createPairing(env,user);
+  assert.deepEqual((await pairingStatus(env,user)).connected,original);
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${new URL(link).searchParams.get('start')}`));
+  const confirmation=await pairingStatus(env,user);
+  assert.deepEqual(confirmation.connected,original);
+  assert.equal(confirmation.pending.telegram_id,'1001');
+  db.prepare('UPDATE supplier_document_pairings SET expires_at=? WHERE admin_id=?').run('2020-01-01T00:00:00.000Z',user.id);
+  const expired=await pairingStatus(env,user);
+  assert.deepEqual(expired.connected,original);assert.equal(expired.pending,null);
+  assert.equal(expired.pairing.state,'expired');
+  await assert.rejects(()=>confirmPairing(env,user,'1001'));
+  assert.equal(db.prepare('SELECT telegram_id FROM supplier_document_telegram WHERE admin_id=?').get(user.id).telegram_id,'9001');
+  const fresh=await createPairing(env,user);
+  assert.equal((await pairingStatus(env,user)).pairing.state,'waiting_start');
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${new URL(fresh.link).searchParams.get('start')}`));
+  await confirmPairing(env,user,'1001');
+  assert.equal((await pairingStatus(env,user)).connected.telegram_id,'1001');
+});
+test('confirmed manager receives one fixed connection message without payment data or forced reminders',async t=>{
+  const{env,db,request,calls}=await fixture(t);
+  await watchPayment(env,'pay1',user.id);
+  const followup=db.prepare('SELECT * FROM supplier_document_followups').get();
+  const {link}=await createPairing(env,user);
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${new URL(link).searchParams.get('start')}`));
+  calls.length=0;
+  const response=await request('confirm',{telegram_id:'1001',chat_id:'evil-destination'});
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{ok:true,connection_message_sent:true});
+  assert.equal(calls.length,1);assert.equal(calls[0].method,'sendMessage');
+  assert.equal(calls[0].body.chat_id,'1001');
+  assert.match(calls[0].body.text,/Telegram підключено до EVLine ✅/);
+  assert.match(calls[0].body.text,/через 5 днів після оплати постачальнику/);
+  assert.doesNotMatch(calls[0].body.text,/O-000|P-000|BYD|test-admin|test-bot/);
+  assert.deepEqual(db.prepare('SELECT * FROM supplier_document_followups').get(),followup);
+});
+test('connection message failure does not undo successful confirmation or leak Telegram credentials',async t=>{
+  const{env,db,request}=await fixture(t);
+  const {link}=await createPairing(env,user);
+  await handleSupplierDocumentsUpdate(env,privateMessage(`/start ${new URL(link).searchParams.get('start')}`));
+  t.mock.method(globalThis,'fetch',async()=>{throw new Error('https://api.telegram.org/bottest-bot/sendMessage');});
+  const response=await request('confirm',{telegram_id:'1001'});
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{ok:true,connection_message_sent:false});
+  assert.equal((await pairingStatus(env,user)).connected.telegram_id,'1001');
+  assert.equal(db.prepare('SELECT count(*) n FROM supplier_document_pairings').get().n,0);
+});
+test('explicit connection test sends only to own confirmed Telegram and rejects destination/order inputs',async t=>{
+  const{env,request,calls,connect}=await fixture(t);connect();
+  assert.equal((await request('test-connection',{})).status,200);
+  assert.equal(calls.length,1);assert.equal(calls[0].body.chat_id,'1001');
+  assert.match(calls[0].body.text,/Telegram підключено до EVLine ✅/);
+  for(const data of [{chat_id:'evil-destination'},{telegram_id:'2002'},{order_id:'order1'},[]]) {
+    assert.equal((await request('test-connection',data)).status,400);
+  }
+  assert.equal((await request('test-connection',null)).status,404);
+  assert.equal((await request('test-connection',{}, {},'test-ihor')).status,400);
+  assert.equal(calls.length,1);
+  connect('ihor','2002');
+  const result=await request('test-connection',{}, {},'test-ihor');
+  assert.deepEqual(await result.json(),{ok:true,connection_message_sent:true});
+  assert.equal(calls.length,2);assert.equal(calls[1].body.chat_id,'2002');
+  assert.equal(calls[1].body.text,calls[0].body.text);
+  t.mock.method(globalThis,'fetch',async()=>{throw new Error('https://api.telegram.org/bottest-bot/sendMessage');});
+  const failure=await request('test-connection',{});
+  assert.equal(failure.status,502);
+  assert.doesNotMatch(await failure.text(),/test-bot|test-admin|api\.telegram/);
+  assert.equal((await pairingStatus(env,user)).connected.telegram_id,'1001');
 });
 test('send ignores caller-selected chat and sends only to current authenticated manager',async t=>{
   const{env,connect,request,calls}=await fixture(t);connect();
