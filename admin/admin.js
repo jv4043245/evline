@@ -12,6 +12,7 @@ import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
+import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb';
 
 const state = {
   range: "30d",
@@ -371,7 +372,10 @@ const keywordLevelLabels = {
   utm_term: "UTM term",
 };
 
-const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting"]);
+const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting", "bank-incoming"]);
+const bankIncomingView = createBankIncomingView(document.querySelector('[data-bank-incoming]'),api,{openOrder:id=>{
+  if(setActiveTab('orders')) {state.orderEditorTab='payment';openOrder(id).catch(error=>alert(error.message));}
+}});
 const accountingView = createAccountingView(document, api);
 const accountingPeriods = createAccountingPeriodState(localStorage);
 const accountingProfitView = createAccountingProfitView(document.querySelector('[data-accounting-profit]'), api);
@@ -569,6 +573,7 @@ function setAdminUser(name) {
 }
 
 function setAuthVisible(visible) {
+  if (visible) bankIncomingView.reset();
   if (visible) accountingBankSourcesView.reset();
   const panel = document.querySelector("[data-auth-panel]");
   if (panel) panel.hidden = !visible;
@@ -587,6 +592,7 @@ function setActiveTab(tab) {
   const rangeInput = document.querySelector("#range");
   if (rangeInput) rangeInput.value = accountingPeriods.enter(nextTab, rangeInput.value);
   state.activeTab = nextTab;
+  bankIncomingView.setActive(nextTab === 'bank-incoming' && Boolean(adminToken()));
   localStorage.setItem("evline_admin_tab", nextTab);
   document.body.dataset.adminTab = nextTab;
 
@@ -614,6 +620,7 @@ function setActiveTab(tab) {
     stopChinaAutoRefresh();
   }
   if (nextTab === "delivery") renderShippingDirectory();
+  if (nextTab === 'bank-incoming' && adminToken()) bankIncomingView.load();
   syncAccountingPanel();
   if (nextTab === "accounting" && adminToken()) {
     if (accountingPanel !== 'bank-sources') accountingBankSourcesView.probeAccess().catch(() => {});
@@ -3702,6 +3709,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       <div class="order-editor__grid">
 
     ${renderSupplierPayments(order)}
+    <section class="bank-order-summary wide" data-bank-order-summary></section>
     <section class="sd-panel wide" data-supplier-documents></section>
 
     <section class="editor-band editor-band--finance wide" aria-label="Фінанси замовлення">
@@ -3779,6 +3787,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
   });
 
   applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
+  mountBankOrderSummary(form.querySelector('[data-bank-order-summary]'),order.id,api);
   orderDocumentsController = mountSupplierDocuments(form.querySelector('[data-supplier-documents]'), {order,payments:state.selectedSupplierPayments,suppliers:supplierDirectory,getHeaders:headers,onCountChanged:setSupplierDocumentCount,onStateChanged:()=>queueMicrotask(updateOrderSaveState),draft:documentDraft});
   orderFormBaseline = orderFormSnapshot();
   for (const entry of draft) {
@@ -4146,6 +4155,7 @@ async function refresh() {
     }
     await Promise.all([loadSummary(), loadOrders(), loadContactEvents(), loadChinaPreorders(), loadShipping(), loadGoogleAds(), loadGoogleAdsKeywords(), loadSupplierDirectory(),
       state.activeTab === "accounting" ? loadAccountingPanel({ force: true }) : Promise.resolve(),
+      state.activeTab === 'bank-incoming' ? bankIncomingView.load() : Promise.resolve(),
       state.activeTab === 'accounting' && accountingPanel !== 'bank-sources' ? accountingBankSourcesView.probeAccess() : Promise.resolve(),
     ]);
     if (state.selectedOrder?.id) renderOrderEditor(state.selectedOrder);

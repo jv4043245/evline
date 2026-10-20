@@ -6,6 +6,7 @@ export const DOCUMENT_SCHEMA = [
     id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     revision INTEGER NOT NULL, created_at TEXT NOT NULL, actor TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('draft','ready')), data_json TEXT NOT NULL,
+    output_mode TEXT NOT NULL DEFAULT '',
     UNIQUE(order_id, revision)
   )`,
   `CREATE TABLE IF NOT EXISTS document_seller_settings (
@@ -82,13 +83,13 @@ export async function saveDocument(env, request, orderId, payload) {
   const serialized = JSON.stringify(data);
   const existing = await env.DB.prepare('SELECT * FROM order_documents WHERE id=?').bind(payload.request_id).first();
   if (existing) {
-    if (existing.order_id !== orderId || existing.data_json !== serialized || existing.status !== payload.status) throw fail('Цей ідентифікатор збереження вже використано.', 409);
+    if (existing.order_id !== orderId || existing.data_json !== serialized || existing.status !== payload.status || (existing.output_mode && existing.output_mode !== mode)) throw fail('Цей ідентифікатор збереження вже використано.', 409);
     return getDocumentContext(env, orderId, existing.id);
   }
   const now = new Date().toISOString(), actor = auditActor(request, env);
-  const result = await env.DB.prepare(`INSERT INTO order_documents (id,order_id,revision,created_at,actor,status,data_json)
-    SELECT ?,?,?,?,?,?,? WHERE ?=(SELECT COALESCE(MAX(revision),0) FROM order_documents WHERE order_id=?)`)
-    .bind(payload.request_id, orderId, payload.expected_revision + 1, now, actor, payload.status, serialized, payload.expected_revision, orderId).run();
+  const result = await env.DB.prepare(`INSERT INTO order_documents (id,order_id,revision,created_at,actor,status,data_json,output_mode)
+    SELECT ?,?,?,?,?,?,?,? WHERE ?=(SELECT COALESCE(MAX(revision),0) FROM order_documents WHERE order_id=?)`)
+    .bind(payload.request_id, orderId, payload.expected_revision + 1, now, actor, payload.status, serialized, mode, payload.expected_revision, orderId).run();
   if (!result.meta.changes) throw fail('Інший менеджер уже зберіг нову версію. Оновіть сторінку перед збереженням; ваші правки поки залишаються на екрані.', 409);
   await recordAuditEvent(env, { actor, action: 'document.save', entity_type: 'order_document', entity_id: payload.request_id,
     entity_label: `${data.number} · v${payload.expected_revision + 1}`, order_id: orderId,
