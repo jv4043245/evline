@@ -234,3 +234,33 @@ test('sync preserves safe schema diagnostics and does not advance the cursor on 
   assert.equal(db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date,before);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM bank_incoming').get().n,0);
 });
+
+test('posted transactions with a null ABS id use the exact documented docId',()=>{
+  const accounts=bankAccounts([bankAccount]);
+  const a=bankTransactions([rawTx(null,'42.50',{docId:'9223372036854775807'})],accounts)[0];
+  assert.equal(a.transaction_id,'1:doc:9223372036854775807');assert.equal(a.amount_minor,4250);
+  const b=bankTransactions([rawTx('777','42.50',{docId:'9223372036854775807'})],accounts)[0];
+  assert.equal(a.transaction_id,b.transaction_id);assert.deepEqual(b.alternate_transaction_ids,['1:777']);
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:null})],accounts));
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:0})],accounts));
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:9223372036854775807})],accounts));
+  assert.notEqual(a.transaction_id,bankTransactions([rawTx('9223372036854775807','42.50')],accounts)[0].transaction_id);
+});
+
+test('document replay and a later ABS id never duplicate or flag an unchanged incoming payment',async t=>{
+  const {env}=setup(t),accounts=bankAccounts([bankAccount]),invoices=await invoiceIndex(env);
+  const first=bankTransactions([rawTx(null,'42.50',{docId:'999'})],accounts);
+  const later=bankTransactions([rawTx('123','42.50',{docId:'999'})],accounts);
+  assert.equal(await ingestTransactions(env,first,invoices),1);await reconcile(env,invoices);
+  assert.equal(await ingestTransactions(env,later,invoices),0);
+  assert.equal(await ingestTransactions(env,first,invoices),0);
+  const data=await readIncoming(env);assert.equal(data.summary.count,1);assert.equal(data.summary.received_minor,4250);
+  assert.equal(data.rows[0].review_reason,null);assert.equal(data.invoices[0].received_minor,4250);
+});
+
+test('legacy ABS identity is recognized when a document ID becomes available',async t=>{
+  const {env}=setup(t),accounts=bankAccounts([bankAccount]),invoices=await invoiceIndex(env);
+  await ingestTransactions(env,bankTransactions([rawTx('777','42.50')],accounts),invoices);
+  assert.equal(await ingestTransactions(env,bankTransactions([rawTx('777','42.50',{docId:'999'})],accounts),invoices),0);
+  const data=await readIncoming(env);assert.equal(data.summary.count,1);assert.equal(data.rows[0].review_reason,'bank_record_changed');
+});

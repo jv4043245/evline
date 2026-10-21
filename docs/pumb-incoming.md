@@ -19,6 +19,12 @@ identity can have broader rights. Do not describe it as bank-enforced read-only.
 - Only processed, non-card UAH account transactions. Amounts are integer kopecks;
   64-bit transaction IDs are preserved as strings before parsing JSON.
 - Immutable bank facts are deduplicated by bank + recipient IBAN + host/document ID.
+  Posted rows can have `id:null` with a valid `docId`. The adapter consistently
+  prefers `hostId:doc:docId`, falling back to `hostId:id` only without a document ID.
+  An available ABS ID is also checked as a legacy deduplication alias. Aliases are
+  excluded from fingerprints, so an ABS ID appearing later does not duplicate or
+  change an already imported document. Ambiguous identities fail closed; legacy
+  identity changes are sent to review rather than inserted as another payment.
   Changed replayed records are flagged, never overwritten or silently re-counted.
 - Ready invoice/all document snapshots only. Drafts, agreement-only and receipt-only
   output are excluded. Migration backfills output modes from the existing audit log;

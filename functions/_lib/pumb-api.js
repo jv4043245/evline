@@ -128,8 +128,16 @@ export function bankTransactions(response, accounts) {
     const account=accounts.find(a=>a.account_id===accountId);
     if (!account) throw schemaFailure('account_match',row.accountId);
     if (row.currencyCode!=='UAH' && row.currencyCode!=='980') throw schemaFailure('currencyCode',row.currencyCode);
-    const transaction_id=`${schemaValue('hostId',row.hostId,exactId)}:${schemaValue('id',row.id,exactId,row)}`;
+    const host=schemaValue('hostId',row.hostId,exactId);
+    // PUMB may supply a posted transaction with id:null and a valid docId.
+    // Prefer the documented document ID consistently, even when id later appears.
+    // Keep namespaces distinct and supply the legacy ABS ID only as a dedupe alias.
+    const docId=row.docId==null || String(row.docId)==='0'?null:schemaValue('docId',row.docId,exactId);
+    const absId=row.id==null || String(row.id)==='0'?null:schemaValue('id',row.id,exactId,row);
+    if(!docId && !absId)throw schemaFailure('id',row.id);
+    const transaction_id=docId?`${host}:doc:${docId}`:`${host}:${absId}`;
     return [{transaction_id,account_id:account.account_id,account_iban:account.iban,currency:'UAH',
+      ...(docId && absId?{alternate_transaction_ids:[`${host}:${absId}`]}:{}),
       amount_minor:schemaValue('amount',row.amount,minorUnits),direction:row.direction,booked_at:schemaValue('operationDate',row.operationDate || row.date,bankDate),
       payer_name:String(row.direction==='INBOUND' ? row.senderName || '' : row.correspondentName || '').slice(0,300),
       purpose:String(row.description || '').slice(0,2000)}];
