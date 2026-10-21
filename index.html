@@ -418,7 +418,80 @@
     .proof-card__media{height:180px}
   }
 </style>
-<link rel="stylesheet" href="/assets/css/footer-contacts.css?v=20260922-footer-contacts-2" data-footer-contacts-style>
+<style data-footer-contacts-style data-footer-contacts-inline>footer .footer-contacts {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  width: min(1140px, calc(100% - 40px));
+  margin: 0 auto 24px;
+  padding: 0 0 24px;
+  border-bottom: 1px solid rgba(128, 150, 138, .3);
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.footer-contacts__heading {
+  display: grid;
+  gap: 4px;
+}
+
+.footer-contacts__heading strong { font-size: 16px; }
+.footer-contacts__heading span { font-variant-numeric: tabular-nums; }
+
+.footer-contacts__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+footer .footer-contacts__link {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  min-width: 132px;
+  padding: 10px 18px;
+  border: 1px solid #dce5df;
+  border-radius: 6px;
+  background: #fff;
+  color: #193c2d;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+footer .footer-contacts__link--telegram { color: #17638c; }
+footer .footer-contacts__link--viber { color: #644397; }
+footer .footer-contacts__link--telegram:hover { background: #edf7fc; color: #17638c; }
+footer .footer-contacts__link--whatsapp:hover { background: #eaf7ef; color: #193c2d; }
+footer .footer-contacts__link--viber:hover { background: #f1edf8; color: #644397; }
+footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outline-offset: 4px; }
+
+.footer-contacts__link img {
+  display: block;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  footer .footer-contacts { gap: 14px; }
+  .footer-contacts__links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  footer .footer-contacts__link { flex-direction: column; gap: 6px; min-width: 0; min-height: 70px; padding: 10px 6px; font-size: 14px; }
+}</style>
 </head>
 <body>
 
@@ -479,13 +552,13 @@
     <figure class="hero-proof" aria-label="Реальні запчастини та пакування замовлень EVLine">
       <div class="hero-proof__grid">
         <div class="hero-proof__tile hero-proof__tile--main">
-          <img src="assets/hero-gallery-5.webp" alt="Пневмостійка в захисному пакуванні перед відправкою" width="720" height="960" loading="eager" decoding="async" fetchpriority="high">
+          <img src="assets/hero-gallery-5.webp" alt="Пневмостійка в захисному пакуванні перед відправкою" width="720" height="960" loading="eager" decoding="async" fetchpriority="high" srcset="/assets/responsive/hero-gallery-5-240.webp 240w, /assets/responsive/hero-gallery-5-400.webp 400w, /assets/hero-gallery-5.webp 720w" sizes="(max-width: 900px) calc((100vw - 64px) * .575), 310px">
         </div>
         <div class="hero-proof__tile">
-          <img src="assets/hero-gallery-3.webp" alt="Дзеркало з проводкою, перевірка деталі" width="720" height="540" loading="eager" decoding="async" fetchpriority="low">
+          <img src="assets/hero-gallery-3.webp" alt="Дзеркало з проводкою, перевірка деталі" width="720" height="540" loading="eager" decoding="async" fetchpriority="low" srcset="/assets/responsive/hero-gallery-3-240.webp 240w, /assets/responsive/hero-gallery-3-400.webp 400w, /assets/hero-gallery-3.webp 720w" sizes="(max-width: 900px) calc((100vw - 64px) * .425), 275px">
         </div>
         <div class="hero-proof__tile">
-          <img src="assets/hero-gallery-6.webp" alt="Запаковане замовлення із запчастинами для доставки" width="720" height="960" loading="eager" decoding="async" fetchpriority="low">
+          <img src="assets/hero-gallery-6.webp" alt="Запаковане замовлення із запчастинами для доставки" width="720" height="960" loading="eager" decoding="async" fetchpriority="low" srcset="/assets/responsive/hero-gallery-6-240.webp 240w, /assets/responsive/hero-gallery-6-400.webp 400w, /assets/hero-gallery-6.webp 720w" sizes="(max-width: 900px) calc((100vw - 64px) * .425), 155px">
         </div>
       </div>
       <div class="hero-proof__badge">Реальні фото замовлень</div>
@@ -593,7 +666,7 @@
     </div>
     <div class="proof-cards">
       <article class="proof-card">
-        <div class="proof-card__media"><picture><source srcset="assets/images/china-delivery-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/china-delivery-visual.jpg?v=soft-delivery-1" alt="Логістика запчастин з Китаю авіа та морем" width="1802" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
+        <div class="proof-card__media"><picture><source srcset="/assets/responsive/china-delivery-visual-240.webp 240w, /assets/responsive/china-delivery-visual-400.webp 400w, /assets/responsive/china-delivery-visual-640.webp 640w, /assets/responsive/china-delivery-visual-960.webp 960w, /assets/images/china-delivery-visual.webp 1802w" type="image/webp" sizes="(max-width: 900px) calc(100vw - 40px), 354px"><img src="assets/images/china-delivery-visual.jpg?v=soft-delivery-1" alt="Логістика запчастин з Китаю авіа та морем" width="1802" height="900" loading="lazy" decoding="async" fetchpriority="low" srcset="/assets/responsive/china-delivery-visual-240.webp 240w, /assets/responsive/china-delivery-visual-400.webp 400w, /assets/responsive/china-delivery-visual-640.webp 640w, /assets/responsive/china-delivery-visual-960.webp 960w, /assets/images/china-delivery-visual.webp 1802w" sizes="(max-width: 900px) calc(100vw - 40px), 354px"></picture></div>
         <div class="proof-card__body">
           <span>Логістика</span>
           <h3>Пакуємо правильно без зайвої ваги</h3>
@@ -606,7 +679,7 @@
         </div>
       </article>
       <article class="proof-card">
-        <div class="proof-card__media"><picture><source srcset="assets/images/vin-parts-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/vin-parts-visual.jpg?v=proof-cards-1" alt="Точний підбір автозапчастин по VIN-коду" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
+        <div class="proof-card__media"><picture><source srcset="/assets/responsive/vin-parts-visual-240.webp 240w, /assets/responsive/vin-parts-visual-400.webp 400w, /assets/responsive/vin-parts-visual-640.webp 640w, /assets/responsive/vin-parts-visual-960.webp 960w, /assets/images/vin-parts-visual.webp 1400w" type="image/webp" sizes="(max-width: 900px) calc(100vw - 40px), 354px"><img src="assets/images/vin-parts-visual.jpg?v=proof-cards-1" alt="Точний підбір автозапчастин по VIN-коду" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low" srcset="/assets/responsive/vin-parts-visual-240.webp 240w, /assets/responsive/vin-parts-visual-400.webp 400w, /assets/responsive/vin-parts-visual-640.webp 640w, /assets/responsive/vin-parts-visual-960.webp 960w, /assets/images/vin-parts-visual.webp 1400w" sizes="(max-width: 900px) calc(100vw - 40px), 354px"></picture></div>
         <div class="proof-card__body">
           <span>Підбір по VIN</span>
           <h3>Деталь має підійти з першого разу</h3>
@@ -619,7 +692,7 @@
         </div>
       </article>
       <article class="proof-card">
-        <div class="proof-card__media"><picture><source srcset="assets/images/oem-parts-visual.webp?v=seo-speed-1" type="image/webp"><img src="assets/images/oem-parts-visual.jpg?v=proof-cards-1" alt="Оригінальні та OEM запчастини для китайських авто" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low"></picture></div>
+        <div class="proof-card__media"><picture><source srcset="/assets/responsive/oem-parts-visual-240.webp 240w, /assets/responsive/oem-parts-visual-400.webp 400w, /assets/responsive/oem-parts-visual-640.webp 640w, /assets/responsive/oem-parts-visual-960.webp 960w, /assets/images/oem-parts-visual.webp 1400w" type="image/webp" sizes="(max-width: 900px) calc(100vw - 40px), 354px"><img src="assets/images/oem-parts-visual.jpg?v=proof-cards-1" alt="Оригінальні та OEM запчастини для китайських авто" width="1400" height="900" loading="lazy" decoding="async" fetchpriority="low" srcset="/assets/responsive/oem-parts-visual-240.webp 240w, /assets/responsive/oem-parts-visual-400.webp 400w, /assets/responsive/oem-parts-visual-640.webp 640w, /assets/responsive/oem-parts-visual-960.webp 960w, /assets/images/oem-parts-visual.webp 1400w" sizes="(max-width: 900px) calc(100vw - 40px), 354px"></picture></div>
         <div class="proof-card__body">
           <span>Оригінал / OEM</span>
           <h3>Показуємо варіанти і різницю в ціні</h3>

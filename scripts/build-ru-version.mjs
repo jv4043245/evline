@@ -1,4 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { withPriorityPartsContent } from "./lib/parts-priority-content.mjs";
+import { withResponsivePartsImages } from "./lib/responsive-parts-images.mjs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { syncSellerIdentity } from "./lib/seller-identity.mjs";
@@ -1487,7 +1489,8 @@ await writeFile(path.join(root, "ru/zapchasti-kitajskih-avto/index.html"), curre
 
 for (const brand of brands) {
   await mkdir(path.join(root, "ru", brand.ruSlug), { recursive: true });
-  await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), currentDeliveryCopy(brandPageRu(brand)));
+  const content = withPriorityPartsContent(currentDeliveryCopy(brandPageRu(brand)));
+  await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), content.includes('data-parts-selection') ? withResponsivePartsImages(content) : content);
 }
 
 const standaloneSummary = rebuildStandalonePages ? "2 standalone pages, " : "";

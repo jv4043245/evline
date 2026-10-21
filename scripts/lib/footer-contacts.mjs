@@ -4,6 +4,7 @@ import { parse } from 'node-html-parser';
 import { publicHtmlFiles } from './seller-identity.mjs';
 
 export const footerContactsVersion = '20260922-footer-contacts-2';
+const footerContactsCss = (await readFile(new URL('../../assets/css/footer-contacts.css', import.meta.url), 'utf8')).trim();
 
 export function footerContactsMarkup(language = 'uk') {
   const ru = language.startsWith('ru');
@@ -24,12 +25,15 @@ export function withFooterContacts(html) {
   // Dedicated programming landings own their technical contacts; do not inject parts links.
   if (document.querySelector('footer[data-footer-contact-intent="byd"]')) return html;
   const markup = footerContactsMarkup(document.querySelector('html')?.getAttribute('lang') || 'uk');
-  const stylesheet = `<link rel="stylesheet" href="/assets/css/footer-contacts.css?v=${footerContactsVersion}" data-footer-contacts-style>`;
+  const existingStyle = document.querySelector('[data-footer-contacts-style]');
+  const stylesheet = existingStyle?.hasAttribute('data-footer-contacts-inline')
+    ? `<style data-footer-contacts-style data-footer-contacts-inline>${footerContactsCss}</style>`
+    : `<link rel="stylesheet" href="/assets/css/footer-contacts.css?v=${footerContactsVersion}" data-footer-contacts-style>`;
   let updated = document.querySelector('[data-footer-contacts]')
     ? html.replace(/<section\b[^>]*\bdata-footer-contacts\b[^>]*>[\s\S]*?<\/section>/, markup)
     : html.replace(/<footer\b[^>]*>/i, opening => `${opening}\n${markup}`);
-  updated = document.querySelector('[data-footer-contacts-style]')
-    ? updated.replace(/<link\b[^>]*\bdata-footer-contacts-style\b[^>]*>/, stylesheet)
+  updated = existingStyle
+    ? updated.replace(existingStyle.outerHTML, stylesheet)
     : updated.replace(/<\/head>/i, `${stylesheet}\n</head>`);
   // All public pages must load the tracker that recognizes the footer's explicit intent.
   return updated.replace(/(assets\/js\/(?:main|contact-tracking)\.js)(?:\?[^"']*)?(?=["'])/g, `$1?v=${footerContactsVersion}`);
