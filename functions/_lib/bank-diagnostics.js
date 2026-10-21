@@ -3,6 +3,7 @@ const stages = new Set(['validation','authorization','accounts','encryption','sa
 const oauthCodes = new Set(['invalid_grant','invalid_client','unauthorized_client','invalid_request','unsupported_grant_type','invalid_scope','access_denied','temporarily_unavailable','server_error']);
 const codes = new Set(('bank_unavailable bank_auth bank_rate_limit bank_response_large bank_schema bank_not_configured bank_operation_forbidden bank_server_setup bank_credentials_unavailable bank_connection_input bank_date_range bank_no_accounts bank_busy bank_input bank_owner_only bank_origin bank_login_rejected bank_client_rejected bank_auth_request bank_auth_unavailable bank_accounts_unavailable bank_transactions_unavailable bank_timeout bank_network bank_save_failed bank_encryption_failed').split(' '));
 export const safeBankCode = code => codes.has(code) ? code : 'bank_unavailable';
+codes.add('bank_redirect');
 export function safeBankDiagnostic(value={}) {
   return {
     stage: stages.has(value.stage) ? value.stage : 'validation',

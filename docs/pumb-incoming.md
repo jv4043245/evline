@@ -105,6 +105,12 @@ timeouts and transport failures. It is not proof of a mistyped password alone.
 Diagnostics do not retry requests, change bank endpoints or replace a working
 connection on authorization/account-fetch failure. No new migration is required.
 
+Cloudflare Workers rejects `redirect: 'error'` before making an outbound request.
+Both OAuth and statement requests use `redirect: 'manual'`; any 3xx response is
+rejected as `bank_redirect`, without following or recording `Location`. Node-only
+fetch mocks do not detect this runtime incompatibility; use the isolated workerd
+regression check in `scripts/test-pumb-runtime.mjs` as well as the unit suite.
+
 Rollback: pause the bank connection, then roll back the site deployment if needed.
 Do not remove the shared cron trigger: tracking and reminders use it too. A scheduler
 rollback must restore both its previous code and two-hour trigger. Keep additive
