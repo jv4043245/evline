@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { adminUser, isAdminRequest } from "../functions/_lib/auth.js";
+import { adminUser, adminIdentities, isAdminRequest } from "../functions/_lib/auth.js";
 import { auditActor, listAuditEvents } from "../functions/_lib/audit-log.js";
 import { onRequest } from "../functions/api/admin/_middleware.js";
 import { onRequestGet, onRequestPost } from "../functions/api/admin/session.js";
@@ -75,6 +75,37 @@ test("removing or rotating a personal token revokes it without changing the othe
   assert.equal(adminUser(requestFor("new-igor-token"), rotated).name, "Ігор");
   assert.equal(isAdminRequest(requestFor(accounts[0].token), rotated), true);
   assert.equal(isAdminRequest(requestFor(accounts[2].token), rotated), true);
+});
+
+test("separate owner recovery token revokes the legacy owner and preserves other users", async () => {
+  const rotated = { ...env, ADMIN_OWNER_TOKEN: "replacement-owner-test" };
+  assert.equal(isAdminRequest(requestFor(accounts[2].token), rotated), false);
+  for (const account of accounts.slice(0, 2)) assert.equal(adminUser(requestFor(account.token), rotated).id, account.id);
+  const request = requestFor(rotated.ADMIN_OWNER_TOKEN);
+  assert.deepEqual(adminUser(request, rotated), { id: "owner", name: "Власник", role: "admin" });
+  assert.deepEqual(adminIdentities(rotated).map(u => u.id).sort(), ["andrii", "igor", "owner"]);
+  const result = await onRequest({ request, env: rotated, next: () => onRequestGet({ request, env: rotated }) });
+  assert.equal(result.status, 200);
+  const body = await result.json();
+  assert.equal(body.user.id, "owner");
+  assert.equal(JSON.stringify(body).includes(rotated.ADMIN_OWNER_TOKEN), false);
+  assert.equal(isAdminRequest(requestFor(rotated.ADMIN_OWNER_TOKEN, { "x-admin-token": accounts[0].token }), rotated), false);
+});
+
+test("owner recovery handles malformed legacy owner config and still fails closed on token collisions", () => {
+  const rotated = { ...env, ADMIN_OWNER_TOKEN: "replacement-owner-test", ADMIN_USERS_JSON: "invalid" };
+  assert.equal(adminUser(requestFor(rotated.ADMIN_OWNER_TOKEN), rotated).id, "owner");
+  assert.equal(adminUser(requestFor(accounts[0].token), rotated).id, "andrii");
+  for (const token of [accounts[0].token, accounts[1].token]) {
+    assert.equal(adminUser(requestFor(token), { ...env, ADMIN_OWNER_TOKEN: token }), null);
+  }
+  for (const value of [undefined, null, "", "   "]) {
+    assert.equal(adminUser(requestFor(accounts[2].token), { ...env, ADMIN_OWNER_TOKEN: value }).id, "owner");
+  }
+  const again = { ...env, ADMIN_OWNER_TOKEN: "second-owner-test" };
+  assert.equal(adminUser(requestFor("replacement-owner-test"), again), null);
+  assert.equal(adminUser(requestFor(accounts[2].token), again), null);
+  assert.equal(adminUser(requestFor(again.ADMIN_OWNER_TOKEN), again).id, "owner");
 });
 
 test("real audit storage records each sign-in under its token owner without storing credentials", async () => {

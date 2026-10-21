@@ -2,15 +2,20 @@ import { json } from "./http.js";
 
 function configuredUsers(env) {
   const users = [];
+  // A separate owner secret permits recovery without reading/replacing the
+  // encrypted additional-users secret or rotating another person's token.
+  const ownerToken = typeof env.ADMIN_OWNER_TOKEN === "string" ? env.ADMIN_OWNER_TOKEN.trim() : "";
   if (typeof env.ADMIN_TOKEN === "string" && env.ADMIN_TOKEN.trim()) {
     users.push({ id: "andrii", name: "Андрій", token: env.ADMIN_TOKEN.trim() });
   }
+  if (ownerToken) users.push({ id: "owner", name: "Власник", token: ownerToken });
   try {
     const additional = JSON.parse(env.ADMIN_USERS_JSON || "[]");
     if (Array.isArray(additional)) {
       for (const user of additional) {
         if (typeof user?.id !== "string" || typeof user?.name !== "string" || typeof user?.token !== "string") continue;
         if (!user.id.trim() || !user.name.trim() || !user.token.trim() || user.id.trim() === "andrii") continue;
+        if (ownerToken && user.id.trim() === "owner") continue;
         users.push({ id: user.id.trim(), name: user.name.trim(), token: user.token.trim() });
       }
     }
