@@ -11,6 +11,7 @@ import { onRequest as cron } from '../functions/api/cron/bank-incoming.js';
 import { createBankIncomingView, invoiceTable, paymentTable, bankErrorMessage } from '../admin/bank-incoming.js';
 import { lastConnectDiagnostic, saveConnectDiagnostic } from '../functions/_lib/bank-diagnostics.js';
 import { adminApiError } from '../assets/js/admin-api-errors.js';
+import { linkPayment, refreshOrderPaymentStatus, invoiceSuggestions } from '../functions/_lib/bank-payment-links.js';
 
 const dir=new URL('../migrations/',import.meta.url);
 const schemas=await Promise.all((await readdir(dir)).filter(f=>f.endsWith('.sql')).sort().map(f=>readFile(new URL(f,dir),'utf8')));
@@ -32,6 +33,7 @@ function setup(t) {
   addDocument();return {db,env,addDocument};
 }
 const fakeBank=(transactions=[],calls=[])=>async(url,options)=>{calls.push({url,options});return Response.json(url.includes('/token')?{access_token:'test-access-token',expires_in:300}:url.endsWith('/account')?[bankAccount]:transactions);};
+const linkPayload=(db,order_id='o1',invoice_key='')=>{const t=db.prepare('SELECT * FROM bank_incoming ORDER BY booked_at,id LIMIT 1').get();return {payment_id:t.id,order_id,invoice_key,expected_amount_minor:t.amount_minor,expected_fingerprint:t.fingerprint,confirmed:true};};
 const request=(body,token='owner-test',headers={})=>new Request('https://evline.test/api/admin/bank-incoming',{method:body?'POST':'GET',headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
 
 test('bank amounts, dates and int64 identifiers are exact; unsafe values fail closed',()=>{
@@ -75,14 +77,95 @@ test('invoice references are bounded, and match requires recipient IBAN and curr
   assert.equal(hasInvoiceReference('Рахунок A.001','A.001'),true);assert.equal(hasInvoiceReference('Рахунок AX001','A.001'),false);
   assert.equal(matchingInvoices(tx(),[{number:'EV-O-TEST',iban:'wrong',currency:'UAH'}]).length,0);
 });
-test('partial receipts accumulate once; matching does not change manual order finance or status',async t=>{
+test('short invoice numbers require invoice wording and cannot match dates, amounts or larger IDs',()=>{
+  for(const [purpose,n] of [['Згідно рахунку 1 від 19 жовтня 2026р.','1'],['Оплата згідно рахунку №2 від 19/10/2026.','2'],['Рахунок на оплату № 4 від 20 жовтня 2026 р.','4'],['По счету №12 от 19.10.2026','12']])assert.equal(hasInvoiceReference(purpose,n),true,purpose);
+  for(const p of ['Оплата 1 грн','від 1.10.2026','замовлення №1','рахунок 12','рахунок 1/2','рахунок 1.20','рахунок 1-A','рахунок 01'])assert.equal(hasInvoiceReference(p,'1'),false,p);
+});
+test('manual link without invoice is idempotent, audited, cannot be reassigned and updates only customer payment status',async t=>{
+  const {env,db}=setup(t);await ingestTransactions(env,[tx('91','40.15',{description:'Без рахунку'})],[]);
+  const payload=linkPayload(db);await linkPayment(env,payload,[],'Owner');
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'partial');
+  assert.equal((await linkPayment(env,payload,[],'Owner')).already_linked,true);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='bank.payment_link'").get().n,1);
+  const order=db.prepare('SELECT * FROM orders').get();assert.equal(order.revenue_uah,100);assert.equal(order.status,'awaiting_payment');
+  db.exec("INSERT INTO orders(id,created_at,updated_at,type,status) VALUES('o2','2026-10-20','2026-10-20','parts','new')");
+  await assert.rejects(linkPayment(env,{...payload,order_id:'o2'},[],'Owner'),/bank_match_conflict/);
+  assert.equal(db.prepare('SELECT order_id FROM bank_incoming').get().order_id,'o1');
+});
+test('manual confirmation rejects stale facts, no consent, canceled orders and outbound payments',async t=>{
+  const {env,db}=setup(t);await ingestTransactions(env,[tx()],[]);const p=linkPayload(db);
+  await assert.rejects(linkPayment(env,{...p,confirmed:false},[],'Owner'),/bank_input/);
+  await assert.rejects(linkPayment(env,{...p,expected_amount_minor:1},[],'Owner'),/bank_match_conflict/);
+  await assert.rejects(linkPayment(env,{...p,expected_fingerprint:'stale'},[],'Owner'),/bank_match_conflict/);
+  for(const reason of ['bank_record_changed','order_deleted','manual_review']){db.prepare('UPDATE bank_incoming SET review_reason=?').run(reason);await assert.rejects(linkPayment(env,p,[],'Owner'),/bank_match_conflict/);}
+  db.exec("UPDATE bank_incoming SET review_reason=NULL;UPDATE orders SET status='canceled'");await assert.rejects(linkPayment(env,p,[],'Owner'),/bank_match_conflict/);
+  db.exec("UPDATE orders SET status='new';UPDATE bank_incoming SET direction='OUTBOUND'");await assert.rejects(linkPayment(env,p,[],'Owner'),/bank_match_conflict/);
+});
+test('concurrent manual confirmations have one winner and short-number auto matching updates the order',async t=>{
+  const {env,db,addDocument}=setup(t);await ingestTransactions(env,[tx('95','100',{description:'Без рахунку'})],[]);
+  db.exec("INSERT INTO orders(id,created_at,updated_at,type,status) VALUES('o2','2026-10-20','2026-10-20','parts','new')");
+  const p=linkPayload(db);const results=await Promise.allSettled([linkPayment(env,p,[],'Owner'),linkPayment(env,{...p,order_id:'o2'},[],'Other')]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='bank.payment_link'").get().n,1);
+  db.exec("DELETE FROM bank_incoming;DELETE FROM bank_order_payment_state;DELETE FROM order_documents;UPDATE orders SET payment_status='unpaid' WHERE id='o1'");
+  const d=fixtureDocument();d.invoice.number='1';addDocument('short',d);
+  const invoices=await invoiceIndex(env);await ingestTransactions(env,[tx('96','100',{description:'Згідно рахунку 1 від 19 жовтня 2026р.'})],invoices);
+  assert.equal(await reconcile(env,invoices),1);assert.equal(db.prepare("SELECT payment_status FROM orders WHERE id='o1'").get().payment_status,'paid');
+});
+test('invoice prepayment does not imply full order paid; no price, manual paid and refund are protected',async t=>{
+  const {env,db,addDocument}=setup(t);db.exec('DELETE FROM order_documents');const doc=fixtureDocument();doc.invoice.mode='custom';doc.invoice.amount='40.15';addDocument('advance',doc);
+  const invoices=await invoiceIndex(env);await ingestTransactions(env,[tx()],invoices);await reconcile(env,invoices);
+  assert.equal((await readIncoming(env)).invoices[0].status,'paid');assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'partial');
+  db.exec('UPDATE orders SET revenue_uah=0');await refreshOrderPaymentStatus(env,'o1');assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'partial');
+  for(const s of ['paid','refunded']){db.prepare('UPDATE orders SET payment_status=?').run(s);await refreshOrderPaymentStatus(env,'o1');assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,s);}
+});
+test('changed bank evidence removes bank-managed paid status instead of leaving false payment confirmation',async t=>{
+  const {env,db}=setup(t),invoices=await invoiceIndex(env);await ingestTransactions(env,[tx('1','100')],invoices);await reconcile(env,invoices);
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'paid');
+  await ingestTransactions(env,[tx('1','99')],invoices);await reconcile(env,invoices);
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'unknown');
+});
+test('manual optional invoice checks account, date and remaining amount; owner-only API',async t=>{
+  const {env,db}=setup(t),invoices=await invoiceIndex(env);await ingestTransactions(env,[tx('1','101')],invoices);const p=linkPayload(db,'o1',invoices[0].key);
+  await assert.rejects(linkPayment(env,p,invoices,'Owner'),/bank_match_conflict/);
+  await assert.rejects(linkPayment(env,p,[{...invoices[0],iban:'wrong'}],'Owner'),/bank_match_conflict/);
+  const res=await route({env,request:request({action:'link',...p},'andrii-test')});assert.equal(res.status,403);
+  const cross=await route({env,request:request({action:'link',...p},'owner-test',{origin:'https://evil.test'})});assert.equal(cross.status,403);
+  const valid=await route({env,request:request({action:'link',...p,invoice_key:''})});assert.equal(valid.status,200);
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'paid');
+});
+test('name and amount suggestions never authorize automatic association',async t=>{
+  const {env,db}=setup(t),invoices=await invoiceIndex(env),payment=tx('92','100',{senderName:'Тест',description:'Оплата товару'});
+  assert.deepEqual(invoiceSuggestions(payment,invoices)[0].reasons,['amount','name']);
+  await ingestTransactions(env,[payment],invoices);assert.equal(await reconcile(env,invoices),0);
+  assert.equal(db.prepare('SELECT order_id FROM bank_incoming').get().order_id,null);
+});
+test('manual UI searches and explicitly confirms a selected order without touching credentials or auto-selecting',async t=>{
+  const {env,db}=setup(t);await ingestTransactions(env,[tx('93','100',{description:'Без номера'})],[]);
+  const dom=new JSDOM('<main></main>',{url:'https://evline.test'});t.after(()=>dom.window.close());const root=dom.window.document.querySelector('main');
+  const posts=[];const view=createBankIncomingView(root,async(path,options)=>{
+    if(options){const body=JSON.parse(options.body);posts.push(body);const response=await route({env,request:request(body)});if(!response.ok)throw new Error((await response.json()).error);return response.json();}
+    if(path.startsWith('/api/admin/orders?'))return {total:1,orders:[{id:'o1',order_number:'O-TEST',customer_name:'Тест',revenue_uah:100,status:'new'}]};
+    return {...await readIncoming(env,{orderId:path.includes('order_id=')?'o1':''}),can_link:true,can_manage:false};
+  });
+  await view.load();root.querySelector('[data-bank-link]').click();
+  assert.equal(root.querySelector('[data-bank-confirm]'),null);
+  root.querySelector('[name=query]').value='O-TEST';root.querySelector('[data-bank-search]').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await new Promise(r=>setTimeout(r,10));assert.equal(root.querySelector('[data-bank-confirm]'),null);
+  const select=root.querySelector('[data-bank-choose]');select.value='o1';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,10));
+  const form=root.querySelector('[data-bank-confirm]');form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));assert.equal(posts.length,0);
+  form.elements.confirmed.checked=true;form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,15));
+  assert.equal(posts.length,1);assert.equal(posts[0].action,'link');assert.equal(posts[0].order_id,'o1');
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'paid');assert.equal(root.querySelector('[data-bank-link]'),null);view.reset();
+});
+test('partial receipts accumulate once; matching updates payment status but not revenue or workflow',async t=>{
   const {env,db}=setup(t),invoices=await invoiceIndex(env);assert.equal(invoices.length,1);
   assert.equal(await ingestTransactions(env,[tx()],invoices),1);assert.equal(await reconcile(env,invoices),1);
   let data=await readIncoming(env);assert.equal(data.invoices[0].received_minor,4015);assert.equal(data.invoices[0].status,'partial');
   assert.equal(await ingestTransactions(env,[tx()],invoices),0);assert.equal(await reconcile(env,invoices),0);
   await ingestTransactions(env,[tx('2','59.85')],invoices);await reconcile(env,invoices);data=await readIncoming(env,{orderId:'o1'});
   assert.equal(data.invoices[0].received_minor,10000);assert.equal(data.invoices[0].status,'paid');assert.equal(data.rows.length,2);
-  const order=db.prepare('SELECT * FROM orders').get();assert.equal(order.revenue_uah,100);assert.equal(order.payment_status,'unpaid');assert.equal(order.status,'awaiting_payment');
+  const order=db.prepare('SELECT * FROM orders').get();assert.equal(order.revenue_uah,100);assert.equal(order.payment_status,'paid');assert.equal(order.status,'awaiting_payment');
 });
 test('duplicate invoice revisions deduplicate, but changed totals and identical numbers across orders are ambiguous',async t=>{
   const {env,addDocument}=setup(t);addDocument('doc2');let invoices=await invoiceIndex(env);assert.equal(invoices.length,1);

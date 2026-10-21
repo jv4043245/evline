@@ -1,4 +1,4 @@
-import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode } from '../../admin/documents/model.js';
+import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode, invoiceAmount } from '../../admin/documents/model.js';
 import { auditActor, recordAuditEvent } from './audit-log.js';
 
 export const DOCUMENT_SCHEMA = [
@@ -52,7 +52,7 @@ export async function getDocumentContext(env, orderId, versionId = '') {
   const deliveries = saved ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
   return { order: { id: order.id, number: order.order_number || order.id, customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
     recipient: documentRecipient(order), versions, latest_revision: versions[0]?.revision || 0,
-    document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
+    document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, output_mode: saved.output_mode || '', actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
     defaults: { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id }, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
 }
 export function checkDocumentOrigin(request) {
@@ -87,6 +87,16 @@ export async function saveDocument(env, request, orderId, payload) {
     return getDocumentContext(env, orderId, existing.id);
   }
   const now = new Date().toISOString(), actor = auditActor(request, env);
+  if(payload.status==='ready' && ['invoice','all'].includes(mode) && data.invoice.enabled) {
+    const normalized=s=>String(s || '').normalize('NFKC').toUpperCase().replace(/[‐‑–—]/g,'-').trim();
+    const iban=s=>String(s || '').replace(/\s/g,'').toUpperCase();
+    const issued=(await env.DB.prepare("SELECT order_id,data_json FROM order_documents WHERE status='ready' AND output_mode IN ('invoice','all')").all()).results || [];
+    for(const row of issued) {
+      let old;try{old=JSON.parse(row.data_json);}catch{continue;}
+      if(!old.invoice?.enabled || normalized(old.invoice.number)!==normalized(data.invoice.number) || iban(old.seller?.iban)!==iban(data.seller.iban))continue;
+      if(row.order_id!==orderId || invoiceAmount(old)!==invoiceAmount(data))throw fail('Цей номер рахунку вже виставлено для іншого замовлення або суми. Вкажіть новий унікальний номер; попередній рахунок збережено.',409);
+    }
+  }
   const result = await env.DB.prepare(`INSERT INTO order_documents (id,order_id,revision,created_at,actor,status,data_json,output_mode)
     SELECT ?,?,?,?,?,?,?,? WHERE ?=(SELECT COALESCE(MAX(revision),0) FROM order_documents WHERE order_id=?)`)
     .bind(payload.request_id, orderId, payload.expected_revision + 1, now, actor, payload.status, serialized, mode, payload.expected_revision, orderId).run();

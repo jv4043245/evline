@@ -1,6 +1,7 @@
 import { adminUser, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
-import { readIncoming, connectBank, pauseBank, syncBank } from '../../_lib/bank-incoming.js';
+import { readIncoming, connectBank, pauseBank, syncBank, invoiceIndex } from '../../_lib/bank-incoming.js';
+import { linkPayment } from '../../_lib/bank-payment-links.js';
 import { bankError, bankFailure } from '../../_lib/pumb-api.js';
 import { lastConnectDiagnostic, safeBankDiagnostic } from '../../_lib/bank-diagnostics.js';
 
@@ -12,7 +13,7 @@ export async function onRequest({request,env}) {
     if(request.method==='GET') {
       const page=Number(url.searchParams.get('page') || 1),orderId=url.searchParams.get('order_id') || '';
       if(!Number.isInteger(page) || page<1 || page>10000 || orderId.length>100) throw bankError('bank_input',400);
-      return json({...await readIncoming(env,{orderId,page,unmatched:url.searchParams.get('review')==='1'}),can_manage:user.id==='owner',
+      return json({...await readIncoming(env,{orderId,page,unmatched:url.searchParams.get('review')==='1'}),can_manage:user.id==='owner',can_link:user.id==='owner',
         ...(user.id==='owner'?{connect_diagnostic:await lastConnectDiagnostic(env)}:{})});
     }
     if(request.method!=='POST') return json({error:'Method not allowed'},{status:405});
@@ -24,6 +25,7 @@ export async function onRequest({request,env}) {
     const raw=await request.text(); if(raw.length>5000) throw bankError('bank_input',400);
     let data; try {data=JSON.parse(raw);} catch {throw bankError('bank_input',400);}
     if(!data || typeof data!=='object') throw bankError('bank_input',400);
+    if(data.action==='link') return json(await linkPayment(env,data,await invoiceIndex(env),user.name));
     if(data.action==='connect') return json({connection:await connectBank(env,data,user.name)});
     if(data.action==='pause') {await pauseBank(env,user.name);return json({ok:true});}
     if(data.action==='sync') return json(await syncBank(env,{force:true}));

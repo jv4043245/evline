@@ -38,7 +38,15 @@ auto parts, so this action is intentionally not offered on programming services.
    supplier payments are never used. Seller tax status does not imply VAT status.
    Existing saved documents retain their original invoice-free content unless a
    manager explicitly enables the invoice and saves a new version.
-5. **Зберегти** saves a draft. **PDF** requires the manager's review and the
+5. **Зберегти чернетку** saves a draft. **Виставити рахунок** saves a manager-reviewed,
+   validated invoice/all snapshot as ready for the bank tracking list, without
+   sending it to anyone. Supply the client's PDF or send separately; copy the exact
+   payment purpose from the invoice. Reusing an issued number on the same recipient
+   IBAN for another order or different amount is rejected; use a new unique number.
+   Identical revisions and draft edits remain allowed. The list in **Надходження**
+   shows the invoice amount, received amount, remaining amount and payment state.
+   This invoice state is distinct from full-order payment: a fully paid advance
+   invoice does not mean that the whole order is paid. **PDF** requires review and the
    selected document's necessary fields, then stores a prepared snapshot and
    downloads a real PDF with a document-specific filename. An invoice needs
    buyer name, seller requisites, prices, tax treatment and invoice details;

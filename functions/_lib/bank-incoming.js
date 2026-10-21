@@ -2,6 +2,7 @@ import { invoiceAmount, validateReady } from '../../admin/documents/model.js';
 import { bankError, bankFailure, normalizeIban, pumbSession, bankAccounts, bankTransactions, bankRange } from './pumb-api.js';
 import { recordAuditEvent } from './audit-log.js';
 import { saveConnectDiagnostic, safeBankDiagnostic } from './bank-diagnostics.js';
+import { refreshLinkedOrderStatuses, invoiceSuggestions } from './bank-payment-links.js';
 
 const now=()=>new Date().toISOString();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -79,8 +80,10 @@ export async function pauseBank(env,actor) {
 
 const normalizeNumber=s=>String(s || '').normalize('NFKC').toUpperCase().replace(/[‐‑–—]/g,'-').trim();
 export function hasInvoiceReference(purpose,number) {
-  const ref=normalizeNumber(number); if (!ref || ref.length<3) return false;
+  const ref=normalizeNumber(number); if (!ref) return false;
   const escaped=ref.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  // Numeric identifiers must be explicitly labelled as invoices, never dates or amounts.
+  if(/^\d+$/.test(ref) || ref.length<3) return new RegExp(`(^|[^\\p{L}\\p{N}])(?:РАХУН(?:ОК|КУ|КОМ|КА)|СЧ[ЕЁ]Т(?:У|А|ОМ)?|INVOICE)(?:\\s+НА\\s+ОПЛАТУ)?\\s*(?:№|N[OО]?[.]?)?\\s*${escaped}(?=$|[\\s,;:)])(?![\\s]*[.,/]\\d)`,'u').test(normalizeNumber(purpose));
   // The full identifier must be present: EV-O-001 cannot match EV-O-0012.
   return new RegExp(`(^|[^\\p{L}\\p{N}\\-])${escaped}($|[^\\p{L}\\p{N}\\-])`,'u').test(normalizeNumber(purpose));
 }
@@ -153,6 +156,7 @@ export async function reconcile(env,invoices,actor='ПУМБ') {
     results.forEach((r,i)=>{if(r.meta.changes && group[i].id)matched.push(group[i].id);});
   }
   if(matched.length)await recordAuditEvent(env,{actor,action:'bank.payments_match',entity_type:'bank_connection',entity_id:'pumb',details:{count:matched.length,payment_ids:matched.slice(0,40)}});
+  await refreshLinkedOrderStatuses(env,actor);
   return matched.length;
 }
 export async function syncBank(env,{fetcher=fetch,force=false}={}) {
@@ -202,7 +206,9 @@ export async function readIncoming(env,{orderId='',page=1,unmatched=false}={}) {
     SUM(CASE WHEN order_id IS NULL OR review_reason IS NOT NULL THEN 1 ELSE 0 END) review_count FROM bank_incoming WHERE ${where}`,...args);
   const payments=await all(env,"SELECT invoice_key,SUM(amount_minor) received_minor FROM bank_incoming WHERE ignored=0 AND review_reason IS NULL AND direction='INBOUND' AND invoice_key IS NOT NULL GROUP BY invoice_key");
   const flagged=await all(env,"SELECT account_iban,currency,purpose,invoice_key FROM bank_incoming WHERE ignored=0 AND review_reason IS NOT NULL");
-  return {connection:await connectionStatus(env),summary,rows,page,invoices:invoices.map(({iban,...i})=>{
+  const facts=await all(env,`SELECT id,account_iban,fingerprint FROM bank_incoming WHERE id IN (${rows.length?rows.map(()=>'?').join(','):'NULL'})`,...rows.map(r=>r.id));
+  return {connection:await connectionStatus(env),summary,rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
+    suggestions:row.order_id?[]:invoiceSuggestions({...row,account_iban:fact?.account_iban},invoices)};}),page,invoices:invoices.map(({iban,...i})=>{
     const received=payments.find(p=>p.invoice_key===i.key)?.received_minor || 0;
     const review=flagged.some(t=>t.invoice_key===i.key || matchingInvoices(t,[{...i,iban}]).length);
     return {...i,iban_masked:iban.slice(0,6)+'…'+iban.slice(-4),received_minor:received,status:review ? 'review':received>=i.amount_minor ? 'paid':received>0 ? 'partial':'unpaid'};

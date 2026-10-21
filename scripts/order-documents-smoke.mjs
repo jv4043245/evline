@@ -57,7 +57,8 @@ try {
     await page.locator('[data-workspace]').waitFor({ state: 'visible' });
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     console.log(`Compact initial editor ${width}px: ${height}px high`);
-    assert.ok(height < (width > 760 ? 1250 : 2400), `Compact editor unexpectedly tall at ${width}`);
+    // The explicit issue action has its own mobile footer row and reserved bottom space.
+    assert.ok(height < (width > 760 ? 1250 : 2500), `Compact editor unexpectedly tall at ${width}`);
     const heading = await page.locator('.page-heading').boundingBox();
     assert.ok(heading.height <= (width > 760 ? 32 : 110), `Header unexpectedly tall at ${width}`);
     if (width > 760) {
@@ -158,6 +159,9 @@ try {
     assert.match(await page.locator('[data-paper]').innerText(), /Другий Тестовий Продавець/);
     await page.screenshot({ path: path.join(output, `preview-${width}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Preview overflow at ${width}`);
+    await page.locator('[data-action="issue-invoice"]').click();
+    await page.getByText('Рахунок готовий і доступний у «Надходження». Передайте PDF клієнту; автоматичного надсилання не було.', { exact: true }).waitFor();
+    assert.equal(db.prepare('SELECT status FROM order_documents ORDER BY revision DESC LIMIT 1').get().status, 'ready');
     const downloaded = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click();
     const file = await downloaded; assert.match(file.suggestedFilename(), /-invoice-v\d+.pdf$/); await file.saveAs(path.join(output, `invoice-${width}.pdf`));
     await page.waitForFunction(() => document.querySelector('[data-state]').textContent === 'Підготовлено');
@@ -173,6 +177,12 @@ try {
     assert.equal(await page.locator('[data-paper] h2').count(), 2);
     const agreementDownload = page.waitForEvent('download'); await page.locator('[data-action="pdf"]').click();
     const agreement = await agreementDownload; assert.match(agreement.suggestedFilename(), /-agreement-v\d+.pdf$/); await agreement.saveAs(path.join(output, `agreement-${width}.pdf`));
+    assert.equal(db.prepare('SELECT output_mode FROM order_documents ORDER BY revision DESC LIMIT 1').get().output_mode, 'agreement');
+    await page.locator('[data-output-mode]').selectOption('invoice');
+    await page.locator('[data-action="issue-invoice"]').click();
+    await page.getByText('Рахунок готовий і доступний у «Надходження». Передайте PDF клієнту; автоматичного надсилання не було.', { exact: true }).waitFor();
+    assert.equal(db.prepare('SELECT output_mode FROM order_documents ORDER BY revision DESC LIMIT 1').get().output_mode, 'invoice');
+    await page.locator('[data-output-mode]').selectOption('agreement');
     await page.locator('[data-action="send"]').click(); await page.locator('[data-send-dialog]').waitFor({ state: 'visible' });
     assert.match(await page.locator('[data-send-content]').innerText(), /^Договір і специфікація ·/);
     await page.getByRole('button', { name: 'Закрити', exact: true }).click();

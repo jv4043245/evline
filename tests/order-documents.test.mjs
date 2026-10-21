@@ -49,6 +49,17 @@ test('only customer-facing order fields seed a draft; paid supplier is never cus
   assert.equal(result.defaults.items[0].kind, ''); assert.equal(result.defaults.forecast, '');
   assert.doesNotMatch(JSON.stringify(result), /7777|purchase_cost|supplier_payments|manager_notes/);
 });
+test('issued invoice number cannot be reused for another order or amount; drafts and identical revisions remain possible',async t=>{
+  const {env,db}=await setup(t),data=completeDocument();
+  await saveDocument(env,req(),orderId,{...payload(data),mode:'invoice'});
+  await saveDocument(env,req(),orderId,{...payload(data,1),mode:'invoice'});
+  const changed=structuredClone(data);changed.invoice.mode='custom';changed.invoice.amount='20.00';
+  await assert.rejects(saveDocument(env,req(),orderId,{...payload(changed,2),mode:'invoice'}),/унікальний номер/);
+  db.prepare("INSERT INTO orders(id,created_at,updated_at,type,status) VALUES('another','2026-10-21','2026-10-21','parts','new')").run();
+  await assert.rejects(saveDocument(env,req(),'another',{...payload(data),mode:'invoice'}),/унікальний номер/);
+  await saveDocument(env,req(),'another',{...payload(data,0,'draft'),mode:'invoice'});
+  changed.invoice.number='EV-NEW-2';await saveDocument(env,req(),orderId,{...payload(changed,2),mode:'invoice'});
+});
 test('arithmetic is cent-based, totals include only explicitly agreed extras', () => {
   const d = completeDocument(); d.items = [{ ...d.items[0], quantity: 3, price: '0.10' }]; d.extras = [{ title: 'Доставка', price: '1 234,56' }]; d.prepayment = '0';
   assert.deepEqual(totals(normalizeDocument(d)), { items: 30, extras: 123456, total: 123486, balance: 123486, received: 0 });

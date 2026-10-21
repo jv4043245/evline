@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20260924-sections">
-  <script type="module" src="/admin/documents/documents.js?v=20260924-sections"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261021-invoice-tracking">
+  <script type="module" src="/admin/documents/documents.js?v=20261021-invoice-tracking"></script>
 </head>
 <body>
   <header class="app-header">
@@ -28,7 +28,8 @@
         </div>
         <div class="toolbar-actions">
           <span data-action-document aria-live="polite"></span>
-          <button type="button" data-action="save">Зберегти</button>
+          <button type="button" data-action="save">Зберегти чернетку</button>
+          <button type="button" class="primary" data-action="issue-invoice">Виставити рахунок</button>
           <button type="button" class="primary" data-action="pdf">PDF</button>
           <button type="button" class="icon-button" data-action="print" aria-label="Друкувати" title="Друкувати"></button>
           <button type="button" class="icon-button" data-action="copy" aria-label="Копіювати текст документа" title="Копіювати текст документа"></button>
@@ -47,7 +48,7 @@
         </div>
         <aside class="document-sidebar" aria-label="Підсумок документа">
           <section><h2>Специфікація</h2><dl data-totals></dl></section>
-          <section><h2 data-check-title>Перевірка рахунку</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label></section>
+          <section><h2 data-check-title>Перевірка рахунку</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label><details><summary>Як відстежувати оплату</summary><p>«Виставити рахунок» зберігає готовий рахунок у «Надходження», але не надсилає його клієнту. Передайте PDF або натисніть «Надіслати». Клієнт копіює призначення платежу з рахунку. Для кожної нової суми використовуйте унікальний номер. Сума та ім’я — лише підказки, не підтвердження оплати.</p></details></section>
           <section><h2>Дані замовлення</h2><button type="button" data-action="refresh-order">Оновити з замовлення</button></section>
           <section><h2>Версії</h2><select data-versions aria-label="Збережена версія"><option value="">Ще не збережено</option></select><p class="muted" data-version-info></p><p class="muted" data-delivery-status></p></section>
         </aside>

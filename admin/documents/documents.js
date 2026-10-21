@@ -78,6 +78,7 @@ function renderEditor() {
   refreshMode();
 }
 function refreshMode() {
+  $('[data-action="issue-invoice"]').hidden = !['invoice','all'].includes(outputMode());
   $('[data-output-mode] option[value="receipt"]').disabled = !data.receipt.enabled;
   $('[data-output-mode] option[value="invoice"]').disabled = !data.invoice.enabled;
   if ((outputMode() === 'invoice' && !data.invoice.enabled) || (outputMode() === 'receipt' && !data.receipt.enabled)) $('[data-output-mode]').value = 'agreement';
@@ -96,7 +97,7 @@ function refreshSummary() {
   } catch (e) { messages = [e.message]; }
   $('[data-checks]').innerHTML = messages.length ? `<details><summary>Не заповнено / потребує перевірки: ${messages.length}</summary><ul class="checks-list">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul></details>` : '<p class="checks-ok">Обов’язкові поля заповнено</p>';
   $('[data-reviewed]').checked = data.reviewed;
-  const ready = !dirty() && !messages.length && data.reviewed && context.document?.status === 'ready';
+  const ready = !dirty() && !messages.length && data.reviewed && context.document?.status === 'ready' && context.document.output_mode === outputMode();
   $('[data-state]').textContent = dirty() ? 'Незбережені зміни' : ready ? 'Підготовлено' : 'Чернетка';
   $('[data-state]').classList.toggle('ready', ready);
   $('[data-action="save"]').disabled = !dirty() && !!context.document;
@@ -128,7 +129,7 @@ async function save(state = 'draft') {
     const errors = validateReady(normalized, outputMode());
     if (errors.length) { revealIncompleteSections(); throw new Error(`Потрібно перевірити: ${errors.join('; ')}.`); }
   }
-  if (!dirty() && context.document?.status === state) return;
+  if (!dirty() && context.document?.status === state && context.document.output_mode === outputMode()) return;
   const fingerprint = JSON.stringify([normalized, state, context.latest_revision, outputMode()]);
   if (pendingSave?.fingerprint !== fingerprint) pendingSave = { fingerprint, id: crypto.randomUUID() };
   const result = await api(endpoint, { method: 'POST', body: JSON.stringify({ request_id: pendingSave.id, expected_revision: context.latest_revision, status: state, mode: outputMode(), data: normalized }) });
@@ -179,6 +180,10 @@ async function prepareSend() {
 }
 async function action(name) {
   if (name === 'save') await save();
+  else if (name === 'issue-invoice') {
+    if(!['invoice','all'].includes(outputMode()))throw new Error('Оберіть документ «Рахунок» або «Повний комплект».');
+    await save('ready');status('Рахунок готовий і доступний у «Надходження». Передайте PDF клієнту; автоматичного надсилання не було.');
+  }
   else if (name === 'pdf' || name === 'draft-pdf') download(await pdfFile(name === 'draft-pdf'));
   else if (name === 'print') {
     // Open during the user gesture so browser popup blocking cannot discard the PDF.

@@ -34,10 +34,25 @@ identity can have broader rights. Do not describe it as bank-enforced read-only.
   possible refunds and changed records require review. Payer name alone never matches.
 - Partial receipts accumulate up to the invoice amount. Identical revisions count
   as one invoice; materially changed totals for the same number are ambiguous.
-- This is a separate bank ledger, not a second revenue source. Existing manual
-  `orders.payment_status`, revenue, supplier payments, notifications, conversions
-  and order workflow are untouched. Review queue is informational; automatic
-  reassignment of disputed transactions is deliberately not provided.
+- This is a separate bank ledger, not a second revenue source. Linked verified
+  receipts update `orders.payment_status` against the full `revenue_uah` order
+  price (not an advance invoice amount). Without a positive order price the status
+  is partial, never paid. Revenue, supplier payments, notifications, conversions
+  and order workflow remain untouched. Manual paid/refunded states are preserved;
+  bank-managed states can be corrected to unknown if their bank evidence changes.
+  `bank_order_payment_state` records bank-managed states; apply additive migration
+  **0040_bank_payment_status.sql** before deploying this version. No existing money
+  or payment links are changed by that migration.
+- Owner-only **Прив’язати до замовлення** searches orders, optionally selects an
+  issued invoice and requires explicit confirmation. An unchanged bank fingerprint,
+  amount and unassigned-row condition prevent stale confirmation, duplicate linking
+  and reassignment. Repeating the same link is idempotent. Canceled orders, changed
+  bank records and outgoing transactions cannot be linked through this action.
+  The operation is audited. No automatic reassignment is provided.
+- Numeric invoice numbers, including 1/2/4, require explicit invoice wording
+  (рахунок/рахунку/счет/invoice) before the bounded identifier; dates, amounts and
+  unrelated order numbers do not qualify. Name/amount matches are suggestions only.
+  They never change a payment or status without an owner's confirmation.
 - Deliberate order deletion preserves its bank facts and marks them for review.
 
 ## Scheduling and limits
