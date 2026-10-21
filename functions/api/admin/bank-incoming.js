@@ -2,7 +2,7 @@ import { adminUser, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
 import { readIncoming, connectBank, pauseBank, syncBank } from '../../_lib/bank-incoming.js';
 import { bankError, bankFailure } from '../../_lib/pumb-api.js';
-import { lastConnectDiagnostic } from '../../_lib/bank-diagnostics.js';
+import { lastConnectDiagnostic, safeBankDiagnostic } from '../../_lib/bank-diagnostics.js';
 
 export async function onRequest({request,env}) {
   const user=adminUser(request,env);
@@ -33,6 +33,6 @@ export async function onRequest({request,env}) {
     const d=error.diagnostic;
     // Fixed, generated metadata only; keep the code first for older clients.
     const reference=d?` [PUMB:${d.id};stage:${d.stage};http:${d.upstream_status || 0};saved:${d.saved?1:0}]`:'';
-    return json({error:bankFailure(error)+reference,...(d?{diagnostic:d}:{})},{status:error.bankCode ? error.status : 503});
+    return json({error:bankFailure(error)+reference,...(d?{diagnostic:d}:user.id==='owner' && error.schema_field?{diagnostic:safeBankDiagnostic(error)}:{})},{status:error.bankCode ? error.status : 503});
   }
 }

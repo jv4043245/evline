@@ -216,3 +216,21 @@ test('diagnostic allowlist drops injected fields and provider-shaped strings on 
   db.prepare('UPDATE admin_audit_log SET details_json=? WHERE id=?').run(JSON.stringify(corrupted),result.id);
   assert.doesNotMatch(JSON.stringify(await lastConnectDiagnostic(env)),/secret-/);
 });
+
+test('statement schema errors expose only allowlisted field and format, not bank values',async()=>{
+  const accounts=bankAccounts([bankAccount]);
+  for(const [extra,field,format] of [[{amount:'123.4500'},'amount','decimal_extra_zeroes'],[{amount:'123.4567'},'amount','decimal_extra_precision'],[{operationDate:'2026-10-20 12:34:56'},'operationDate','datetime_space'],[{hostId:null},'hostId','null'],[{currencyCode:'private-bank-value'},'currencyCode','other']]) {
+    assert.throws(()=>bankTransactions([rawTx('1','1',extra)],accounts),e=>{
+      assert.equal(e.schema_field,field);assert.equal(e.schema_format,format);assert.equal(e.stage,'transactions');
+      assert.doesNotMatch(JSON.stringify(e),/private-bank-value|123\.45|12:34:56/);return true;
+    });
+  }
+});
+
+test('sync preserves safe schema diagnostics and does not advance the cursor on failure',async t=>{
+  const {env,db}=setup(t);await connectBank(env,{username:'u',password:'p',consent:true},'Owner',fakeBank());
+  const before=db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date;
+  await assert.rejects(syncBank(env,{fetcher:fakeBank([rawTx('1','123.4567')])}),e=>e.schema_field==='amount' && e.schema_format==='decimal_extra_precision');
+  assert.equal(db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date,before);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM bank_incoming').get().n,0);
+});

@@ -1,6 +1,8 @@
 // Strict allowlists only. Never accept provider text, request bodies or headers.
 const stages = new Set(['validation','authorization','accounts','encryption','save','complete','transactions']);
 const oauthCodes = new Set(['invalid_grant','invalid_client','unauthorized_client','invalid_request','unsupported_grant_type','invalid_scope','access_denied','temporarily_unavailable','server_error']);
+const schemaFields=new Set(['response','row','direction','accountId','account_match','currencyCode','hostId','id','amount','operationDate']);
+const schemaFormats=new Set(['missing','null','array','object','boolean','number','integer','negative_integer','decimal','decimal_extra_zeroes','decimal_extra_precision','date_dot','datetime_dot','datetime_iso','datetime_iso_zone','datetime_space','other']);
 const codes = new Set(('bank_unavailable bank_auth bank_rate_limit bank_response_large bank_schema bank_not_configured bank_operation_forbidden bank_server_setup bank_credentials_unavailable bank_connection_input bank_date_range bank_no_accounts bank_busy bank_input bank_owner_only bank_origin bank_login_rejected bank_client_rejected bank_auth_request bank_auth_unavailable bank_accounts_unavailable bank_transactions_unavailable bank_timeout bank_network bank_save_failed bank_encryption_failed').split(' '));
 export const safeBankCode = code => codes.has(code) ? code : 'bank_unavailable';
 codes.add('bank_redirect');
@@ -9,6 +11,7 @@ export function safeBankDiagnostic(value={}) {
     stage: stages.has(value.stage) ? value.stage : 'validation',
     upstream_status: Number.isInteger(value.upstream_status) && value.upstream_status>=100 && value.upstream_status<=599 ? value.upstream_status : null,
     oauth_code: oauthCodes.has(value.oauth_code) ? value.oauth_code : null,
+    ...(schemaFields.has(value.schema_field)?{schema_field:value.schema_field,schema_format:schemaFormats.has(value.schema_format)?value.schema_format:'other'}:{}),
   };
 }
 function safeRecord(value={}) {

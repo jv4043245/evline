@@ -180,7 +180,7 @@ export async function syncBank(env,{fetcher=fetch,force=false}={}) {
   } catch(e) {
     const code=bankFailure(e);
     await run(env,"UPDATE bank_connections SET last_error=?,lease_id=NULL,lease_until=NULL WHERE id='pumb' AND lease_id=?",code,lease);
-    throw bankError(code);
+    throw bankError(code,503,safeBankDiagnostic(e));
   }
 }
 export async function readIncoming(env,{orderId='',page=1,unmatched=false}={}) {

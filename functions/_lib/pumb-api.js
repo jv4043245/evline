@@ -89,18 +89,41 @@ export function bankAccounts(rows) {
   return rows.filter(a=>a.currency==='UAH' && !a.isCardAccount && /^UA\d{27}$/.test(normalizeIban(a.iban)))
     .map(a=>({account_id:exactId(a.accountId),iban:normalizeIban(a.iban),currency:'UAH'}));
 }
+function schemaFormat(value) {
+  if(value===undefined)return 'missing';if(value===null)return 'null';if(Array.isArray(value))return 'array';
+  if(typeof value==='object' || typeof value==='boolean')return typeof value;
+  const s=String(value);
+  if(/^\d+$/.test(s))return 'integer';if(/^-\d+$/.test(s))return 'negative_integer';
+  if(/^\d+\.\d{1,2}$/.test(s))return 'decimal';
+  if(/^\d+\.\d{2}0+$/.test(s))return 'decimal_extra_zeroes';
+  if(/^-?\d+\.\d{3,}$/.test(s))return 'decimal_extra_precision';
+  if(/^\d{2}\.\d{2}\.\d{4}$/.test(s))return 'date_dot';
+  if(/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/.test(s))return 'datetime_dot';
+  if(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(s))return 'datetime_iso_zone';
+  if(/^\d{4}-\d{2}-\d{2}T/.test(s))return 'datetime_iso';
+  if(/^\d{4}-\d{2}-\d{2} /.test(s))return 'datetime_space';
+  return typeof value==='number'?'number':'other';
+}
+function schemaFailure(field,value) {
+  return bankError('bank_schema',503,{stage:'transactions',schema_field:field,schema_format:schemaFormat(value)});
+}
+function schemaValue(field,value,parse) {
+  try{return parse(value);}catch{throw schemaFailure(field,value);}
+}
 export function bankTransactions(response, accounts) {
   const rows=Array.isArray(response) ? response : response?.id!=null ? [response] : null;
-  if (!rows) throw bankError('bank_schema');
+  if (!rows) throw schemaFailure('response',response);
   return rows.flatMap(row=>{
+    if(!row || typeof row!=='object')throw schemaFailure('row',row);
     if (row.cardTransaction || row.state!=='PROCESSED') return [];
-    if (!['INBOUND','OUTBOUND'].includes(row.direction)) throw bankError('bank_schema');
-    const account=accounts.find(a=>a.account_id===exactId(row.accountId));
-    if (!account) throw bankError('bank_schema');
-    if (row.currencyCode!=='UAH' && row.currencyCode!=='980') throw bankError('bank_schema');
-    const transaction_id=`${exactId(row.hostId)}:${exactId(row.id)}`;
+    if (!['INBOUND','OUTBOUND'].includes(row.direction)) throw schemaFailure('direction',row.direction);
+    const accountId=schemaValue('accountId',row.accountId,exactId);
+    const account=accounts.find(a=>a.account_id===accountId);
+    if (!account) throw schemaFailure('account_match',row.accountId);
+    if (row.currencyCode!=='UAH' && row.currencyCode!=='980') throw schemaFailure('currencyCode',row.currencyCode);
+    const transaction_id=`${schemaValue('hostId',row.hostId,exactId)}:${schemaValue('id',row.id,exactId)}`;
     return [{transaction_id,account_id:account.account_id,account_iban:account.iban,currency:'UAH',
-      amount_minor:minorUnits(row.amount),direction:row.direction,booked_at:bankDate(row.operationDate || row.date),
+      amount_minor:schemaValue('amount',row.amount,minorUnits),direction:row.direction,booked_at:schemaValue('operationDate',row.operationDate || row.date,bankDate),
       payer_name:String(row.direction==='INBOUND' ? row.senderName || '' : row.correspondentName || '').slice(0,300),
       purpose:String(row.description || '').slice(0,2000)}];
   });
