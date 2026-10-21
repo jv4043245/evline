@@ -12,6 +12,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2">
 <meta name="facebook-domain-verification" content="tdp2vza03g2rqklsnitrrngs6u2sqo">
 <title>Запчастини для китайських авто з Китаю | EVLine Україна</title>
 <meta name="description" content="Оригінальні та OEM запчастини для китайських авто: BYD, ZEEKR, Xiaomi та інші. Підбір по VIN, перевірка в Китаї, доставка в Україну.">
@@ -386,7 +387,7 @@
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .hero{padding:38px 0 34px}
-    .hero .wrap{gap:14px}
+    .hero .wrap{gap:14px;grid-template-rows:auto 156px auto}
     .hero-copy{display:contents}
     .hero-copy__main{grid-column:1;grid-row:1}
     .hero-proof{grid-column:1;grid-row:2}
@@ -1197,15 +1198,27 @@ function submitLead(formId){
 (function(){
   var hero=document.querySelector('.hero'),hc=document.querySelector('.hdr-cta');
   if(!hero||!hc) return;
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(entries){
+      document.body.classList.toggle('sticky-cta-visible',entries[0].boundingClientRect.bottom<80);
+    },{rootMargin:'-80px 0px 0px',threshold:0}).observe(hero);
+    return;
+  }
+  var pending=false;
   function updateStickyCta(){
-    var threshold=hero.offsetTop+hero.offsetHeight-80;
-    document.body.classList.toggle('sticky-cta-visible',window.scrollY>threshold);
+    if(pending) return;
+    pending=true;
+    window.requestAnimationFrame(function(){
+      pending=false;
+      var threshold=hero.offsetTop+hero.offsetHeight-80;
+      document.body.classList.toggle('sticky-cta-visible',window.scrollY>threshold);
+    });
   }
   updateStickyCta();
   window.addEventListener('scroll',updateStickyCta,{passive:true});
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script src="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2"></script>
+<script defer src="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2"></script>
 </body>
 </html>
