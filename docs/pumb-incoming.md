@@ -78,6 +78,28 @@ Corrections dated earlier than yesterday require an owner-initiated reconnect wi
 an earlier start date. Failed runs preserve the cursor; replay is idempotent.
 The visible ledger refreshes every minute while its tab is active and setup is closed.
 
+### New-receipt indicator and manager view
+
+The top-level **Надходження** tab polls a small authenticated count endpoint every
+minute while the browser page is visible, independently of the active CRM section.
+It does not call PUMB or replace unsaved order forms. Returning to the browser page
+refreshes the count immediately. The bank itself is still polled every 15 minutes.
+
+The orange badge counts imported, non-ignored inbound receipts not yet viewed by
+the current CRM identity, whether linked automatically or unassigned. The first
+view includes existing imported receipts. Only the visible page's receipt IDs are
+acknowledged after a successful active-ledger load; later arrivals and other pages
+remain new. Viewing does not link a payment, change its review flag, or its amount.
+View state is per user, shared across devices, and deduplicated by immutable receipt
+ID. Owner viewing cannot clear Andrii's badge. Failures retain the last known count.
+
+Apply additive migration **0041_bank_receipt_views.sql** before publishing this UI.
+It creates only per-user view state; no bank facts, credentials or orders change.
+Managers see the title, reload button and bank operations; connection diagnostics,
+settings, explanatory technical text and the invoice overview remain owner-only.
+Order-specific invoice details and both guarded manual-link entry points remain.
+A plain-language outage notice is retained if automatic synchronization is unavailable.
+
 ## Production deployment
 
 1. Verify production's current source lineage before merging. Run `npm test` and

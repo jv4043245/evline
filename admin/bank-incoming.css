@@ -14,3 +14,9 @@
 .bank-confirmation { display:grid;gap:12px;border-top:1px solid #cbd5e1;padding-top:12px; }
 .bank-confirmation p { margin:0; }
 .bank-table tr[hidden] { display:none; }
+.bank-new-badge { display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:999px;margin-left:4px;background:#f97316;color:#171717;font-size:12px;font-weight:800;line-height:1;vertical-align:middle; }
+.bank-new-badge[hidden] { display:none; }
+@media(max-width:760px){
+  .admin-tabs [data-admin-tab="bank-incoming"] { position:sticky;right:0;z-index:2;background:#fff;box-shadow:-6px 0 10px #fff; }
+  .admin-tabs [data-admin-tab="bank-incoming"][aria-selected="true"] { background:var(--green,#087751); }
+}

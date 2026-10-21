@@ -12,7 +12,8 @@ import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
-import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb-two-way';
+import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb-badge';
+import { createBankNotifications } from './bank-notifications.js?v=20261021-pumb-badge';
 
 const state = {
   range: "30d",
@@ -373,9 +374,10 @@ const keywordLevelLabels = {
 };
 
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting", "bank-incoming"]);
+const bankNotifications=createBankNotifications(document.querySelector('[data-bank-new-badge]'),api);
 const bankIncomingView = createBankIncomingView(document.querySelector('[data-bank-incoming]'),api,{openOrder:id=>{
   if(setActiveTab('orders')) {state.orderEditorTab='payment';openOrder(id).catch(error=>alert(error.message));}
-}});
+},onViewed:rows=>bankNotifications.markSeen(rows)});
 const accountingView = createAccountingView(document, api);
 const accountingPeriods = createAccountingPeriodState(localStorage);
 const accountingProfitView = createAccountingProfitView(document.querySelector('[data-accounting-profit]'), api);
@@ -573,7 +575,9 @@ function setAdminUser(name) {
 }
 
 function setAuthVisible(visible) {
+  if(visible)bankNotifications.reset();else if(adminToken())bankNotifications.start();
   if (visible) bankIncomingView.reset();
+  else bankIncomingView.setActive(state.activeTab==='bank-incoming' && Boolean(adminToken()));
   if (visible) accountingBankSourcesView.reset();
   const panel = document.querySelector("[data-auth-panel]");
   if (panel) panel.hidden = !visible;
@@ -4709,6 +4713,7 @@ document.querySelector("[data-contact-channel]")?.addEventListener("change", loa
 document.querySelector("[data-contact-intent]")?.addEventListener("change", loadContactEvents);
 
 document.addEventListener("visibilitychange", () => {
+  if(!document.hidden && state.activeTab==='bank-incoming' && adminToken())bankIncomingView.load();
   if (!document.hidden && state.activeTab === "china") {
     loadChinaPreorders({ silent: true });
   }

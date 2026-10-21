@@ -40,19 +40,19 @@ export function paymentTable(rows,{canLink=false,recentOrders=[]}={}) {
   }).join('')}</tbody></table></div>`;
 }
 
-export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
-  let data=null,page=1,review=false,busy=false,loading=false,revision=0,timer=null;
+export function createBankIncomingView(root,api,{openOrder=()=>{},onViewed=()=>{}}={}) {
+  let data=null,page=1,review=false,busy=false,loading=false,revision=0,timer=null,active=false;
   let linking=null,searchOrders=[],chosenOrder=null,chosenInvoices=[],recentOrders=[];
   const post=body=>api('/api/admin/bank-incoming',{method:'POST',body:JSON.stringify(body)});
   const showMessage=(text,error=false)=>{const node=root.querySelector('[data-bank-message]');if(node){node.textContent=text;node.classList.toggle('bank-error',error);}};
   function render() {
     const c=data.connection;
-    root.innerHTML=`<div class="admin-panel__head"><div><h2>Надходження · ПУМБ</h2><p class="muted">Виписка рахунків ФОП у гривні · стан останнього оновлення нижче</p></div><button type="button" class="admin-btn" data-bank-reload>Оновити список</button></div>
-      <div class="bank-connection"><strong>${c.enabled?'Підключено':c.configured?'Синхронізацію призупинено':'Ще не підключено'}</strong>
+    root.innerHTML=`<div class="admin-panel__head"><div><h2>${data.can_manage?'Надходження · ПУМБ':'Надходження'}</h2>${data.can_manage?'<p class="muted">Виписка рахунків ФОП у гривні · стан останнього оновлення нижче</p>':''}</div><button type="button" class="admin-btn" data-bank-reload>Оновити список</button></div>
+      ${data.can_manage?`<div class="bank-connection"><strong>${c.enabled?'Підключено':c.configured?'Синхронізацію призупинено':'Ще не підключено'}</strong>
       <span>${c.accounts.map(a=>escape(a.iban_masked)).join(' · ')}</span><span>Остання успішна перевірка: ${escape(timestamp(c.last_success_at))}</span>
       ${c.cursor_date?`<span>Виписку завантажено до ${escape(c.cursor_date)} включно${c.cursor_date<new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Kyiv'}).format(new Date())?' · історія ще завантажується':''}</span>`:''}
       ${c.last_error?`<p class="bank-error">${escape(bankErrorMessage(c.last_error))}</p>`:''}
-      ${data.can_manage?`<div class="bank-actions">${c.enabled?'<button type="button" class="admin-btn" data-bank-sync>Перевірити банк зараз</button><button type="button" class="admin-btn" data-bank-pause>Призупинити</button>':''}</div>`:''}</div>
+      <div class="bank-actions">${c.enabled?'<button type="button" class="admin-btn" data-bank-sync>Перевірити банк зараз</button><button type="button" class="admin-btn" data-bank-pause>Призупинити</button>':''}</div></div>`:!c.enabled || c.last_error?'<p class="bank-error">Автоматичне оновлення надходжень тимчасово недоступне. Повідомте власника; збережені платежі залишаються у списку.</p>':''}
       <p data-bank-message role="status" aria-live="polite"></p>
       ${data.can_manage && data.connect_diagnostic?.outcome==='error'?`<p class="bank-error" data-bank-diagnostic>Остання спроба підключення (${escape(timestamp(data.connect_diagnostic.at))}): ${escape(bankErrorMessage(`${data.connect_diagnostic.code} [PUMB:${data.connect_diagnostic.id};stage:${data.connect_diagnostic.stage};http:${data.connect_diagnostic.upstream_status || 0};saved:1]`))}</p>`:''}
       ${data.can_manage ? `<details class="bank-setup" ${c.configured?'':'open'}><summary>${c.configured?'Змінити / поновити підключення':'Підключити ПУМБ'}</summary>
@@ -62,8 +62,8 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
       <label>Завантажити платежі починаючи з<input name="start_date" type="date" required value="${escape(c.start_date || new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Kyiv'}).format(new Date()))}"></label>
       <label class="bank-consent"><input name="consent" type="checkbox" required>Дозволяю зберегти логін і пароль зашифрованими на сервері EVLine для автоматичного читання виписок. Пароль не потрібно надсилати в чат.</label>
       <button class="admin-btn admin-btn--primary" type="submit">Перевірити та підключити</button></form>`:'<p>Серверні ключі ПУМБ ще не налаштовано. Банківський пароль поки вводити не потрібно.</p>'}</details>`:''}
-      <p class="bank-note">Автоматично: номер готового рахунку в призначенні, IBAN та валюта. Короткі номери — лише після слова «рахунок». Часткові оплати накопичуються; статус оплати клієнта оновлюється відносно повної вартості замовлення. Сума та ім’я — тільки підказки для ручного підтвердження. Виручка, етап замовлення, повернення і витрати постачальникам не змінюються.</p>
-      <h3>Рахунки клієнтам</h3>${invoiceTable(data.invoices)}
+      ${data.can_manage?`<p class="bank-note">Автоматично: номер готового рахунку в призначенні, IBAN та валюта. Короткі номери — лише після слова «рахунок». Часткові оплати накопичуються; статус оплати клієнта оновлюється відносно повної вартості замовлення. Сума та ім’я — тільки підказки для ручного підтвердження. Виручка, етап замовлення, повернення і витрати постачальникам не змінюються.</p>
+      <h3>Рахунки клієнтам</h3>${invoiceTable(data.invoices)}`:''}
       <div class="bank-actions"><h3>Банківські операції</h3><label><input type="checkbox" data-bank-review ${review?'checked':''}>Лише для перевірки</label><span>${Number(data.summary.count)} записів · ${Number(data.summary.review_count || 0)} для перевірки</span></div>
       ${paymentTable(data.rows,{canLink:data.can_link,recentOrders})}<div class="bank-actions"><button type="button" class="admin-btn" data-bank-prev ${page<=1?'disabled':''}>Назад</button><span>Сторінка ${page}</span><button type="button" class="admin-btn" data-bank-next ${page*50>=data.summary.count?'disabled':''}>Далі</button></div>`;
   }
@@ -102,7 +102,8 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
     loading=true; const current=revision;
     try {const result=await api(`/api/admin/bank-incoming?page=${page}${review?'&review=1':''}`);
       const orders=result.can_link?await api('/api/admin/orders?range=all&limit=20').catch(()=>({orders:[]})):{orders:[]};
-      if(current!==revision)return;recentOrders=(orders.orders || []).filter(o=>o.status!=='canceled');data=result;render();}
+      if(current!==revision)return;recentOrders=(orders.orders || []).filter(o=>o.status!=='canceled');data=result;render();
+      if(active && !root.hidden && !root.ownerDocument.hidden && root.isConnected)Promise.resolve(onViewed(data.rows)).catch(()=>{});}
     catch(e){if(current!==revision)return;if(!data)root.innerHTML='<h2>Надходження · ПУМБ</h2><p data-bank-message role="alert"></p>';showMessage(bankErrorMessage(e.message),true);}
     finally{loading=false;}
   }
@@ -141,9 +142,9 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
     try{await post(body);body.password='';body.username='';showMessage('Доступ підтверджено. Завантажуємо першу виписку…');await post({action:'sync'});busy=false;await load();showMessage('ПУМБ підключено. Перевірте стан завантаження та надходження у списку.');}
     catch(error){showMessage(bankErrorMessage(error.message),true);}finally{body.password='';body.username='';busy=false;form.querySelector('button').disabled=false;}
   });
-  return {load,setActive(active){clearInterval(timer);timer=null;if(active)timer=setInterval(()=>{
+  return {load,setActive(value){active=value;clearInterval(timer);timer=null;if(active)timer=setInterval(()=>{
     if(!root.ownerDocument.hidden && !root.querySelector('details[open]'))load();
-  },60000);},reset(){clearInterval(timer);timer=null;revision++;data=null;linking=null;searchOrders=[];chosenOrder=null;chosenInvoices=[];page=1;review=false;if(root)root.replaceChildren();}};
+  },60000);},reset(){active=false;clearInterval(timer);timer=null;revision++;data=null;linking=null;searchOrders=[];chosenOrder=null;chosenInvoices=[];page=1;review=false;if(root)root.replaceChildren();}};
 }
 
 export async function mountBankOrderSummary(root,orderId,api,{beforeLink=()=>'',onLinked=()=>{},onBusy=()=>{}}={}) {
