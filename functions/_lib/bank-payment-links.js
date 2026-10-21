@@ -29,8 +29,16 @@ export async function refreshOrderPaymentStatus(env,orderId,actor='ПУМБ') {
 }
 
 export async function refreshLinkedOrderStatuses(env,actor='ПУМБ') {
-  const orders=await all(env,'SELECT DISTINCT order_id FROM bank_incoming WHERE order_id IS NOT NULL AND ignored=0');
-  for(const order of orders)await refreshOrderPaymentStatus(env,order.order_id,actor);
+  // One aggregate read on routine polls, not multiple queries for every historical order.
+  const orders=await all(env,`SELECT o.id FROM orders o
+    JOIN (SELECT order_id,SUM(CASE WHEN direction='INBOUND' AND review_reason IS NULL THEN amount_minor ELSE 0 END) received,
+      SUM(CASE WHEN review_reason IS NOT NULL THEN 1 ELSE 0 END) disputed FROM bank_incoming WHERE order_id IS NOT NULL AND ignored=0 GROUP BY order_id) b ON b.order_id=o.id
+    LEFT JOIN bank_order_payment_state s ON s.order_id=o.id
+    WHERE o.status!='canceled' AND o.payment_status IS NOT 'refunded'
+      AND (o.payment_status IS NOT 'paid' OR s.last_status='paid')
+      AND o.payment_status IS NOT CASE WHEN b.disputed>0 THEN 'unknown' WHEN b.received>0 THEN CASE
+        WHEN o.revenue_uah>0 AND b.received>=ROUND(o.revenue_uah*100) THEN 'paid' ELSE 'partial' END ELSE 'unknown' END`);
+  for(const order of orders)await refreshOrderPaymentStatus(env,order.id,actor);
 }
 
 export async function linkPayment(env,payload,invoices,actor) {
