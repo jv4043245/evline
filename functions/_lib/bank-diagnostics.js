@@ -12,6 +12,8 @@ export function safeBankDiagnostic(value={}) {
     upstream_status: Number.isInteger(value.upstream_status) && value.upstream_status>=100 && value.upstream_status<=599 ? value.upstream_status : null,
     oauth_code: oauthCodes.has(value.oauth_code) ? value.oauth_code : null,
     ...(schemaFields.has(value.schema_field)?{schema_field:value.schema_field,schema_format:schemaFormats.has(value.schema_format)?value.schema_format:'other'}:{}),
+    ...(['INBOUND','OUTBOUND'].includes(value.transaction_direction)?{transaction_direction:value.transaction_direction}:{}),
+    ...(typeof value.document_id_usable==='boolean'?{document_id_usable:value.document_id_usable}:{}),
   };
 }
 function safeRecord(value={}) {

@@ -107,8 +107,15 @@ function schemaFormat(value) {
 function schemaFailure(field,value) {
   return bankError('bank_schema',503,{stage:'transactions',schema_field:field,schema_format:schemaFormat(value)});
 }
-function schemaValue(field,value,parse) {
-  try{return parse(value);}catch{throw schemaFailure(field,value);}
+function schemaValue(field,value,parse,row) {
+  try{return parse(value);}catch{
+    const error=schemaFailure(field,value);
+    if(row){
+      let usable=false;try{usable=BigInt(exactId(row.docId))>0n;}catch{}
+      Object.assign(error,safeBankDiagnostic({...error,transaction_direction:row.direction,document_id_usable:usable}));
+    }
+    throw error;
+  }
 }
 export function bankTransactions(response, accounts) {
   const rows=Array.isArray(response) ? response : response?.id!=null ? [response] : null;
@@ -121,7 +128,7 @@ export function bankTransactions(response, accounts) {
     const account=accounts.find(a=>a.account_id===accountId);
     if (!account) throw schemaFailure('account_match',row.accountId);
     if (row.currencyCode!=='UAH' && row.currencyCode!=='980') throw schemaFailure('currencyCode',row.currencyCode);
-    const transaction_id=`${schemaValue('hostId',row.hostId,exactId)}:${schemaValue('id',row.id,exactId)}`;
+    const transaction_id=`${schemaValue('hostId',row.hostId,exactId)}:${schemaValue('id',row.id,exactId,row)}`;
     return [{transaction_id,account_id:account.account_id,account_iban:account.iban,currency:'UAH',
       amount_minor:schemaValue('amount',row.amount,minorUnits),direction:row.direction,booked_at:schemaValue('operationDate',row.operationDate || row.date,bankDate),
       payer_name:String(row.direction==='INBOUND' ? row.senderName || '' : row.correspondentName || '').slice(0,300),
