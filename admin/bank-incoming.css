@@ -46,7 +46,7 @@
 .order-payment-menu .order-payment-menu__confirm { background:#00865b;color:#fff;font-weight:600; }
 .order-payment-menu__message { margin:8px 0;font-size:12px; }
 @media(max-width:760px){
-  .orders-table__actions { grid-template-columns:44px minmax(0,1fr); }
+  .orders-table__actions { grid-template-columns:44px 66px;justify-content:start; }
   .orders-table__primary-stack { width:44px; }
   .orders-table__primary-stack .orders-table__open,.orders-table__payment { width:44px;min-width:44px;min-height:44px;height:44px; }
   .admin-tabs [data-admin-tab="bank-incoming"] { position:sticky;right:0;z-index:2;background:#fff;box-shadow:-6px 0 10px #fff; }

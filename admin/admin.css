@@ -1674,9 +1674,10 @@ body.audit-log-open .audit-log-panel {
 
 .orders-table__china-stack {
   display: grid;
+  width: 66px;
   min-width: 66px;
-  justify-items: center;
-  gap: 4px;
+  justify-items: stretch;
+  gap: 6px;
 }
 
 .orders-table__open {
@@ -1695,7 +1696,7 @@ body.audit-log-open .audit-log-panel {
 .orders-table__china {
   min-height: 34px;
   margin-top: 0;
-  padding: 0 9px;
+  padding: 0 8px;
   border-color: var(--china-border);
   background: #fff;
   color: var(--china-accent-dark);
@@ -1704,10 +1705,18 @@ body.audit-log-open .audit-log-panel {
 }
 
 .orders-table__delete {
-  width: 32px;
-  min-width: 32px;
-  min-height: 32px;
+  min-width: 0;
   padding: 0;
+}
+
+.orders-table__china-stack > .admin-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  margin: 0;
+  border-radius: 7px;
 }
 
 .orders-table__delete svg {
@@ -4279,13 +4288,12 @@ body.audit-log-open .audit-log-panel {
   }
 
   .orders-table__china-stack {
-    width: 100%;
+    width: 66px;
   }
 
-  .orders-table__delete {
-    width: 34px;
-    min-width: 34px;
-    min-height: 34px;
+  .orders-table__china-stack > .admin-btn {
+    height: 44px;
+    min-height: 44px;
   }
 
   .tracking-sync-card {

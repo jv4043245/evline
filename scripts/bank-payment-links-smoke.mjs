@@ -16,7 +16,7 @@ const nav=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<na
 const columns=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<colgroup>[\s\S]*?<\/colgroup>/)[0];
 const listActions=`<div class="orders-table__actions"><div class="orders-table__primary-stack">
   <button class="admin-btn admin-btn--icon orders-table__open" type="button">✎</button>${orderPaymentButton('test-order','O-SMOKE')}</div>
-  <div class="orders-table__china-stack"><button class="admin-btn admin-btn--small orders-table__china" type="button">В Китай</button><button class="admin-btn admin-btn--icon orders-table__delete" type="button">×</button></div></div>`;
+  <div class="orders-table__china-stack"><button class="admin-btn admin-btn--small orders-table__china" type="button">В Китай</button><button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" aria-label="Видалити заявку"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg></button></div></div>`;
 const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
 for(const file of (await readdir(path.join(root,'migrations'))).filter(f=>f.endsWith('.sql')).sort())db.exec(await readFile(path.join(root,'migrations',file),'utf8'));
 const env={ADMIN_TOKEN:'synthetic-manager',ADMIN_OWNER_TOKEN:'synthetic-owner',DB:{prepare(sql){const statement=db.prepare(sql);let args=[];return {bind(...v){args=v;return this;},async first(){return statement.get(...args)||null;},async all(){return {results:statement.all(...args)};},async run(){return {meta:{changes:Number(statement.run(...args).changes)}};}};},async batch(statements){db.exec('BEGIN');try{const r=[];for(const s of statements)r.push(await s.run());db.exec('COMMIT');return r;}catch(e){db.exec('ROLLBACK');throw e;}}}};
@@ -89,6 +89,9 @@ for(const width of [1440,390,320]){
   const before=await page.locator('[data-order-id]').boundingBox();
   const pencil=await page.locator('.orders-table__open').boundingBox(),pay=await page.locator('[data-order-payment]').boundingBox(),trash=await page.locator('.orders-table__delete').boundingBox();
   assert.equal(pay.x,pencil.x);assert.ok(pay.y>=pencil.y+pencil.height+5);assert.ok(pay.x+pay.width<=trash.x);assert.equal(pay.width,width<=760?44:42);assert.equal(pay.height,width<=760?44:42);
+  const china=await page.locator('.orders-table__china').boundingBox();
+  assert.equal(trash.width,china.width);assert.equal(trash.width,66);assert.equal(trash.height,china.height);assert.equal(china.height,pay.height);
+  assert.equal(china.y,pencil.y);assert.equal(trash.y,pay.y);assert.equal(trash.x,china.x);assert.equal(trash.y-china.y-china.height,6);
   assert.match(await page.locator('[data-order-payment]').innerText(),/₴[\s\S]*Оплата/);
   await page.screenshot({path:path.join(output,`list-actions-${width}.png`),fullPage:true});
   await page.locator('[data-order-payment]').click();await page.locator('[data-payment-choice]').first().waitFor();
