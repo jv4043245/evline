@@ -14,6 +14,9 @@ const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
 const root=path.resolve(import.meta.dirname,'..'),output='/tmp/evline-payment-links-browser';await mkdir(output,{recursive:true});
 const nav=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<nav class="admin-tabs"[\s\S]*?<\/nav>/)[0];
 const columns=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<colgroup>[\s\S]*?<\/colgroup>/)[0];
+const listActions=`<div class="orders-table__actions"><div class="orders-table__primary-stack">
+  <button class="admin-btn admin-btn--icon orders-table__open" type="button">✎</button>${orderPaymentButton('test-order','O-SMOKE')}</div>
+  <div class="orders-table__china-stack"><button class="admin-btn admin-btn--small orders-table__china" type="button">В Китай</button><button class="admin-btn admin-btn--icon orders-table__delete" type="button">×</button></div></div>`;
 const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
 for(const file of (await readdir(path.join(root,'migrations'))).filter(f=>f.endsWith('.sql')).sort())db.exec(await readFile(path.join(root,'migrations',file),'utf8'));
 const env={ADMIN_TOKEN:'synthetic-manager',ADMIN_OWNER_TOKEN:'synthetic-owner',DB:{prepare(sql){const statement=db.prepare(sql);let args=[];return {bind(...v){args=v;return this;},async first(){return statement.get(...args)||null;},async all(){return {results:statement.all(...args)};},async run(){return {meta:{changes:Number(statement.run(...args).changes)}};}};},async batch(statements){db.exec('BEGIN');try{const r=[];for(const s of statements)r.push(await s.run());db.exec('COMMIT');return r;}catch(e){db.exec('ROLLBACK');throw e;}}}};
@@ -29,7 +32,7 @@ const server=createServer(async(req,res)=>{try{
       const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{authorization:'Bearer synthetic-manager','content-type':'application/json'}});const j=await r.json();if(!r.ok)throw Error(j.error);return j};
       const table=document.querySelector('[data-orders]'),picker=createOrderPaymentPicker(table,api,{onLinked:o=>document.querySelector('#payment-status').textContent=o.payment_status});
       table.onclick=e=>{const b=e.target.closest('[data-order-payment]');if(b){picker.toggle(b);return;}if(e.target.closest('[data-order-payment-panel-row]'))return;window.unexpectedOrderOpen=true;};
-    </script></body></html>`.replace('<thead>',columns+'<thead>').replace(/<button class="admin-link-button orders-table__payment"[\s\S]*?<\/button>/,orderPaymentButton('test-order','O-SMOKE')));return;
+    </script></body></html>`.replace('<thead>',columns+'<thead>').replace(/<div class="orders-table__actions">[\s\S]*?<\/td>/,listActions+'</td>'));return;
   }
   if(url.pathname==='/notifications-test'){
     res.setHeader('content-type','text/html; charset=utf-8');
@@ -84,6 +87,10 @@ for(const width of [1440,390,320]){
   const context=await browser.newContext({viewport:{width,height:1000}});await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/list-test');
   const before=await page.locator('[data-order-id]').boundingBox();
+  const pencil=await page.locator('.orders-table__open').boundingBox(),pay=await page.locator('[data-order-payment]').boundingBox(),trash=await page.locator('.orders-table__delete').boundingBox();
+  assert.equal(pay.x,pencil.x);assert.ok(pay.y>=pencil.y+pencil.height+5);assert.ok(pay.x+pay.width<=trash.x);assert.equal(pay.width,width<=760?44:42);assert.equal(pay.height,width<=760?44:42);
+  assert.match(await page.locator('[data-order-payment]').innerText(),/₴[\s\S]*Оплата/);
+  await page.screenshot({path:path.join(output,`list-actions-${width}.png`),fullPage:true});
   await page.locator('[data-order-payment]').click();await page.locator('[data-payment-choice]').first().waitFor();
   assert.equal(await page.locator('[data-orders] tr').count(),1);assert.equal(await page.locator('.order-payment-menu select').count(),0);assert.equal(await page.locator('[data-payment-choice]').count(),2);
   const after=await page.locator('[data-order-id]').boundingBox();assert.deepEqual(after,before);

@@ -12,7 +12,7 @@ import { createBankIncomingView, mountBankOrderSummary, invoiceTable, paymentTab
 import { lastConnectDiagnostic, saveConnectDiagnostic } from '../functions/_lib/bank-diagnostics.js';
 import { adminApiError } from '../assets/js/admin-api-errors.js';
 import { linkPayment, refreshOrderPaymentStatus, invoiceSuggestions } from '../functions/_lib/bank-payment-links.js';
-import { createOrderPaymentPicker } from '../admin/order-payment-picker.js';
+import { createOrderPaymentPicker, orderPaymentButton } from '../admin/order-payment-picker.js';
 
 const dir=new URL('../migrations/',import.meta.url);
 const schemas=await Promise.all((await readdir(dir)).filter(f=>f.endsWith('.sql')).sort().map(f=>readFile(new URL(f,dir),'utf8')));
@@ -192,6 +192,13 @@ test('Andrii links from a row dropdown and from inside an order without nested f
   unsaved=false;bank.querySelector('[data-order-bank-link]').click();await waitFor(()=>linked && busy.at(-1)===false);
   assert.equal(linked.payment_status,'paid');assert.equal(posts.length,2);assert.equal(bank.querySelector('[data-order-bank-payment]').options.length,1);
   assert.deepEqual(busy,[true,false]);assert.equal(dom.window.document.querySelector('[name=note]').value,'keep');view.reset();
+});
+test('payment action has a visible hryvnia label, accessible dropdown semantics and sits below edit in the primary stack',async t=>{
+  const dom=new JSDOM(orderPaymentButton('id" onclick="bad','O-1 <script>'));t.after(()=>dom.window.close());
+  const button=dom.window.document.querySelector('button');assert.match(button.textContent,/₴[\s\S]*Оплата/);
+  assert.equal(button.getAttribute('aria-haspopup'),'dialog');assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(button.getAttribute('onclick'),null);assert.equal(button.getAttribute('title'),'Прив’язати оплату');assert.equal(dom.window.document.querySelector('script'),null);
+  const source=await readFile(new URL('../admin/admin.js',import.meta.url),'utf8');
+  assert.match(source,/<div class="orders-table__primary-stack">[\s\S]*?data-open-order=[\s\S]*?orderPaymentButton\(order.id,publicNumber\)[\s\S]*?<\/div>\s*<div class="orders-table__china-stack">/);
 });
 test('order-list payment panel loads only unassigned last-week receipts and requires explicit confirmation',async t=>{
   const {env,db}=setup(t),today=kyivDay(),day=n=>new Date(Date.parse(today+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);

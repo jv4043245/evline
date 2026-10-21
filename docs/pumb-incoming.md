@@ -184,7 +184,8 @@ financial tables as a rollback. Existing admin functionality works with the adde
 
 ### Quick linking from the order list
 
-In «Замовлення» → «Дії», the banknote icon opens a small floating menu over the
+In «Замовлення» → «Дії», the **₴ / Оплата** button directly below the pencil (left
+action stack, separate from the delete action) opens a small floating menu over the
 table without adding rows or shifting orders. It loads fresh, unassigned, safe UAH incoming receipts for
 today and the preceding six Kyiv calendar days (`available=1&days=7`). Assigned,
 ignored, outbound, future-dated and flagged unsafe facts are excluded by the

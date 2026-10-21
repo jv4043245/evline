@@ -13,7 +13,7 @@ import { createAccountingProviderView } from "./accounting-provider.js?v=2026100
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
-import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-menu';
+import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-design';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-badge-states';
 
 const state = {
@@ -2567,9 +2567,12 @@ function renderOrders() {
               <td class="orders-table__track-cell" data-label="Трек">${trackCell}</td>
               <td data-label="Дії">
                 <div class="orders-table__actions">
+                  <div class="orders-table__primary-stack">
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
                   </button>
+                  ${order.status!=='canceled'?orderPaymentButton(order.id,publicNumber):''}
+                  </div>
                   <div class="orders-table__china-stack">
                     ${order.type === "parts" ? `<button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запит у Китай для ${escapeHtml(publicNumber)}" title="Запит у Китай">
                       В Китай
@@ -2579,7 +2582,6 @@ function renderOrders() {
                     </button>
                   </div>
                 </div>
-                ${order.status!=='canceled'?orderPaymentButton(order.id,publicNumber):''}
               </td>
             </tr>
           `;

@@ -3,7 +3,7 @@ import { bankErrorMessage } from './bank-incoming.js?v=20261021-order-payment';
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'}).format(Number(n)/100);
 export function orderPaymentButton(id,number) {
-  return `<button class="admin-btn admin-btn--icon orders-table__payment" type="button" data-order-payment="${escape(id)}" aria-expanded="false" aria-haspopup="dialog" aria-label="Прив’язати оплату до ${escape(number)}" title="Прив’язати оплату"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M6 12h1m10 0h1"/></svg><span aria-hidden="true" class="orders-table__payment-caret">▾</span></button>`;
+  return `<button class="admin-btn orders-table__payment" type="button" data-order-payment="${escape(id)}" aria-expanded="false" aria-haspopup="dialog" aria-label="Прив’язати оплату до ${escape(number)}" title="Прив’язати оплату"><span class="orders-table__payment-symbol" aria-hidden="true">₴<span class="orders-table__payment-caret">▾</span></span><span class="orders-table__payment-label">Оплата</span></button>`;
 }
 
 // Body-level overlay avoids table clipping and never inserts rows or shifts orders.
@@ -40,11 +40,11 @@ export function createOrderPaymentPicker(table,api,{onLinked=()=>{},beforeLink=(
   }
   function render(message='',error=false) {
     if(!panel)return;
-    panel.innerHTML=`<div class="order-payment-menu__head"><strong>${selected?'Прив’язати оплату?':'Неприв’язані оплати'}</strong><button type="button" data-payment-close aria-label="Закрити" ${saving?'disabled':''}>×</button></div>
-      <div class="order-payment-menu__subtitle">${escape(order?.order_number || orderId)} · ${selected?escape(order?.customer_name || ''):'останні 7 днів'}</div>
+    panel.innerHTML=`<div class="order-payment-menu__head"><strong>${selected?'Прив’язати оплату?':'Прив’язати оплату'}</strong><button type="button" data-payment-close aria-label="Закрити" ${saving?'disabled':''}>×</button></div>
+      <div class="order-payment-menu__subtitle">${escape(order?.order_number || orderId)} · ${selected?escape(order?.customer_name || ''):'Вільні надходження · 7 днів'}</div>
       ${message?`<p class="order-payment-menu__message${error?' bank-error':''}" role="status">${escape(message)}</p>`:''}
       ${loading?'<p role="status">Завантаження…</p>':selected?`<div class="order-payment-menu__confirmation"><strong>${money(selected.amount_minor)}</strong><span>${escape(selected.payer_name)}</span><small>${escape(selected.booked_at.slice(0,10))}</small><p>${escape(selected.purpose)}</p><div class="order-payment-menu__footer"><button type="button" data-payment-back ${saving?'disabled':''}>Назад</button><button type="button" class="order-payment-menu__confirm" data-payment-confirm ${saving?'disabled':''}>${saving?'Зберігаємо…':'Підтвердити'}</button></div></div>`:
-      order?`<div class="order-payment-menu__list">${rows.length?rows.map(p=>`<button type="button" data-payment-choice="${escape(p.id)}"><span class="order-payment-menu__line"><strong>${money(p.amount_minor)}</strong><small>${escape(p.booked_at.slice(0,10))}</small></span><span>${escape(p.payer_name || 'Платник не вказаний')}</span><small class="order-payment-menu__purpose">${escape(p.purpose)}</small></button>`).join(''):'<p>Неприв’язаних оплат за тиждень немає.</p>'}</div>
+      order?`<div class="order-payment-menu__list">${rows.length?rows.map(p=>`<button type="button" data-payment-choice="${escape(p.id)}"><span class="order-payment-menu__line"><strong>${money(p.amount_minor)}</strong><small title="${escape(p.booked_at.slice(0,10))}">${escape(p.booked_at.slice(8,10)+'.'+p.booked_at.slice(5,7))}</small></span><span class="order-payment-menu__payer">${escape(p.payer_name || 'Платник не вказаний')}</span><small class="order-payment-menu__purpose">${escape(p.purpose)}</small></button>`).join(''):'<p>Неприв’язаних оплат за тиждень немає.</p>'}</div>
       <div class="order-payment-menu__footer">${count>50 || page>1?`<button type="button" data-payment-prev ${page<=1?'disabled':''}>←</button><small>${page} / ${Math.max(1,Math.ceil(count/50))}</small><button type="button" data-payment-next ${page*50>=count?'disabled':''}>→</button>`:''}<button type="button" data-payment-reload>Оновити</button></div>`:'<button type="button" data-payment-reload>Спробувати знову</button>'}`;
     position();
   }
