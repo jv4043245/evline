@@ -43,6 +43,9 @@ async function oauthErrorCode(response) {
 }
 async function responseJson(response, stage) {
   const diagnostic={stage,upstream_status:response.status};
+  // Workers does not implement redirect:'error'. Manual mode prevents credential
+  // forwarding; explicitly reject redirects without reading/following Location.
+  if (response.status>=300 && response.status<400) throw bankError('bank_redirect',503,diagnostic);
   if (!response.ok) {
     const oauth=stage==='authorization'?await oauthErrorCode(response):null;
     diagnostic.oauth_code=oauth;
@@ -65,7 +68,7 @@ export async function pumbSession(credentials, fetcher=fetch) {
   if (!['client_id','client_secret','username','password'].every(k=>typeof credentials?.[k]==='string' && credentials[k])) throw bankError('bank_not_configured');
   let auth;
   try {
-    auth=await responseJson(await fetcher(TOKEN_URL,{method:'POST',redirect:'error',signal:AbortSignal.timeout(20000),
+    auth=await responseJson(await fetcher(TOKEN_URL,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(20000),
       headers:{'content-type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({grant_type:'password',...Object.fromEntries(['client_id','client_secret','username','password'].map(k=>[k,credentials[k]]))}).toString()}),'authorization');
   } catch (e) { throw requestFailure(e,'authorization'); }
@@ -75,7 +78,7 @@ export async function pumbSession(credentials, fetcher=fetch) {
     if (!['/account','/multi-account-transactions'].includes(path)) throw bankError('bank_operation_forbidden');
     const stage=path==='/account'?'accounts':'transactions';
     try {
-      return await responseJson(await fetcher(API_URL+path,{method:body ? 'POST':'GET',redirect:'error',signal:AbortSignal.timeout(25000),
+      return await responseJson(await fetcher(API_URL+path,{method:body ? 'POST':'GET',redirect:'manual',signal:AbortSignal.timeout(25000),
         headers:{'content-type':'application/json',authorization:`Bearer ${auth.access_token}`,'X-App-Channel':'pure-api',
           'X-Flow-ID':`${crypto.randomUUID()}:${session}:evline-pumb-readonly-v1`},...(body ? {body:JSON.stringify(body)} : {})}),stage);
     } catch(e) { throw requestFailure(e,stage); }

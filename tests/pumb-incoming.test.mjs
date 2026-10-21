@@ -52,6 +52,7 @@ test('only posted UAH account transactions are imported and response schema is c
 test('OAuth adapter sends mandatory headers, uses only read endpoints, never leaks bank errors',async()=>{
   const calls=[],api=await pumbSession({client_id:'c',client_secret:'s',username:'u',password:'p'},fakeBank([],calls));
   await api('/account');await api('/multi-account-transactions',{accountIds:[123]});
+  assert.ok(calls.every(c=>c.options.redirect==='manual'));
   assert.equal(new URLSearchParams(calls[0].options.body).get('grant_type'),'password');assert.equal(calls[1].options.headers['X-App-Channel'],'pure-api');
   assert.equal(calls[1].options.headers['X-Flow-ID'].split(':')[1],calls[2].options.headers['X-Flow-ID'].split(':')[1]);
   assert.notEqual(calls[1].options.headers['X-Flow-ID'],calls[2].options.headers['X-Flow-ID']);
@@ -147,6 +148,21 @@ test('OAuth errors are classified without provider descriptions or secret-shaped
   }
   await assert.rejects(pumbSession(credentials,async()=>new Response('secret-'.repeat(2000),{status:500})),e=>e.bankCode==='bank_auth_unavailable' && e.oauth_code===null);
   for(const name of ['TimeoutError','TypeError'])await assert.rejects(pumbSession(credentials,async()=>{throw Object.assign(new Error('secret-url-and-body'),{name});}),e=>e.bankCode===(name==='TimeoutError'?'bank_timeout':'bank_network') && !JSON.stringify(e).includes('secret-'));
+});
+
+test('all bank redirects fail closed without following Location or exposing its contents',async()=>{
+  const credentials={client_id:'c',client_secret:'s',username:'u',password:'p'};
+  for(const status of [301,302,303,307,308]) {
+    let calls=0;
+    await assert.rejects(pumbSession(credentials,async(_url,options)=>{
+      calls++;assert.equal(options.redirect,'manual');return new Response('secret-redirect-body',{status,headers:{Location:'https://untrusted.invalid/?secret-token'}});
+    }),e=>e.bankCode==='bank_redirect' && e.stage==='authorization' && e.upstream_status===status && !JSON.stringify(e).includes('secret-'));
+    assert.equal(calls,1);
+  }
+  let calls=0;const api=await pumbSession(credentials,async(_url,options)=>{
+    calls++;assert.equal(options.redirect,'manual');return calls===1?Response.json({access_token:'secret-token'}):new Response(null,{status:307,headers:{Location:'https://untrusted.invalid/'}});
+  });
+  await assert.rejects(api('/account'),e=>e.bankCode==='bank_redirect' && e.stage==='accounts');assert.equal(calls,2);
 });
 
 test('failed connection records only safe metadata and preserves a working connection',async t=>{
