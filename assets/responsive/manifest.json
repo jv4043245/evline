@@ -1,0 +1,184 @@
+[
+  {
+    "source": "assets/hero-gallery-5.webp",
+    "output": "assets/responsive/hero-gallery-5-240.webp",
+    "width": 240,
+    "height": 320,
+    "bytes": 25406
+  },
+  {
+    "source": "assets/hero-gallery-5.webp",
+    "output": "assets/responsive/hero-gallery-5-400.webp",
+    "width": 400,
+    "height": 533,
+    "bytes": 60112
+  },
+  {
+    "source": "assets/hero-gallery-3.webp",
+    "output": "assets/responsive/hero-gallery-3-240.webp",
+    "width": 240,
+    "height": 180,
+    "bytes": 17290
+  },
+  {
+    "source": "assets/hero-gallery-3.webp",
+    "output": "assets/responsive/hero-gallery-3-400.webp",
+    "width": 400,
+    "height": 300,
+    "bytes": 42360
+  },
+  {
+    "source": "assets/hero-gallery-6.webp",
+    "output": "assets/responsive/hero-gallery-6-240.webp",
+    "width": 240,
+    "height": 320,
+    "bytes": 28418
+  },
+  {
+    "source": "assets/hero-gallery-6.webp",
+    "output": "assets/responsive/hero-gallery-6-400.webp",
+    "width": 400,
+    "height": 533,
+    "bytes": 70688
+  },
+  {
+    "source": "assets/images/china-delivery-visual.webp",
+    "output": "assets/responsive/china-delivery-visual-240.webp",
+    "width": 240,
+    "height": 120,
+    "bytes": 6816
+  },
+  {
+    "source": "assets/images/china-delivery-visual.webp",
+    "output": "assets/responsive/china-delivery-visual-400.webp",
+    "width": 400,
+    "height": 200,
+    "bytes": 15196
+  },
+  {
+    "source": "assets/images/china-delivery-visual.webp",
+    "output": "assets/responsive/china-delivery-visual-640.webp",
+    "width": 640,
+    "height": 320,
+    "bytes": 31676
+  },
+  {
+    "source": "assets/images/china-delivery-visual.webp",
+    "output": "assets/responsive/china-delivery-visual-960.webp",
+    "width": 960,
+    "height": 479,
+    "bytes": 57962
+  },
+  {
+    "source": "assets/images/vin-parts-visual.webp",
+    "output": "assets/responsive/vin-parts-visual-240.webp",
+    "width": 240,
+    "height": 154,
+    "bytes": 9116
+  },
+  {
+    "source": "assets/images/vin-parts-visual.webp",
+    "output": "assets/responsive/vin-parts-visual-400.webp",
+    "width": 400,
+    "height": 257,
+    "bytes": 20690
+  },
+  {
+    "source": "assets/images/vin-parts-visual.webp",
+    "output": "assets/responsive/vin-parts-visual-640.webp",
+    "width": 640,
+    "height": 411,
+    "bytes": 41334
+  },
+  {
+    "source": "assets/images/vin-parts-visual.webp",
+    "output": "assets/responsive/vin-parts-visual-960.webp",
+    "width": 960,
+    "height": 617,
+    "bytes": 70602
+  },
+  {
+    "source": "assets/images/oem-parts-visual.webp",
+    "output": "assets/responsive/oem-parts-visual-240.webp",
+    "width": 240,
+    "height": 154,
+    "bytes": 11726
+  },
+  {
+    "source": "assets/images/oem-parts-visual.webp",
+    "output": "assets/responsive/oem-parts-visual-400.webp",
+    "width": 400,
+    "height": 257,
+    "bytes": 26976
+  },
+  {
+    "source": "assets/images/oem-parts-visual.webp",
+    "output": "assets/responsive/oem-parts-visual-640.webp",
+    "width": 640,
+    "height": 411,
+    "bytes": 54406
+  },
+  {
+    "source": "assets/images/oem-parts-visual.webp",
+    "output": "assets/responsive/oem-parts-visual-960.webp",
+    "width": 960,
+    "height": 617,
+    "bytes": 99376
+  },
+  {
+    "source": "assets/images/seo-photos/byd.jpg",
+    "output": "assets/responsive/byd-240.webp",
+    "width": 240,
+    "height": 148,
+    "bytes": 15160
+  },
+  {
+    "source": "assets/images/seo-photos/byd.jpg",
+    "output": "assets/responsive/byd-400.webp",
+    "width": 400,
+    "height": 247,
+    "bytes": 35170
+  },
+  {
+    "source": "assets/images/seo-photos/byd.jpg",
+    "output": "assets/responsive/byd-640.webp",
+    "width": 640,
+    "height": 395,
+    "bytes": 77064
+  },
+  {
+    "source": "assets/images/seo-photos/byd.jpg",
+    "output": "assets/responsive/byd-960.webp",
+    "width": 960,
+    "height": 592,
+    "bytes": 153234
+  },
+  {
+    "source": "assets/images/seo-photos/zeekr.jpg",
+    "output": "assets/responsive/zeekr-240.webp",
+    "width": 240,
+    "height": 143,
+    "bytes": 16570
+  },
+  {
+    "source": "assets/images/seo-photos/zeekr.jpg",
+    "output": "assets/responsive/zeekr-400.webp",
+    "width": 400,
+    "height": 238,
+    "bytes": 38540
+  },
+  {
+    "source": "assets/images/seo-photos/zeekr.jpg",
+    "output": "assets/responsive/zeekr-640.webp",
+    "width": 640,
+    "height": 381,
+    "bytes": 85642
+  },
+  {
+    "source": "assets/images/seo-photos/zeekr.jpg",
+    "output": "assets/responsive/zeekr-960.webp",
+    "width": 960,
+    "height": 572,
+    "bytes": 171340
+  }
+]

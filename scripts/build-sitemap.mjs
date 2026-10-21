@@ -45,6 +45,7 @@ const blocks = source.replace(/\n?  <url>[\s\S]*?  <\/url>/g, (block) => {
 
   const relativePath = pagePathForUrl(location);
   const absolutePath = path.join(root, relativePath);
+  if (process.argv.includes('--changed-only') && !git(['status', '--porcelain', '--', relativePath])) return block;
   const date = lastModified(relativePath);
   updatedCount += 1;
 
