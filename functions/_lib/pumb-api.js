@@ -1,9 +1,10 @@
 // PUMB's supplied REST API guide (PUMB_API.zip, received 2026-10-20).
 // Credentials/tokens and raw bank error bodies must never leave this module.
+import { safeBankCode, safeBankDiagnostic } from './bank-diagnostics.js';
 const TOKEN_URL = 'https://auth.fuib.com/auth/realms/VegaNet/protocol/openid-connect/token';
 const API_URL = 'https://service.fuib.com:4103/war_veganet_api';
-export const bankError = (code, status=503) => Object.assign(new Error(code), { bankCode: code, status });
-export function bankFailure(error) { return error?.bankCode || 'bank_unavailable'; }
+export const bankError = (code, status=503, diagnostic={}) => Object.assign(new Error(safeBankCode(code)), { bankCode: safeBankCode(code), status, ...safeBankDiagnostic(diagnostic) });
+export function bankFailure(error) { return safeBankCode(error?.bankCode); }
 
 export function exactId(value) {
   if (typeof value === 'number' && !Number.isSafeInteger(value)) throw bankError('bank_schema');
@@ -31,11 +32,34 @@ export const normalizeIban = v => String(v || '').replace(/\s/g,'').toUpperCase(
 export function parseBankJson(raw) {
   return JSON.parse(raw.replace(/("(?:id|accountId|hostId|docId|transactionId)"\s*:\s*)(\d{16,})(?=\s*[,}])/g,'$1"$2"'));
 }
-async function responseJson(response) {
-  if (!response.ok) throw bankError(response.status===401 || response.status===403 ? 'bank_auth' : response.status===429 ? 'bank_rate_limit' : 'bank_unavailable');
+async function oauthErrorCode(response) {
+  // Bounded read; discard description, body and all unknown provider values.
+  const reader=response.body?.getReader(); if(!reader)return null;
+  let raw='',size=0;const decoder=new TextDecoder();
+  try {
+    while(true) {const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>8192)return null;raw+=decoder.decode(value,{stream:true});}
+    raw+=decoder.decode();return safeBankDiagnostic({oauth_code:JSON.parse(raw)?.error}).oauth_code;
+  } catch {return null;} finally {try{await reader.cancel();}catch{}}
+}
+async function responseJson(response, stage) {
+  const diagnostic={stage,upstream_status:response.status};
+  if (!response.ok) {
+    const oauth=stage==='authorization'?await oauthErrorCode(response):null;
+    diagnostic.oauth_code=oauth;
+    const unavailable=stage==='authorization'?'bank_auth_unavailable':stage==='accounts'?'bank_accounts_unavailable':'bank_transactions_unavailable';
+    const code=response.status===429?'bank_rate_limit':response.status>=500?unavailable:
+      oauth==='invalid_grant'?'bank_login_rejected':['invalid_client','unauthorized_client'].includes(oauth)?'bank_client_rejected':
+      ['invalid_request','unsupported_grant_type','invalid_scope'].includes(oauth)?'bank_auth_request':
+      response.status===401 || response.status===403?'bank_auth':unavailable;
+    throw bankError(code,503,diagnostic);
+  }
   const raw=await response.text();
-  if (raw.length>5000000) throw bankError('bank_response_large');
-  try { return parseBankJson(raw); } catch { throw bankError('bank_schema'); }
+  if (raw.length>5000000) throw bankError('bank_response_large',503,diagnostic);
+  try { return parseBankJson(raw); } catch { throw bankError('bank_schema',503,diagnostic); }
+}
+function requestFailure(e,stage) {
+  const code=e?.bankCode?bankFailure(e):['TimeoutError','AbortError'].includes(e?.name)?'bank_timeout':'bank_network';
+  return bankError(code,503,{...safeBankDiagnostic(e),stage});
 }
 export async function pumbSession(credentials, fetcher=fetch) {
   if (!['client_id','client_secret','username','password'].every(k=>typeof credentials?.[k]==='string' && credentials[k])) throw bankError('bank_not_configured');
@@ -43,17 +67,18 @@ export async function pumbSession(credentials, fetcher=fetch) {
   try {
     auth=await responseJson(await fetcher(TOKEN_URL,{method:'POST',redirect:'error',signal:AbortSignal.timeout(20000),
       headers:{'content-type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({grant_type:'password',...Object.fromEntries(['client_id','client_secret','username','password'].map(k=>[k,credentials[k]]))}).toString()}));
-  } catch (e) { throw bankError(bankFailure(e)); }
-  if (typeof auth.access_token!=='string' || !auth.access_token) throw bankError('bank_auth');
+      body:new URLSearchParams({grant_type:'password',...Object.fromEntries(['client_id','client_secret','username','password'].map(k=>[k,credentials[k]]))}).toString()}),'authorization');
+  } catch (e) { throw requestFailure(e,'authorization'); }
+  if (typeof auth?.access_token!=='string' || !auth.access_token) throw bankError('bank_schema',503,{stage:'authorization',upstream_status:200});
   const session=crypto.randomUUID();
   return async (path, body) => {
     if (!['/account','/multi-account-transactions'].includes(path)) throw bankError('bank_operation_forbidden');
+    const stage=path==='/account'?'accounts':'transactions';
     try {
       return await responseJson(await fetcher(API_URL+path,{method:body ? 'POST':'GET',redirect:'error',signal:AbortSignal.timeout(25000),
         headers:{'content-type':'application/json',authorization:`Bearer ${auth.access_token}`,'X-App-Channel':'pure-api',
-          'X-Flow-ID':`${crypto.randomUUID()}:${session}:evline-pumb-readonly-v1`},...(body ? {body:JSON.stringify(body)} : {})}));
-    } catch(e) { throw bankError(bankFailure(e)); }
+          'X-Flow-ID':`${crypto.randomUUID()}:${session}:evline-pumb-readonly-v1`},...(body ? {body:JSON.stringify(body)} : {})}),stage);
+    } catch(e) { throw requestFailure(e,stage); }
   };
 }
 export function bankAccounts(rows) {

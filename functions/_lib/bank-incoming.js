@@ -1,6 +1,7 @@
 import { invoiceAmount, validateReady } from '../../admin/documents/model.js';
 import { bankError, bankFailure, normalizeIban, pumbSession, bankAccounts, bankTransactions, bankRange } from './pumb-api.js';
 import { recordAuditEvent } from './audit-log.js';
+import { saveConnectDiagnostic, safeBankDiagnostic } from './bank-diagnostics.js';
 
 const now=()=>new Date().toISOString();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -38,15 +39,33 @@ export async function connectionStatus(env) {
     last_success_at:row?.last_success_at || null,last_error:row?.last_error || null,interval_minutes:15};
 }
 export async function connectBank(env,data,actor,fetcher=fetch) {
+  const started=Date.now();let stage='validation';
+  try {
+    const result=await connectBankAttempt(env,data,actor,fetcher,value=>{stage=value;});
+    await saveConnectDiagnostic(env,{outcome:'ok',stage:'complete',elapsed_ms:Date.now()-started});
+    return result;
+  } catch(error) {
+    const code=error?.bankCode?bankFailure(error):stage==='encryption'?'bank_encryption_failed':stage==='save'?'bank_save_failed':'bank_unavailable';
+    const safe=bankError(code,error?.bankCode?error.status:503,{...safeBankDiagnostic(error),stage});
+    safe.diagnostic=await saveConnectDiagnostic(env,{...safeBankDiagnostic(safe),outcome:'error',code,elapsed_ms:Date.now()-started});
+    throw safe;
+  }
+}
+async function connectBankAttempt(env,data,actor,fetcher,setStage) {
   if (!env.PUMB_CLIENT_ID || !env.PUMB_CLIENT_SECRET || !env.PUMB_ENCRYPTION_KEY) throw bankError('bank_server_setup');
   if (typeof data.username!=='string' || typeof data.password!=='string' || !data.username.trim() || !data.password || data.username.length>200 || data.password.length>500 || data.consent!==true) throw bankError('bank_connection_input',400);
   const start=data.start_date || kyivDay();
   if (!validDay(start) || start>kyivDay() || start<shiftDay(kyivDay(),-90)) throw bankError('bank_date_range',400);
   // Check authorization and available accounts before replacing a working connection.
   const credentials={client_id:env.PUMB_CLIENT_ID,client_secret:env.PUMB_CLIENT_SECRET,username:data.username.trim(),password:data.password};
-  const api=await pumbSession(credentials,fetcher), accounts=bankAccounts(await api('/account'));
+  setStage('authorization');
+  const api=await pumbSession(credentials,fetcher);
+  setStage('accounts');
+  const accounts=bankAccounts(await api('/account'));
   if (!accounts.length) throw bankError('bank_no_accounts');
+  setStage('encryption');
   const encrypted=await encryptCredentials(env,{username:credentials.username,password:credentials.password});
+  setStage('save');
   const changed=await run(env,`UPDATE bank_connections SET credentials_encrypted=?,enabled=1,accounts_json=?,start_date=?,cursor_date=NULL,
     last_error=NULL,updated_at=? WHERE id='pumb' AND (lease_until IS NULL OR lease_until<?)`,encrypted,JSON.stringify(accounts),start,now(),now());
   if (!changed.meta.changes) throw bankError('bank_busy',409);

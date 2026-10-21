@@ -2,6 +2,7 @@ import { adminUser, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
 import { readIncoming, connectBank, pauseBank, syncBank } from '../../_lib/bank-incoming.js';
 import { bankError, bankFailure } from '../../_lib/pumb-api.js';
+import { lastConnectDiagnostic } from '../../_lib/bank-diagnostics.js';
 
 export async function onRequest({request,env}) {
   const user=adminUser(request,env);
@@ -11,7 +12,8 @@ export async function onRequest({request,env}) {
     if(request.method==='GET') {
       const page=Number(url.searchParams.get('page') || 1),orderId=url.searchParams.get('order_id') || '';
       if(!Number.isInteger(page) || page<1 || page>10000 || orderId.length>100) throw bankError('bank_input',400);
-      return json({...await readIncoming(env,{orderId,page,unmatched:url.searchParams.get('review')==='1'}),can_manage:user.id==='owner'});
+      return json({...await readIncoming(env,{orderId,page,unmatched:url.searchParams.get('review')==='1'}),can_manage:user.id==='owner',
+        ...(user.id==='owner'?{connect_diagnostic:await lastConnectDiagnostic(env)}:{})});
     }
     if(request.method!=='POST') return json({error:'Method not allowed'},{status:405});
     // Banking credentials and connection controls are owner-only, including direct API calls.
@@ -28,6 +30,9 @@ export async function onRequest({request,env}) {
     throw bankError('bank_input',400);
   } catch(error) {
     // Never forward DB, authentication-provider or bank response bodies to the browser.
-    return json({error:bankFailure(error)},{status:error.bankCode ? error.status : 503});
+    const d=error.diagnostic;
+    // Fixed, generated metadata only; keep the code first for older clients.
+    const reference=d?` [PUMB:${d.id};stage:${d.stage};http:${d.upstream_status || 0};saved:${d.saved?1:0}]`:'';
+    return json({error:bankFailure(error)+reference,...(d?{diagnostic:d}:{})},{status:error.bankCode ? error.status : 503});
   }
 }
