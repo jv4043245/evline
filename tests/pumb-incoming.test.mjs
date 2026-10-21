@@ -12,6 +12,7 @@ import { createBankIncomingView, mountBankOrderSummary, invoiceTable, paymentTab
 import { lastConnectDiagnostic, saveConnectDiagnostic } from '../functions/_lib/bank-diagnostics.js';
 import { adminApiError } from '../assets/js/admin-api-errors.js';
 import { linkPayment, refreshOrderPaymentStatus, invoiceSuggestions } from '../functions/_lib/bank-payment-links.js';
+import { createOrderPaymentPicker } from '../admin/order-payment-picker.js';
 
 const dir=new URL('../migrations/',import.meta.url);
 const schemas=await Promise.all((await readdir(dir)).filter(f=>f.endsWith('.sql')).sort().map(f=>readFile(new URL(f,dir),'utf8')));
@@ -191,6 +192,39 @@ test('Andrii links from a row dropdown and from inside an order without nested f
   unsaved=false;bank.querySelector('[data-order-bank-link]').click();await waitFor(()=>linked && busy.at(-1)===false);
   assert.equal(linked.payment_status,'paid');assert.equal(posts.length,2);assert.equal(bank.querySelector('[data-order-bank-payment]').options.length,1);
   assert.deepEqual(busy,[true,false]);assert.equal(dom.window.document.querySelector('[name=note]').value,'keep');view.reset();
+});
+test('order-list payment panel loads only unassigned last-week receipts and requires explicit confirmation',async t=>{
+  const {env,db}=setup(t),today=kyivDay(),day=n=>new Date(Date.parse(today+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
+  for(const [id,offset] of [['1',0],['2',-6],['3',-7],['4',0]])await ingestTransactions(env,[tx(id,'40',{description:'Без номера '+id,operationDate:day(offset)+'T10:00:00'})],[]);
+  const assigned=db.prepare("SELECT id FROM bank_incoming WHERE purpose='Без номера 4'").get().id;
+  db.prepare("UPDATE bank_incoming SET order_id='o1' WHERE id=?").run(assigned);
+  const dom=new JSDOM('<table><tbody><tr data-order-id="o1"><td><button data-order-payment="o1" aria-expanded="false">Оплата</button></td></tr></tbody></table>',{url:'https://evline.test'});t.after(()=>dom.window.close());
+  const table=dom.window.document.querySelector('tbody'),button=table.querySelector('button'),calls=[];let updated=null,rowClicks=0;
+  table.addEventListener('click',()=>rowClicks++);
+  const api=async(path,options)=>{calls.push({path,options});const r=await route({env,request:new Request(new URL(path,'https://evline.test'),{method:options?'POST':'GET',headers:{authorization:'Bearer andrii-test','content-type':'application/json'},...(options?{body:options.body}:{})})});const j=await r.json();if(!r.ok)throw Error(j.error);return j;};
+  const picker=createOrderPaymentPicker(table,api,{onLinked:o=>updated=o});
+  assert.equal(calls.length,0);await picker.toggle(button);
+  assert.ok(calls.some(c=>c.path.includes('available=1&days=7&page=1')));
+  assert.equal(table.querySelector('[data-order-bank-days]'),null);assert.equal(table.querySelector('.bank-table'),null);
+  const select=table.querySelector('[data-order-bank-payment]');assert.equal(select.options.length,3);
+  assert.equal(button.getAttribute('aria-expanded'),'true');assert.equal(table.querySelectorAll('[data-order-payment-panel-row]').length,1);
+  select.value=select.options[1].value;select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
+  table.querySelector('[data-order-bank-link]').click();assert.equal(calls.filter(c=>c.options).length,0);assert.equal(rowClicks,0);
+  table.querySelector('[data-order-bank-confirmed]').checked=true;table.querySelector('[data-order-bank-link]').click();
+  const end=Date.now()+5000;while(!table.querySelector('[data-order-bank-message]')?.textContent.includes('Платіж прив’язано')){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,10));}
+  assert.equal(updated.id,'o1');assert.equal(updated.payment_status,'partial');
+  assert.equal(table.querySelector('[data-order-bank-payment]').options.length,2);
+  assert.equal(calls.filter(c=>c.options).length,1);
+  table.querySelector('select').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(table.querySelector('[data-order-payment-panel-row]'),null);assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(dom.window.document.activeElement,button);
+  await picker.toggle(button);assert.equal(table.querySelector('[data-order-bank-payment]').options.length,2);await picker.toggle(button);assert.equal(table.querySelector('[data-order-payment-panel-row]'),null);
+});
+test('order-list panel ignores a late load after closing and switching orders',async t=>{
+  const dom=new JSDOM('<table><tbody><tr data-order-id="one"><td><button>One</button></td></tr><tr data-order-id="two"><td><button>Two</button></td></tr></tbody></table>');t.after(()=>dom.window.close());
+  const table=dom.window.document.querySelector('tbody'),buttons=table.querySelectorAll('button');let release;
+  const picker=createOrderPaymentPicker(table,async path=>{if(path.includes('one'))return new Promise(r=>release=r);return{can_link:false,order:{order_number:'Two'},invoices:[],rows:[]};});
+  const first=picker.toggle(buttons[0]);await picker.toggle(buttons[1]);release({can_link:false,order:{order_number:'One'},invoices:[],rows:[]});await first;
+  assert.equal(table.querySelectorAll('[data-order-payment-panel-row]').length,1);assert.match(table.querySelector('.bank-order-summary').textContent,/Two/);assert.equal(buttons[0].getAttribute('aria-expanded'),'false');picker.reset();
 });
 test('name and amount suggestions never authorize automatic association',async t=>{
   const {env,db}=setup(t),invoices=await invoiceIndex(env),payment=tx('92','100',{senderName:'Тест',description:'Оплата товару'});

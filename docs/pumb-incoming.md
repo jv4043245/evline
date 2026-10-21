@@ -172,6 +172,22 @@ rollback must restore both its previous code and two-hour trigger. Keep additive
 database structures and bank facts. Do not drop
 financial tables as a rollback. Existing admin functionality works with the added schema.
 
+### Quick linking from the order list
+
+In «Замовлення» → «Дії», «Прив’язати оплату ▾» expands one compact panel below
+the selected order. It loads fresh, unassigned, safe UAH incoming receipts for
+today and the preceding six Kyiv calendar days (`available=1&days=7`). Assigned,
+ignored, outbound, future-dated and flagged unsafe facts are excluded by the
+existing server filter. Pagination retains access to more than 50 eligible receipts.
+Older receipts remain available from the order card's Payment section.
+
+Selecting a receipt does not write anything. The existing explicit confirmation,
+amount/fingerprint conflict guards, owner/Andrii permissions and audit are reused.
+After linking, the order-list payment status updates in place and the candidates
+reload; linked receipts disappear. Only one panel is open, loaded on demand (not
+once per row); Escape/Close collapses it. This does not acknowledge receipt badges,
+change the bank polling schedule, move money or require a new database migration.
+
 Tests: `tests/pumb-incoming.test.mjs` covers exact money/IDs, schema rejection,
 read-method allowlist, encrypted access, authorization, matching, replay, partial/full
 receipts, disputes, deletion preservation, sync failure/cooldown, and UI escaping.

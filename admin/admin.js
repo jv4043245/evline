@@ -12,7 +12,8 @@ import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
-import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb-badge';
+import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
+import { createOrderPaymentPicker } from './order-payment-picker.js?v=20261021-order-payment';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-pumb-badge';
 
 const state = {
@@ -375,6 +376,22 @@ const keywordLevelLabels = {
 
 const adminTabs = new Set(["orders", "contacts", "china", "analytics", "delivery", "accounting", "bank-incoming"]);
 const bankNotifications=createBankNotifications(document.querySelector('[data-bank-new-badge]'),api);
+const orderPaymentPicker=createOrderPaymentPicker(document.querySelector('[data-orders]'),api,{
+  beforeLink:()=>orderSaving || orderIsDirty()?'Спочатку збережіть або закрийте зміни відкритого замовлення.':'',
+  onLinked:updated=>{
+    const order=state.orders.find(o=>o.id===updated?.id);if(!order)return;
+    order.payment_status=updated.payment_status;
+    if(state.selectedOrder?.id===updated.id){
+      state.selectedOrder.payment_status=updated.payment_status;
+      const form=document.querySelector('[data-order-editor]');
+      if(form?.elements.payment_status)form.elements.payment_status.value=updated.payment_status;
+      if(orderFormBaseline)orderFormBaseline=JSON.stringify(JSON.parse(orderFormBaseline).map(([name,value])=>[name,name==='payment_status'?updated.payment_status:value]));
+      updateOrderSaveState();
+    }
+    const row=document.querySelector(`[data-order-id="${CSS.escape(order.id)}"]`);
+    const amount=row?.querySelector('[data-label="Сума"]');if(amount)amount.innerHTML=moneyCell(order);
+  },
+});
 const bankIncomingView = createBankIncomingView(document.querySelector('[data-bank-incoming]'),api,{openOrder:id=>{
   if(setActiveTab('orders')) {state.orderEditorTab='payment';openOrder(id).catch(error=>alert(error.message));}
 },onViewed:rows=>bankNotifications.markSeen(rows)});
@@ -575,6 +592,7 @@ function setAdminUser(name) {
 }
 
 function setAuthVisible(visible) {
+  if(visible)orderPaymentPicker.reset();
   if(visible)bankNotifications.reset();else if(adminToken())bankNotifications.start();
   if (visible) bankIncomingView.reset();
   else bankIncomingView.setActive(state.activeTab==='bank-incoming' && Boolean(adminToken()));
@@ -2516,6 +2534,7 @@ function renderSupplierPayments(order) {
 }
 
 function renderOrders() {
+  orderPaymentPicker.reset();
   const root = document.querySelector("[data-orders]");
   if (!root) return;
   root.innerHTML = state.orders.length
@@ -2558,6 +2577,7 @@ function renderOrders() {
                     </button>
                   </div>
                 </div>
+                ${order.status!=='canceled'?`<button class="admin-link-button orders-table__payment" type="button" data-order-payment="${escapeHtml(order.id)}" aria-expanded="false" aria-label="Прив’язати оплату до ${escapeHtml(publicNumber)}">Прив’язати оплату <span aria-hidden="true">▾</span></button>`:''}
               </td>
             </tr>
           `;
@@ -4996,6 +5016,9 @@ document.querySelector("#search")?.addEventListener("input", () => {
 });
 
 document.querySelector("[data-orders]")?.addEventListener("click", async (event) => {
+  const paymentButton=event.target.closest('[data-order-payment]');
+  if(paymentButton){await orderPaymentPicker.toggle(paymentButton);return;}
+  if(event.target.closest('[data-order-payment-panel-row]'))return;
   const deleteButton = event.target.closest("[data-delete-order]");
   if (deleteButton) {
     deleteButton.disabled = true;

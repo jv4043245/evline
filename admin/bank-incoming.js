@@ -147,21 +147,20 @@ export function createBankIncomingView(root,api,{openOrder=()=>{},onViewed=()=>{
   },60000);},reset(){active=false;clearInterval(timer);timer=null;revision++;data=null;linking=null;searchOrders=[];chosenOrder=null;chosenInvoices=[];page=1;review=false;if(root)root.replaceChildren();}};
 }
 
-export async function mountBankOrderSummary(root,orderId,api,{beforeLink=()=>'',onLinked=()=>{},onBusy=()=>{}}={}) {
+export async function mountBankOrderSummary(root,orderId,api,{beforeLink=()=>'',onLinked=()=>{},onBusy=()=>{},compact=false}={}) {
   if(!root)return;
-  let data=null,available=null,days=3,page=1,selected=null,busy=false;
+  let data=null,available=null,days=compact?7:3,page=1,selected=null,busy=false;
   const message=(text,error=false)=>{const el=root.querySelector('[data-order-bank-message]');if(el){el.textContent=text;el.classList.toggle('bank-error',error);}};
   function render() {
     const canLink=data.can_link && data.order && data.order.status!=='canceled';
-    root.innerHTML=`<h3>Оплати клієнта · ПУМБ</h3><p class="muted">Перевірено: ${escape(timestamp(data.connection.last_success_at))}. Статус оплати враховує перевірені прив’язані надходження і повну вартість замовлення.</p>
-      ${invoiceTable(data.invoices,{compact:true})}${paymentTable(data.rows)}
+    root.innerHTML=`${compact?`<h3>Оплата до ${escape(data.order?.order_number || orderId)} · ${escape(data.order?.customer_name || '')}</h3>`:`<h3>Оплати клієнта · ПУМБ</h3><p class="muted">Перевірено: ${escape(timestamp(data.connection.last_success_at))}. Статус оплати враховує перевірені прив’язані надходження і повну вартість замовлення.</p>${invoiceTable(data.invoices,{compact:true})}${paymentTable(data.rows)}`}
       ${canLink?`<div class="bank-link-box"><h4>Прив’язати надходження до цього замовлення</h4>
-        <p>Вільні гривневі платежі, ще не прив’язані до замовлень. Сьогодні та два попередні дні за Києвом — період за замовчуванням. Вибір не зберігається без підтвердження.</p>
-        <label>Період<select data-order-bank-days>${[[3,'Останні 3 дні'],[7,'Останні 7 днів'],[30,'Останні 30 днів'],[0,'Усі завантажені']].map(([n,label])=>`<option value="${n}" ${days===n?'selected':''}>${label}</option>`).join('')}</select></label>
-        <label>Надходження<select data-order-bank-payment><option value="">Оберіть платіж…</option>${(available?.rows || []).map(p=>`<option value="${escape(p.id)}">${escape(p.booked_at.slice(0,10))} · ${escape(p.payer_name)} · ${money(p.amount_minor)} · ${escape(p.purpose)}</option>`).join('')}</select></label>
-        <p>${available?`${Number(available.summary.count)} вільних платежів · сторінка ${page}`:'Список не завантажено.'}${available && !available.rows.length?' Збільште період або оновіть список.':''}</p>
-        <div class="bank-actions"><button type="button" class="admin-btn" data-order-bank-prev ${page<=1?'disabled':''}>Назад</button><button type="button" class="admin-btn" data-order-bank-next ${!available || page*50>=available.summary.count?'disabled':''}>Далі</button><button type="button" class="admin-btn" data-order-bank-reload>Оновити список</button></div>
-        <div data-order-bank-confirm-panel></div></div>`:''}<p role="status" data-order-bank-message></p>`;
+        <p>${compact?'Лише неприв’язані надходження за останні 7 днів (за Києвом).':'Вільні гривневі платежі, ще не прив’язані до замовлень. Сьогодні та два попередні дні за Києвом — період за замовчуванням.'} Вибір не зберігається без підтвердження.</p>
+        ${compact?'':`<label>Період<select data-order-bank-days>${[[3,'Останні 3 дні'],[7,'Останні 7 днів'],[30,'Останні 30 днів'],[0,'Усі завантажені']].map(([n,label])=>`<option value="${n}" ${days===n?'selected':''}>${label}</option>`).join('')}</select></label>`}
+        <label>Надходження<select data-order-bank-payment><option value="">Оберіть платіж…</option>${(available?.rows || []).map(p=>`<option value="${escape(p.id)}">${compact?`${money(p.amount_minor)} · ${escape(p.booked_at.slice(0,10))} · ${escape(p.payer_name)}`:`${escape(p.booked_at.slice(0,10))} · ${escape(p.payer_name)} · ${money(p.amount_minor)}`} · ${escape(p.purpose)}</option>`).join('')}</select></label>
+        <p>${available?`${Number(available.summary.count)} вільних платежів${!compact || available.summary.count>50?` · сторінка ${page}`:''}`:'Список не завантажено.'}${available && !available.rows.length?(compact?' Неприв’язаних оплат за тиждень немає. Старіші платежі доступні в картці замовлення → Оплата.':' Збільште період або оновіть список.'):''}</p>
+        <div class="bank-actions">${!compact || page>1 || available?.summary.count>50?`<button type="button" class="admin-btn" data-order-bank-prev ${page<=1?'disabled':''}>Назад</button><button type="button" class="admin-btn" data-order-bank-next ${!available || page*50>=available.summary.count?'disabled':''}>Далі</button>`:''}<button type="button" class="admin-btn" data-order-bank-reload>Оновити список</button></div>
+        <div data-order-bank-confirm-panel></div></div>`:compact?'<p>Прив’язка недоступна для цього замовлення або вашого користувача.</p>':''}<p role="status" data-order-bank-message></p>`;
     renderConfirmation();
   }
   function renderConfirmation() {
@@ -181,7 +180,7 @@ export async function mountBankOrderSummary(root,orderId,api,{beforeLink=()=>'',
       if(!root.isConnected)return false;data=next;available=candidates;selected=null;render();return true;
     } catch {
       if(!root.isConnected)return;
-      if(!data)root.innerHTML='<h3>Оплати клієнта · ПУМБ</h3><p data-order-bank-message></p>';
+      if(!data)root.innerHTML='<h3>Оплати клієнта · ПУМБ</h3><p data-order-bank-message></p><button type="button" class="admin-btn" data-order-bank-reload>Оновити список</button>';
       message('Банківські дані зараз недоступні. Оновіть список або відкрийте замовлення знову.',true);
       return false;
     } finally {busy=false;}
