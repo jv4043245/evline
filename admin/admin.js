@@ -14,7 +14,7 @@ import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
 import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-menu';
-import { createBankNotifications } from './bank-notifications.js?v=20261021-pumb-badge';
+import { createBankNotifications } from './bank-notifications.js?v=20261021-badge-states';
 
 const state = {
   range: "30d",
@@ -379,6 +379,7 @@ const bankNotifications=createBankNotifications(document.querySelector('[data-ba
 const orderPaymentPicker=createOrderPaymentPicker(document.querySelector('[data-orders]'),api,{
   beforeLink:()=>orderSaving || orderIsDirty()?'Спочатку збережіть або закрийте зміни відкритого замовлення.':'',
   onLinked:updated=>{
+    bankNotifications.refresh();
     const order=state.orders.find(o=>o.id===updated?.id);if(!order)return;
     order.payment_status=updated.payment_status;
     if(state.selectedOrder?.id===updated.id){
@@ -3816,6 +3817,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
     beforeLink:()=>orderSaving || orderIsDirty()?'Спочатку збережіть зміни замовлення, потім підтвердьте прив’язку платежу.':'',
     onBusy:value=>{orderSaving=value;updateOrderSaveState();},
     onLinked:updated=>{
+      bankNotifications.refresh();
       if(!updated || state.selectedOrder?.id!==updated.id)return;
       // Refresh only the persisted bank status. Do not discard other form edits.
       state.selectedOrder.payment_status=updated.payment_status;

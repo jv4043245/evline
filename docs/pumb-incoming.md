@@ -93,6 +93,16 @@ remain new. Viewing does not link a payment, change its review flag, or its amou
 View state is per user, shared across devices, and deduplicated by immutable receipt
 ID. Owner viewing cannot clear Andrii's badge. Failures retain the last known count.
 
+Orange has priority whenever this identity has unseen receipts; its number is the
+unseen count. Once all receipts are viewed, the badge turns blue and shows the
+shared count of non-ignored inbound receipts with no order assigned, without a
+seven-day cutoff. Viewing or leaving the ledger never clears this blue reminder.
+It disappears only when both counts are zero. A new receipt restores orange.
+The tooltip and accessible label disclose both counts. Linking refreshes the count;
+other users receive the updated assignment count on the next poll, but their unread
+state remains independent. The API retains `count` for backward compatibility and
+adds `unassigned_count`. No additional migration or reset of existing views is needed.
+
 Apply additive migration **0041_bank_receipt_views.sql** before publishing this UI.
 It creates only per-user view state; no bank facts, credentials or orders change.
 Managers see the title, reload button and bank operations; connection diagnostics,

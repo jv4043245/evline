@@ -20,14 +20,29 @@ function setup(t) {
 test('new receipts are counted individually per identity, including automatic links; reading is not linking',async t=>{
   const {db,insert,call}=setup(t);insert('a');insert('b');insert('out','OUTBOUND');insert('ignored','INBOUND',1);
   db.exec("INSERT INTO orders(id,created_at,updated_at,type,status,payment_status) VALUES('o','2026-10-21','2026-10-21','parts','new','unpaid');UPDATE bank_incoming SET order_id='o',match_method='automatic' WHERE id='a'");
-  assert.deepEqual(await(await call()).json(),{count:2});
-  assert.deepEqual(await(await call({ids:['a','a','missing','out','ignored'],user_id:'owner'})).json(),{count:1});
-  assert.deepEqual(await(await call(null,'owner')).json(),{count:2});
+  assert.deepEqual(await(await call()).json(),{count:2,unassigned_count:1});
+  assert.deepEqual(await(await call({ids:['a','a','missing','out','ignored'],user_id:'owner'})).json(),{count:1,unassigned_count:1});
+  assert.deepEqual(await(await call(null,'owner')).json(),{count:2,unassigned_count:1});
   assert.equal(db.prepare('SELECT COUNT(*) n FROM bank_receipt_views').get().n,1);
-  insert('new');assert.deepEqual(await(await call({ids:['a']})).json(),{count:2});
-  await call({ids:['b','new']});assert.deepEqual(await(await call()).json(),{count:0});
+  insert('new');assert.deepEqual(await(await call({ids:['a']})).json(),{count:2,unassigned_count:2});
+  await call({ids:['b','new']});assert.deepEqual(await(await call()).json(),{count:0,unassigned_count:2});
   assert.equal(db.prepare("SELECT payment_status FROM orders WHERE id='o'").get().payment_status,'unpaid');
   assert.equal(db.prepare("SELECT order_id FROM bank_incoming WHERE id='b'").get().order_id,null);
+});
+test('owner viewing leaves Andrii unread; unassigned reminder survives viewing until assignment, without a date limit',async t=>{
+  const {db,insert,call}=setup(t);
+  assert.deepEqual(await(await call()).json(),{count:0,unassigned_count:0});
+  insert('old');insert('new');insert('out','OUTBOUND');insert('ignored','INBOUND',1);
+  await call({ids:['old','new']},'owner');
+  assert.deepEqual(await(await call(null,'owner')).json(),{count:0,unassigned_count:2});
+  assert.deepEqual(await(await call()).json(),{count:2,unassigned_count:2});
+  db.exec("INSERT INTO orders(id,created_at,updated_at,type,status,payment_status) VALUES('o','2026-10-21','2026-10-21','parts','new','unpaid');UPDATE bank_incoming SET order_id='o' WHERE id='old'");
+  assert.deepEqual(await(await call(null,'owner')).json(),{count:0,unassigned_count:1});
+  assert.deepEqual(await(await call()).json(),{count:2,unassigned_count:1});
+  insert('latest');assert.deepEqual(await(await call(null,'owner')).json(),{count:1,unassigned_count:2});
+  await call({ids:['latest']},'owner');db.exec("UPDATE bank_incoming SET order_id='o' WHERE direction='INBOUND'");
+  assert.deepEqual(await(await call(null,'owner')).json(),{count:0,unassigned_count:0});
+  assert.equal((await(await call()).json()).count,3);
 });
 test('only supplied visible IDs are acknowledged; pagination and concurrently arriving money stay new',async t=>{
   const {insert,call}=setup(t);for(let i=0;i<52;i++)insert('p'+i);
@@ -46,6 +61,19 @@ test('view state requires authentication, same origin and bounded valid IDs',asy
 
 const waitFor=async check=>{const end=Date.now()+5000;while(!check()){assert.ok(Date.now()<end,'condition timed out');await new Promise(r=>setTimeout(r,5));}};
 function ui(t){const dom=new JSDOM('<button>Надходження <span hidden></span></button><main></main>',{url:'https://evline.test',pretendToBeVisual:true});t.after(()=>dom.window.close());return{dom,badge:dom.window.document.querySelector('span')};}
+test('orange unread takes priority, seen unassigned stays blue, linking clears blue, errors do not hide reminders',async t=>{
+  const {badge}=ui(t);let state={count:3,unassigned_count:3},fail=false;
+  const n=createBankNotifications(badge,async(_p,o)=>{if(fail)throw Error('offline');if(o?.method==='POST')state.count=0;return{...state};});t.after(()=>n.destroy());
+  n.start();await waitFor(()=>badge.dataset.state==='new');assert.equal(badge.textContent,'3');
+  await n.markSeen([{id:'a',direction:'INBOUND'}]);assert.equal(badge.hidden,false);assert.equal(badge.dataset.state,'unassigned');assert.equal(badge.textContent,'3');assert.ok(badge.classList.contains('bank-new-badge--unassigned'));
+  fail=true;await n.refresh();assert.equal(badge.dataset.state,'unassigned');fail=false;
+  state={count:1,unassigned_count:4};await n.refresh();assert.equal(badge.dataset.state,'new');assert.equal(badge.textContent,'1');assert.equal(badge.classList.contains('bank-new-badge--unassigned'),false);assert.match(badge.closest('button').title,/4/);
+  await n.markSeen([{id:'b',direction:'INBOUND'}]);assert.equal(badge.dataset.state,'unassigned');assert.equal(badge.textContent,'4');
+  state={count:0,unassigned_count:120};await n.refresh();assert.equal(badge.textContent,'99+');assert.match(badge.getAttribute('aria-label'),/120/);
+  state={count:0,unassigned_count:0};await n.markSeen([{id:'b',direction:'INBOUND'}]);assert.equal(badge.hidden,true);assert.equal(badge.dataset.state,'clear');
+  state={count:1,unassigned_count:0};await n.refresh();assert.equal(badge.dataset.state,'new');assert.equal(badge.hidden,false);
+  n.reset();assert.equal(badge.hidden,true);assert.equal(badge.classList.contains('bank-new-badge--unassigned'),false);
+});
 test('badge polls outside bank view, acknowledges exact IDs, caches successful views and preserves count on error',async t=>{
   const {dom,badge}=ui(t);let count=1,fail=false;const posts=[];
   const api=async(_path,options)=>{if(fail)throw Error('offline');if(options?.method==='POST'){posts.push(JSON.parse(options.body).ids);count=0;}return{count};};

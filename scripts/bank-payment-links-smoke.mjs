@@ -35,7 +35,8 @@ const server=createServer(async(req,res)=>{try{
     res.setHeader('content-type','text/html; charset=utf-8');
     res.end(`<!doctype html><html lang="uk"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/css/styles.css"><link rel="stylesheet" href="/admin/admin.css"><link rel="stylesheet" href="/admin/bank-incoming.css"><body class="admin-shell"><main class="admin-main">${nav}<section id="orders"><h2>Замовлення · ізольований тест</h2><input id="draft" value="Незбережений текст"></section><section class="bank-incoming" id="bank" hidden></section></main><script type="module">
       import{createBankNotifications}from'/admin/bank-notifications.js';import{createBankIncomingView}from'/admin/bank-incoming.js';
-      const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{authorization:'Bearer synthetic-manager','content-type':'application/json'}});const j=await r.json();if(!r.ok)throw Error(j.error);return j};
+      const token=new URLSearchParams(location.search).get('role')==='owner'?'synthetic-owner':'synthetic-manager';
+      const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{authorization:'Bearer '+token,'content-type':'application/json'}});const j=await r.json();if(!r.ok)throw Error(j.error);return j};
       const n=createBankNotifications(document.querySelector('[data-bank-new-badge]'),api,{intervalMs:100});n.start();
       const root=document.querySelector('#bank'),view=createBankIncomingView(root,api,{onViewed:rows=>n.markSeen(rows)});
       document.querySelector('nav').onclick=async e=>{const button=e.target.closest('button');if(!button)return;const bank=button.dataset.adminTab==='bank-incoming';root.hidden=!bank;document.querySelector('#orders').hidden=bank;view.setActive(bank);for(const b of document.querySelectorAll('nav button'))b.setAttribute('aria-selected',String(b===button));if(bank)await view.load();};
@@ -111,13 +112,23 @@ for(const width of [1440,390,320]){
   assert.equal(await page.locator('#draft').inputValue(),'Незбережений текст');
   await page.screenshot({path:path.join(output,`badge-${width}.png`),fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`badge overflow ${width}`);
-  await page.locator('[data-admin-tab="bank-incoming"]').click();await badge.waitFor({state:'hidden'});await page.locator('[data-bank-reload]').waitFor();
+  const owner=await context.newPage();await owner.goto(origin+'/notifications-test?role=owner');
+  await owner.locator('[data-admin-tab="bank-incoming"]').click();await owner.waitForFunction(()=>document.querySelector('[data-bank-new-badge]').dataset.state==='unassigned');
+  assert.equal(await badge.getAttribute('data-state'),'new');assert.equal(await badge.textContent(),'3');
+  await owner.locator('[data-admin-tab="orders"]').click();
+  await page.locator('[data-admin-tab="bank-incoming"]').click();await page.waitForFunction(()=>document.querySelector('[data-bank-new-badge]').dataset.state==='unassigned');await page.locator('[data-bank-reload]').waitFor();
+  assert.equal(await badge.textContent(),'3');assert.equal(await badge.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(219, 234, 254)');
   assert.equal(await page.locator('.bank-connection,.bank-setup,.bank-note').count(),0);
   assert.equal(await page.getByText('Рахунки клієнтам',{exact:true}).count(),0);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM bank_incoming WHERE order_id IS NOT NULL').get().n,0);
   await page.screenshot({path:path.join(output,`manager-bank-${width}.png`),fullPage:true});
-  await page.locator('[data-admin-tab="orders"]').click();insert('p4');await page.waitForFunction(()=>document.querySelector('[data-bank-new-badge]').textContent==='1');
-  assert.equal(await badge.isVisible(),true);assert.deepEqual(errors,[]);await context.close();
-  console.log(`PASS ${width}px: live badge 2 → 3 → viewed → 0 → new receipt → 1; no page reload; manager-only operations; no payment links changed`);
+  await page.locator('[data-admin-tab="orders"]').click();await page.screenshot({path:path.join(output,`badge-blue-${width}.png`),fullPage:true});
+  insert('p4');await page.waitForFunction(()=>document.querySelector('[data-bank-new-badge]').textContent==='1');assert.equal(await badge.getAttribute('data-state'),'new');
+  await page.locator('[data-admin-tab="bank-incoming"]').click();await page.waitForFunction(()=>document.querySelector('[data-bank-new-badge]').dataset.state==='unassigned' && document.querySelector('[data-bank-new-badge]').textContent==='4');
+  db.exec("UPDATE bank_incoming SET order_id='test-order',review_reason=NULL");await badge.waitFor({state:'hidden'});
+  assert.equal(await owner.locator('[data-bank-new-badge]').getAttribute('data-state'),'new');
+  await owner.locator('[data-admin-tab="bank-incoming"]').click();await owner.locator('[data-bank-new-badge]').waitFor({state:'hidden'});
+  assert.deepEqual(errors,[]);await context.close();
+  console.log(`PASS ${width}px: independent owner/Andrii views, orange 3 → blue 3 → orange 1 → blue 4 → assigned → hidden; synthetic data only`);
 }
 }finally{await browser.close();await new Promise(r=>server.close(r));db.close();}
