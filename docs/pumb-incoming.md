@@ -186,7 +186,10 @@ financial tables as a rollback. Existing admin functionality works with the adde
 
 In «Замовлення» → «Дії», the **₴ / Оплата** button directly below the pencil (left
 action stack, separate from the delete action) opens a small floating menu over the
-table without adding rows or shifting orders. It loads fresh, unassigned, safe UAH incoming receipts for
+table without adding rows or shifting orders. A linked incoming receipt turns the
+button blue with «Є оплата», including partial receipts; it remains available for
+additional payments. This uses actual non-ignored linked bank receipts, not a
+manually selected paid status, and survives reloads. It loads fresh, unassigned, safe UAH incoming receipts for
 today and the preceding six Kyiv calendar days (`available=1&days=7`). Assigned,
 ignored, outbound, future-dated and flagged unsafe facts are excluded by the
 existing server filter. Pagination retains access to more than 50 eligible receipts.

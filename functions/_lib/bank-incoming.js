@@ -2,7 +2,7 @@ import { invoiceAmount, validateReady } from '../../admin/documents/model.js';
 import { bankError, bankFailure, normalizeIban, pumbSession, bankAccounts, bankTransactions, bankRange } from './pumb-api.js';
 import { recordAuditEvent } from './audit-log.js';
 import { saveConnectDiagnostic, safeBankDiagnostic } from './bank-diagnostics.js';
-import { refreshLinkedOrderStatuses, invoiceSuggestions } from './bank-payment-links.js';
+import { refreshLinkedOrderStatuses, invoiceSuggestions, linkedBankPaymentSql } from './bank-payment-links.js';
 
 const now=()=>new Date().toISOString();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -212,7 +212,7 @@ export async function readIncoming(env,{orderId='',page=1,unmatched=false,availa
   const payments=await all(env,"SELECT invoice_key,SUM(amount_minor) received_minor FROM bank_incoming WHERE ignored=0 AND review_reason IS NULL AND direction='INBOUND' AND invoice_key IS NOT NULL GROUP BY invoice_key");
   const flagged=await all(env,"SELECT account_iban,currency,purpose,invoice_key FROM bank_incoming WHERE ignored=0 AND review_reason IS NOT NULL");
   const facts=await all(env,`SELECT id,account_iban,fingerprint FROM bank_incoming WHERE id IN (${rows.length?rows.map(()=>'?').join(','):'NULL'})`,...rows.map(r=>r.id));
-  return {connection:await connectionStatus(env),summary,...(orderId?{order:await first(env,'SELECT id,order_number,customer_name,revenue_uah,payment_status,status FROM orders WHERE id=?',orderId)}:{}),rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
+  return {connection:await connectionStatus(env),summary,...(orderId?{order:await first(env,`SELECT id,order_number,customer_name,revenue_uah,payment_status,status,${linkedBankPaymentSql} AS has_bank_payment FROM orders WHERE id=?`,orderId)}:{}),rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
     suggestions:row.order_id?[]:invoiceSuggestions({...row,account_iban:fact?.account_iban},invoices)};}),page,invoices:invoices.map(({iban,...i})=>{
     const received=payments.find(p=>p.invoice_key===i.key)?.received_minor || 0;
     const review=flagged.some(t=>t.invoice_key===i.key || matchingInvoices(t,[{...i,iban}]).length);

@@ -10,6 +10,7 @@ import {
 } from "../../_lib/crm.js";
 import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
 import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
+import { linkedBankPaymentSql } from "../../_lib/bank-payment-links.js";
 
 function supplierPaymentStateSql(options) {
   const legacy = "CASE WHEN orders.status = 'paid' THEN 'paid' ELSE 'unpaid' END";
@@ -33,6 +34,7 @@ function orderSelect(options = {}) {
   return `
     SELECT
       orders.*,
+      ${options.hasBankIncoming ? linkedBankPaymentSql : '0'} AS has_bank_payment,
       ${options.hasSupplierDocuments ? '(SELECT COUNT(*) FROM supplier_document_links d WHERE d.order_id=orders.id AND d.archived_at IS NULL)' : '0'} AS supplier_document_count,
       ${supplierPaymentStateSql(options)} AS supplier_payment_status,
       ${options.hasCustomerNumber ? "customers.customer_number" : "NULL"} AS customer_number,
@@ -226,6 +228,7 @@ export async function onRequestGet({ request, env }) {
     hasSupplierRequests: await tableHasColumn(env, "supplier_requests", "id"),
     hasOrderStatusEvents: await tableHasColumn(env, "order_status_events", "status"),
     hasSupplierDocuments: await tableHasColumn(env, 'supplier_document_links', 'document_id'),
+    hasBankIncoming: await tableHasColumn(env, 'bank_incoming', 'order_id'),
   };
   const { where, binds } = buildWhere(url, options);
   const limit = Math.min(Math.max(integer(url.searchParams.get("limit")) || 100, 1), 500);

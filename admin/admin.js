@@ -13,7 +13,7 @@ import { createAccountingProviderView } from "./accounting-provider.js?v=2026100
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
-import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-design';
+import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-linked';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-badge-states';
 
 const state = {
@@ -382,6 +382,7 @@ const orderPaymentPicker=createOrderPaymentPicker(document.querySelector('[data-
     bankNotifications.refresh();
     const order=state.orders.find(o=>o.id===updated?.id);if(!order)return;
     order.payment_status=updated.payment_status;
+    order.has_bank_payment=updated.has_bank_payment;
     if(state.selectedOrder?.id===updated.id){
       state.selectedOrder.payment_status=updated.payment_status;
       const form=document.querySelector('[data-order-editor]');
@@ -2571,7 +2572,7 @@ function renderOrders() {
                   <button class="admin-btn admin-btn--icon orders-table__open" type="button" data-open-order="${escapeHtml(order.id)}" aria-label="Відкрити картку ${escapeHtml(publicNumber)}" title="Відкрити картку">
                     <span aria-hidden="true">✎</span>
                   </button>
-                  ${order.status!=='canceled'?orderPaymentButton(order.id,publicNumber):''}
+                  ${order.status!=='canceled'?orderPaymentButton(order.id,publicNumber,order.has_bank_payment):''}
                   </div>
                   <div class="orders-table__china-stack">
                     ${order.type === "parts" ? `<button class="admin-btn admin-btn--small orders-table__china" type="button" data-order-to-china="${escapeHtml(order.id)}" aria-label="Запит у Китай для ${escapeHtml(publicNumber)}" title="Запит у Китай">
@@ -3823,7 +3824,7 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
       if(!updated || state.selectedOrder?.id!==updated.id)return;
       // Refresh only the persisted bank status. Do not discard other form edits.
       state.selectedOrder.payment_status=updated.payment_status;
-      const listed=state.orders.find(o=>o.id===updated.id);if(listed)listed.payment_status=updated.payment_status;
+      const listed=state.orders.find(o=>o.id===updated.id);if(listed){listed.payment_status=updated.payment_status;listed.has_bank_payment=updated.has_bank_payment;}
       form.elements.payment_status.value=updated.payment_status;
       orderFormBaseline=JSON.stringify(JSON.parse(orderFormBaseline).map(([name,value])=>[name,name==='payment_status'?updated.payment_status:value]));
       renderOrders();updateOrderSaveState();

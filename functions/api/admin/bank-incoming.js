@@ -1,7 +1,7 @@
 import { adminUser, unauthorized } from '../../_lib/auth.js';
 import { json } from '../../_lib/http.js';
 import { readIncoming, connectBank, pauseBank, syncBank, invoiceIndex } from '../../_lib/bank-incoming.js';
-import { linkPayment } from '../../_lib/bank-payment-links.js';
+import { linkPayment, linkedBankPaymentSql } from '../../_lib/bank-payment-links.js';
 import { bankError, bankFailure } from '../../_lib/pumb-api.js';
 import { lastConnectDiagnostic, safeBankDiagnostic } from '../../_lib/bank-diagnostics.js';
 
@@ -28,7 +28,7 @@ export async function onRequest({request,env}) {
     if(data.action==='link') {
       if(!canLink) throw bankError('bank_link_forbidden',403);
       const result=await linkPayment(env,data,await invoiceIndex(env),user.name);
-      const order=await env.DB.prepare('SELECT id,payment_status,revenue_uah FROM orders WHERE id=?').bind(data.order_id).first();
+      const order=await env.DB.prepare(`SELECT id,payment_status,revenue_uah,${linkedBankPaymentSql} AS has_bank_payment FROM orders WHERE id=?`).bind(data.order_id).first();
       return json({...result,order});
     }
     // Andrii may reconcile receipts, never manage bank credentials or connection controls.

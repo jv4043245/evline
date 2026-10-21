@@ -25,6 +25,10 @@
 .orders-table__payment-caret { font-size:8px;line-height:1; }
 .orders-table__payment:hover,.orders-table__payment[aria-expanded="true"] { background:#dff3e8;border-color:#087751; }
 .orders-table__payment:focus-visible { outline:2px solid #087751;outline-offset:2px; }
+.orders-table__payment--linked { color:#174ea6;background:#e8f0ff;border-color:#9dbbee; }
+.orders-table__payment--linked .orders-table__payment-label { white-space:nowrap;font-size:8px; }
+.orders-table__payment--linked:hover,.orders-table__payment--linked[aria-expanded="true"] { color:#123d82;background:#d9e7ff;border-color:#527fc6; }
+.orders-table__payment--linked:focus-visible { outline-color:#174ea6; }
 .order-payment-menu { position:fixed;z-index:20000;box-sizing:border-box;margin:0;padding:12px;background:#fff;color:#18352b;border:1px solid #d6e5de;border-radius:12px;box-shadow:0 12px 36px #193e292b;overflow:auto;overscroll-behavior:contain;font:13px/1.4 Arial,sans-serif;text-align:left; }
 .order-payment-menu button { font:inherit;cursor:pointer;border:0;border-radius:7px;padding:7px 10px;background:#f1f6f3;color:#17543e; }
 .order-payment-menu button:disabled { cursor:wait;opacity:.5; }

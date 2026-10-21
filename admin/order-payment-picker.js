@@ -2,8 +2,16 @@ import { bankErrorMessage } from './bank-incoming.js?v=20261021-order-payment';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'}).format(Number(n)/100);
-export function orderPaymentButton(id,number) {
-  return `<button class="admin-btn orders-table__payment" type="button" data-order-payment="${escape(id)}" aria-expanded="false" aria-haspopup="dialog" aria-label="Прив’язати оплату до ${escape(number)}" title="Прив’язати оплату"><span class="orders-table__payment-symbol" aria-hidden="true">₴<span class="orders-table__payment-caret">▾</span></span><span class="orders-table__payment-label">Оплата</span></button>`;
+const paymentTitle=linked=>linked?'Є прив’язана оплата. Можна додати ще один платіж':'Прив’язати оплату';
+export function orderPaymentButton(id,number,linked=false) {
+  linked=Boolean(Number(linked));
+  return `<button class="admin-btn orders-table__payment${linked?' orders-table__payment--linked':''}" type="button" data-order-payment="${escape(id)}" data-order-payment-number="${escape(number)}" aria-expanded="false" aria-haspopup="dialog" aria-label="${paymentTitle(linked)} — ${escape(number)}" title="${paymentTitle(linked)}"><span class="orders-table__payment-symbol" aria-hidden="true">₴<span class="orders-table__payment-caret">▾</span></span><span class="orders-table__payment-label">${linked?'Є оплата':'Оплата'}</span></button>`;
+}
+function updatePaymentButton(button,linked) {
+  if(!button)return;
+  linked=Boolean(Number(linked));button.classList.toggle('orders-table__payment--linked',linked);
+  button.title=paymentTitle(linked);button.setAttribute('aria-label',`${paymentTitle(linked)} — ${button.dataset.orderPaymentNumber || button.dataset.orderPayment}`);
+  const label=button.querySelector('.orders-table__payment-label');if(label)label.textContent=linked?'Є оплата':'Оплата';
 }
 
 // Body-level overlay avoids table clipping and never inserts rows or shifts orders.
@@ -54,7 +62,7 @@ export function createOrderPaymentPicker(table,api,{onLinked=()=>{},beforeLink=(
       const [details,available]=await Promise.all([api(`/api/admin/bank-incoming?order_id=${encodeURIComponent(orderId)}`),api(`/api/admin/bank-incoming?available=1&days=7&page=${page}`)]);
       if(current!==revision || !panel)return;
       if(!details.can_link || !details.order || details.order.status==='canceled')throw Error('bank_link_forbidden');
-      order=details.order;rows=available.rows;count=Number(available.summary.count);loading=false;render();
+      order=details.order;updatePaymentButton(trigger,order.has_bank_payment);rows=available.rows;count=Number(available.summary.count);loading=false;render();
       panel.querySelector('[data-payment-choice]')?.focus({preventScroll:true});
       return true;
     } catch(error){if(current===revision && panel){loading=false;order=null;rows=[];render(bankErrorMessage(error.message),true);}return false;}
@@ -75,7 +83,7 @@ export function createOrderPaymentPicker(table,api,{onLinked=()=>{},beforeLink=(
     try {
       const result=await api('/api/admin/bank-incoming',{method:'POST',body:JSON.stringify(payload)});
       if(current!==revision || !panel)return;
-      onLinked(result.order);saving=false;trigger.disabled=false;
+      updatePaymentButton(trigger,result.order?.has_bank_payment);onLinked(result.order);saving=false;trigger.disabled=false;
       // Refresh before allowing another choice; never reuse linked candidates.
       const savedPanel=panel,refreshed=await load();
       if(panel===savedPanel && !loading){render(refreshed?'Оплату прив’язано. Статус замовлення оновлено.':'Оплату збережено, але список не оновився. Спробуйте оновити список.');panel.querySelector('[data-payment-close]')?.focus();}

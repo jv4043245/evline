@@ -3,6 +3,8 @@ import { recordAuditEvent } from './audit-log.js';
 
 const first=(env,sql,...args)=>env.DB.prepare(sql).bind(...args).first();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
+// A linked receipt is distinct from a manually selected "paid" order status.
+export const linkedBankPaymentSql = "EXISTS(SELECT 1 FROM bank_incoming b WHERE b.order_id=orders.id AND b.ignored=0 AND b.direction='INBOUND')";
 
 // Only linked, verified incoming bank facts count. Invoice prepayment != full order price.
 export async function refreshOrderPaymentStatus(env,orderId,actor='ПУМБ') {

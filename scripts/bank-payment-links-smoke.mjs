@@ -14,8 +14,8 @@ const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
 const root=path.resolve(import.meta.dirname,'..'),output='/tmp/evline-payment-links-browser';await mkdir(output,{recursive:true});
 const nav=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<nav class="admin-tabs"[\s\S]*?<\/nav>/)[0];
 const columns=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<colgroup>[\s\S]*?<\/colgroup>/)[0];
-const listActions=`<div class="orders-table__actions"><div class="orders-table__primary-stack">
-  <button class="admin-btn admin-btn--icon orders-table__open" type="button">✎</button>${orderPaymentButton('test-order','O-SMOKE')}</div>
+const listActions=(linked=false)=>`<div class="orders-table__actions"><div class="orders-table__primary-stack">
+  <button class="admin-btn admin-btn--icon orders-table__open" type="button">✎</button>${orderPaymentButton('test-order','O-SMOKE',linked)}</div>
   <div class="orders-table__china-stack"><button class="admin-btn admin-btn--small orders-table__china" type="button">В Китай</button><button class="admin-btn admin-btn--icon admin-btn--subtle-danger orders-table__delete" type="button" aria-label="Видалити заявку"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg></button></div></div>`;
 const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
 for(const file of (await readdir(path.join(root,'migrations'))).filter(f=>f.endsWith('.sql')).sort())db.exec(await readFile(path.join(root,'migrations',file),'utf8'));
@@ -32,7 +32,7 @@ const server=createServer(async(req,res)=>{try{
       const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{authorization:'Bearer synthetic-manager','content-type':'application/json'}});const j=await r.json();if(!r.ok)throw Error(j.error);return j};
       const table=document.querySelector('[data-orders]'),picker=createOrderPaymentPicker(table,api,{onLinked:o=>document.querySelector('#payment-status').textContent=o.payment_status});
       table.onclick=e=>{const b=e.target.closest('[data-order-payment]');if(b){picker.toggle(b);return;}if(e.target.closest('[data-order-payment-panel-row]'))return;window.unexpectedOrderOpen=true;};
-    </script></body></html>`.replace('<thead>',columns+'<thead>').replace(/<div class="orders-table__actions">[\s\S]*?<\/td>/,listActions+'</td>'));return;
+    </script></body></html>`.replace('<thead>',columns+'<thead>').replace(/<div class="orders-table__actions">[\s\S]*?<\/td>/,listActions(db.prepare("SELECT EXISTS(SELECT 1 FROM bank_incoming WHERE order_id='test-order' AND ignored=0 AND direction='INBOUND') AS linked").get().linked)+'</td>'));return;
   }
   if(url.pathname==='/notifications-test'){
     res.setHeader('content-type','text/html; charset=utf-8');
@@ -87,6 +87,7 @@ for(const width of [1440,390,320]){
   const context=await browser.newContext({viewport:{width,height:1000}});await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/list-test');
   const before=await page.locator('[data-order-id]').boundingBox();
+  assert.equal(await page.locator('.orders-table__payment--linked').count(),0);
   const pencil=await page.locator('.orders-table__open').boundingBox(),pay=await page.locator('[data-order-payment]').boundingBox(),trash=await page.locator('.orders-table__delete').boundingBox();
   assert.equal(pay.x,pencil.x);assert.ok(pay.y>=pencil.y+pencil.height+5);assert.ok(pay.x+pay.width<=trash.x);assert.equal(pay.width,width<=760?44:42);assert.equal(pay.height,width<=760?44:42);
   const china=await page.locator('.orders-table__china').boundingBox();
@@ -103,11 +104,14 @@ for(const width of [1440,390,320]){
   await page.locator('[data-payment-choice=p1]').click();assert.equal(db.prepare("SELECT order_id FROM bank_incoming WHERE id='p1'").get().order_id,null);
   await page.locator('[data-payment-confirm]').click();
   await page.locator('.order-payment-menu__message').filter({hasText:'Оплату прив’язано'}).waitFor();assert.equal(await page.locator('#payment-status').textContent(),'partial');
+  assert.equal(await page.locator('.orders-table__payment--linked').count(),1);assert.match(await page.locator('[data-order-payment]').innerText(),/Є оплата/);
   assert.equal(await page.locator('[data-payment-choice]').count(),1);assert.equal(await page.locator('[data-payment-choice=p1]').count(),0);
   await page.locator('[data-payment-choice=p2]').click();await page.screenshot({path:path.join(output,`list-confirm-${width}.png`),fullPage:true});
   await page.keyboard.press('Escape');assert.equal(await page.locator('.order-payment-menu').count(),0);assert.equal(await page.locator('[data-order-payment]').getAttribute('aria-expanded'),'false');
   await page.locator('[data-order-payment]').click();await page.locator('[data-payment-choice]').waitFor();await page.locator('h2').click();assert.equal(await page.locator('.order-payment-menu').count(),0);
-  assert.equal(await page.evaluate(()=>Boolean(window.unexpectedOrderOpen)),false);assert.deepEqual(errors,[]);await context.close();
+  assert.equal(await page.evaluate(()=>Boolean(window.unexpectedOrderOpen)),false);assert.deepEqual(errors,[]);
+  await page.reload();assert.equal(await page.locator('.orders-table__payment--linked').count(),1);assert.equal(await page.locator('[data-order-payment]').isEnabled(),true);
+  await page.screenshot({path:path.join(output,`list-linked-${width}.png`),fullPage:true});await context.close();
   console.log(`PASS ${width}px: order-list weekly picker, excludes old/linked receipts, explicit consent, live status, Escape, no unintended order open`);
 }
 for(const width of [1440,390,320]){

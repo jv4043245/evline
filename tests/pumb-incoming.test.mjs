@@ -198,7 +198,10 @@ test('payment action has a visible hryvnia label, accessible dropdown semantics 
   const button=dom.window.document.querySelector('button');assert.match(button.textContent,/₴[\s\S]*Оплата/);
   assert.equal(button.getAttribute('aria-haspopup'),'dialog');assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(button.getAttribute('onclick'),null);assert.equal(button.getAttribute('title'),'Прив’язати оплату');assert.equal(dom.window.document.querySelector('script'),null);
   const source=await readFile(new URL('../admin/admin.js',import.meta.url),'utf8');
-  assert.match(source,/<div class="orders-table__primary-stack">[\s\S]*?data-open-order=[\s\S]*?orderPaymentButton\(order.id,publicNumber\)[\s\S]*?<\/div>\s*<div class="orders-table__china-stack">/);
+  assert.match(source,/<div class="orders-table__primary-stack">[\s\S]*?data-open-order=[\s\S]*?orderPaymentButton\(order.id,publicNumber,order.has_bank_payment\)[\s\S]*?<\/div>\s*<div class="orders-table__china-stack">/);
+  const linked=new JSDOM(orderPaymentButton('o1','O-1',1));t.after(()=>linked.window.close());
+  const linkedButton=linked.window.document.querySelector('button');assert.ok(linkedButton.classList.contains('orders-table__payment--linked'));assert.match(linkedButton.textContent,/Є оплата/);assert.match(linkedButton.title,/ще один платіж/);assert.equal(linkedButton.disabled,false);
+  assert.doesNotMatch(orderPaymentButton('o1','O-1',0),/orders-table__payment--linked/);
 });
 test('order-list payment panel loads only unassigned last-week receipts and requires explicit confirmation',async t=>{
   const {env,db}=setup(t),today=kyivDay(),day=n=>new Date(Date.parse(today+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
@@ -220,6 +223,7 @@ test('order-list payment panel loads only unassigned last-week receipts and requ
   doc.querySelector('[data-payment-confirm]').click();
   const end=Date.now()+5000;while(!doc.querySelector('.order-payment-menu__message')?.textContent.includes('Оплату прив’язано')){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,10));}
   assert.equal(updated.id,'o1');assert.equal(updated.payment_status,'partial');
+  assert.equal(updated.has_bank_payment,1);assert.ok(button.classList.contains('orders-table__payment--linked'));
   assert.equal(doc.querySelectorAll('[data-payment-choice]').length,1);
   assert.equal(calls.filter(c=>c.options).length,1);
   doc.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));

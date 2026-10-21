@@ -85,6 +85,17 @@ function fixture(t, { history = true, extraOrders = 0, payments = false } = {}) 
   return { db, rows, statements, select, get, response };
 }
 
+test("linked payment indicator uses bank receipts, not manual paid status, and tolerates a missing bank table", async (t) => {
+  const {db,get}=fixture(t);
+  assert.ok((await get()).orders.every(o=>o.has_bank_payment===0));
+  db.exec(`CREATE TABLE bank_incoming (id TEXT PRIMARY KEY,order_id TEXT,ignored INTEGER,direction TEXT);
+    INSERT INTO bank_incoming VALUES ('linked','partial-air',0,'INBOUND'),('ignored','paid-later',1,'INBOUND'),('out','no-mode',0,'OUTBOUND'),('unassigned',NULL,0,'INBOUND');`);
+  const orders=(await get()).orders;
+  assert.deepEqual(orders.filter(o=>o.has_bank_payment===1).map(o=>o.id),['partial-air']);
+  db.exec("DELETE FROM bank_incoming WHERE id='linked'");
+  assert.ok((await get()).orders.every(o=>o.has_bank_payment===0));
+});
+
 test("customer payment filter is independent of workflow and supplier-paid timestamps", (t) => {
   const { select } = fixture(t);
   const paid = select("payment_status=paid");
