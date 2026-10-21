@@ -43,3 +43,19 @@ for(const scenario of ['old-redirect-error','auth-refusal','redirect-blocked','r
     console.log(JSON.stringify({scenario,outbound_calls:calls.length,result}));
   } finally {await mf.dispose();}
 }
+
+const scheduler=await readFile(new URL('../workers/pumb-incoming/index.js',import.meta.url),'utf8');
+for(const scenario of ['scheduler-old-redirect-error','scheduler-redirect-blocked','scheduler-success']) {
+  const calls=[];
+  const source=(scenario==='scheduler-old-redirect-error'?scheduler.replace("redirect:'manual'","redirect:'error'"):scheduler).replace('export default','const scheduler =');
+  const entry=`export default {async fetch(){const pending=[];await scheduler.scheduled({}, {PUMB_CRON_TOKEN:'synthetic-cron'}, {waitUntil:p=>pending.push(p)});const result=await Promise.allSettled(pending);return Response.json({ok:result.every(r=>r.status==='fulfilled')});}};`;
+  const mf=new Miniflare({modules:true,compatibilityDate:'2025-08-01',script:source+'\n'+entry,outboundService:request=>{
+    calls.push({url:request.url,method:request.method});
+    return scenario==='scheduler-redirect-blocked'?new Response(null,{status:302,headers:{Location:'https://must-not-follow.invalid/'}}):Response.json({ok:true});
+  }});
+  try {const result=await(await mf.dispatchFetch('http://localhost/')).json();
+    assert.equal(result.ok,scenario==='scheduler-success');assert.equal(calls.length,scenario==='scheduler-old-redirect-error'?0:1);
+    if(calls.length)assert.deepEqual(calls[0],{url:'https://evline.com.ua/api/cron/bank-incoming',method:'POST'});
+    console.log(JSON.stringify({scenario,outbound_calls:calls.length,result}));
+  }finally{await mf.dispose();}
+}

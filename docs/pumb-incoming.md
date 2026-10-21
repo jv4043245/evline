@@ -131,6 +131,9 @@ Both OAuth and statement requests use `redirect: 'manual'`; any 3xx response is
 rejected as `bank_redirect`, without following or recording `Location`. Node-only
 fetch mocks do not detect this runtime incompatibility; use the isolated workerd
 regression check in `scripts/test-pumb-runtime.mjs` as well as the unit suite.
+The scheduled PUMB HTTP call also uses manual redirect handling and rejects any
+non-2xx response without following Location. Runtime tests cover the scheduler
+separately; publishing Pages alone does not deploy this shared Worker fix.
 
 Rollback: pause the bank connection, then roll back the site deployment if needed.
 Do not remove the shared cron trigger: tracking and reminders use it too. A scheduler

@@ -148,13 +148,14 @@ test('manual UI searches and explicitly confirms a selected order without touchi
     if(path.startsWith('/api/admin/orders?'))return {total:1,orders:[{id:'o1',order_number:'O-TEST',customer_name:'Тест',revenue_uah:100,status:'new'}]};
     return {...await readIncoming(env,{orderId:path.includes('order_id=')?'o1':''}),can_link:true,can_manage:false};
   });
+  const waitFor=async check=>{const deadline=Date.now()+10000;while(!check()){assert.ok(Date.now()<deadline,'UI condition timed out');await new Promise(r=>setTimeout(r,10));}};
   await view.load();root.querySelector('[data-bank-link]').click();
   assert.equal(root.querySelector('[data-bank-confirm]'),null);
   root.querySelector('[name=query]').value='O-TEST';root.querySelector('[data-bank-search]').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
-  await new Promise(r=>setTimeout(r,10));assert.equal(root.querySelector('[data-bank-confirm]'),null);
-  const select=root.querySelector('[data-bank-choose]');select.value='o1';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,10));
+  await waitFor(()=>root.querySelector('[data-bank-choose]'));assert.equal(root.querySelector('[data-bank-confirm]'),null);
+  const select=root.querySelector('[data-bank-choose]');select.value='o1';select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await waitFor(()=>root.querySelector('[data-bank-confirm]'));
   const form=root.querySelector('[data-bank-confirm]');form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));assert.equal(posts.length,0);
-  form.elements.confirmed.checked=true;form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,15));
+  form.elements.confirmed.checked=true;form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await waitFor(()=>!root.querySelector('[data-bank-link]'));
   assert.equal(posts.length,1);assert.equal(posts[0].action,'link');assert.equal(posts[0].order_id,'o1');
   assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'paid');assert.equal(root.querySelector('[data-bank-link]'),null);view.reset();
 });

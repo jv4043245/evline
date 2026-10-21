@@ -97,7 +97,7 @@ export default {
         worker: "evline-crm-tracking-cron",
         has_token: Boolean(env.CRON_SYNC_TOKEN),
         has_pumb_token: Boolean(env.PUMB_CRON_TOKEN),
-        schedule_revision: "shared-pumb-15m-legacy-2h-v1",
+        schedule_revision: "shared-pumb-15m-legacy-2h-v2",
         sync_url: env.CRM_TRACKING_SYNC_URL || DEFAULT_SYNC_URL,
       });
     }

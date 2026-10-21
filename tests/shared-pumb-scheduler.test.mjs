@@ -35,7 +35,7 @@ test('96 daily ticks poll PUMB while preserving 12 legacy runs and Kyiv reminder
   assert.equal(calls.filter(c=>c.kind==='supplier-documents').length,5);
   for(const c of calls) {
     assert.equal(c.options.headers.authorization,`Bearer ${c.kind==='bank-incoming'?'bank-test':c.kind==='tracking-sync'?'tracking-test':'reminder-test'}`);
-    if(c.kind==='bank-incoming') {assert.equal(c.options.redirect,'error');assert.ok(c.options.signal);}
+    if(c.kind==='bank-incoming') {assert.equal(c.options.redirect,'manual');assert.ok(c.options.signal);}
   }
 });
 test('failure of any task cannot suppress the other two',async t=>{
@@ -61,7 +61,7 @@ test('manual tracking endpoint is still protected and never starts a bank sync',
   const allowed=await worker.fetch(new Request('https://worker.test/run',{method:'POST',headers:{authorization:'Bearer tracking-test'}}),env);
   assert.equal(allowed.status,200);assert.deepEqual(calls.map(c=>c.kind),['tracking-sync']);
   const health=await (await worker.fetch(new Request('https://worker.test/health'),env)).json();
-  assert.equal(health.schedule_revision,'shared-pumb-15m-legacy-2h-v1');
+  assert.equal(health.schedule_revision,'shared-pumb-15m-legacy-2h-v2');
   assert.equal(health.has_pumb_token,true);assert.doesNotMatch(JSON.stringify(health),/bank-test|tracking-test|reminder-test/);
 });
 test('only the existing shared worker owns a production cron trigger',async()=>{
