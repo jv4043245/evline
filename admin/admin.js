@@ -12,7 +12,7 @@ import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
-import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb-links';
+import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-pumb-two-way';
 
 const state = {
   range: "30d",
@@ -3787,7 +3787,19 @@ https://t.me/evline_crm_bot?start=order_${escapeHtml(order.id)}</textarea>
   });
 
   applyShippingSelection(form, { overwriteCost: !Number(order.delivery_cost_uah || 0) });
-  mountBankOrderSummary(form.querySelector('[data-bank-order-summary]'),order.id,api);
+  mountBankOrderSummary(form.querySelector('[data-bank-order-summary]'),order.id,api,{
+    beforeLink:()=>orderSaving || orderIsDirty()?'Спочатку збережіть зміни замовлення, потім підтвердьте прив’язку платежу.':'',
+    onBusy:value=>{orderSaving=value;updateOrderSaveState();},
+    onLinked:updated=>{
+      if(!updated || state.selectedOrder?.id!==updated.id)return;
+      // Refresh only the persisted bank status. Do not discard other form edits.
+      state.selectedOrder.payment_status=updated.payment_status;
+      const listed=state.orders.find(o=>o.id===updated.id);if(listed)listed.payment_status=updated.payment_status;
+      form.elements.payment_status.value=updated.payment_status;
+      orderFormBaseline=JSON.stringify(JSON.parse(orderFormBaseline).map(([name,value])=>[name,name==='payment_status'?updated.payment_status:value]));
+      renderOrders();updateOrderSaveState();
+    },
+  });
   orderDocumentsController = mountSupplierDocuments(form.querySelector('[data-supplier-documents]'), {order,payments:state.selectedSupplierPayments,suppliers:supplierDirectory,getHeaders:headers,onCountChanged:setSupplierDocumentCount,onStateChanged:()=>queueMicrotask(updateOrderSaveState),draft:documentDraft});
   orderFormBaseline = orderFormSnapshot();
   for (const entry of draft) {

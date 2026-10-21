@@ -7,6 +7,7 @@ const codes = new Set(('bank_unavailable bank_auth bank_rate_limit bank_response
 export const safeBankCode = code => codes.has(code) ? code : 'bank_unavailable';
 codes.add('bank_redirect');
 codes.add('bank_match_conflict');
+codes.add('bank_link_forbidden');
 export function safeBankDiagnostic(value={}) {
   return {
     stage: stages.has(value.stage) ? value.stage : 'validation',

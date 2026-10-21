@@ -194,11 +194,16 @@ export async function syncBank(env,{fetcher=fetch,force=false}={}) {
     throw bankError(code,503,safeBankDiagnostic(e));
   }
 }
-export async function readIncoming(env,{orderId='',page=1,unmatched=false}={}) {
+export async function readIncoming(env,{orderId='',page=1,unmatched=false,available=false,days=3}={}) {
   const invoices=await invoiceIndex(env,orderId);
   const clauses=['ignored=0'],args=[];
   if(orderId) {clauses.push('order_id=?');args.push(orderId);}
   if(unmatched) clauses.push('(order_id IS NULL OR review_reason IS NOT NULL)');
+  if(available) {
+    clauses.push("order_id IS NULL", "invoice_key IS NULL", "direction='INBOUND'", "currency='UAH'", "COALESCE(review_reason,'') NOT IN ('bank_record_changed','order_deleted','manual_review')", 'booked_at<?');
+    args.push(shiftDay(kyivDay(),1));
+    if(days) {clauses.push('booked_at>=?');args.push(shiftDay(kyivDay(),1-days));}
+  }
   const where=clauses.join(' AND ');
   const rows=await all(env,`SELECT b.id,b.currency,b.amount_minor,b.direction,b.booked_at,b.payer_name,b.purpose,b.order_id,b.invoice_number,b.invoice_key,b.review_reason,b.match_method,o.order_number
     FROM bank_incoming b LEFT JOIN orders o ON o.id=b.order_id WHERE ${clauses.map(c=>c.replace(/\border_id\b/g,'b.order_id')).join(' AND ')} ORDER BY booked_at DESC,b.id LIMIT 50 OFFSET ?`,...args,(page-1)*50);
@@ -207,7 +212,7 @@ export async function readIncoming(env,{orderId='',page=1,unmatched=false}={}) {
   const payments=await all(env,"SELECT invoice_key,SUM(amount_minor) received_minor FROM bank_incoming WHERE ignored=0 AND review_reason IS NULL AND direction='INBOUND' AND invoice_key IS NOT NULL GROUP BY invoice_key");
   const flagged=await all(env,"SELECT account_iban,currency,purpose,invoice_key FROM bank_incoming WHERE ignored=0 AND review_reason IS NOT NULL");
   const facts=await all(env,`SELECT id,account_iban,fingerprint FROM bank_incoming WHERE id IN (${rows.length?rows.map(()=>'?').join(','):'NULL'})`,...rows.map(r=>r.id));
-  return {connection:await connectionStatus(env),summary,rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
+  return {connection:await connectionStatus(env),summary,...(orderId?{order:await first(env,'SELECT id,order_number,customer_name,revenue_uah,payment_status,status FROM orders WHERE id=?',orderId)}:{}),rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
     suggestions:row.order_id?[]:invoiceSuggestions({...row,account_iban:fact?.account_iban},invoices)};}),page,invoices:invoices.map(({iban,...i})=>{
     const received=payments.find(p=>p.invoice_key===i.key)?.received_minor || 0;
     const review=flagged.some(t=>t.invoice_key===i.key || matchingInvoices(t,[{...i,iban}]).length);

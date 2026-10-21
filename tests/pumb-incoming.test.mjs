@@ -8,7 +8,7 @@ import { bankAccounts, bankTransactions, bankDate, minorUnits, parseBankJson, pu
 import { encryptCredentials, decryptCredentials, validDay, kyivDay, invoiceIndex, hasInvoiceReference, matchingInvoices, ingestTransactions, reconcile, readIncoming, connectBank, syncBank } from '../functions/_lib/bank-incoming.js';
 import { onRequest as route } from '../functions/api/admin/bank-incoming.js';
 import { onRequest as cron } from '../functions/api/cron/bank-incoming.js';
-import { createBankIncomingView, invoiceTable, paymentTable, bankErrorMessage } from '../admin/bank-incoming.js';
+import { createBankIncomingView, mountBankOrderSummary, invoiceTable, paymentTable, bankErrorMessage } from '../admin/bank-incoming.js';
 import { lastConnectDiagnostic, saveConnectDiagnostic } from '../functions/_lib/bank-diagnostics.js';
 import { adminApiError } from '../assets/js/admin-api-errors.js';
 import { linkPayment, refreshOrderPaymentStatus, invoiceSuggestions } from '../functions/_lib/bank-payment-links.js';
@@ -125,14 +125,72 @@ test('changed bank evidence removes bank-managed paid status instead of leaving 
   await ingestTransactions(env,[tx('1','99')],invoices);await reconcile(env,invoices);
   assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'unknown');
 });
-test('manual optional invoice checks account, date and remaining amount; owner-only API',async t=>{
+test('manual optional invoice checks account, date and remaining amount for owner and Andrii',async t=>{
   const {env,db}=setup(t),invoices=await invoiceIndex(env);await ingestTransactions(env,[tx('1','101')],invoices);const p=linkPayload(db,'o1',invoices[0].key);
   await assert.rejects(linkPayment(env,p,invoices,'Owner'),/bank_match_conflict/);
   await assert.rejects(linkPayment(env,p,[{...invoices[0],iban:'wrong'}],'Owner'),/bank_match_conflict/);
-  const res=await route({env,request:request({action:'link',...p},'andrii-test')});assert.equal(res.status,403);
+  const res=await route({env,request:request({action:'link',...p},'andrii-test')});assert.equal(res.status,409);
   const cross=await route({env,request:request({action:'link',...p},'owner-test',{origin:'https://evil.test'})});assert.equal(cross.status,403);
   const valid=await route({env,request:request({action:'link',...p,invoice_key:''})});assert.equal(valid.status,200);
   assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'paid');
+});
+test('Andrii may link with an audit, but bank controls and other users remain restricted',async t=>{
+  const {env,db}=setup(t);env.ADMIN_USERS_JSON=JSON.stringify([{id:'owner',name:'Owner',token:'owner-test'},{id:'other',name:'Other',token:'other-test'}]);
+  await ingestTransactions(env,[tx('1','100',{description:'Без номера'})],[]);const payload={action:'link',...linkPayload(db)};
+  for(const token of ['andrii-test','owner-test'])assert.equal((await (await route({env,request:request(null,token)})).json()).can_link,true);
+  assert.equal((await (await route({env,request:request(null,'other-test')})).json()).can_link,false);
+  const forbidden=await route({env,request:request(payload,'other-test')});assert.equal(forbidden.status,403);assert.equal((await forbidden.json()).error,'bank_link_forbidden');
+  for(const action of ['connect','pause','sync'])assert.equal((await route({env,request:request({action},'andrii-test')})).status,403);
+  assert.equal((await route({env,request:request(payload,'andrii-test',{origin:'https://evil.test'})})).status,403);
+  const linked=await route({env,request:request(payload,'andrii-test')});assert.equal(linked.status,200);assert.equal((await linked.json()).order.payment_status,'paid');
+  assert.equal(db.prepare("SELECT actor FROM admin_audit_log WHERE action='bank.payment_link'").get().actor,'Андрій');
+  assert.equal((await route({env,request:request(payload,'andrii-test')})).status,200);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='bank.payment_link'").get().n,1);
+});
+test('available receipt picker uses Kyiv calendar days, excludes unsafe/assigned facts, and paginates',async t=>{
+  const {env,db}=setup(t),today=kyivDay(),day=n=>new Date(Date.parse(today+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
+  for(let i=1;i<=58;i++)await ingestTransactions(env,[tx(String(i),'1',{description:'Без номера'})],[]);
+  db.prepare('UPDATE bank_incoming SET booked_at=?').run(today+'T00:01:00');
+  const ids=db.prepare('SELECT id FROM bank_incoming ORDER BY id').all().map(r=>r.id);
+  const update=(index,sql,...args)=>db.prepare(`UPDATE bank_incoming SET ${sql} WHERE id=?`).run(...args,ids[index]);
+  update(0,'booked_at=?',day(-3)+'T23:59:59');update(1,'booked_at=?',day(-2)+'T00:00:00');update(2,'booked_at=?',day(1)+'T00:00:00');
+  update(3,"direction='OUTBOUND'");update(4,"currency='EUR'");update(5,"order_id='o1'");update(6,"review_reason='bank_record_changed'");update(7,"review_reason='order_deleted'");update(8,"review_reason='manual_review'");update(9,'ignored=1');
+  let data=await readIncoming(env,{available:true,days:3});assert.equal(data.summary.count,49);assert.ok(data.rows.some(r=>r.id===ids[1]));assert.ok(!data.rows.some(r=>r.id===ids[0]));
+  data=await readIncoming(env,{available:true,days:7});assert.equal(data.summary.count,50);
+  for(let i=59;i<=63;i++)await ingestTransactions(env,[tx(String(i),'1',{description:'Без номера',operationDate:today+'T01:00:00'})],[]);
+  const first=await readIncoming(env,{available:true,days:0}),second=await readIncoming(env,{available:true,days:0,page:2});
+  assert.equal(first.summary.count,55);assert.equal(first.rows.length,50);assert.equal(second.rows.length,5);assert.ok(second.rows.every(r=>!first.rows.some(a=>a.id===r.id)));
+  for(const query of ['available=1&days=-1','available=1&days=4','available=1&days=no','available=1&order_id=o1']) {
+    const response=await route({env,request:new Request('https://evline.test/api/admin/bank-incoming?'+query,{headers:{authorization:'Bearer andrii-test'}})});assert.equal(response.status,400,query);
+  }
+});
+test('Andrii links from a row dropdown and from inside an order without nested forms or implicit writes',async t=>{
+  const {env,db}=setup(t);for(const [id,amount] of [['1','40.15'],['2','59.85']])await ingestTransactions(env,[tx(id,amount,{description:'Без номера',operationDate:kyivDay()+'T10:00:00'})],[]);
+  const dom=new JSDOM('<main></main><form id="order"><input name="note" value="keep"><select name="payment_status"><option>partial</option><option>paid</option></select><section id="bank"></section></form>',{url:'https://evline.test'});t.after(()=>dom.window.close());
+  const posts=[];const api=async(path,options)=>{
+    if(path.startsWith('/api/admin/orders?'))return {total:1,orders:[{id:'o1',order_number:'O-TEST',customer_name:'Тест',revenue_uah:100,status:'new'}]};
+    if(options)posts.push(JSON.parse(options.body));
+    const response=await route({env,request:new Request(new URL(path,'https://evline.test'),{method:options?'POST':'GET',headers:{authorization:'Bearer andrii-test','content-type':'application/json'},...(options?{body:options.body}:{})})});
+    const body=await response.json();if(!response.ok)throw Error(body.error);return body;
+  };
+  const waitFor=async check=>{const end=Date.now()+10000;while(!check()){assert.ok(Date.now()<end,'UI timeout');await new Promise(r=>setTimeout(r,10));}};
+  const change=el=>el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
+  const root=dom.window.document.querySelector('main'),view=createBankIncomingView(root,api);await view.load();
+  assert.equal(root.querySelector('[data-bank-connect]'),null);
+  const select=root.querySelector('[data-bank-row-order]');select.value='o1';change(select);await waitFor(()=>root.querySelector('[data-bank-confirm] select')?.options.length>1);
+  assert.equal(posts.length,0);const form=root.querySelector('[data-bank-confirm]');form.elements.confirmed.checked=true;form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>posts.length===1 && root.querySelector('[data-bank-message]')?.textContent.includes('Платіж прив’язано'));
+  assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'partial');
+  const bank=dom.window.document.querySelector('#bank');let unsaved=true,linked=null;const busy=[];
+  await mountBankOrderSummary(bank,'o1',api,{beforeLink:()=>unsaved?'Save first':'',onBusy:b=>busy.push(b),onLinked:o=>{linked=o;}});
+  assert.equal(bank.querySelector('form'),null);assert.equal(bank.querySelector('[data-order-bank-days]').value,'3');
+  assert.deepEqual([...new dom.window.FormData(dom.window.document.querySelector('#order'))],[['note','keep'],['payment_status','partial']]);
+  const picker=bank.querySelector('[data-order-bank-payment]');picker.value=picker.options[1].value;change(picker);
+  bank.querySelector('[data-order-bank-link]').click();assert.equal(posts.length,1);
+  bank.querySelector('[data-order-bank-confirmed]').checked=true;bank.querySelector('[data-order-bank-link]').click();assert.equal(posts.length,1);assert.match(bank.textContent,/Save first/);
+  unsaved=false;bank.querySelector('[data-order-bank-link]').click();await waitFor(()=>linked && busy.at(-1)===false);
+  assert.equal(linked.payment_status,'paid');assert.equal(posts.length,2);assert.equal(bank.querySelector('[data-order-bank-payment]').options.length,1);
+  assert.deepEqual(busy,[true,false]);assert.equal(dom.window.document.querySelector('[name=note]').value,'keep');view.reset();
 });
 test('name and amount suggestions never authorize automatic association',async t=>{
   const {env,db}=setup(t),invoices=await invoiceIndex(env),payment=tx('92','100',{senderName:'Тест',description:'Оплата товару'});

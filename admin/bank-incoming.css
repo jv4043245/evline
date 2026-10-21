@@ -6,3 +6,11 @@
 .bank-link-box button { min-height: 40px; white-space: normal; }
 .bank-link-box .bank-consent { display:flex;align-items:flex-start;gap:8px; }
 .bank-link-box .bank-consent input { flex-shrink:0;margin-top:3px; }
+.bank-row-picker { display:grid;gap:8px;min-width:180px;max-width:320px;margin-top:10px; }
+.bank-row-picker label { display:grid;gap:4px; }
+.bank-row-picker select { width:100%;min-width:0;min-height:40px; }
+.bank-order-summary { min-width:0; }
+.bank-order-summary .bank-link-box { display:grid;gap:12px;min-width:0; }
+.bank-confirmation { display:grid;gap:12px;border-top:1px solid #cbd5e1;padding-top:12px; }
+.bank-confirmation p { margin:0; }
+.bank-table tr[hidden] { display:none; }

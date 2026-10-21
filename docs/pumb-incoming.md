@@ -43,12 +43,21 @@ identity can have broader rights. Do not describe it as bank-enforced read-only.
   `bank_order_payment_state` records bank-managed states; apply additive migration
   **0040_bank_payment_status.sql** before deploying this version. No existing money
   or payment links are changed by that migration.
-- Owner-only **Прив’язати до замовлення** searches orders, optionally selects an
-  issued invoice and requires explicit confirmation. An unchanged bank fingerprint,
+- Owner and Andrii may select/search orders and optionally select an issued invoice.
+  Linking requires explicit confirmation. An unchanged bank fingerprint,
   amount and unassigned-row condition prevent stale confirmation, duplicate linking
   and reassignment. Repeating the same link is idempotent. Canceled orders, changed
   bank records and outgoing transactions cannot be linked through this action.
   The operation is audited. No automatic reassignment is provided.
+- Two entry points share the same guarded link API: the **Замовлення** dropdown
+  beside a bank receipt (latest 20 orders, with search for older ones), and
+  **Замовлення → Оплата → Оплати клієнта · ПУМБ → Надходження**.
+  The order picker defaults to today and the preceding two Kyiv calendar days;
+  7/30 days and all imported receipts are also available, paginated in groups of 50.
+  Only unassigned, non-ignored UAH inbound facts without blocking disputes appear.
+  Selection alone never writes. Save order edits before confirming a link.
+  Andrii cannot connect, pause, change credentials or trigger bank synchronization;
+  these controls remain owner-only. Other admin identities do not gain link rights.
 - Numeric invoice numbers, including 1/2/4, require explicit invoice wording
   (рахунок/рахунку/счет/invoice) before the bounded identifier; dates, amounts and
   unrelated order numbers do not qualify. Name/amount matches are suggestions only.
