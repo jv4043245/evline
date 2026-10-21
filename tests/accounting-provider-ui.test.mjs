@@ -240,7 +240,8 @@ function navigationHarness(t) {
   const code = adminSource.slice(adminSource.indexOf('function setActiveTab(tab)'), adminSource.indexOf('function renderSummary(data)'));
   assert.match(code, /function navigateAccountingProvider/);
   const initialize = new window.Function('state', 'guards', 'accountingProviderView', 'accountingProfitView', 'accountingPeriods', 'loads', `
-    const adminTabs = new Set(['orders','contacts','china','analytics','delivery','accounting']);
+    const adminTabs = new Set(['orders','contacts','china','analytics','delivery','accounting','bank-incoming']);
+    const bankIncomingView = { setActive: active => { guards.incomingActive = active; }, load: async () => { loads.push({bank:'incoming'}); } };
     let accountingProvider = null, accountingPanel = 'advertising', accountingIgorSection = 'china';
     const accountingIgorView = { canLeave: () => guards.igor !== false, load: async () => {} };
     const bankView = name => ({ hide: () => {}, load: async options => { loads.push({ bank: name, ...options }); } });
@@ -258,7 +259,7 @@ function navigationHarness(t) {
   return { window, document: window.document, guards, loads, navigation };
 }
 
-test('actual admin markup exposes exactly two native links, one isolated detail mount and no extra primary tab', t => {
+test('actual admin markup exposes exactly two native links, one isolated advertising detail mount and one accounting tab', t => {
   const { document } = navigationHarness(t);
   const links = [...document.querySelectorAll('[data-accounting-provider]')];
   assert.deepEqual(links.map(link => [link.tagName, link.dataset.accountingProvider, link.getAttribute('href')]), [['A', 'google', '#accounting/google'], ['A', 'meta', '#accounting/meta']]);
@@ -266,6 +267,15 @@ test('actual admin markup exposes exactly two native links, one isolated detail 
   assert.ok(document.querySelector('[data-accounting-panel="advertising"] [data-accounting-provider-view]'));
   assert.equal(document.querySelectorAll('.admin-tabs [data-admin-tab="accounting"]').length, 1);
   assert.match(adminSource, /createAccountingProviderView\(document\.querySelector\('\[data-accounting-provider-view\]'\)/);
+});
+
+test('incoming bank payments have an independent primary view and polling stops when leaving it', async t => {
+  const {document,navigation,guards,loads}=navigationHarness(t);
+  assert.equal(navigation.setActiveTab('bank-incoming'),true);await tick();
+  assert.equal(document.querySelector('[data-admin-view="bank-incoming"]').hidden,false);
+  assert.equal(document.querySelector('[data-admin-view="accounting"]').hidden,true);
+  assert.equal(guards.incomingActive,true);assert.equal(loads.at(-1).bank,'incoming');
+  navigation.setActiveTab('orders');assert.equal(guards.incomingActive,false);
 });
 
 test('actual navigation opens a card and returns to the overview with its saved period intact', async t => {
