@@ -216,3 +216,51 @@ test('diagnostic allowlist drops injected fields and provider-shaped strings on 
   db.prepare('UPDATE admin_audit_log SET details_json=? WHERE id=?').run(JSON.stringify(corrupted),result.id);
   assert.doesNotMatch(JSON.stringify(await lastConnectDiagnostic(env)),/secret-/);
 });
+
+test('statement schema errors expose only allowlisted field and format, not bank values',async()=>{
+  const accounts=bankAccounts([bankAccount]);
+  for(const [extra,field,format] of [[{amount:'123.4500'},'amount','decimal_extra_zeroes'],[{amount:'123.4567'},'amount','decimal_extra_precision'],[{operationDate:'2026-10-20 12:34:56'},'operationDate','datetime_space'],[{hostId:null},'hostId','null'],[{currencyCode:'private-bank-value'},'currencyCode','other']]) {
+    assert.throws(()=>bankTransactions([rawTx('1','1',extra)],accounts),e=>{
+      assert.equal(e.schema_field,field);assert.equal(e.schema_format,format);assert.equal(e.stage,'transactions');
+      assert.doesNotMatch(JSON.stringify(e),/private-bank-value|123\.45|12:34:56/);return true;
+    });
+  }
+});
+
+test('sync preserves safe schema diagnostics and does not advance the cursor on failure',async t=>{
+  const {env,db}=setup(t);await connectBank(env,{username:'u',password:'p',consent:true},'Owner',fakeBank());
+  const before=db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date;
+  await assert.rejects(syncBank(env,{fetcher:fakeBank([rawTx('1','123.4567')])}),e=>e.schema_field==='amount' && e.schema_format==='decimal_extra_precision');
+  assert.equal(db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date,before);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM bank_incoming').get().n,0);
+});
+
+test('posted transactions with a null ABS id use the exact documented docId',()=>{
+  const accounts=bankAccounts([bankAccount]);
+  const a=bankTransactions([rawTx(null,'42.50',{docId:'9223372036854775807'})],accounts)[0];
+  assert.equal(a.transaction_id,'1:doc:9223372036854775807');assert.equal(a.amount_minor,4250);
+  const b=bankTransactions([rawTx('777','42.50',{docId:'9223372036854775807'})],accounts)[0];
+  assert.equal(a.transaction_id,b.transaction_id);assert.deepEqual(b.alternate_transaction_ids,['1:777']);
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:null})],accounts));
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:0})],accounts));
+  assert.throws(()=>bankTransactions([rawTx(null,'42.50',{docId:9223372036854775807})],accounts));
+  assert.notEqual(a.transaction_id,bankTransactions([rawTx('9223372036854775807','42.50')],accounts)[0].transaction_id);
+});
+
+test('document replay and a later ABS id never duplicate or flag an unchanged incoming payment',async t=>{
+  const {env}=setup(t),accounts=bankAccounts([bankAccount]),invoices=await invoiceIndex(env);
+  const first=bankTransactions([rawTx(null,'42.50',{docId:'999'})],accounts);
+  const later=bankTransactions([rawTx('123','42.50',{docId:'999'})],accounts);
+  assert.equal(await ingestTransactions(env,first,invoices),1);await reconcile(env,invoices);
+  assert.equal(await ingestTransactions(env,later,invoices),0);
+  assert.equal(await ingestTransactions(env,first,invoices),0);
+  const data=await readIncoming(env);assert.equal(data.summary.count,1);assert.equal(data.summary.received_minor,4250);
+  assert.equal(data.rows[0].review_reason,null);assert.equal(data.invoices[0].received_minor,4250);
+});
+
+test('legacy ABS identity is recognized when a document ID becomes available',async t=>{
+  const {env}=setup(t),accounts=bankAccounts([bankAccount]),invoices=await invoiceIndex(env);
+  await ingestTransactions(env,bankTransactions([rawTx('777','42.50')],accounts),invoices);
+  assert.equal(await ingestTransactions(env,bankTransactions([rawTx('777','42.50',{docId:'999'})],accounts),invoices),0);
+  const data=await readIncoming(env);assert.equal(data.summary.count,1);assert.equal(data.rows[0].review_reason,'bank_record_changed');
+});

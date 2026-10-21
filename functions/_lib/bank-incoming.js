@@ -108,17 +108,24 @@ export async function ingestTransactions(env,transactions,invoices) {
     const entries=[];
     for(const tx of transactions.slice(offset,offset+40)) {
       if(tx.direction==='OUTBOUND' && !matchingInvoices(tx,invoices).length) continue;
-      entries.push({tx,id:await hash(`pumb|${tx.account_iban}|${tx.transaction_id}`),fingerprint:await hash(JSON.stringify(tx))});
+      const {alternate_transaction_ids=[],...fact}=tx;
+      const ids=await Promise.all([tx.transaction_id,...alternate_transaction_ids].map(id=>hash(`pumb|${tx.account_iban}|${id}`)));
+      entries.push({tx,id:ids[0],ids,fingerprint:await hash(JSON.stringify(fact))});
     }
     if(!entries.length)continue;
-    const existing=await all(env,`SELECT id,fingerprint FROM bank_incoming WHERE id IN (${entries.map(()=>'?').join(',')})`,...entries.map(e=>e.id));
-    const known=new Map(existing.map(e=>[e.id,e.fingerprint])),statements=[];
-    for(const {tx,id,fingerprint} of entries) {
-      if(known.has(id)) {
-        if(known.get(id)!==fingerprint) statements.push(env.DB.prepare("UPDATE bank_incoming SET review_reason='bank_record_changed' WHERE id=?").bind(id));
+    const candidateIds=[...new Set(entries.flatMap(e=>e.ids))];
+    const existing=await all(env,`SELECT id,fingerprint FROM bank_incoming WHERE id IN (${candidateIds.map(()=>'?').join(',')})`,...candidateIds);
+    const known=new Map(existing.map(e=>[e.id,e])),statements=[];
+    for(const {tx,id,ids,fingerprint} of entries) {
+      const matches=ids.map(key=>known.get(key)).filter(Boolean);
+      if(new Set(matches.map(m=>m.id)).size>1)throw bankError('bank_schema');
+      const match=matches[0];
+      if(match) {
+        if(match.fingerprint!==fingerprint) statements.push(env.DB.prepare("UPDATE bank_incoming SET review_reason='bank_record_changed' WHERE id=?").bind(match.id));
+        for(const key of ids)known.set(key,match);
         continue;
       }
-      known.set(id,fingerprint);inserted++;
+      for(const key of ids)known.set(key,{id,fingerprint});inserted++;
       statements.push(env.DB.prepare(`INSERT OR IGNORE INTO bank_incoming(id,bank,transaction_id,account_id,account_iban,currency,amount_minor,direction,booked_at,payer_name,purpose,fingerprint,first_seen_at,review_reason)
         VALUES(?,'pumb',?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id,tx.transaction_id,tx.account_id,tx.account_iban,tx.currency,tx.amount_minor,tx.direction,tx.booked_at,tx.payer_name,tx.purpose,fingerprint,now(),tx.direction==='OUTBOUND' ? 'possible_refund':null));
     }
@@ -180,7 +187,7 @@ export async function syncBank(env,{fetcher=fetch,force=false}={}) {
   } catch(e) {
     const code=bankFailure(e);
     await run(env,"UPDATE bank_connections SET last_error=?,lease_id=NULL,lease_until=NULL WHERE id='pumb' AND lease_id=?",code,lease);
-    throw bankError(code);
+    throw bankError(code,503,safeBankDiagnostic(e));
   }
 }
 export async function readIncoming(env,{orderId='',page=1,unmatched=false}={}) {
