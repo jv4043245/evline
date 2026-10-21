@@ -5,7 +5,24 @@ const statusLabels={paid:'Оплачено за випискою',partial:'Ча�
 const reviewLabels={no_invoice:'Не знайдено однозначного рахунку',ambiguous_invoice:'Кілька рахунків з цим номером',overpayment:'Сума перевищує залишок рахунку',before_invoice:'Платіж раніше дати рахунку',canceled_order:'Замовлення скасовано',possible_refund:'Можливе повернення — перевірте',bank_record_changed:'Банк змінив запис — перевірте',manual_review:'Ручна перевірка'};
 const errorLabels={bank_auth:'ПУМБ не підтвердив доступ. Перевірте логін, пароль та активацію API у банку.',bank_server_setup:'Серверний доступ ПУМБ ще не налаштовано.',bank_no_accounts:'ПУМБ не повернув доступних гривневих рахунків.',bank_date_range:'Оберіть дату в межах останніх 90 днів, не пізніше сьогодні.',bank_connection_input:'Заповніть логін, пароль і підтвердіть збереження.',bank_owner_only:'Керувати підключенням може лише власник.',bank_schema:'Формат відповіді ПУМБ потребує перевірки інтеграції. Невідомі записи не зараховано.',bank_credentials_unavailable:'Не вдалося відкрити збережений доступ. Потрібна перевірка серверного ключа.',bank_rate_limit:'Банк обмежив частоту запитів. Спробуйте пізніше.',bank_busy:'Синхронізація вже триває.',bank_response_large:'Виписка перевищила безпечний обсяг. Потрібна перевірка інтеграції.'};
 reviewLabels.order_deleted='Пов’язане замовлення видалено';
-export const bankErrorMessage = code => errorLabels[String(code).split(/[\s.]/)[0]] || 'Не вдалося отримати дані ПУМБ. Останні збережені платежі не видалено. Спробуйте пізніше.';
+Object.assign(errorLabels,{
+  bank_login_rejected:'ПУМБ відхилив авторизацію користувача. Перевірте логін і пароль для API та активацію доступу в банку. Це не помилка токена CRM.',
+  bank_client_rejected:'ПУМБ відхилив серверний доступ інтеграції. Потрібна перевірка client_id / client_secret та дозволу API; повторне введення пароля не допоможе.',
+  bank_auth_request:'ПУМБ відхилив формат запиту авторизації. Потрібна перевірка інтеграції; не вводьте пароль повторно.',
+  bank_auth_unavailable:'Не вдалося завершити авторизацію через API ПУМБ. Технічні дані відповіді наведено нижче; це не доводить, що пароль неправильний.',
+  bank_accounts_unavailable:'Авторизація пройшла, але API ПУМБ не повернув рахунки. Потрібна перевірка доступу до рахунків.',
+  bank_transactions_unavailable:'API ПУМБ не повернув виписку. Збережені платежі залишаються без змін.',
+  bank_timeout:'Час очікування API ПУМБ вичерпано. Це не підтверджує помилку пароля.',
+  bank_network:'Не вдалося завершити мережевий запит до API ПУМБ. Потрібна перевірка з’єднання сервера EVLine з банком.',
+  bank_save_failed:'Перевірка доступу пройшла, але EVLine не завершив збереження підключення. Не вводьте пароль повторно до перевірки стану.',
+  bank_encryption_failed:'EVLine не зміг зашифрувати доступ. Потрібна перевірка серверного ключа; пароль не збережено.',
+});
+const stageLabels={validation:'перевірка форми',authorization:'авторизація ПУМБ',accounts:'отримання рахунків',encryption:'шифрування',save:'збереження підключення',complete:'підключення завершено',transactions:'отримання виписки'};
+export function bankErrorMessage(code) {
+  const text=String(code),message=errorLabels[text.split(/[\s.]/)[0]] || 'Не вдалося отримати дані ПУМБ. Останні збережені платежі не видалено. Спробуйте пізніше.';
+  const d=/\[PUMB:([a-f0-9-]{36});stage:([a-z]+);http:(\d{1,3});saved:([01])\]/.exec(text);
+  return message+(d?` Етап: ${stageLabels[d[2]] || 'перевірка'}.${Number(d[3])?` HTTP банку: ${Number(d[3])}.`:''} Номер діагностики: ${d[1]}.${d[4]==='0'?' Запис діагностики не вдалося зберегти — повідомте цей номер і текст помилки.':''}`:'');
+}
 const orderButton = i => `<button type="button" class="admin-link-button" data-bank-order="${escape(i.order_id)}">${escape(i.order_number || i.order_id)}</button>`;
 export function invoiceTable(invoices,{compact=false}={}) {
   if(!invoices.length) return '<p class="muted">Немає збережених готових рахунків для зіставлення. Створіть і збережіть рахунок у документах замовлення.</p>';
@@ -29,6 +46,7 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
       ${c.last_error?`<p class="bank-error">${escape(bankErrorMessage(c.last_error))}</p>`:''}
       ${data.can_manage?`<div class="bank-actions">${c.enabled?'<button type="button" class="admin-btn" data-bank-sync>Перевірити банк зараз</button><button type="button" class="admin-btn" data-bank-pause>Призупинити</button>':''}</div>`:''}</div>
       <p data-bank-message role="status" aria-live="polite"></p>
+      ${data.can_manage && data.connect_diagnostic?.outcome==='error'?`<p class="bank-error" data-bank-diagnostic>Остання спроба підключення (${escape(timestamp(data.connect_diagnostic.at))}): ${escape(bankErrorMessage(`${data.connect_diagnostic.code} [PUMB:${data.connect_diagnostic.id};stage:${data.connect_diagnostic.stage};http:${data.connect_diagnostic.upstream_status || 0};saved:1]`))}</p>`:''}
       ${data.can_manage ? `<details class="bank-setup" ${c.configured?'':'open'}><summary>${c.configured?'Змінити / поновити підключення':'Підключити ПУМБ'}</summary>
       ${c.server_ready ? `<form data-bank-connect autocomplete="off"><p>Інтеграція лише читає рахунки та виписки: не створює і не підписує платежів. Основний банківський користувач може мати ширші права. Безпечніший варіант — окремий користувач лише для перегляду.</p>
       <label>Логін ПУМБ Digital Business<input name="username" required maxlength="200" autocomplete="off" autocapitalize="none" spellcheck="false"></label>

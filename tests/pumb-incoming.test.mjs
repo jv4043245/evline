@@ -8,7 +8,9 @@ import { bankAccounts, bankTransactions, bankDate, minorUnits, parseBankJson, pu
 import { encryptCredentials, decryptCredentials, validDay, kyivDay, invoiceIndex, hasInvoiceReference, matchingInvoices, ingestTransactions, reconcile, readIncoming, connectBank, syncBank } from '../functions/_lib/bank-incoming.js';
 import { onRequest as route } from '../functions/api/admin/bank-incoming.js';
 import { onRequest as cron } from '../functions/api/cron/bank-incoming.js';
-import { createBankIncomingView, invoiceTable, paymentTable } from '../admin/bank-incoming.js';
+import { createBankIncomingView, invoiceTable, paymentTable, bankErrorMessage } from '../admin/bank-incoming.js';
+import { lastConnectDiagnostic, saveConnectDiagnostic } from '../functions/_lib/bank-diagnostics.js';
+import { adminApiError } from '../assets/js/admin-api-errors.js';
 
 const dir=new URL('../migrations/',import.meta.url);
 const schemas=await Promise.all((await readdir(dir)).filter(f=>f.endsWith('.sql')).sort().map(f=>readFile(new URL(f,dir),'utf8')));
@@ -108,8 +110,8 @@ test('synchronization retries safely, keeps cursor on failure, and respects cool
   const cursor=db.prepare('SELECT cursor_date FROM bank_connections').get().cursor_date;
   result=await syncBank(env,{fetcher:()=>{throw new Error('should not call');}});assert.equal(result.reason,'bank_cooldown');
   db.exec('UPDATE bank_connections SET last_attempt_at=NULL');
-  await assert.rejects(syncBank(env,{fetcher:async()=>{throw new Error('secret provider error');}}),e=>e.message==='bank_unavailable');
-  const failed=db.prepare('SELECT * FROM bank_connections').get();assert.equal(failed.cursor_date,cursor);assert.equal(failed.lease_id,null);assert.equal(failed.last_error,'bank_unavailable');
+  await assert.rejects(syncBank(env,{fetcher:async()=>{throw new Error('secret provider error');}}),e=>e.message==='bank_network');
+  const failed=db.prepare('SELECT * FROM bank_connections').get();assert.equal(failed.cursor_date,cursor);assert.equal(failed.lease_id,null);assert.equal(failed.last_error,'bank_network');
   db.exec('UPDATE bank_connections SET last_attempt_at=NULL');result=await syncBank(env,{fetcher:fakeBank([rawTx()])});assert.equal(result.imported,0);
   assert.equal((await readIncoming(env)).invoices[0].received_minor,4015);
 });
@@ -133,4 +135,68 @@ test('UI escapes bank content, hides setup for managers, clears password before 
   root.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));assert.equal(calls.length,1);assert.equal(calls[0].password,'test-pass');view.reset();assert.equal(root.textContent,'');
   assert.doesNotMatch(invoiceTable([{number:'<img onerror=x>',order_id:'"onclick=x',amount_minor:1,received_minor:0,status:'unpaid'}]),/<img|onclick="x/);
   assert.doesNotMatch(paymentTable([{booked_at:'2026-10-20',payer_name:'<script>x</script>',purpose:'<img>',amount_minor:1}]),/<script>|<img>/);
+});
+
+test('OAuth errors are classified without provider descriptions or secret-shaped values',async()=>{
+  const credentials={client_id:'secret-client',client_secret:'secret-client-key',username:'secret-login',password:'secret-password'};
+  for(const [status,error,expected] of [[400,'invalid_grant','bank_login_rejected'],[401,'invalid_client','bank_client_rejected'],[400,'unauthorized_client','bank_client_rejected'],[400,'invalid_request','bank_auth_request'],[500,'server_error','bank_auth_unavailable'],[429,'invalid_grant','bank_rate_limit'],[400,'secret-provider-value','bank_auth_unavailable']]) {
+    await assert.rejects(pumbSession(credentials,async()=>Response.json({error,error_description:JSON.stringify(credentials),access_token:'secret-token'},{status})),e=>{
+      assert.equal(e.bankCode,expected);assert.equal(e.stage,'authorization');assert.equal(e.upstream_status,status);
+      assert.doesNotMatch(JSON.stringify(e),/secret-/);return true;
+    });
+  }
+  await assert.rejects(pumbSession(credentials,async()=>new Response('secret-'.repeat(2000),{status:500})),e=>e.bankCode==='bank_auth_unavailable' && e.oauth_code===null);
+  for(const name of ['TimeoutError','TypeError'])await assert.rejects(pumbSession(credentials,async()=>{throw Object.assign(new Error('secret-url-and-body'),{name});}),e=>e.bankCode===(name==='TimeoutError'?'bank_timeout':'bank_network') && !JSON.stringify(e).includes('secret-'));
+});
+
+test('failed connection records only safe metadata and preserves a working connection',async t=>{
+  const {env,db}=setup(t),data={username:'secret-login',password:'secret-password',consent:true,start_date:kyivDay()};
+  await connectBank(env,data,'Owner',fakeBank());
+  const before=db.prepare('SELECT * FROM bank_connections').get();
+  await assert.rejects(connectBank(env,data,'Owner',async()=>Response.json({error:'invalid_grant',error_description:'secret-password'},{status:400})),e=>{
+    assert.equal(e.diagnostic.saved,true);assert.equal(e.diagnostic.stage,'authorization');assert.equal(e.diagnostic.upstream_status,400);return true;
+  });
+  assert.deepEqual(db.prepare('SELECT * FROM bank_connections').get(),before);
+  const diagnostics=db.prepare("SELECT details_json FROM admin_audit_log WHERE action='bank.connect_diagnostic'").all();
+  assert.equal(diagnostics.length,2);assert.doesNotMatch(JSON.stringify(diagnostics),/secret-|username|password|access_token|error_description/);
+  const record=JSON.parse(diagnostics[1].details_json);
+  assert.deepEqual(Object.keys(record).sort(),['id','at','stage','upstream_status','oauth_code','outcome','code','elapsed_ms'].sort());
+  assert.equal(record.oauth_code,'invalid_grant');assert.ok(record.elapsed_ms>=0);
+});
+
+test('account-stage failures are distinguished from authorization and local save failures',async t=>{
+  const {env}=setup(t),data={username:'u',password:'p',consent:true,start_date:kyivDay()};
+  await assert.rejects(connectBank(env,data,'Owner',async url=>url.includes('/token')?Response.json({access_token:'secret-token'}):new Response('secret-bank-error',{status:500})),e=>e.bankCode==='bank_accounts_unavailable' && e.diagnostic.stage==='accounts' && e.diagnostic.upstream_status===500);
+  await assert.rejects(connectBank({...env,PUMB_ENCRYPTION_KEY:'malformed'},data,'Owner',fakeBank()),e=>e.bankCode==='bank_encryption_failed' && e.diagnostic.stage==='encryption');
+  const broken={...env,DB:{...env.DB,prepare(sql){if(sql.startsWith('UPDATE bank_connections'))throw new Error('secret-db-bindings');return env.DB.prepare(sql);}}};
+  await assert.rejects(connectBank(broken,data,'Owner',fakeBank()),e=>e.bankCode==='bank_save_failed' && e.diagnostic.stage==='save' && !JSON.stringify(e).includes('secret-'));
+});
+
+test('failed diagnostic storage never logs raw errors or masks the connection failure',async t=>{
+  const warns=t.mock.method(console,'warn',()=>{}),errors=t.mock.method(console,'error',()=>{});
+  const {env}=setup(t),broken={...env,DB:{prepare(){throw new Error('secret-db-error');}}};
+  await assert.rejects(connectBank(broken,{username:'u',password:'p',consent:true},'Owner',async()=>Response.json({error:'invalid_grant'},{status:400})),e=>e.bankCode==='bank_login_rejected' && e.diagnostic.saved===false);
+  assert.equal(warns.mock.callCount(),0);assert.equal(errors.mock.callCount(),0);
+});
+
+test('diagnostics survive API error translation and refresh but are omitted for managers',async t=>{
+  const {env}=setup(t);t.mock.method(globalThis,'fetch',async()=>Response.json({error:'invalid_grant',error_description:'secret-password'},{status:400}));
+  const response=await route({env,request:request({action:'connect',username:'secret-login',password:'secret-password',consent:true})});
+  assert.equal(response.status,503);const json=await response.clone().json();assert.doesNotMatch(JSON.stringify(json),/secret-/);
+  const message=bankErrorMessage(await adminApiError(response));
+  assert.match(message,/відхилив авторизацію користувача/);assert.match(message,/HTTP банку: 400/);assert.ok(message.includes(json.diagnostic.id));
+  const owner=await (await route({env,request:request()})).json();assert.equal(owner.connect_diagnostic.id,json.diagnostic.id);
+  const manager=await (await route({env,request:request(null,'andrii-test')})).json();assert.equal(manager.connect_diagnostic,undefined);
+  const dom=new JSDOM('<main></main>');t.after(()=>dom.window.close());const root=dom.window.document.querySelector('main');
+  const view=createBankIncomingView(root,async()=>owner);await view.load();assert.ok(root.querySelector('[data-bank-diagnostic]').textContent.includes(json.diagnostic.id));
+  assert.equal(root.querySelector('[name=password]').value,'');view.reset();
+});
+
+test('diagnostic allowlist drops injected fields and provider-shaped strings on write and read',async t=>{
+  const {env,db}=setup(t);
+  const result=await saveConnectDiagnostic(env,{stage:'secret-stage',oauth_code:'secret-oauth',code:'secret-code',upstream_status:'secret-http',password:'secret-password',elapsed_ms:Infinity});
+  assert.doesNotMatch(JSON.stringify(result),/secret-/);
+  const corrupted={...result,username:'secret-login',stage:'secret-stage',oauth_code:'secret-token',code:'secret-code'};
+  db.prepare('UPDATE admin_audit_log SET details_json=? WHERE id=?').run(JSON.stringify(corrupted),result.id);
+  assert.doesNotMatch(JSON.stringify(await lastConnectDiagnostic(env)),/secret-/);
 });

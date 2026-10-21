@@ -89,6 +89,22 @@ Pausing stops future polling and preserves existing records and encrypted access
 If bank password changes, reconnect through the owner form. Removing bank API
 authorization must be performed in the bank by the account owner.
 
+### Connection diagnostics
+
+Each owner connection attempt records `bank.connect_diagnostic` in the existing
+audit table: generated UUID, UTC timestamp, bounded duration, allowlisted stage,
+outcome/error code, upstream HTTP status and allowlisted OAuth error identifier.
+No login, password, client key, access token, headers, URL, response description,
+raw body or exception message is recorded. Failure to store diagnostics is caught
+without logging the database exception and is explicitly shown in the response.
+The owner bank-status response includes the latest sanitized diagnostic; the form
+shows the last failed attempt after reload. Managers do not receive that field.
+The ordinary CRM audit remains governed by existing audit access permissions.
+OAuth `invalid_grant` is distinct from client authorization, server failures,
+timeouts and transport failures. It is not proof of a mistyped password alone.
+Diagnostics do not retry requests, change bank endpoints or replace a working
+connection on authorization/account-fetch failure. No new migration is required.
+
 Rollback: pause the bank connection, then roll back the site deployment if needed.
 Do not remove the shared cron trigger: tracking and reminders use it too. A scheduler
 rollback must restore both its previous code and two-hour trigger. Keep additive
