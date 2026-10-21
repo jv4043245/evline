@@ -9,6 +9,7 @@ import { onRequest } from '../functions/api/admin/bank-incoming.js';
 import { onRequestGet as orders } from '../functions/api/admin/orders.js';
 import { kyivDay } from '../functions/_lib/bank-incoming.js';
 import { onRequest as notifications } from '../functions/api/admin/bank-notifications.js';
+import { orderPaymentButton } from '../admin/order-payment-picker.js';
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const root=path.resolve(import.meta.dirname,'..'),output='/tmp/evline-payment-links-browser';await mkdir(output,{recursive:true});
 const nav=(await readFile(path.join(root,'admin/index.html'),'utf8')).match(/<nav class="admin-tabs"[\s\S]*?<\/nav>/)[0];
@@ -28,7 +29,7 @@ const server=createServer(async(req,res)=>{try{
       const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{authorization:'Bearer synthetic-manager','content-type':'application/json'}});const j=await r.json();if(!r.ok)throw Error(j.error);return j};
       const table=document.querySelector('[data-orders]'),picker=createOrderPaymentPicker(table,api,{onLinked:o=>document.querySelector('#payment-status').textContent=o.payment_status});
       table.onclick=e=>{const b=e.target.closest('[data-order-payment]');if(b){picker.toggle(b);return;}if(e.target.closest('[data-order-payment-panel-row]'))return;window.unexpectedOrderOpen=true;};
-    </script></body></html>`.replace('<thead>',columns+'<thead>'));return;
+    </script></body></html>`.replace('<thead>',columns+'<thead>').replace(/<button class="admin-link-button orders-table__payment"[\s\S]*?<\/button>/,orderPaymentButton('test-order','O-SMOKE')));return;
   }
   if(url.pathname==='/notifications-test'){
     res.setHeader('content-type','text/html; charset=utf-8');
@@ -81,16 +82,20 @@ for(const width of [1440,390,320]){
     SELECT 'old','pumb','old','test','TEST','UAH',100,'INBOUND',?,'Старий платник','Старий платіж','test',?,'no_invoice'`).run(new Date(Date.parse(kyivDay()+'T12:00:00Z')-7*86400000).toISOString().slice(0,10),new Date().toISOString());
   const context=await browser.newContext({viewport:{width,height:1000}});await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/list-test');
-  await page.locator('[data-order-payment]').click();await page.locator('[data-order-bank-payment]').waitFor();
-  assert.equal(await page.locator('[data-order-bank-days]').count(),0);assert.equal(await page.locator('[data-order-bank-payment] option').count(),3);
+  const before=await page.locator('[data-order-id]').boundingBox();
+  await page.locator('[data-order-payment]').click();await page.locator('[data-payment-choice]').first().waitFor();
+  assert.equal(await page.locator('[data-orders] tr').count(),1);assert.equal(await page.locator('.order-payment-menu select').count(),0);assert.equal(await page.locator('[data-payment-choice]').count(),2);
+  const after=await page.locator('[data-order-id]').boundingBox();assert.deepEqual(after,before);
+  const menu=await page.locator('.order-payment-menu').boundingBox();assert.ok(menu.x>=0 && menu.x+menu.width<=width && menu.y>=0 && menu.y+menu.height<=1000);
   await page.screenshot({path:path.join(output,`list-picker-${width}.png`),fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`list overflow ${width}`);
-  await page.locator('[data-order-bank-payment]').selectOption('p1');await page.locator('[data-order-bank-link]').click();assert.equal(db.prepare("SELECT order_id FROM bank_incoming WHERE id='p1'").get().order_id,null);
-  await page.locator('[data-order-bank-confirmed]').check();await page.locator('[data-order-bank-link]').click();
-  await page.locator('[data-order-bank-message]').filter({hasText:'Платіж прив’язано'}).waitFor();assert.equal(await page.locator('#payment-status').textContent(),'partial');
-  assert.equal(await page.locator('[data-order-bank-payment] option').count(),2);assert.equal(await page.locator('[data-order-bank-payment] option[value=p1]').count(),0);
-  await page.locator('[data-order-bank-payment]').selectOption('p2');await page.screenshot({path:path.join(output,`list-confirm-${width}.png`),fullPage:true});
-  await page.locator('[data-order-bank-payment]').focus();await page.keyboard.press('Escape');assert.equal(await page.locator('[data-order-payment-panel-row]').count(),0);assert.equal(await page.locator('[data-order-payment]').getAttribute('aria-expanded'),'false');
+  await page.locator('[data-payment-choice=p1]').click();assert.equal(db.prepare("SELECT order_id FROM bank_incoming WHERE id='p1'").get().order_id,null);
+  await page.locator('[data-payment-confirm]').click();
+  await page.locator('.order-payment-menu__message').filter({hasText:'Оплату прив’язано'}).waitFor();assert.equal(await page.locator('#payment-status').textContent(),'partial');
+  assert.equal(await page.locator('[data-payment-choice]').count(),1);assert.equal(await page.locator('[data-payment-choice=p1]').count(),0);
+  await page.locator('[data-payment-choice=p2]').click();await page.screenshot({path:path.join(output,`list-confirm-${width}.png`),fullPage:true});
+  await page.keyboard.press('Escape');assert.equal(await page.locator('.order-payment-menu').count(),0);assert.equal(await page.locator('[data-order-payment]').getAttribute('aria-expanded'),'false');
+  await page.locator('[data-order-payment]').click();await page.locator('[data-payment-choice]').waitFor();await page.locator('h2').click();assert.equal(await page.locator('.order-payment-menu').count(),0);
   assert.equal(await page.evaluate(()=>Boolean(window.unexpectedOrderOpen)),false);assert.deepEqual(errors,[]);await context.close();
   console.log(`PASS ${width}px: order-list weekly picker, excludes old/linked receipts, explicit consent, live status, Escape, no unintended order open`);
 }

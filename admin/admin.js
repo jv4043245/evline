@@ -13,7 +13,7 @@ import { createAccountingProviderView } from "./accounting-provider.js?v=2026100
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
 import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
-import { createOrderPaymentPicker } from './order-payment-picker.js?v=20261021-order-payment';
+import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-menu';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-pumb-badge';
 
 const state = {
@@ -614,6 +614,7 @@ function setActiveTab(tab) {
   const rangeInput = document.querySelector("#range");
   if (rangeInput) rangeInput.value = accountingPeriods.enter(nextTab, rangeInput.value);
   state.activeTab = nextTab;
+  if(nextTab!=='orders')orderPaymentPicker.reset();
   bankIncomingView.setActive(nextTab === 'bank-incoming' && Boolean(adminToken()));
   localStorage.setItem("evline_admin_tab", nextTab);
   document.body.dataset.adminTab = nextTab;
@@ -2577,7 +2578,7 @@ function renderOrders() {
                     </button>
                   </div>
                 </div>
-                ${order.status!=='canceled'?`<button class="admin-link-button orders-table__payment" type="button" data-order-payment="${escapeHtml(order.id)}" aria-expanded="false" aria-label="Прив’язати оплату до ${escapeHtml(publicNumber)}">Прив’язати оплату <span aria-hidden="true">▾</span></button>`:''}
+                ${order.status!=='canceled'?orderPaymentButton(order.id,publicNumber):''}
               </td>
             </tr>
           `;
@@ -5018,7 +5019,6 @@ document.querySelector("#search")?.addEventListener("input", () => {
 document.querySelector("[data-orders]")?.addEventListener("click", async (event) => {
   const paymentButton=event.target.closest('[data-order-payment]');
   if(paymentButton){await orderPaymentPicker.toggle(paymentButton);return;}
-  if(event.target.closest('[data-order-payment-panel-row]'))return;
   const deleteButton = event.target.closest("[data-delete-order]");
   if (deleteButton) {
     deleteButton.disabled = true;

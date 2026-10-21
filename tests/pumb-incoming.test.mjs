@@ -205,26 +205,41 @@ test('order-list payment panel loads only unassigned last-week receipts and requ
   const picker=createOrderPaymentPicker(table,api,{onLinked:o=>updated=o});
   assert.equal(calls.length,0);await picker.toggle(button);
   assert.ok(calls.some(c=>c.path.includes('available=1&days=7&page=1')));
-  assert.equal(table.querySelector('[data-order-bank-days]'),null);assert.equal(table.querySelector('.bank-table'),null);
-  const select=table.querySelector('[data-order-bank-payment]');assert.equal(select.options.length,3);
-  assert.equal(button.getAttribute('aria-expanded'),'true');assert.equal(table.querySelectorAll('[data-order-payment-panel-row]').length,1);
-  select.value=select.options[1].value;select.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
-  table.querySelector('[data-order-bank-link]').click();assert.equal(calls.filter(c=>c.options).length,0);assert.equal(rowClicks,0);
-  table.querySelector('[data-order-bank-confirmed]').checked=true;table.querySelector('[data-order-bank-link]').click();
-  const end=Date.now()+5000;while(!table.querySelector('[data-order-bank-message]')?.textContent.includes('Платіж прив’язано')){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,10));}
+  const doc=dom.window.document;assert.equal(table.querySelector('select'),null);assert.equal(table.querySelectorAll('tr').length,1);
+  assert.equal(doc.querySelectorAll('[data-payment-choice]').length,2);
+  assert.equal(button.getAttribute('aria-expanded'),'true');assert.equal(doc.querySelector('.order-payment-menu').parentElement,doc.body);
+  doc.querySelector('[data-payment-choice]').click();assert.equal(calls.filter(c=>c.options).length,0);assert.equal(rowClicks,0);
+  assert.equal(doc.querySelectorAll('.order-payment-menu input,.order-payment-menu select').length,0);
+  doc.querySelector('[data-payment-confirm]').click();
+  const end=Date.now()+5000;while(!doc.querySelector('.order-payment-menu__message')?.textContent.includes('Оплату прив’язано')){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,10));}
   assert.equal(updated.id,'o1');assert.equal(updated.payment_status,'partial');
-  assert.equal(table.querySelector('[data-order-bank-payment]').options.length,2);
+  assert.equal(doc.querySelectorAll('[data-payment-choice]').length,1);
   assert.equal(calls.filter(c=>c.options).length,1);
-  table.querySelector('select').dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
-  assert.equal(table.querySelector('[data-order-payment-panel-row]'),null);assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(dom.window.document.activeElement,button);
-  await picker.toggle(button);assert.equal(table.querySelector('[data-order-bank-payment]').options.length,2);await picker.toggle(button);assert.equal(table.querySelector('[data-order-payment-panel-row]'),null);
+  doc.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(doc.querySelector('.order-payment-menu'),null);assert.equal(button.getAttribute('aria-expanded'),'false');assert.equal(doc.activeElement,button);
+  await picker.toggle(button);assert.equal(doc.querySelectorAll('[data-payment-choice]').length,1);
+  doc.body.dispatchEvent(new dom.window.Event('pointerdown',{bubbles:true}));assert.equal(doc.querySelector('.order-payment-menu'),null);
 });
 test('order-list panel ignores a late load after closing and switching orders',async t=>{
   const dom=new JSDOM('<table><tbody><tr data-order-id="one"><td><button>One</button></td></tr><tr data-order-id="two"><td><button>Two</button></td></tr></tbody></table>');t.after(()=>dom.window.close());
   const table=dom.window.document.querySelector('tbody'),buttons=table.querySelectorAll('button');let release;
-  const picker=createOrderPaymentPicker(table,async path=>{if(path.includes('one'))return new Promise(r=>release=r);return{can_link:false,order:{order_number:'Two'},invoices:[],rows:[]};});
+  const picker=createOrderPaymentPicker(table,async path=>{if(path.includes('one'))return new Promise(r=>release=r);return{can_link:true,order:{order_number:'Two'},summary:{count:0},rows:[]};});
   const first=picker.toggle(buttons[0]);await picker.toggle(buttons[1]);release({can_link:false,order:{order_number:'One'},invoices:[],rows:[]});await first;
-  assert.equal(table.querySelectorAll('[data-order-payment-panel-row]').length,1);assert.match(table.querySelector('.bank-order-summary').textContent,/Two/);assert.equal(buttons[0].getAttribute('aria-expanded'),'false');picker.reset();
+  assert.equal(dom.window.document.querySelectorAll('.order-payment-menu').length,1);assert.match(dom.window.document.querySelector('.order-payment-menu').textContent,/Two/);assert.equal(buttons[0].getAttribute('aria-expanded'),'false');picker.reset();
+});
+test('floating payment menu preserves confirmation guards, disables repeated submits, and clears stale choices after conflict',async t=>{
+  const dom=new JSDOM('<table><tbody><tr data-order-id="o"><td><button>Open</button></td></tr></tbody></table>');t.after(()=>dom.window.close());
+  const doc=dom.window.document,table=doc.querySelector('tbody');let posts=0,blocked=true,rejectPost;
+  const picker=createOrderPaymentPicker(table,async(path,options)=>{
+    if(options){posts++;return new Promise((resolve,reject)=>rejectPost=reject);}
+    return {can_link:true,order:{id:'o',order_number:'O-1',customer_name:'Тест'},summary:{count:1},rows:[{id:'p',amount_minor:4000,booked_at:'2026-10-21',payer_name:'<img src=x>',purpose:'<script>bad</script>',fingerprint:'test'}]};
+  },{beforeLink:()=>blocked?'Save first':''});
+  await picker.toggle(table.querySelector('button'));assert.equal(doc.querySelector('.order-payment-menu img'),null);
+  doc.querySelector('[data-payment-choice]').click();doc.querySelector('[data-payment-confirm]').click();assert.equal(posts,0);assert.match(doc.querySelector('[role=status]').textContent,/Save first/);
+  blocked=false;doc.querySelector('[data-payment-confirm]').click();doc.querySelector('[data-payment-confirm]').click();assert.equal(posts,1);
+  doc.body.dispatchEvent(new dom.window.Event('pointerdown',{bubbles:true}));assert.ok(doc.querySelector('.order-payment-menu'));
+  rejectPost(Error('bank_match_conflict'));await new Promise(r=>setTimeout(r,10));assert.equal(doc.querySelector('[data-payment-confirm]'),null);assert.equal(doc.querySelector('[data-payment-choice]'),null);assert.ok(doc.querySelector('[data-payment-reload]'));
+  picker.reset();assert.equal(doc.querySelector('.order-payment-menu'),null);
 });
 test('name and amount suggestions never authorize automatic association',async t=>{
   const {env,db}=setup(t),invoices=await invoiceIndex(env),payment=tx('92','100',{senderName:'Тест',description:'Оплата товару'});

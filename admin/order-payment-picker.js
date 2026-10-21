@@ -1,35 +1,95 @@
-import { mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
+import { bankErrorMessage } from './bank-incoming.js?v=20261021-order-payment';
 
-// One lazily loaded panel: no bank queries per order and no stale shared candidate cache.
+const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'}).format(Number(n)/100);
+export function orderPaymentButton(id,number) {
+  return `<button class="admin-btn admin-btn--icon orders-table__payment" type="button" data-order-payment="${escape(id)}" aria-expanded="false" aria-haspopup="dialog" aria-label="Прив’язати оплату до ${escape(number)}" title="Прив’язати оплату"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M6 12h1m10 0h1"/></svg><span aria-hidden="true" class="orders-table__payment-caret">▾</span></button>`;
+}
+
+// Body-level overlay avoids table clipping and never inserts rows or shifts orders.
 export function createOrderPaymentPicker(table,api,{onLinked=()=>{},beforeLink=()=>''}={}) {
-  let panelRow=null,trigger=null,saving=false;
-  function close({focus=false}={}) {
-    if(saving)return false;
-    panelRow?.remove();panelRow=null;
+  const doc=table.ownerDocument,win=doc.defaultView;
+  let panel=null,trigger=null,orderId='',order=null,rows=[],count=0,page=1,selected=null,saving=false,loading=false,revision=0;
+  function position() {
+    if(!panel || !trigger?.isConnected)return;
+    const rect=trigger.getBoundingClientRect(),width=win.innerWidth,height=win.innerHeight;
+    panel.style.width=`${Math.min(350,width-16)}px`;panel.style.maxHeight=`${Math.max(120,height-16)}px`;
+    const box=panel.getBoundingClientRect();
+    panel.style.left=`${Math.max(8,Math.min(rect.right-box.width,width-box.width-8))}px`;
+    const below=rect.bottom+6,above=rect.top-box.height-6;
+    panel.style.top=`${Math.max(8,Math.min(below+box.height<=height-8?below:above>=8?above:height-box.height-8,height-box.height-8))}px`;
+  }
+  const outside=e=>{if(panel && !panel.contains(e.target) && !trigger?.contains(e.target))close();};
+  const scroll=e=>{if(!panel?.contains(e.target))position();};
+  const key=e=>{
+    if(!panel)return;
+    if(e.key==='Escape'){e.preventDefault();close({focus:true});return;}
+    if(!panel.contains(e.target) || !['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;
+    const buttons=[...panel.querySelectorAll('[data-payment-choice]')];if(!buttons.length)return;
+    e.preventDefault();const current=buttons.indexOf(doc.activeElement);
+    buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(current+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();
+  };
+  function close({focus=false,force=false}={}) {
+    if(saving && !force)return false;
+    revision++;panel?.remove();panel=null;
     trigger?.setAttribute('aria-expanded','false');trigger?.removeAttribute('aria-controls');
-    if(focus && trigger?.isConnected)trigger.focus();trigger=null;return true;
+    if(trigger)trigger.disabled=false;if(focus && trigger?.isConnected)trigger.focus();trigger=null;
+    loading=false;saving=false;selected=null;
+    doc.removeEventListener('pointerdown',outside);doc.removeEventListener('focusin',outside);doc.removeEventListener('keydown',key);doc.removeEventListener('scroll',scroll,true);win.removeEventListener('resize',position);
+    return true;
+  }
+  function render(message='',error=false) {
+    if(!panel)return;
+    panel.innerHTML=`<div class="order-payment-menu__head"><strong>${selected?'Прив’язати оплату?':'Неприв’язані оплати'}</strong><button type="button" data-payment-close aria-label="Закрити" ${saving?'disabled':''}>×</button></div>
+      <div class="order-payment-menu__subtitle">${escape(order?.order_number || orderId)} · ${selected?escape(order?.customer_name || ''):'останні 7 днів'}</div>
+      ${message?`<p class="order-payment-menu__message${error?' bank-error':''}" role="status">${escape(message)}</p>`:''}
+      ${loading?'<p role="status">Завантаження…</p>':selected?`<div class="order-payment-menu__confirmation"><strong>${money(selected.amount_minor)}</strong><span>${escape(selected.payer_name)}</span><small>${escape(selected.booked_at.slice(0,10))}</small><p>${escape(selected.purpose)}</p><div class="order-payment-menu__footer"><button type="button" data-payment-back ${saving?'disabled':''}>Назад</button><button type="button" class="order-payment-menu__confirm" data-payment-confirm ${saving?'disabled':''}>${saving?'Зберігаємо…':'Підтвердити'}</button></div></div>`:
+      order?`<div class="order-payment-menu__list">${rows.length?rows.map(p=>`<button type="button" data-payment-choice="${escape(p.id)}"><span class="order-payment-menu__line"><strong>${money(p.amount_minor)}</strong><small>${escape(p.booked_at.slice(0,10))}</small></span><span>${escape(p.payer_name || 'Платник не вказаний')}</span><small class="order-payment-menu__purpose">${escape(p.purpose)}</small></button>`).join(''):'<p>Неприв’язаних оплат за тиждень немає.</p>'}</div>
+      <div class="order-payment-menu__footer">${count>50 || page>1?`<button type="button" data-payment-prev ${page<=1?'disabled':''}>←</button><small>${page} / ${Math.max(1,Math.ceil(count/50))}</small><button type="button" data-payment-next ${page*50>=count?'disabled':''}>→</button>`:''}<button type="button" data-payment-reload>Оновити</button></div>`:'<button type="button" data-payment-reload>Спробувати знову</button>'}`;
+    position();
+  }
+  async function load() {
+    const current=++revision;loading=true;selected=null;render();
+    try {
+      const [details,available]=await Promise.all([api(`/api/admin/bank-incoming?order_id=${encodeURIComponent(orderId)}`),api(`/api/admin/bank-incoming?available=1&days=7&page=${page}`)]);
+      if(current!==revision || !panel)return;
+      if(!details.can_link || !details.order || details.order.status==='canceled')throw Error('bank_link_forbidden');
+      order=details.order;rows=available.rows;count=Number(available.summary.count);loading=false;render();
+      panel.querySelector('[data-payment-choice]')?.focus({preventScroll:true});
+      return true;
+    } catch(error){if(current===revision && panel){loading=false;order=null;rows=[];render(bankErrorMessage(error.message),true);}return false;}
+  }
+  async function click(e) {
+    const button=e.target.closest('button');if(!button || saving)return;
+    if(button.hasAttribute('data-payment-close')){close({focus:true});return;}
+    if(loading)return;
+    if(button.hasAttribute('data-payment-reload')){await load();return;}
+    if(button.hasAttribute('data-payment-prev')){page--;await load();return;}
+    if(button.hasAttribute('data-payment-next')){page++;await load();return;}
+    if(button.hasAttribute('data-payment-back')){selected=null;render();panel.querySelector('[data-payment-choice]')?.focus();return;}
+    if(button.hasAttribute('data-payment-choice')){selected=rows.find(p=>p.id===button.dataset.paymentChoice);render();panel.querySelector('[data-payment-back]')?.focus();return;}
+    if(!button.hasAttribute('data-payment-confirm') || !selected)return;
+    const reason=beforeLink();if(reason){render(reason,true);return;}
+    const current=revision,payload={action:'link',payment_id:selected.id,order_id:orderId,invoice_key:'',expected_amount_minor:selected.amount_minor,expected_fingerprint:selected.fingerprint,confirmed:true};
+    saving=true;trigger.disabled=true;render();
+    try {
+      const result=await api('/api/admin/bank-incoming',{method:'POST',body:JSON.stringify(payload)});
+      if(current!==revision || !panel)return;
+      onLinked(result.order);saving=false;trigger.disabled=false;
+      // Refresh before allowing another choice; never reuse linked candidates.
+      const savedPanel=panel,refreshed=await load();
+      if(panel===savedPanel && !loading){render(refreshed?'Оплату прив’язано. Статус замовлення оновлено.':'Оплату збережено, але список не оновився. Спробуйте оновити список.');panel.querySelector('[data-payment-close]')?.focus();}
+    } catch(error){if(current===revision && panel){saving=false;trigger.disabled=false;selected=null;order=null;rows=[];render(bankErrorMessage(error.message),true);}}
   }
   async function toggle(button) {
     if(saving)return;
-    if(trigger===button && panelRow?.isConnected){close({focus:true});return;}
-    close();trigger=button;
-    const orderRow=button.closest('[data-order-id]');if(!orderRow || !table.contains(orderRow))return;
-    const doc=table.ownerDocument,row=doc.createElement('tr'),cell=doc.createElement('td');
-    row.dataset.orderPaymentPanelRow='';cell.colSpan=7;row.append(cell);
-    const shell=doc.createElement('section');shell.className='order-payment-picker';shell.id='order-payment-picker';
-    shell.setAttribute('aria-label','Прив’язка оплати до замовлення');
-    const cancel=doc.createElement('button');cancel.type='button';cancel.className='admin-link-button order-payment-picker__close';cancel.textContent='Закрити ×';
-    cancel.addEventListener('click',()=>close({focus:true}));
-    const content=doc.createElement('div');content.className='bank-order-summary';shell.append(cancel,content);cell.append(shell);
-    // The parent table opens order cards on row clicks; controls here must never do that.
-    row.addEventListener('click',event=>event.stopPropagation());
-    row.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close({focus:true});}});
-    orderRow.after(row);panelRow=row;button.setAttribute('aria-expanded','true');button.setAttribute('aria-controls',shell.id);
-    await mountBankOrderSummary(content,orderRow.dataset.orderId,api,{
-      compact:true,beforeLink,onLinked,
-      onBusy(value){saving=value;cancel.disabled=value;button.disabled=value;},
-    });
-    if(panelRow===row && row.isConnected)content.querySelector('select')?.focus({preventScroll:true});
+    if(trigger===button && panel){close({focus:true});return;}
+    close();const row=button.closest('[data-order-id]');if(!row || !table.contains(row))return;
+    trigger=button;orderId=row.dataset.orderId;order=null;rows=[];count=0;page=1;
+    panel=doc.createElement('section');panel.className='order-payment-menu';panel.id='order-payment-menu';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Прив’язати оплату');
+    doc.body.append(panel);panel.addEventListener('click',click);button.setAttribute('aria-expanded','true');button.setAttribute('aria-controls',panel.id);
+    doc.addEventListener('pointerdown',outside);doc.addEventListener('focusin',outside);doc.addEventListener('keydown',key);doc.addEventListener('scroll',scroll,true);win.addEventListener('resize',position);
+    await load();
   }
-  return {toggle,reset:close};
+  return {toggle,reset:()=>close({force:true})};
 }

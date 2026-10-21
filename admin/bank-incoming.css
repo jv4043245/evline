@@ -16,25 +16,28 @@
 .bank-table tr[hidden] { display:none; }
 .bank-new-badge { display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:999px;margin-left:4px;background:#f97316;color:#171717;font-size:12px;font-weight:800;line-height:1;vertical-align:middle; }
 .bank-new-badge[hidden] { display:none; }
-.orders-table__payment { display:block;max-width:100%;margin:7px 0 0 auto;font-size:11px;white-space:normal;text-align:right;line-height:1.4; }
-.order-payment-picker { max-width:600px;margin:0 0 0 auto;text-align:left;white-space:normal; }
-.order-payment-picker__close { display:block;margin:0 0 6px auto; }
-.order-payment-picker .bank-link-box { margin:0;border:0;padding:0;background:transparent; }
-.order-payment-picker h4 { display:none; }
-.order-payment-picker h3 { font-size:15px; }
-.order-payment-picker p { font-size:13px; }
-.order-payment-picker .bank-order-summary { padding:12px; }
-.order-payment-picker .bank-link-box { gap:8px; }
-.order-payment-picker .bank-link-box p { margin:0; }
-.order-payment-picker .bank-actions { margin:4px 0 0;gap:8px; }
-.order-payment-picker [data-order-bank-message]:empty { display:none; }
-.orders-table [data-order-payment-panel-row] { cursor:default; }
-@media(max-width:760px){
-  .orders-table [data-order-payment-panel-row] { display:block; }
-  .orders-table [data-order-payment-panel-row]>td { display:block;width:100%;box-sizing:border-box; }
-  .orders-table [data-order-payment-panel-row]>td::before { display:none; }
-  .order-payment-picker { max-width:100%; }
-}
+.orders-table__payment { display:flex;align-items:center;justify-content:center;gap:3px;width:42px;min-height:32px;margin:5px 0 0 auto;padding:4px;color:#087751;border:1px solid #cce5d9;background:#f2faf6;border-radius:7px; }
+.orders-table__payment-caret { font-size:10px; }
+.orders-table__payment[aria-expanded="true"] { background:#e0f3e9;border-color:#087751; }
+.order-payment-menu { position:fixed;z-index:20000;box-sizing:border-box;margin:0;padding:12px;background:#fff;color:#18352b;border:1px solid #d6e5de;border-radius:12px;box-shadow:0 12px 36px #193e292b;overflow:auto;overscroll-behavior:contain;font:13px/1.4 Arial,sans-serif;text-align:left; }
+.order-payment-menu button { font:inherit;cursor:pointer;border:0;border-radius:7px;padding:7px 10px;background:#f1f6f3;color:#17543e; }
+.order-payment-menu button:disabled { cursor:wait;opacity:.5; }
+.order-payment-menu button:focus-visible { outline:2px solid #00865b;outline-offset:1px; }
+.order-payment-menu__head,.order-payment-menu__line,.order-payment-menu__footer { display:flex;align-items:center;justify-content:space-between;gap:8px; }
+.order-payment-menu__head>button { font-size:20px;line-height:1;padding:3px 7px;background:transparent; }
+.order-payment-menu__subtitle { margin:0 0 8px;color:#647a6f;font-size:12px; }
+.order-payment-menu__list { max-height:260px;overflow:auto; }
+.order-payment-menu__list>button { display:grid;gap:3px;width:100%;padding:10px 8px;text-align:left;background:#fff;border-radius:6px;border-bottom:1px solid #edf2ef;overflow-wrap:anywhere; }
+.order-payment-menu__list>button:hover,.order-payment-menu__list>button:focus-visible { background:#eef8f2; }
+.order-payment-menu small { font-size:11px;color:#657a70; }
+.order-payment-menu__line strong { font-size:14px; }
+.order-payment-menu__purpose { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+.order-payment-menu__footer { margin-top:10px;justify-content:flex-end; }
+.order-payment-menu__confirmation { display:grid;gap:4px;overflow-wrap:anywhere; }
+.order-payment-menu__confirmation>strong { font-size:20px; }
+.order-payment-menu__confirmation p { margin:4px 0;max-height:90px;overflow:auto; }
+.order-payment-menu .order-payment-menu__confirm { background:#00865b;color:#fff;font-weight:600; }
+.order-payment-menu__message { margin:8px 0;font-size:12px; }
 @media(max-width:760px){
   .admin-tabs [data-admin-tab="bank-incoming"] { position:sticky;right:0;z-index:2;background:#fff;box-shadow:-6px 0 10px #fff; }
   .admin-tabs [data-admin-tab="bank-incoming"][aria-selected="true"] { background:var(--green,#087751); }

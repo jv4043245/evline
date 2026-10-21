@@ -174,18 +174,20 @@ financial tables as a rollback. Existing admin functionality works with the adde
 
 ### Quick linking from the order list
 
-In «Замовлення» → «Дії», «Прив’язати оплату ▾» expands one compact panel below
-the selected order. It loads fresh, unassigned, safe UAH incoming receipts for
+In «Замовлення» → «Дії», the banknote icon opens a small floating menu over the
+table without adding rows or shifting orders. It loads fresh, unassigned, safe UAH incoming receipts for
 today and the preceding six Kyiv calendar days (`available=1&days=7`). Assigned,
 ignored, outbound, future-dated and flagged unsafe facts are excluded by the
 existing server filter. Pagination retains access to more than 50 eligible receipts.
 Older receipts remain available from the order card's Payment section.
 
-Selecting a receipt does not write anything. The existing explicit confirmation,
+Receipts are directly selectable menu items (amount, date, payer, purpose), not a
+second form or nested dropdown. Selecting one shows a short confirmation in the same
+menu, with Back and Confirm buttons; selection itself does not write anything. The existing explicit confirmation,
 amount/fingerprint conflict guards, owner/Andrii permissions and audit are reused.
 After linking, the order-list payment status updates in place and the candidates
-reload; linked receipts disappear. Only one panel is open, loaded on demand (not
-once per row); Escape/Close collapses it. This does not acknowledge receipt badges,
+reload; linked receipts disappear. Only one menu is open, loaded on demand (not
+once per row); Escape/Close or clicking outside dismisses it. This does not acknowledge receipt badges,
 change the bank polling schedule, move money or require a new database migration.
 
 Tests: `tests/pumb-incoming.test.mjs` covers exact money/IDs, schema rejection,
