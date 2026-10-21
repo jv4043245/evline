@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../workers/tracking-cron/index.js';
 
-async function run(t, { token='reminder-token', time='2026-10-06T09:00:00Z', fail='' }={}) {
+async function run(t, { token='reminder-token', time='2026-10-06T10:00:00Z', fail='' }={}) {
   const calls=[], pending=[];
   t.mock.method(console,'log',()=>{});
   t.mock.method(globalThis,'fetch',async(url,options)=>{

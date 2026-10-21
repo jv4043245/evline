@@ -1,4 +1,5 @@
 import supplierReminders from '../supplier-document-reminders/index.js';
+import pumbIncoming from '../pumb-incoming/index.js';
 
 const DEFAULT_SYNC_URL = "https://evline.com.ua/api/cron/tracking-sync";
 
@@ -61,6 +62,13 @@ async function runTrackingSync(env, source = "scheduled") {
 
 export default {
   async scheduled(event, env, ctx) {
+    // The shared trigger wakes every 15 minutes. Bank failures do not prevent
+    // dispatching the existing tasks; each task owns its waitUntil promise.
+    if (env.PUMB_CRON_TOKEN) ctx.waitUntil(pumbIncoming.scheduled(event, env, ctx));
+    const scheduledAt = new Date(event.scheduledTime);
+    // Preserve the original 00:00, 02:00, ... UTC schedule, including delayed
+    // deliveries: use the scheduled timestamp, not the execution wall clock.
+    if (!Number.isFinite(scheduledAt.getTime()) || scheduledAt.getUTCMinutes() !== 0 || scheduledAt.getUTCHours() % 2 !== 0) return;
     // Independent task on the existing schedule; neither failure blocks the other.
     if (env.SUPPLIER_DOCS_CRON_TOKEN) await supplierReminders.scheduled(event, env, ctx);
     ctx.waitUntil(
@@ -88,6 +96,8 @@ export default {
         ok: true,
         worker: "evline-crm-tracking-cron",
         has_token: Boolean(env.CRON_SYNC_TOKEN),
+        has_pumb_token: Boolean(env.PUMB_CRON_TOKEN),
+        schedule_revision: "shared-pumb-15m-legacy-2h-v1",
         sync_url: env.CRM_TRACKING_SYNC_URL || DEFAULT_SYNC_URL,
       });
     }

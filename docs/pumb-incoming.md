@@ -36,7 +36,10 @@ identity can have broader rights. Do not describe it as bank-enforced read-only.
 
 ## Scheduling and limits
 
-Dedicated `evline-pumb-incoming` Worker calls the Pages cron route every 15 minutes.
+Existing `evline-crm-tracking-cron` Worker calls the Pages bank cron route every
+15 minutes with a separate PUMB token. Its original tracking/reminder tasks retain
+their two-hour UTC cadence. No additional cron trigger or paid plan is required.
+The standalone PUMB Worker has no schedule and is not used for production polling.
 One durable lease and cooldown cover cron/manual refresh. It loads up to three daily
 windows per run; initial history can be up to 90 days and catches up incrementally.
 After catch-up each poll re-reads yesterday and today. This is polling, not a webhook;
@@ -62,9 +65,12 @@ The visible ledger refreshes every minute while its tab is active and setup is c
    Never put production bank secrets or D1 bindings into public preview builds.
 5. Deploy the reviewed site revision via the existing production Git/Pages flow.
    Keep the current `DB` binding and unrelated settings.
-6. Deploy `workers/pumb-incoming/wrangler.toml`, then install its secret with
-   `wrangler secret bulk .local-data/pumb/worker-secrets.json --config workers/pumb-incoming/wrangler.toml`.
-   Cron contains only the dedicated shared token, never bank credentials.
+6. Install the existing PUMB token into the shared scheduler with
+   `wrangler secret bulk .local-data/pumb/worker-secrets.json --config workers/tracking-cron/wrangler.toml`,
+   preserving its tracking/reminder secrets. Deploy `workers/tracking-cron/wrangler.toml`.
+   This updates its one existing trigger to 15 minutes; code gates the legacy jobs
+   to their original two-hour cadence. Cron contains only a dedicated shared token,
+   never bank credentials. Do not add a separate PUMB trigger.
 7. Verify unauthenticated admin/cron calls are denied. Owner verifies the setup
    form, personally supplies bank login/password, chooses history start and consents.
    Verify the first real sync and compare a real receipt to the bank before declaring
@@ -83,8 +89,10 @@ Pausing stops future polling and preserves existing records and encrypted access
 If bank password changes, reconnect through the owner form. Removing bank API
 authorization must be performed in the bank by the account owner.
 
-Rollback: pause the connection or remove the dedicated cron trigger, then roll back
-the site deployment. Keep additive database structures and bank facts. Do not drop
+Rollback: pause the bank connection, then roll back the site deployment if needed.
+Do not remove the shared cron trigger: tracking and reminders use it too. A scheduler
+rollback must restore both its previous code and two-hour trigger. Keep additive
+database structures and bank facts. Do not drop
 financial tables as a rollback. Existing admin functionality works with the added schema.
 
 Tests: `tests/pumb-incoming.test.mjs` covers exact money/IDs, schema rejection,
