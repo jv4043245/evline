@@ -242,6 +242,7 @@ function navigationHarness(t) {
   const initialize = new window.Function('state', 'guards', 'accountingProviderView', 'accountingProfitView', 'accountingPeriods', 'loads', `
     const adminTabs = new Set(['orders','contacts','china','analytics','delivery','accounting','bank-incoming']);
     const bankIncomingView = { setActive: active => { guards.incomingActive = active; }, load: async () => { loads.push({bank:'incoming'}); } };
+    const orderPaymentPicker = { reset: () => { guards.paymentMenuCloses = (guards.paymentMenuCloses || 0) + 1; } };
     let accountingProvider = null, accountingPanel = 'advertising', accountingIgorSection = 'china';
     const accountingIgorView = { canLeave: () => guards.igor !== false, load: async () => {} };
     const bankView = name => ({ hide: () => {}, load: async options => { loads.push({ bank: name, ...options }); } });
@@ -271,7 +272,9 @@ test('actual admin markup exposes exactly two native links, one isolated adverti
 
 test('incoming bank payments have an independent primary view and polling stops when leaving it', async t => {
   const {document,navigation,guards,loads}=navigationHarness(t);
+  const before=guards.paymentMenuCloses;
   assert.equal(navigation.setActiveTab('bank-incoming'),true);await tick();
+  assert.equal(guards.paymentMenuCloses,before+1);
   assert.equal(document.querySelector('[data-admin-view="bank-incoming"]').hidden,false);
   assert.equal(document.querySelector('[data-admin-view="accounting"]').hidden,true);
   assert.equal(guards.incomingActive,true);assert.equal(loads.at(-1).bank,'incoming');
