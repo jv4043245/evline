@@ -28,7 +28,7 @@ for (const page of ['index.html', 'ru/index.html']) {
       assert.equal(script.parentNode, document.body);
       assert.ok(script.previousElementSibling.textContent.includes('function submitLead'));
       assert.equal(script.hasAttribute('async'), false);
-      assert.equal(script.hasAttribute('defer'), false);
+      assert.equal(script.hasAttribute('defer'), true);
     } finally { dom.window.close(); }
   });
 
