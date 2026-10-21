@@ -22,7 +22,7 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
   const showMessage=(text,error=false)=>{const node=root.querySelector('[data-bank-message]');if(node){node.textContent=text;node.classList.toggle('bank-error',error);}};
   function render() {
     const c=data.connection;
-    root.innerHTML=`<div class="admin-panel__head"><div><h2>Надходження · ПУМБ</h2><p class="muted">Виписка рахунків ФОП у гривні · перевірка кожні 15 хвилин</p></div><button type="button" class="admin-btn" data-bank-reload>Оновити список</button></div>
+    root.innerHTML=`<div class="admin-panel__head"><div><h2>Надходження · ПУМБ</h2><p class="muted">Виписка рахунків ФОП у гривні · стан останнього оновлення нижче</p></div><button type="button" class="admin-btn" data-bank-reload>Оновити список</button></div>
       <div class="bank-connection"><strong>${c.enabled?'Підключено':c.configured?'Синхронізацію призупинено':'Ще не підключено'}</strong>
       <span>${c.accounts.map(a=>escape(a.iban_masked)).join(' · ')}</span><span>Остання успішна перевірка: ${escape(timestamp(c.last_success_at))}</span>
       ${c.cursor_date?`<span>Виписку завантажено до ${escape(c.cursor_date)} включно${c.cursor_date<new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Kyiv'}).format(new Date())?' · історія ще завантажується':''}</span>`:''}
@@ -70,7 +70,7 @@ export function createBankIncomingView(root,api,{openOrder=()=>{}}={}) {
     busy=true;form.querySelector('button').disabled=true;showMessage('Перевіряємо доступ до ПУМБ…');
     // Clear credentials from the DOM immediately; never put them in browser storage or logs.
     form.elements.password.value='';form.elements.username.value='';
-    try{await post(body);body.password='';body.username='';showMessage('Доступ підтверджено. Завантажуємо першу виписку…');await post({action:'sync'});busy=false;await load();showMessage('ПУМБ підключено. Наступні перевірки — автоматично кожні 15 хвилин.');}
+    try{await post(body);body.password='';body.username='';showMessage('Доступ підтверджено. Завантажуємо першу виписку…');await post({action:'sync'});busy=false;await load();showMessage('ПУМБ підключено. Перевірте стан завантаження та надходження у списку.');}
     catch(error){showMessage(bankErrorMessage(error.message),true);}finally{body.password='';body.username='';busy=false;form.querySelector('button').disabled=false;}
   });
   return {load,setActive(active){clearInterval(timer);timer=null;if(active)timer=setInterval(()=>{
