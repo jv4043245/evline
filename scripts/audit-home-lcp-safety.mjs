@@ -13,6 +13,8 @@ for (const file of ['index.html', 'ru/index.html']) {
   assert.equal(hint.getAttribute('href'), after.querySelector('script[src*="contact-tracking.js"]').getAttribute('src'));
   hint.remove();
   after.querySelector('script[src*="contact-tracking.js"]').removeAttribute('defer');
+  const style = after.querySelector('style');
+  style.set_content(style.textContent.replace('.hero .wrap{gap:14px;grid-template-rows:auto 156px auto}', '.hero .wrap{gap:14px}'));
   for (const document of [before, after]) {
     const script = document.querySelectorAll('script').find(node => node.textContent.includes('function updateStickyCta'));
     const start = script.textContent.lastIndexOf('\n(function(){');
@@ -20,10 +22,10 @@ for (const file of ['index.html', 'ru/index.html']) {
     assert.ok(script.textContent.slice(start).includes('function updateStickyCta'));
     script.set_content(script.textContent.slice(0, start));
   }
-  // Only the sticky-header IIFE, preload hint and deferred execution may differ.
+  // Allow only sticky UI, preload/defer and a fixed row matching the existing mobile photo height.
   assert.equal(after.toString().replace(/\n\s*\n/g, '\n'), before.toString().replace(/\n\s*\n/g, '\n'), `${file}: unexpected markup, CSS, form, SEO or tracking change`);
 }
 const protectedPaths = ['assets', 'functions', 'admin', 'migrations', 'workers', '_redirects', '_headers', 'robots.txt', 'sitemap.xml', 'byd.html', 'ru/byd.html', 'запчастини-з-китаю', 'ru/zapchasti-iz-kitaya'];
 const differences = execFileSync('git', ['diff', '--name-only', base, '--', ...protectedPaths], { cwd: root, encoding: 'utf8' });
 assert.equal(differences.trim(), '', `Protected files changed:\n${differences}`);
-console.log('PASS: photos, CSS, forms, SEO, ad landings, API and tracking unchanged; only home preload/sticky UI changed.');
+console.log('PASS: photos, forms, SEO, ad landings, API and tracking unchanged; only preload/defer, sticky UI and reserved mobile photo row changed.');

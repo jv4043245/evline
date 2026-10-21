@@ -15,6 +15,11 @@ for (const page of ['index.html', 'ru/index.html']) {
     window.eval(script.textContent.slice(start));
   }
 
+  test(`${page}: mobile photo row reserves the existing height before images arrive`, () => {
+    assert.match(html, /\.hero \.wrap\{gap:14px;grid-template-rows:auto 156px auto\}/);
+    assert.match(html, /\.hero-proof\{height:156px;min-height:0\}/);
+  });
+
   test(`${page}: tracking preload does not change script execution order`, () => {
     const dom = setup();
     try {
