@@ -112,6 +112,28 @@ A plain-language outage notice is retained if automatic synchronization is unava
 
 ## Production deployment
 
+### Accounting Telegram notices (22 October 2026)
+
+After each bank sync attempt, including cooldown or bank failure, the receipt
+outbox drains through Slavik's dedicated `/evline-bank/receipts` endpoint. Only new
+positive, non-ignored UAH incoming receipts are queued. Migration 0042 marks all
+existing receipts suppressed, so activation does not post history. The existing
+15-minute bank schedule is reused. Amount, payer, date, brief purpose and a linked
+order number are sent to the owner's fixed «Бухг EV» group by `slavik_office_bot`.
+Unassigned receipts explicitly request manual linking; no order is guessed.
+Order buttons use the CRM's authenticated `?order=` route.
+
+Install a separate shared `EVLINE_BANK_ALERT_SECRET` on production Pages and the
+Slavik Worker. It grants only fixed-group receipt notices/status/one activation
+test, not access to other chats or the temporary manager-help channel. Apply
+0042 on CRM and 0011 on Slavik before deployment. Failed transport retries retain
+the same event ID and frozen facts. Slavik persists the Telegram claim before
+sending; sent/uncertain/rejected outcomes are not automatically sent again.
+Rate-limited definite rejections honor `retry_after`. The three-receipt batch is
+bounded; backlog continues on the next run. Monitor the two outbox tables for
+pending/uncertain/rejected states. Bank synchronization is not failed by a notice
+outage. No new cron or AI usage is introduced.
+
 1. Verify production's current source lineage before merging. Run `npm test` and
    `wrangler pages functions build functions --outfile=/tmp/evline-pumb-worker.js`.
 2. Verify that migrations through 0038 exist remotely. Back up D1 / record its

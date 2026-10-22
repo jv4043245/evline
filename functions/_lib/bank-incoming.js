@@ -3,6 +3,7 @@ import { bankError, bankFailure, normalizeIban, pumbSession, bankAccounts, bankT
 import { recordAuditEvent } from './audit-log.js';
 import { saveConnectDiagnostic, safeBankDiagnostic } from './bank-diagnostics.js';
 import { refreshLinkedOrderStatuses, invoiceSuggestions, linkedBankPaymentSql } from './bank-payment-links.js';
+import { dispatchBankReceiptAlerts } from './bank-telegram-alerts.js';
 
 const now=()=>new Date().toISOString();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -37,7 +38,8 @@ export async function connectionStatus(env) {
   return {configured:Boolean(row?.credentials_encrypted),enabled:Boolean(row?.enabled),server_ready:Boolean(env.PUMB_CLIENT_ID && env.PUMB_CLIENT_SECRET && env.PUMB_ENCRYPTION_KEY),
     accounts:JSON.parse(row?.accounts_json || '[]').map(a=>({iban_masked:a.iban.slice(0,6)+'…'+a.iban.slice(-4),currency:a.currency})),
     start_date:row?.start_date || null,cursor_date:row?.cursor_date || null,last_attempt_at:row?.last_attempt_at || null,
-    last_success_at:row?.last_success_at || null,last_error:row?.last_error || null,interval_minutes:15};
+    last_success_at:row?.last_success_at || null,last_error:row?.last_error || null,interval_minutes:15,
+    telegram_alerts_enabled:/^[A-Za-z0-9_-]{43,128}$/.test(env.EVLINE_BANK_ALERT_SECRET || '')};
 }
 export async function connectBank(env,data,actor,fetcher=fetch) {
   const started=Date.now();let stage='validation';
@@ -160,6 +162,13 @@ export async function reconcile(env,invoices,actor='ПУМБ') {
   return matched.length;
 }
 export async function syncBank(env,{fetcher=fetch,force=false}={}) {
+  try{return await syncBankAttempt(env,{fetcher,force});}
+  finally{
+    // Notices drain on cron/manual calls even when the bank is cooling down or offline.
+    try{await dispatchBankReceiptAlerts(env);}catch{console.warn('Bank receipt Telegram delivery deferred');}
+  }
+}
+async function syncBankAttempt(env,{fetcher=fetch,force=false}={}) {
   const row=await first(env,"SELECT * FROM bank_connections WHERE id='pumb'");
   if(!row?.enabled || !row.credentials_encrypted) return {skipped:true,reason:'bank_not_configured'};
   const time=now();
