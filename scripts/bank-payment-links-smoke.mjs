@@ -57,6 +57,9 @@ try {for(const width of [1440,390,320]){
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.locator('[data-bank-link="p1"]').waitFor();
   assert.equal(await page.locator('img').count(),0);
   assert.equal(await page.locator('[data-bank-connect]').count(),0);
+  const selectStyle=await page.locator('[data-bank-row-order]').first().evaluate(el=>{const s=getComputedStyle(el);return{width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,padding:s.paddingRight,arrow:s.backgroundPosition,appearance:s.appearance};});
+  assert.ok(selectStyle.width<=240);assert.equal(selectStyle.height,width<=700?44:36);assert.equal(selectStyle.padding,'34px');assert.match(selectStyle.arrow,/10px/);assert.equal(selectStyle.appearance,'none');
+  await page.locator('[data-bank-row-order]').first().scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,`receipt-picker-${width}.png`),fullPage:true});
   for(const id of ['p1']){
     await page.locator(`[data-bank-row-order="${id}"]`).selectOption('test-order');await page.locator('[data-bank-confirm]').waitFor();
     assert.equal(db.prepare('SELECT order_id FROM bank_incoming WHERE id=?').get(id).order_id,null);

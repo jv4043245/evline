@@ -28,7 +28,7 @@ export function bankErrorMessage(code) {
 }
 const orderButton = i => `<button type="button" class="admin-link-button" data-bank-order="${escape(i.order_id)}">${escape(i.order_number || i.order_id)}</button>`;
 export function invoiceTable(invoices,{compact=false}={}) {
-  if(!invoices.length) return '<p class="muted">Немає готових рахунків. Відкрийте замовлення → Документи → Рахунок, перевірте дані та натисніть «Виставити рахунок». Збереження чернетки не вмикає відстеження.</p>';
+  if(!invoices.length) return '';
   return `<div class="bank-table-scroll"><table class="bank-table"><thead><tr><th>Рахунок${compact ? '':' / замовлення'}</th><th>До сплати</th><th>Зараховано</th><th>Залишок</th><th>Стан</th></tr></thead><tbody>${invoices.map(i=>`<tr><td>${escape(i.number)}${compact?'':`<br>${orderButton(i)}`}</td><td>${money(i.amount_minor)}</td><td>${money(i.received_minor)}</td><td>${money(Math.max(0,i.amount_minor-i.received_minor))}</td><td><span class="bank-state bank-state--${escape(i.status)}">${escape(statusLabels[i.status])}</span></td></tr>`).join('')}</tbody></table></div>`;
 }
 const orderOptions = orders => orders.map(o=>`<option value="${escape(o.id)}">${escape(o.order_number)} · ${escape(o.customer_name)} · ${escape(o.car || o.item_name || '')} · ${money(Number(o.revenue_uah)*100)}</option>`).join('');
@@ -62,8 +62,6 @@ export function createBankIncomingView(root,api,{openOrder=()=>{},onViewed=()=>{
       <label>Завантажити платежі починаючи з<input name="start_date" type="date" required value="${escape(c.start_date || new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Kyiv'}).format(new Date()))}"></label>
       <label class="bank-consent"><input name="consent" type="checkbox" required>Дозволяю зберегти логін і пароль зашифрованими на сервері EVLine для автоматичного читання виписок. Пароль не потрібно надсилати в чат.</label>
       <button class="admin-btn admin-btn--primary" type="submit">Перевірити та підключити</button></form>`:'<p>Серверні ключі ПУМБ ще не налаштовано. Банківський пароль поки вводити не потрібно.</p>'}</details>`:''}
-      ${data.can_manage?`<p class="bank-note">Автоматично: номер готового рахунку в призначенні, IBAN та валюта. Короткі номери — лише після слова «рахунок». Часткові оплати накопичуються; статус оплати клієнта оновлюється відносно повної вартості замовлення. Сума та ім’я — тільки підказки для ручного підтвердження. Виручка, етап замовлення, повернення і витрати постачальникам не змінюються.</p>
-      <h3>Рахунки клієнтам</h3>${invoiceTable(data.invoices)}`:''}
       <div class="bank-actions"><h3>Банківські операції</h3><label><input type="checkbox" data-bank-review ${review?'checked':''}>Лише для перевірки</label><span>${Number(data.summary.count)} записів · ${Number(data.summary.review_count || 0)} для перевірки</span></div>
       ${paymentTable(data.rows,{canLink:data.can_link,recentOrders})}<div class="bank-actions"><button type="button" class="admin-btn" data-bank-prev ${page<=1?'disabled':''}>Назад</button><span>Сторінка ${page}</span><button type="button" class="admin-btn" data-bank-next ${page*50>=data.summary.count?'disabled':''}>Далі</button></div>`;
   }

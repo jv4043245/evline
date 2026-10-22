@@ -12,8 +12,8 @@ import { createAccountingIgorView } from "./accounting-igor.js?v=20261010-igor";
 import { createAccountingProviderView } from "./accounting-provider.js?v=20261009-reports";
 import { createAccountingBankExpensesView } from "./accounting-bank-expenses.js?v=20261015-receipts";
 import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=20261015-sources";
-import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261021-order-payment';
-import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261021-payment-linked';
+import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261022-receipts-cleanup';
+import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261022-receipts-cleanup';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-badge-states';
 
 const state = {

@@ -102,4 +102,5 @@ test('manager sees operations without technical panels; only visible active bank
   view.setActive(true);root.hidden=true;await view.load();assert.equal(seen.length,0);
   root.hidden=false;await view.load();assert.deepEqual(seen,[['a']]);
   data.can_manage=true;await view.load();assert.ok(root.querySelector('.bank-connection'));assert.ok(root.querySelector('.bank-setup'));
+  assert.doesNotMatch(root.textContent,/Автоматично:|Рахунки клієнтам|Немає готових рахунків|Збереження чернетки/);
 });
