@@ -176,11 +176,13 @@ test('Andrii links from a row dropdown and from inside an order without nested f
   };
   const waitFor=async check=>{const end=Date.now()+10000;while(!check()){assert.ok(Date.now()<end,'UI timeout');await new Promise(r=>setTimeout(r,10));}};
   const change=el=>el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
-  const root=dom.window.document.querySelector('main'),view=createBankIncomingView(root,api);await view.load();
+  const opened=[],root=dom.window.document.querySelector('main'),view=createBankIncomingView(root,api,{openOrder:id=>opened.push(id)});await view.load();
   assert.equal(root.querySelector('[data-bank-connect]'),null);
   const select=root.querySelector('[data-bank-row-order]');select.value='o1';change(select);await waitFor(()=>root.querySelector('[data-bank-confirm] select')?.options.length>1);
   assert.equal(posts.length,0);const form=root.querySelector('[data-bank-confirm]');form.elements.confirmed.checked=true;form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
   await waitFor(()=>posts.length===1 && root.querySelector('[data-bank-message]')?.textContent.includes('Платіж прив’язано'));
+  const orderLink=root.querySelector('.bank-order-link');assert.ok(orderLink);assert.equal(orderLink.dataset.bankOrder,'o1');assert.match(orderLink.getAttribute('aria-label'),/Відкрити замовлення/);
+  orderLink.querySelector('strong').click();orderLink.querySelector('span').click();assert.deepEqual(opened,['o1','o1']);assert.equal(posts.length,1);
   assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,'partial');
   const bank=dom.window.document.querySelector('#bank');let unsaved=true,linked=null;const busy=[];
   await mountBankOrderSummary(bank,'o1',api,{beforeLink:()=>unsaved?'Save first':'',onBusy:b=>busy.push(b),onLinked:o=>{linked=o;}});

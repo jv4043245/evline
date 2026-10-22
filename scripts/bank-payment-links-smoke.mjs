@@ -67,6 +67,10 @@ try {for(const width of [1440,390,320]){
     if(id==='p1')await page.screenshot({path:path.join(output,`confirm-${width}.png`),fullPage:true});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow ${width}`);
     await page.locator('[name=confirmed]').check();await page.locator('[data-bank-confirm] button').click();await page.locator('[data-bank-message]').filter({hasText:'Платіж прив’язано'}).waitFor();
+    const linkedOrder=page.getByRole('button',{name:'Відкрити замовлення O-SMOKE',exact:true});await linkedOrder.waitFor();
+    assert.match(await linkedOrder.innerText(),/O-SMOKE/);assert.equal(await linkedOrder.getAttribute('data-bank-order'),'test-order');
+    const linkedSize=await linkedOrder.boundingBox();assert.ok(linkedSize.height>=(width<=700?44:38));
+    await linkedOrder.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(output,`receipt-order-link-${width}.png`),fullPage:true});
     assert.equal(db.prepare('SELECT payment_status FROM orders').get().payment_status,id==='p1'?'partial':'paid');
   }
   await page.goto(origin+'/order-test');await page.locator('[data-order-bank-payment]').waitFor();
