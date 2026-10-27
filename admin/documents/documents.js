@@ -1,8 +1,9 @@
-import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-repeat';
+import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-delivery';
 import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-repeat';
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
+import { contactEmail, deliveryDetails, emailDraftUrl, manualChatLinks } from './delivery.js?v=20261027-delivery';
 
 const $ = s => document.querySelector(s);
 const pageUrl = new URL(location.href), orderId = pageUrl.searchParams.get('order') || '';
@@ -188,10 +189,30 @@ function download(file) { const url = URL.createObjectURL(file); const a = docum
 async function prepareSend() {
   sendFile = await pdfFile();
   sendMode = outputMode();
-  $('[data-send-content]').innerHTML = `<p>${documentModes[sendMode]} · версія ${context.document.revision}</p><p>${esc(data.buyer.name)}</p><p>${esc(data.seller.name)}</p>${context.recipient ? `<div class="recipient"><strong>Telegram клієнта цього замовлення</strong>${esc([context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '))}<br>ID: ${esc(context.recipient)}</div><label class="check-label"><input type="checkbox" data-confirm-recipient><span>Документ і одержувача перевірено</span></label>` : '<p>Telegram клієнта не підключено до бота.</p>'}`;
-  $('[data-action="telegram"]').hidden = !context.recipient;
-  $('[data-action="share"]').hidden = !navigator.canShare?.({ files: [sendFile] });
+  const details = deliveryDetails(data, sendMode);
+  $('[data-send-content]').innerHTML = `<div class="send-file-summary">${icon('FileText')}<div><strong>${esc(details.title)}</strong><span>${esc([data.buyer.name, data.buyer.phone].filter(Boolean).join(' · '))}</span><span class="muted">PDF · версія ${context.document.revision}</span></div></div>`;
+  $('[data-bot-channel]').hidden = !context.recipient;
+  $('[data-send-recipient]').innerHTML = `<strong>Telegram</strong>${esc(context.recipient_label || [context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '))}`;
+  $('[data-confirm-recipient]').checked = false;
+  updateBotDelivery();
+  let canShare = false;
+  try { canShare = !!navigator.share && !!navigator.canShare?.({ files: [sendFile] }); } catch { /* Download stays available when sharing is blocked. */ }
+  $('[data-action="share"]').hidden = !canShare;
+  $('[data-send-email]').value = contactEmail(data.buyer.contact);
+  const links = manualChatLinks(data.buyer, details);
+  $('[data-send-chats]').innerHTML = links.map(link => `<a data-manual-chat href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">${icon('Share2')}${esc(link.name)}</a>`).join('');
+  $('[data-manual-channels]').hidden = !links.length;
+  sendStatus('');
   error('', '[data-send-error]'); $('[data-send-dialog]').showModal();
+}
+function sendStatus(message) { $('[data-send-status]').textContent = message; $('[data-send-status]').hidden = !message; }
+function updateBotDelivery() {
+  const key = sendMode === 'all' ? context.document.id : `${context.document.id}:${sendMode}`;
+  const sent = context.deliveries?.find(d => d.id === key && d.status === 'sent');
+  $('[data-action="telegram"]').hidden = !!sent;
+  $('[data-recipient-confirmation]').hidden = !!sent;
+  $('[data-bot-result]').textContent = sent ? 'Цю версію вже надіслано клієнту в Telegram.' : '';
+  $('[data-bot-result]').hidden = !sent;
 }
 async function action(name) {
   if (name === 'save') await save();
@@ -203,9 +224,10 @@ async function action(name) {
   else if (name === 'issue-invoice') {
     if(!['invoice','all'].includes(outputMode()))throw new Error('Оберіть документ «Рахунок» або «Повний комплект».');
     await save('ready');status(`Рахунок № ${data.invoice.number} виставлено. Автоматичного надсилання клієнту не було.`);
+    await prepareSend();
   }
   else if (name === 'pdf' || name === 'draft-pdf') download(await pdfFile(name === 'draft-pdf'));
-  else if (name === 'print') {
+  else if (name === 'print' || name === 'send-print') {
     // Open during the user gesture so browser popup blocking cannot discard the PDF.
     const popup = window.open('', '_blank');
     if (!popup) throw new Error('Дозвольте відкриття вікна PDF або завантажте файл для друку.');
@@ -221,14 +243,25 @@ async function action(name) {
     try { await navigator.clipboard.writeText(text); status('Текст документа скопійовано'); }
     catch { $('[data-copy-text]').value = text; $('[data-copy-dialog]').showModal(); $('[data-copy-text]').select(); }
   }
-  else if (name === 'send-download') download(sendFile);
-  else if (name === 'share') await navigator.share({ files: [sendFile], title: `${documentModes[sendMode]} EVLine ${data.number}` });
+  else if (name === 'send-download') { download(sendFile); sendStatus('PDF підготовлено до завантаження.'); }
+  else if (name === 'share') {
+    await navigator.share({ files: [sendFile], title: deliveryDetails(data, sendMode).subject });
+    sendStatus('Файл передано в меню поширення. Завершіть відправлення у вибраному застосунку.');
+  }
+  else if (name === 'email') {
+    const input = $('[data-send-email]');
+    const href = emailDraftUrl(input.value, deliveryDetails(data, sendMode));
+    download(sendFile);
+    const link = document.createElement('a'); link.href = href; link.click();
+    sendStatus('PDF підготовлено до завантаження. Додайте його до листа перед відправленням.');
+  }
   else if (name === 'telegram') {
     if (!$('[data-confirm-recipient]')?.checked) throw new Error('Підтвердьте одержувача перед відправленням.');
     const payload = new FormData();
     payload.set('document_id', context.document.id); payload.set('recipient', context.recipient); payload.set('file', sendFile); payload.set('mode', sendMode);
-    await api(`/api/admin/orders/${encodeURIComponent(orderId)}/document-send`, { method: 'POST', body: payload });
-    $('[data-send-dialog]').close(); adopt(await api(`${endpoint}?version=${encodeURIComponent(context.document.id)}`)); status(`${documentModes[sendMode]}: надіслано клієнту в Telegram`);
+    await api(standalone ? `${endpoint}/send` : `/api/admin/orders/${encodeURIComponent(orderId)}/document-send`, { method: 'POST', body: payload });
+    adopt(await api(`${endpoint}?version=${encodeURIComponent(context.document.id)}`)); updateBotDelivery();
+    status(`${documentModes[sendMode]}: надіслано клієнту в Telegram`);
   }
   else if (name === 'refresh-order') {
     const fresh = await api(endpoint);
@@ -307,6 +340,7 @@ $('[data-editor]').addEventListener('input', e => {
   const keys = path.split('.'), key = keys.pop(); let obj = data;
   for (const k of keys) obj = obj[k];
   obj[key] = e.target.type === 'checkbox' ? e.target.checked : key === 'quantity' ? Number(e.target.value) : e.target.value;
+  if (path === 'buyer.phone' || path === 'buyer.name') delete data.crm_customer_id;
   if (key === 'kind') {
     syncStandardTerms(data);
     for (const i of [0, 3]) $(`[data-path="terms.${i}.text"]`).value = data.terms[i].text;
@@ -354,7 +388,7 @@ window.addEventListener('beforeunload', e => { if (dirty() || busy) { e.preventD
 async function boot() {
   $('[data-back]').href = standalone ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
   $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${standalone ? 'До рахунків' : 'До замовлення'}`;
-  for (const [name, symbol] of Object.entries({ save: 'Save', 'duplicate-invoice': 'Copy', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw' })) {
+  for (const [name, symbol] of Object.entries({ save: 'Save', 'duplicate-invoice': 'Copy', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw', 'send-download': 'Download', 'send-print': 'Printer', share: 'Share2', telegram: 'Share2', email: 'FileText' })) {
     const b = $(`[data-action="${name}"]`), label = b.textContent.trim();
     b.setAttribute('aria-label', b.getAttribute('aria-label') || label);
     b.title ||= name === 'pdf' ? 'Завантажити PDF' : label;
@@ -381,6 +415,12 @@ $('[data-customer-results]').addEventListener('click', e => {
   const c = customers[Number(button.dataset.pickCustomer)]; if (!c) return;
   if ((data.buyer.name || data.buyer.phone || data.buyer.code) && !confirm('Замінити покупця в документі вибраним клієнтом? Дані самого замовлення не зміняться.')) return;
   data.buyer = { name: c.name || '', phone: c.phone || '', contact: c.email || c.telegram || '', address: '', code: '', purpose: '' };
+  if (standalone) data.crm_customer_id = c.id;
   data.recipient = [c.name, c.phone].filter(Boolean).join(', '); data.reviewed = false;
   renderEditor(); refreshSummary(); $('[data-customer-dialog]').close();
+});
+$('[data-send-dialog]').addEventListener('click', e => {
+  if (!e.target.closest('[data-manual-chat]')) return;
+  if (busy) { e.preventDefault(); return; }
+  download(sendFile); sendStatus('PDF підготовлено до завантаження. Додайте файл у чаті.');
 });

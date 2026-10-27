@@ -13,11 +13,17 @@ import * as orders from '../functions/api/admin/orders.js';
 import { onRequestGet as orderDetail } from '../functions/api/admin/orders/[id].js';
 import { onRequestGet as summary } from '../functions/api/admin/summary.js';
 import * as numbering from '../functions/api/admin/invoice-numbering.js';
+import { sendCustomerDocument } from '../functions/_lib/document-send.js';
+
+globalThis.fetch = async url => {
+  if (url !== 'https://api.telegram.org/botsynthetic-preview/sendDocument') throw new Error('External requests disabled in preview');
+  return Response.json({ ok: true, result: { message_id: 123 } });
+};
 
 const root = path.resolve(import.meta.dirname, '..'), db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys=ON');
 for (const file of (await readdir(path.join(root, 'migrations'))).filter(f => f.endsWith('.sql')).sort()) db.exec(await readFile(path.join(root, 'migrations', file), 'utf8'));
-const env = { ADMIN_TOKEN: 'synthetic-admin', DB: { prepare(sql) {
+const env = { ADMIN_TOKEN: 'synthetic-admin', TELEGRAM_BOT_TOKEN: 'synthetic-preview', DB: { prepare(sql) {
   const s = db.prepare(sql); let args = []; return {
     bind(...values) { args = values; return this; }, _run() { return { meta: { changes: Number(s.run(...args).changes) } }; },
     async run() { return this._run(); }, async first() { return s.get(...args) || null; }, async all() { return { results: s.all(...args) }; },
@@ -30,7 +36,9 @@ d.tax = 'Без ПДВ'; d.seller_profile_id = 'primary'; d.invoice.number = '';
 d.items[0].sku = 'TEST-OEM-123';
 db.prepare('INSERT INTO document_seller_settings(id,revision,updated_at,actor,data_json) VALUES(1,1,?,?,?)').run('2026-10-27', 'Тест', JSON.stringify(d.seller));
 db.prepare('INSERT INTO customers(id,created_at,updated_at,name,phone,email) VALUES(?,?,?,?,?,?)').run('test-customer','2026-10-27','2026-10-27','Тестовий покупець','+380000000001','test@example.invalid');
+db.prepare('UPDATE customers SET telegram_chat_id=? WHERE id=?').run('123456789', 'test-customer');
 db.prepare('INSERT INTO orders(id,created_at,updated_at,order_number,customer_name,customer_phone,car,vin,item_name,revenue_uah,type) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(order.id,'2026-10-27','2026-10-27',order.order_number,order.customer_name,order.customer_phone,order.car,order.vin,order.item_name,order.revenue_uah,order.type);
+db.prepare('UPDATE orders SET customer_id=? WHERE id=?').run('test-customer', order.id);
 db.prepare('INSERT INTO order_documents(id,order_id,revision,created_at,actor,status,data_json,output_mode) VALUES(?,?,1,?,?,?, ?,?)').run('test-version',order.id,'2026-10-27T12:00:00Z','Тестовий менеджер','draft',JSON.stringify(normalizeDocument(d)),'invoice');
 const server = createServer(async (req, res) => {
   try {
@@ -41,6 +49,8 @@ const server = createServer(async (req, res) => {
       const request = new Request(url, { method: req.method, headers, ...(chunks.length ? { body: Buffer.concat(chunks) } : {}) });
       const standalone = /^\/api\/admin\/invoices\/([a-f0-9-]+)$/.exec(url.pathname), ordered = /^\/api\/admin\/orders\/([^/]+)\/documents$/.exec(url.pathname);
       const next = () => {
+        const delivery = /^\/api\/admin\/(invoices|orders)\/([^/]+)\/(?:send|document-send)$/.exec(url.pathname);
+        if (delivery && req.method === 'POST') return sendCustomerDocument({ env, request, params: { id: delivery[2] } }, delivery[1] === 'invoices');
         if (url.pathname === '/api/admin/invoice-numbering') return numbering[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request });
         const routes = standalone ? invoices : orderDocuments, id = (standalone || ordered)?.[1];
         if (id) return routes[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request, params: { id } });
