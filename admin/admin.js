@@ -193,6 +193,7 @@ const auditActionLabels = {
   "document.save": "Збережено документи клієнта",
   "document.send": "Документи надіслано клієнту",
   "document.seller_update": "Оновлено реквізити продавця",
+  "invoice.numbering.advanced": "Змінено нумерацію рахунків",
   "telegram.intake.apply": "Заявку оновлено з Telegram",
   "telegram.intake.undo": "Скасовано зміну з Telegram",
   "telegram.approve_connection": "Підключено Telegram-помічника",
@@ -1403,6 +1404,7 @@ function uniqueParts(parts) {
 
 function auditDetailText(event) {
   const details = event.details || {};
+  if (event.action === 'invoice.numbering.advanced') return `Наступний номер: ${details.previous_number} → ${details.next_number}`;
   const statusChange = details.status_from || details.status_to
     ? `${details.status_from || "-"} -> ${details.status_to || "-"}`
     : "";
