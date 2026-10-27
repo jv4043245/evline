@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261021-invoice-tracking">
-  <script type="module" src="/admin/documents/documents.js?v=20261021-invoice-tracking"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261027-invoices">
+  <script type="module" src="/admin/documents/documents.js?v=20261027-invoices"></script>
 </head>
 <body>
   <header class="app-header">
@@ -47,9 +47,9 @@
           </section>
         </div>
         <aside class="document-sidebar" aria-label="Підсумок документа">
-          <section><h2>Специфікація</h2><dl data-totals></dl></section>
-          <section><h2 data-check-title>Перевірка рахунку</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label><details><summary>Як відстежувати оплату</summary><p>«Виставити рахунок» зберігає готовий рахунок у «Надходження», але не надсилає його клієнту. Передайте PDF або натисніть «Надіслати». Клієнт копіює призначення платежу з рахунку. Для кожної нової суми використовуйте унікальний номер. Сума та ім’я — лише підказки, не підтвердження оплати.</p></details></section>
-          <section><h2>Дані замовлення</h2><button type="button" data-action="refresh-order">Оновити з замовлення</button></section>
+          <section><h2>Специфікація</h2><dl data-totals></dl><p class="muted" data-amount-words></p></section>
+          <section><h2 data-check-title>Перевірка рахунку</h2><div data-checks></div><label class="check-label"><input type="checkbox" data-reviewed><span>Дані, ціни та умови перевірено</span></label><details><summary>Як відстежувати оплату</summary><p>Готовий документ зберігається у <a href="/admin/invoices/">«Рахунках»</a>, але не надсилається автоматично. Передайте PDF клієнту. Для зіставлення банківського платежу важливе призначення з номером рахунку; сума та ім’я самі по собі не підтверджують оплату.</p></details></section>
+          <section data-order-refresh><h2>Дані замовлення</h2><button type="button" data-action="refresh-order">Оновити з замовлення</button></section>
           <section><h2>Версії</h2><select data-versions aria-label="Збережена версія"><option value="">Ще не збережено</option></select><p class="muted" data-version-info></p><p class="muted" data-delivery-status></p></section>
         </aside>
       </div>
@@ -77,6 +77,11 @@
     <label>ПІБ / найменування ФОПа<input data-new-seller-name maxlength="200" autocomplete="off"></label>
     <p data-seller-error class="notice error" role="alert" hidden></p>
     <div class="dialog-actions"><button type="button" data-action="create-seller" class="primary">Додати ФОП</button></div>
+  </dialog>
+  <dialog data-customer-dialog aria-labelledby="customer-title">
+    <form method="dialog"><div class="dialog-heading"><h2 id="customer-title">Клієнт із CRM</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
+    <form data-customer-search class="customer-search"><label>Ім’я або телефон<input data-customer-query type="search" minlength="2" maxlength="100" required autocomplete="off"></label><button>Знайти</button></form>
+    <p class="notice error" data-customer-error role="alert" hidden></p><div data-customer-results></div>
   </dialog>
 </body>
 </html>

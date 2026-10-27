@@ -4,6 +4,8 @@ import { recordAuditEvent } from './audit-log.js';
 import { saveConnectDiagnostic, safeBankDiagnostic } from './bank-diagnostics.js';
 import { refreshLinkedOrderStatuses, invoiceSuggestions, linkedBankPaymentSql } from './bank-payment-links.js';
 import { dispatchBankReceiptAlerts } from './bank-telegram-alerts.js';
+import { allDocumentRows } from './invoice-numbering.js';
+import { ensureDocuments } from './order-documents.js';
 
 const now=()=>new Date().toISOString();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -90,15 +92,17 @@ export function hasInvoiceReference(purpose,number) {
   return new RegExp(`(^|[^\\p{L}\\p{N}\\-])${escaped}($|[^\\p{L}\\p{N}\\-])`,'u').test(normalizeNumber(purpose));
 }
 export async function invoiceIndex(env,orderId='') {
-  const rows=await all(env,`SELECT d.*,o.order_number,o.customer_name,o.status AS order_status FROM order_documents d JOIN orders o ON o.id=d.order_id
-    WHERE d.status='ready' AND d.output_mode IN ('invoice','all') ${orderId ? 'AND d.order_id=?':''} ORDER BY d.created_at DESC`,...(orderId ? [orderId]:[]));
+  await ensureDocuments(env);
+  const rows=await all(env,`SELECT d.*,o.id AS order_id,o.order_number,o.customer_name,o.status AS order_status FROM (${allDocumentRows}) d LEFT JOIN orders o ON d.scope='order:'||o.id
+    WHERE d.status='ready' AND d.output_mode IN ('invoice','all') ${orderId ? 'AND o.id=?':''} ORDER BY d.created_at DESC,d.revision DESC`,...(orderId ? [orderId]:[]));
   const map=new Map();
   for(const row of rows) {
-    let d; try { d=JSON.parse(row.data_json); if(!d.invoice?.enabled || validateReady(d,'invoice').length) continue; } catch {continue;}
+    let d; try { d=JSON.parse(row.data_json); if(!d.invoice?.enabled || !d.invoice.number || validateReady(d,'invoice').length) continue; } catch {continue;}
     const number=normalizeNumber(d.invoice.number),iban=normalizeIban(d.seller.iban),amount_minor=invoiceAmount(d);
     if (!Number.isSafeInteger(amount_minor) || amount_minor<=0) continue;
-    const key=await hash(`${row.order_id}|${number}|${iban}|UAH|${amount_minor}`);
-    if (!map.has(key)) map.set(key,{key,document_id:row.id,order_id:row.order_id,order_number:row.order_number,customer_name:row.customer_name,
+    const workspace_id=row.scope.startsWith('invoice:') ? row.scope.slice(8):null;
+    const key=await hash(`${row.order_id || row.scope}|${number}|${iban}|UAH|${amount_minor}`);
+    if (!map.has(key)) map.set(key,{key,document_id:workspace_id ? null:row.id,workspace_id,source_document_id:row.id,order_id:row.order_id,order_number:row.order_number,customer_name:d.buyer.name || row.customer_name,
       order_status:row.order_status,number,iban,currency:'UAH',amount_minor,date:d.invoice.date,created_at:row.created_at});
   }
   return [...map.values()];
@@ -147,10 +151,10 @@ export async function reconcile(env,invoices,actor='ПУМБ') {
     const invoice=candidates.length===1 ? candidates[0]:null;
     let reason=candidates.length>1 ? 'ambiguous_invoice': !invoice ? 'no_invoice': invoice.order_status==='canceled' ? 'canceled_order':tx.booked_at.slice(0,10)<invoice.date ? 'before_invoice':null;
     if(!reason && (paid.get(invoice.key)||0)+tx.amount_minor>invoice.amount_minor) reason='overpayment';
-    if(reason) { if(tx.review_reason!==reason)updates.push({statement:env.DB.prepare('UPDATE bank_incoming SET review_reason=? WHERE id=? AND order_id IS NULL').bind(reason,tx.id)});continue; }
+    if(reason) { if(tx.review_reason!==reason)updates.push({statement:env.DB.prepare('UPDATE bank_incoming SET review_reason=? WHERE id=? AND order_id IS NULL AND invoice_key IS NULL').bind(reason,tx.id)});continue; }
     paid.set(invoice.key,(paid.get(invoice.key)||0)+tx.amount_minor);
     updates.push({id:tx.id,statement:env.DB.prepare(`UPDATE bank_incoming SET order_id=?,document_id=?,invoice_number=?,invoice_key=?,matched_at=?,match_method='automatic',review_reason=NULL
-      WHERE id=? AND order_id IS NULL AND ignored=0 AND amount_minor+(SELECT COALESCE(SUM(amount_minor),0) FROM bank_incoming WHERE invoice_key=? AND ignored=0 AND review_reason IS NULL AND direction='INBOUND')<=?`).bind(invoice.order_id,invoice.document_id,invoice.number,invoice.key,now(),tx.id,invoice.key,invoice.amount_minor)});
+      WHERE id=? AND order_id IS NULL AND invoice_key IS NULL AND ignored=0 AND amount_minor+(SELECT COALESCE(SUM(amount_minor),0) FROM bank_incoming WHERE invoice_key=? AND ignored=0 AND review_reason IS NULL AND direction='INBOUND')<=?`).bind(invoice.order_id,invoice.document_id,invoice.number,invoice.key,now(),tx.id,invoice.key,invoice.amount_minor)});
   }
   const matched=[];
   for(let offset=0;offset<updates.length;offset+=40) {
@@ -207,7 +211,7 @@ export async function readIncoming(env,{orderId='',page=1,unmatched=false,availa
   const invoices=await invoiceIndex(env,orderId);
   const clauses=['ignored=0'],args=[];
   if(orderId) {clauses.push('order_id=?');args.push(orderId);}
-  if(unmatched) clauses.push('(order_id IS NULL OR review_reason IS NOT NULL)');
+  if(unmatched) clauses.push('((order_id IS NULL AND invoice_key IS NULL) OR review_reason IS NOT NULL)');
   if(available) {
     clauses.push("order_id IS NULL", "invoice_key IS NULL", "direction='INBOUND'", "currency='UAH'", "COALESCE(review_reason,'') NOT IN ('bank_record_changed','order_deleted','manual_review')", 'booked_at<?');
     args.push(shiftDay(kyivDay(),1));
@@ -217,12 +221,13 @@ export async function readIncoming(env,{orderId='',page=1,unmatched=false,availa
   const rows=await all(env,`SELECT b.id,b.currency,b.amount_minor,b.direction,b.booked_at,b.payer_name,b.purpose,b.order_id,b.invoice_number,b.invoice_key,b.review_reason,b.match_method,o.order_number
     FROM bank_incoming b LEFT JOIN orders o ON o.id=b.order_id WHERE ${clauses.map(c=>c.replace(/\border_id\b/g,'b.order_id')).join(' AND ')} ORDER BY booked_at DESC,b.id LIMIT 50 OFFSET ?`,...args,(page-1)*50);
   const summary=await first(env,`SELECT COUNT(*) count,COALESCE(SUM(CASE WHEN direction='INBOUND' THEN amount_minor ELSE 0 END),0) received_minor,
-    SUM(CASE WHEN order_id IS NULL OR review_reason IS NOT NULL THEN 1 ELSE 0 END) review_count FROM bank_incoming WHERE ${where}`,...args);
+    SUM(CASE WHEN (order_id IS NULL AND invoice_key IS NULL) OR review_reason IS NOT NULL THEN 1 ELSE 0 END) review_count FROM bank_incoming WHERE ${where}`,...args);
   const payments=await all(env,"SELECT invoice_key,SUM(amount_minor) received_minor FROM bank_incoming WHERE ignored=0 AND review_reason IS NULL AND direction='INBOUND' AND invoice_key IS NOT NULL GROUP BY invoice_key");
   const flagged=await all(env,"SELECT account_iban,currency,purpose,invoice_key FROM bank_incoming WHERE ignored=0 AND review_reason IS NOT NULL");
   const facts=await all(env,`SELECT id,account_iban,fingerprint FROM bank_incoming WHERE id IN (${rows.length?rows.map(()=>'?').join(','):'NULL'})`,...rows.map(r=>r.id));
   return {connection:await connectionStatus(env),summary,...(orderId?{order:await first(env,`SELECT id,order_number,customer_name,revenue_uah,payment_status,status,${linkedBankPaymentSql} AS has_bank_payment FROM orders WHERE id=?`,orderId)}:{}),rows:rows.map(row=>{const fact=facts.find(f=>f.id===row.id);return {...row,fingerprint:fact?.fingerprint,
-    suggestions:row.order_id?[]:invoiceSuggestions({...row,account_iban:fact?.account_iban},invoices)};}),page,invoices:invoices.map(({iban,...i})=>{
+    workspace_id:invoices.find(i=>i.key===row.invoice_key)?.workspace_id || null,
+    suggestions:row.order_id || row.invoice_key?[]:invoiceSuggestions({...row,account_iban:fact?.account_iban},invoices)};}),page,invoices:invoices.map(({iban,...i})=>{
     const received=payments.find(p=>p.invoice_key===i.key)?.received_minor || 0;
     const review=flagged.some(t=>t.invoice_key===i.key || matchingInvoices(t,[{...i,iban}]).length);
     return {...i,iban_masked:iban.slice(0,6)+'…'+iban.slice(-4),received_minor:received,status:review ? 'review':received>=i.amount_minor ? 'paid':received>0 ? 'partial':'unpaid'};

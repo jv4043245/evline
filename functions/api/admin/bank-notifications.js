@@ -4,7 +4,7 @@ import { json } from '../../_lib/http.js';
 async function unread(env,userId) {
   const row=await env.DB.prepare(`SELECT
     COALESCE(SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM bank_receipt_views v WHERE v.user_id=? AND v.payment_id=b.id) THEN 1 ELSE 0 END),0) count,
-    COALESCE(SUM(CASE WHEN b.order_id IS NULL THEN 1 ELSE 0 END),0) unassigned_count
+    COALESCE(SUM(CASE WHEN b.order_id IS NULL AND b.invoice_key IS NULL THEN 1 ELSE 0 END),0) unassigned_count
     FROM bank_incoming b WHERE b.ignored=0 AND b.direction='INBOUND'`).bind(userId).first();
   // Keep count as the per-user unread count for older clients. Assignment is shared.
   return {count:Number(row?.count || 0),unassigned_count:Number(row?.unassigned_count || 0)};

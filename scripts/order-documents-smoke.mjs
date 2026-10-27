@@ -15,8 +15,8 @@ await mkdir(output, { recursive: true });
 const db = new DatabaseSync(':memory:'); db.exec('PRAGMA foreign_keys=ON');
 for (const file of (await readdir(path.join(root, 'migrations'))).filter(f => f.endsWith('.sql')).sort()) db.exec(await readFile(path.join(root, 'migrations', file), 'utf8'));
 const env = { ADMIN_TOKEN: 'synthetic-admin', DB: { prepare(sql) { const statement = db.prepare(sql); let args = []; return {
-  bind(...values) { args = values; return this; }, async first() { return statement.get(...args) || null; }, async all() { return { results: statement.all(...args) }; }, async run() { return { meta: { changes: Number(statement.run(...args).changes) } }; },
-}; } } };
+  bind(...values) { args = values; return this; }, async first() { return statement.get(...args) || null; }, async all() { return { results: statement.all(...args) }; }, _run() { return { meta: { changes: Number(statement.run(...args).changes) } }; }, async run() { return this._run(); },
+}; }, async batch(statements) { db.exec('BEGIN'); try { const results=statements.map(s=>s._run()); db.exec('COMMIT'); return results; } catch(e) { db.exec('ROLLBACK'); throw e; } } } };
 const order = { id: 'test-document-order', order_number: 'O-900001', customer_name: 'Тестовий Покупець', customer_phone: '+380000000001', item_name: 'Бампер передній BYD Yuan Plus', car: 'BYD Yuan Plus 2023', vin: 'TESTVIN00000000001', revenue_uah: 10000, type: 'parts' };
 db.prepare('INSERT INTO orders(id,created_at,updated_at,order_number,customer_name,customer_phone,item_name,car,vin,revenue_uah,type) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(order.id, '2026-09-24', '2026-09-24', order.order_number, order.customer_name, order.customer_phone, order.item_name, order.car, order.vin, order.revenue_uah, order.type);
 const fixture = fromOrder(order);

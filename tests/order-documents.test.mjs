@@ -9,6 +9,9 @@ import { getDocumentContext, saveDocument, saveSeller, ensureDocuments, document
 import { onRequestPost as sendDocument } from '../functions/api/admin/orders/[id]/document-send.js';
 import { onRequest as authorize } from '../functions/api/admin/_middleware.js';
 import { onRequestDelete as deleteOrder } from '../functions/api/admin/orders/[id].js';
+import { onRequestGet as listInvoices } from '../functions/api/admin/invoices.js';
+import { amountWords } from '../admin/documents/amount-words.js';
+import { invoiceIndex, ingestTransactions, reconcile, readIncoming } from '../functions/_lib/bank-incoming.js';
 
 const migrationDir = new URL('../migrations/', import.meta.url);
 const schemas = await Promise.all((await readdir(migrationDir)).filter(f => f.endsWith('.sql')).sort().map(f => readFile(new URL(f, migrationDir), 'utf8')));
@@ -28,8 +31,8 @@ async function setup(t) {
   for (const schema of schemas) db.exec(schema);
   const env = { ADMIN_TOKEN: 'test-admin', TELEGRAM_BOT_TOKEN: 'test-bot', DB: { prepare(sql) { const statement = db.prepare(sql); let args = []; return {
     bind(...values) { args = values; return this; }, async first() { return statement.get(...args) || null; }, async all() { return { results: statement.all(...args) }; },
-    async run() { return { meta: { changes: Number(statement.run(...args).changes) } }; },
-  }; } } };
+    _run() { return { meta: { changes: Number(statement.run(...args).changes) } }; }, async run() { return this._run(); },
+  }; }, async batch(statements) { db.exec('BEGIN'); try { const results = statements.map(s => s._run()); db.exec('COMMIT'); return results; } catch(e) { db.exec('ROLLBACK'); throw e; } } } };
   db.prepare('INSERT INTO customers(id,created_at,updated_at,name,phone) VALUES(?,?,?,?,?)').run('test-customer', '2026-09-24', '2026-09-24', 'Тест', '+380000000001');
   db.prepare(`INSERT INTO orders(id,created_at,updated_at,customer_id,order_number,customer_name,customer_phone,type,status,revenue_uah,purchase_cost_uah,payment_status,item_name,telegram_chat_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(orderId, '2026-09-24', '2026-09-24', 'test-customer', 'O-TEST', 'Тест', '+380000000001', 'parts', 'paid', 10000, 7777, 'paid', 'Бампер', '123456789');
   return { db, env };
@@ -256,4 +259,113 @@ test('Telegram sends once, retains audit/version and refuses uncertain delivery 
   await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(next.request_id) }), /міг надійти/);
   await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(next.request_id) }), /дублікат/); assert.equal(calls, 2);
   assert.equal(db.prepare('SELECT status FROM document_deliveries WHERE id=?').get(next.request_id).status, 'unknown');
+});
+
+test('Ukrainian amount in words handles feminine forms, teens, thousands, millions and kopecks', () => {
+  for (const [minor, text] of [[0, 'Нуль гривень 00 копійок'], [101, 'Одна гривня 01 копійка'], [202, 'Дві гривні 02 копійки'], [511, 'П’ять гривень 11 копійок'], [1121, 'Одинадцять гривень 21 копійка'], [2124, 'Двадцять одна гривня 24 копійки'], [100000, 'Одна тисяча гривень 00 копійок'], [200000, 'Дві тисячі гривень 00 копійок'], [2742000, 'Двадцять сім тисяч чотириста двадцять гривень 00 копійок'], [100200102, 'Один мільйон дві тисячі одна гривня 02 копійки']]) assert.equal(amountWords(minor), text);
+  assert.throws(() => amountWords(-1)); assert.throws(() => amountWords(1.5));
+});
+const autoPayload = (data = completeDocument(), revision = 0, status = 'ready') => ({ ...payload({ ...data, invoice: { ...data.invoice, number: '', automatic: true } }, revision, status), mode: 'invoice' });
+test('new order and standalone drafts use automatic numbering, but do not consume a number or create an order', async t => {
+  const { env, db } = await setup(t), id = crypto.randomUUID();
+  const blank = await getDocumentContext(env, id, '', true);
+  assert.equal(blank.defaults.invoice.automatic, true); assert.equal(blank.defaults.invoice.number, '');
+  assert.equal(blank.recipient, ''); assert.equal(blank.standalone, true);
+  await saveDocument(env, req(), id, autoPayload(completeDocument(), 0, 'draft'), true);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM orders').get().n, 1);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+  assert.equal((await getDocumentContext(env, orderId)).defaults.invoice.automatic, true);
+});
+test('number 9 onward is shared across standalone and ordered invoices, with atomic concurrent issue and retry', async t => {
+  const { env, db } = await setup(t), ids = [crypto.randomUUID(), crypto.randomUUID()];
+  const inputs = [autoPayload(), autoPayload(), autoPayload()];
+  const results = await Promise.all([saveDocument(env, req(), orderId, inputs[0]), ...ids.map((id, i) => saveDocument(env, req(), id, inputs[i + 1], true))]);
+  assert.deepEqual(results.map(r => Number(r.document.data.invoice.number)).sort((a,b) => a-b), [9,10,11]);
+  assert.equal((await saveDocument(env, req(), ids[0], inputs[1], true)).document.data.invoice.number, results[1].document.data.invoice.number);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 12);
+  const saved = results[1].document.data; saved.buyer.name = 'Виправлене ім’я';
+  const corrected = await saveDocument(env, req(), ids[0], { ...payload(saved, 1), mode: 'invoice' }, true);
+  assert.equal(corrected.document.data.invoice.number, saved.invoice.number);
+  saved.items[0].price = '20000';
+  await assert.rejects(saveDocument(env, req(), ids[0], { ...payload(saved, 2), mode: 'invoice' }, true), e => e.status === 409);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 12);
+  const next = await saveDocument(env, req(), ids[0], autoPayload(saved, 2), true);
+  assert.equal(next.document.data.invoice.number, '12');
+});
+test('stale save and simultaneous duplicate requests never spend extra invoice numbers', async t => {
+  const { env, db } = await setup(t), id = crypto.randomUUID(), p = autoPayload();
+  const same = await Promise.all([saveDocument(env, req(), id, p, true), saveDocument(env, req(), id, p, true)]);
+  assert.equal(same[0].document.id, same[1].document.id);
+  const competing = await Promise.allSettled([saveDocument(env, req(), id, autoPayload(completeDocument(), 1), true), saveDocument(env, req(), id, autoPayload(completeDocument(), 1), true)]);
+  assert.equal(competing.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 11);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 2);
+});
+test('legacy numeric invoices advance sequence, and historical number, amount and PDF remain unchanged', async t => {
+  const { env, db } = await setup(t), old = completeDocument(); old.invoice.number = '18';
+  await saveDocument(env, req(), orderId, { ...payload(old), mode: 'invoice' });
+  const before = db.prepare('SELECT data_json FROM order_documents').get().data_json;
+  const next = await saveDocument(env, req(), crypto.randomUUID(), autoPayload(), true);
+  assert.equal(next.document.data.invoice.number, '19');
+  assert.equal(db.prepare('SELECT data_json FROM order_documents').get().data_json, before);
+});
+test('invoice register, search and customer lookup include standalone invoices without leaking internal fields', async t => {
+  const { env } = await setup(t);
+  await saveDocument(env, req(), orderId, autoPayload());
+  const id = crypto.randomUUID(), first = await saveDocument(env, req(), id, autoPayload(), true);
+  await saveDocument(env, req(), id, autoPayload(completeDocument(), 1), true);
+  const list = async query => (await listInvoices({ env, request: new Request(`https://evline.test/api/admin/invoices?${query}`) })).json();
+  const all = await list(''); assert.equal(all.rows.length, 3); assert.equal(all.rows.filter(r => r.workspace).length, 2);
+  const one = await list(`q=${first.document.data.invoice.number}`); assert.equal(one.rows.length, 1);
+  assert.equal((await list('customers=Тест')).customers.length, 1);
+  assert.doesNotMatch(JSON.stringify(all), /iban|tax_id|manager_notes|purchase_cost/);
+  assert.equal((await list('q=%25')).rows.length, 0);
+});
+test('invoice output mirrors the sample: code, quantity, unit, VIN, editable note and sum in words, no agreement', () => {
+  const d = completeDocument(); d.items[0].price = '27420'; d.invoice.note = 'Погоджене отримання зі складу'; d.items[0].sku = 'TEST-OEM';
+  const blocks = documentBlocks(d, 'invoice'), text = documentText(d, 'invoice');
+  assert.equal(blocks.find(b => b.type === 'table').headers.length, 7);
+  for (const value of [d.vin, 'TEST-OEM', 'Двадцять сім тисяч чотириста двадцять гривень 00 копійок', d.invoice.note]) assert.ok(text.includes(value));
+  assert.doesNotMatch(text, /Договір|Специфікація/);
+});
+test('standalone invoice remains matchable by the bank, but does not update or create any order', async t => {
+  const { env, db } = await setup(t), id = crypto.randomUUID(), before = db.prepare('SELECT * FROM orders').all();
+  const result = await saveDocument(env, req(), id, autoPayload(), true), d = result.document.data;
+  const invoices = await invoiceIndex(env);
+  assert.equal(invoices.length, 1); assert.equal(invoices[0].workspace_id, id); assert.equal(invoices[0].order_id, null);
+  const tx = { transaction_id: 'standalone-test', account_id: 'test', account_iban: d.seller.iban, currency: 'UAH', amount_minor: 1000000, direction: 'INBOUND', booked_at: `${d.invoice.date}T12:00:00Z`, payer_name: 'Тестовий Покупець', purpose: `Оплата за рахунком № ${d.invoice.number}` };
+  await ingestTransactions(env, [tx], invoices);
+  assert.equal(await reconcile(env, invoices), 1); assert.equal(await reconcile(env, invoices), 0);
+  const incoming = await readIncoming(env);
+  assert.equal(incoming.invoices[0].status, 'paid'); assert.equal(incoming.rows[0].workspace_id, id);
+  assert.equal(incoming.summary.review_count, 0); assert.equal((await readIncoming(env, { unmatched: true })).rows.length, 0);
+  assert.deepEqual(db.prepare('SELECT * FROM orders').all(), before);
+});
+test('atomic rollback keeps number 9 available after an intermediate database failure', async t => {
+  const { env, db } = await setup(t), id = crypto.randomUUID(), p = autoPayload();
+  db.exec("CREATE TRIGGER fail_number BEFORE INSERT ON invoice_numbers BEGIN SELECT RAISE(ABORT,'synthetic failure'); END");
+  await assert.rejects(saveDocument(env, req(), id, p, true), /synthetic failure/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 0);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+  db.exec('DROP TRIGGER fail_number');
+  assert.equal((await saveDocument(env, req(), id, p, true)).document.data.invoice.number, '9');
+});
+test('manual-number races have one winner; automatic numbers cannot be impersonated', async t => {
+  const { env, db } = await setup(t), d = completeDocument(); d.invoice.number = 'MANUAL-TEST';
+  const results = await Promise.allSettled([crypto.randomUUID(),crypto.randomUUID()].map(id => saveDocument(env, req(), id, { ...payload(d), mode:'invoice' }, true)));
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 1);
+  d.invoice.number = '9'; d.invoice.automatic = true;
+  await assert.rejects(saveDocument(env, req(), crypto.randomUUID(), { ...payload(d), mode:'invoice' }, true), e => e.status === 409);
+});
+test('issuing replaces the pending draft in the register, and seller tax terms seed the next draft only', async t => {
+  const { env } = await setup(t), id = crypto.randomUUID(), p = autoPayload();
+  await saveSeller(env, req(), { expected_revision:0, seller:p.data.seller });
+  await saveDocument(env, req(), id, { ...p, status:'draft' }, true);
+  const ready = await saveDocument(env, req(), id, { ...autoPayload(p.data,1), mode:'invoice' }, true);
+  const result = await (await listInvoices({ env, request:new Request('https://evline.test/api/admin/invoices') })).json();
+  assert.equal(result.rows.length, 1); assert.equal(result.rows[0].status, 'ready');
+  const fresh = await getDocumentContext(env, crypto.randomUUID(), '', true);
+  assert.equal(fresh.defaults.tax, 'Без ПДВ'); assert.equal(fresh.defaults.buyer.name, ''); assert.equal(fresh.defaults.invoice.note, undefined);
+  assert.equal((await getDocumentContext(env, id, ready.document.id, true)).document.data.invoice.number, '9');
 });

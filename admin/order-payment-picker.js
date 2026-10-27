@@ -1,4 +1,4 @@
-import { bankErrorMessage } from './bank-incoming.js?v=20261022-receipt-order-link';
+import { bankErrorMessage } from './bank-incoming.js?v=20261027-invoices';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'}).format(Number(n)/100);
