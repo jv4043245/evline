@@ -1,4 +1,4 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-invoices';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-invoice-defaults';
 import { amountWords } from './amount-words.js';
 
 const value = v => String(v || '').trim() || '________________';
@@ -24,7 +24,7 @@ export function documentBlocks(d, mode = 'all') {
     p(`${d.invoice.number ? `№ ${d.invoice.number}` : 'Номер буде присвоєно при виставленні'} від ${dateLabel(d.invoice.date)}`),
     field('Постачальник / одержувач коштів', d.seller.name),
     field('РНОКПП / ЄДРПОУ', d.seller.tax_id), field('IBAN', d.seller.iban), field('Банк', d.seller.bank),
-    field('Адреса постачальника', d.seller.address), field('Телефон', d.seller.phone),
+    ...(d.seller.address ? [field('Адреса постачальника', d.seller.address)] : []), field('Телефон', d.seller.phone),
     ...(d.seller.tax_status ? [field('Податковий статус постачальника', d.seller.tax_status)] : []),
     field('Покупець', d.buyer.name), ...(d.buyer.code ? [field('Код / РНОКПП покупця', d.buyer.code)] : []),
     ...(d.buyer.phone ? [field('Телефон покупця', d.buyer.phone)] : []),

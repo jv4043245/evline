@@ -123,7 +123,7 @@ export function validateReady(d, mode = 'all') {
   const fields = agreement ? ['number', 'date', 'city', 'car', 'condition', 'warranty', 'tax', 'included', 'prepayment_due', 'balance_due', 'route', 'forecast', 'deadline_days', 'handover', 'recipient', 'partial'] : mode === 'receipt' ? ['number', 'date'] : ['tax'];
   for (const k of fields) required(d[k], fieldLabels[k]);
   for (const [k, label] of Object.entries(agreement ? { name: 'ПІБ / назва покупця', address: 'Адреса покупця', phone: 'Телефон покупця', purpose: 'Мета придбання' } : { name: 'ПІБ / назва покупця' })) required(d.buyer[k], label);
-  for (const [k, label] of Object.entries({ name: 'Продавець', tax_id: 'РНОКПП продавця', address: 'Адреса продавця', iban: 'IBAN продавця', bank: 'Банк', phone: 'Телефон продавця' })) required(d.seller[k], label);
+  for (const [k, label] of Object.entries({ name: 'Продавець', tax_id: 'РНОКПП продавця', ...(mode !== 'invoice' ? { address: 'Адреса продавця' } : {}), iban: 'IBAN продавця', bank: 'Банк', phone: 'Телефон продавця' })) required(d.seller[k], label);
   if (d.seller.iban && !validIban(d.seller.iban)) errors.push('Коректний український IBAN');
   if ((agreement || mode === 'receipt') && d.date && !validDate(d.date)) errors.push('Коректна дата договору');
   if (agreement && d.deadline_days && !/^[1-9]\d{0,3}$/.test(d.deadline_days)) errors.push('Строк: від 1 до 9999 календарних днів');
