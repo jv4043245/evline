@@ -18,9 +18,13 @@ export function deliveryDetails(data, mode) {
   const payable = mode === 'invoice' ? invoiceAmount(data) : null;
   return { title, subject: `${title} · EVLine`, text: `Добрий день!\n\n${title}${payable == null ? '' : ` на суму ${money(payable)} грн`}.\nДокумент у вкладенні.\n\nEVLine` };
 }
-export function emailDraftUrl(email, details) {
+export function emailAddress(email) {
   const address = String(email || '').trim();
-  if (!address || contactEmail(address) !== address || /[\r\n]/.test(address)) throw new Error('Вкажіть коректну адресу email.');
+  if (!address || address.length > 254 || contactEmail(address) !== address || /[\r\n]/.test(String(email))) throw new Error('Вкажіть коректну адресу email.');
+  return address;
+}
+export function emailDraftUrl(email, details) {
+  const address = emailAddress(email);
   return `mailto:${encodeURIComponent(address)}?subject=${encodeURIComponent(details.subject)}&body=${encodeURIComponent(details.text)}`;
 }
 export function manualChatLinks(buyer, details) {

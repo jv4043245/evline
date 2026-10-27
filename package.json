@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "fflate": "0.8.2",
+    "mimetext": "3.0.28",
     "node-html-parser": "7.0.1"
   },
   "devDependencies": {
