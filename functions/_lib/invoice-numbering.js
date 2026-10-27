@@ -6,7 +6,8 @@ export const INVOICE_SCHEMA = [
     created_at TEXT NOT NULL, actor TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('draft','ready')),
     data_json TEXT NOT NULL, output_mode TEXT NOT NULL DEFAULT 'invoice', UNIQUE(workspace_id,revision))`,
   `CREATE TABLE IF NOT EXISTS invoice_sequence (id INTEGER PRIMARY KEY CHECK(id=1), next_number INTEGER NOT NULL CHECK(next_number>=9))`,
-  `INSERT OR IGNORE INTO invoice_sequence(id,next_number) VALUES(1,9)`,
+  `INSERT OR IGNORE INTO invoice_sequence(id,next_number) VALUES(1,10)`,
+  `UPDATE invoice_sequence SET next_number=10 WHERE id=1 AND next_number<10`,
   `CREATE TABLE IF NOT EXISTS invoice_numbers (number TEXT NOT NULL, iban TEXT NOT NULL, scope TEXT NOT NULL,
     amount_minor INTEGER NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(number,iban))`,
   `CREATE TABLE IF NOT EXISTS document_save_requests (id TEXT PRIMARY KEY, scope TEXT NOT NULL, fingerprint TEXT NOT NULL)`,
@@ -61,8 +62,8 @@ export async function writeDocumentVersion(env, { standalone, id, payload, data,
   const inserted = `EXISTS(SELECT 1 FROM ${store.table} WHERE id=?)`;
   if (allocate) {
     // D1 batch is transactional: sequence, reservation and snapshot commit together or not at all.
-    // External #1-8 and any legacy numeric invoices are never reused, even after deleting an order.
-    statements.push(env.DB.prepare(`UPDATE invoice_sequence SET next_number=MAX(next_number,
+    // External #1-9 and any legacy numeric invoices are never reused, even after deleting an order.
+    statements.push(env.DB.prepare(`UPDATE invoice_sequence SET next_number=MAX(next_number,10,
       COALESCE((SELECT MAX(CAST(number AS INTEGER))+1 FROM invoice_numbers WHERE length(number) BETWEEN 1 AND 9 AND number NOT GLOB '*[^0-9]*'),9),
       COALESCE((SELECT MAX(CAST(json_extract(data_json,'$.invoice.number') AS INTEGER))+1 FROM (${allDocumentRows})
         WHERE status='ready' AND output_mode IN ('invoice','all') AND length(json_extract(data_json,'$.invoice.number')) BETWEEN 1 AND 9
