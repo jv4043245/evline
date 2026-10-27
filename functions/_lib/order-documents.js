@@ -55,7 +55,7 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
     SELECT REPLACE(json_extract(data_json,'$.seller.iban'),' ','') account,json_extract(data_json,'$.tax') tax,
       ROW_NUMBER() OVER(PARTITION BY REPLACE(json_extract(data_json,'$.seller.iban'),' ','') ORDER BY created_at DESC,revision DESC) position
     FROM (${allDocumentRows}) WHERE status='ready' AND output_mode IN ('invoice','all')) WHERE position=1`).all()).results || [];
-  settings.profiles = settings.profiles.map(p => ({ ...p, invoice_defaults: { tax: priceTerms.find(r => r.account === p.seller.iban?.replace(/\s/g,''))?.tax || '' } }));
+  settings.profiles = settings.profiles.map(p => ({ ...p, invoice_defaults: { tax: p.invoice_defaults?.tax ?? priceTerms.find(r => r.account === p.seller.iban?.replace(/\s/g,''))?.tax ?? '' } }));
   const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
   const items = standalone ? [] : (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
   const deliveries = saved && !standalone ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
@@ -117,13 +117,14 @@ export async function saveSeller(env, request, payload) {
   const profileId = payload.profile_id || settings.default_id;
   if (!/^[a-zA-Z0-9-]{1,80}$/.test(profileId)) throw fail('Некоректний ідентифікатор ФОПа.');
   const index = settings.profiles.findIndex(p => p.id === profileId);
+  const invoice_defaults = payload.invoice_defaults ? { tax: String(payload.invoice_defaults.tax || '').trim().slice(0, 300) } : settings.profiles[index]?.invoice_defaults;
   if (payload.create === true) {
     if (index !== -1) throw fail('Такий профіль ФОПа вже існує.', 409);
     if (settings.profiles.length >= 10) throw fail('Не більше 10 ФОПів.');
-    settings.profiles.push({ id: profileId, seller });
+    settings.profiles.push({ id: profileId, seller, ...(invoice_defaults ? { invoice_defaults } : {}) });
   } else {
     if (index === -1) throw fail('ФОПа не знайдено.', 404);
-    settings.profiles[index] = { id: profileId, seller };
+    settings.profiles[index] = { id: profileId, seller, ...(invoice_defaults ? { invoice_defaults } : {}) };
   }
   const serialized = JSON.stringify({ profiles: settings.profiles, default_id: settings.default_id });
   const row = await env.DB.prepare(`INSERT INTO document_seller_settings(id,revision,updated_at,actor,data_json)

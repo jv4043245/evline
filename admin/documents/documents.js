@@ -1,5 +1,5 @@
-import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-invoices';
-import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-invoices';
+import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-invoice-defaults';
+import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-invoice-defaults';
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
@@ -243,7 +243,7 @@ async function action(name) {
   }
   else if (name === 'save-seller') {
     if (!data.seller_profile_id) throw new Error('Спочатку оберіть ФОПа або додайте нового.');
-    const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ profile_id: data.seller_profile_id, seller: data.seller, expected_revision: context.seller_revision }) });
+    const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ profile_id: data.seller_profile_id, seller: data.seller, invoice_defaults: { tax: data.tax }, expected_revision: context.seller_revision }) });
     context.seller_revision = result.revision; context.seller_profiles = result.profiles; renderEditor(); status('Реквізити цього ФОПа збережено');
   }
   else if (name === 'add-seller') { error('', '[data-seller-error]'); $('[data-new-seller-name]').value = ''; $('[data-seller-dialog]').showModal(); }

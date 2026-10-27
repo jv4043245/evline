@@ -369,3 +369,22 @@ test('issuing replaces the pending draft in the register, and seller tax terms s
   assert.equal(fresh.defaults.tax, 'Без ПДВ'); assert.equal(fresh.defaults.buyer.name, ''); assert.equal(fresh.defaults.invoice.note, undefined);
   assert.equal((await getDocumentContext(env, id, ready.document.id, true)).document.data.invoice.number, '9');
 });
+
+test('seller invoice defaults are reusable before first issue and survive legacy profile edits', async t => {
+  const { env, db } = await setup(t), d = completeDocument();
+  await saveSeller(env, req(), { expected_revision:0, seller:d.seller, invoice_defaults:{tax:'Без податку (ПДВ)'} });
+  let fresh = await getDocumentContext(env, crypto.randomUUID(), '', true);
+  assert.equal(fresh.defaults.tax, 'Без податку (ПДВ)');
+  await saveSeller(env, req(), { expected_revision:1, seller:{...d.seller, phone:'000000003'} });
+  fresh = await getDocumentContext(env, crypto.randomUUID(), '', true);
+  assert.equal(fresh.defaults.tax, 'Без податку (ПДВ)');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 0);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+});
+
+test('invoice does not require contract address and does not print an empty address', () => {
+  const d = completeDocument(); d.seller.address = '';
+  assert.deepEqual(validateReady(d, 'invoice'), []);
+  assert.ok(validateReady(d, 'agreement').includes('Адреса продавця'));
+  assert.doesNotMatch(documentText(d, 'invoice'), /Адреса постачальника/);
+});
