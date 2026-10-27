@@ -14,6 +14,8 @@ import { amountWords } from '../admin/documents/amount-words.js';
 import { invoiceIndex, ingestTransactions, reconcile, readIncoming } from '../functions/_lib/bank-incoming.js';
 import { onRequestPost as createOrder } from '../functions/api/admin/orders.js';
 import { repeatOrderDraft, repeatOrderPayload } from '../admin/repeat-order.js';
+import { advanceInvoiceNumbering, invoiceNumberingState } from '../functions/_lib/invoice-numbering.js';
+import { onRequestGet as getNumbering, onRequestPost as setNumbering } from '../functions/api/admin/invoice-numbering.js';
 
 const migrationDir = new URL('../migrations/', import.meta.url);
 const schemas = await Promise.all((await readdir(migrationDir)).filter(f => f.endsWith('.sql')).sort().map(f => readFile(new URL(f, migrationDir), 'utf8')));
@@ -270,7 +272,8 @@ test('Ukrainian amount in words handles feminine forms, teens, thousands, millio
 const autoPayload = (data = completeDocument(), revision = 0, status = 'ready') => ({ ...payload({ ...data, invoice: { ...data.invoice, number: '', automatic: true } }, revision, status), mode: 'invoice' });
 test('external invoice 9 advances an existing counter without renumbering or rewinding invoices', async t => {
   const { env, db } = await setup(t), old = completeDocument(); old.invoice.number = '9';
-  await saveDocument(env, req(), orderId, { ...payload(old), mode: 'invoice' });
+  db.prepare("INSERT INTO order_documents(id,order_id,revision,created_at,actor,status,data_json,output_mode) VALUES(?,?,1,'2026-10-26','legacy','ready',?,'invoice')")
+    .run(crypto.randomUUID(),orderId,JSON.stringify(old));
   const before = db.prepare('SELECT * FROM order_documents').all();
   const migration = await readFile(new URL('../migrations/0044_invoice_start_10.sql', import.meta.url), 'utf8');
   for (const [previous, expected] of [[9,10], [10,10], [27,27]]) {
@@ -464,4 +467,113 @@ test('repeat cannot create an orphan when source is missing', async t => {
   const request=new Request('https://evline.test/api/admin/orders',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({repeat_order_id:'missing'})});
   assert.equal((await createOrder({env,request})).status,404);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM orders').get().n,count);
+});
+
+const numberingChange = (expected = 10, next = 20) => ({ request_id: crypto.randomUUID(), expected_next_number: expected, next_number: next });
+test('manager advances numbering with durable actor history, audit and idempotent retries', async t => {
+  const {env,db}=await setup(t), p=numberingChange();
+  assert.equal((await (await getNumbering({env})).json()).next_number,10);
+  const result=await advanceInvoiceNumbering(env,req(),p);
+  assert.equal(result.next_number,20); assert.equal(result.last_change.previous_number,10); assert.ok(result.last_change.actor);
+  assert.equal((await advanceInvoiceNumbering(env,req(),p)).next_number,20);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbering_changes').get().n,1);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='invoice.numbering.advanced'").get().n,1);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbers').get().n,0);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n,0);
+  await advanceInvoiceNumbering(env,req(),numberingChange(20,30));
+  assert.equal((await advanceInvoiceNumbering(env,req(),p)).next_number,30);
+  await assert.rejects(advanceInvoiceNumbering(env,req(),{...p,next_number:40}),e=>e.status===409);
+});
+test('numbering rejects invalid, backward and stale edits', async t => {
+  const {env}=await setup(t); await ensureDocuments(env);
+  for (const invalid of [null,[],20]) await assert.rejects(advanceInvoiceNumbering(env,req(),invalid),e=>e.status===400);
+  for(const next of [0,9,10,10.5,'20',null,NaN,Infinity,1000000000])
+    await assert.rejects(advanceInvoiceNumbering(env,req(),numberingChange(10,next)),e=>e.status===400);
+  await assert.rejects(advanceInvoiceNumbering(env,req(),{...numberingChange(),request_id:'bad'}),e=>e.status===400);
+  await saveDocument(env,req(),crypto.randomUUID(),autoPayload(),true);
+  await assert.rejects(advanceInvoiceNumbering(env,req(),numberingChange()),e=>e.status===409);
+  assert.equal((await invoiceNumberingState(env)).next_number,11);
+});
+test('simultaneous identical numbering retries make one durable change', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env); const p=numberingChange();
+  const results=await Promise.all([advanceInvoiceNumbering(env,req(),p),advanceInvoiceNumbering(env,req(),p)]);
+  assert.deepEqual(results.map(r=>r.next_number),[20,20]);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbering_changes').get().n,1);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit_log WHERE action='invoice.numbering.advanced'").get().n,1);
+});
+test('concurrent reuse of a numbering request ID with different values cannot move the counter', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env); const p=numberingChange();
+  const results=await Promise.allSettled([advanceInvoiceNumbering(env,req(),p),advanceInvoiceNumbering(env,req(),{...p,next_number:30})]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(results.find(r=>r.status==='rejected').reason.status,409);
+  const change=db.prepare('SELECT next_number FROM invoice_numbering_changes').get();
+  assert.equal((await invoiceNumberingState(env)).next_number,change.next_number);
+});
+test('last supported invoice number is issued once and exhaustion never creates an invalid snapshot', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env);
+  await advanceInvoiceNumbering(env,req(),numberingChange(10,999999999));
+  const last=await saveDocument(env,req(),crypto.randomUUID(),autoPayload(),true);
+  assert.equal(last.document.data.invoice.number,'999999999');
+  await assert.rejects(saveDocument(env,req(),crypto.randomUUID(),autoPayload(),true),/вичерпано/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n,1);
+});
+test('two managers advancing the same counter cannot overwrite one another', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env);
+  const results=await Promise.allSettled([20,30].map(n=>advanceInvoiceNumbering(env,req(),numberingChange(10,n))));
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(results.find(r=>r.status==='rejected').reason.status,409);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbering_changes').get().n,1);
+  assert.equal((await invoiceNumberingState(env)).next_number,results.find(r=>r.status==='fulfilled').value.next_number);
+});
+test('simultaneous numbering change and invoice issue serialize without duplicate or rewound numbers', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env);
+  const [change,issue]=await Promise.allSettled([advanceInvoiceNumbering(env,req(),numberingChange()),saveDocument(env,req(),crypto.randomUUID(),autoPayload(),true)]);
+  assert.equal(issue.status,'fulfilled');
+  const number=Number(issue.value.document.data.invoice.number);
+  if(change.status==='fulfilled') assert.equal(number,20);
+  else { assert.equal(change.reason.status,409); assert.equal(number,10); }
+  assert.equal((await invoiceNumberingState(env)).next_number,number+1);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbers').get().n,1);
+});
+test('drafts created before a numbering change issue from the new counter and skipped manual numbers fail', async t => {
+  const {env,db}=await setup(t), id=crypto.randomUUID();
+  await saveDocument(env,req(),id,autoPayload(completeDocument(),0,'draft'),true);
+  await advanceInvoiceNumbering(env,req(),numberingChange());
+  for(const number of ['9','10','19','019']) {
+    const d=completeDocument(); d.invoice.number=number; d.invoice.automatic=false;
+    await assert.rejects(saveDocument(env,req(),crypto.randomUUID(),{...payload(d),mode:'invoice'},true),e=>e.status===409);
+  }
+  const tooLong=completeDocument(); tooLong.invoice.number='0000000019'; tooLong.invoice.automatic=false;
+  await assert.rejects(saveDocument(env,req(),crypto.randomUUID(),{...payload(tooLong),mode:'invoice'},true),e=>e.status===400);
+  const ready=await saveDocument(env,req(),id,autoPayload(completeDocument(),1),true);
+  assert.equal(ready.document.data.invoice.number,'20');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n,2);
+});
+test('existing invoice revisions survive advancing past their number; reuse for another buyer account does not', async t => {
+  const {env}=await setup(t), id=crypto.randomUUID(), d=completeDocument(); d.invoice.number='18';
+  const saved=await saveDocument(env,req(),id,{...payload(d),mode:'invoice'},true);
+  assert.equal((await invoiceNumberingState(env)).next_number,19);
+  await advanceInvoiceNumbering(env,req(),numberingChange(19,50));
+  d.buyer.phone='+380000000099';
+  assert.equal((await saveDocument(env,req(),id,{...payload(d,1),mode:'invoice'},true)).document.data.invoice.number,'18');
+  const body='3000020000000000000000000';
+  d.seller.iban='UA'+String(98-Number(BigInt(body+'301000')%97n)).padStart(2,'0')+body;
+  await assert.rejects(saveDocument(env,req(),crypto.randomUUID(),{...payload(d),mode:'invoice'},true),e=>e.status===409);
+  assert.equal((await getDocumentContext(env,id,saved.document.id,true)).document.data.buyer.phone,'+380000000001');
+});
+test('numbering update and history roll back together on database failure', async t => {
+  const {env,db}=await setup(t); await ensureDocuments(env);
+  db.exec("CREATE TRIGGER fail_numbering BEFORE UPDATE ON invoice_sequence WHEN NEW.next_number=20 BEGIN SELECT RAISE(ABORT,'synthetic numbering failure'); END");
+  await assert.rejects(advanceInvoiceNumbering(env,req(),numberingChange()),/synthetic numbering failure/);
+  assert.equal((await invoiceNumberingState(env)).next_number,10);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM invoice_numbering_changes').get().n,0);
+});
+test('numbering endpoint requires admin auth and same-origin JSON updates', async t => {
+  const {env}=await setup(t);
+  const unauth=new Request('https://evline.test/api/admin/invoice-numbering');
+  const response=await authorize({env,request:unauth,next:()=>getNumbering({env})}); assert.equal(response.status,401);
+  const request=new Request('https://evline.test/api/admin/invoice-numbering',{method:'POST',headers:{origin:'https://other.test','content-type':'application/json'},body:JSON.stringify(numberingChange())});
+  await assert.rejects(setNumbering({env,request}),e=>e.status===403);
+  const ok=new Request('https://evline.test/api/admin/invoice-numbering',{method:'POST',headers:{authorization:'Bearer test-admin',origin:'https://evline.test','content-type':'application/json'},body:JSON.stringify(numberingChange())});
+  assert.equal((await (await authorize({env,request:ok,next:()=>setNumbering({env,request:ok})})).json()).next_number,20);
 });

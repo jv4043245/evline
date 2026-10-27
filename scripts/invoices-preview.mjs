@@ -12,6 +12,7 @@ import { onRequestPost as seller } from '../functions/api/admin/document-setting
 import * as orders from '../functions/api/admin/orders.js';
 import { onRequestGet as orderDetail } from '../functions/api/admin/orders/[id].js';
 import { onRequestGet as summary } from '../functions/api/admin/summary.js';
+import * as numbering from '../functions/api/admin/invoice-numbering.js';
 
 const root = path.resolve(import.meta.dirname, '..'), db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys=ON');
@@ -40,6 +41,7 @@ const server = createServer(async (req, res) => {
       const request = new Request(url, { method: req.method, headers, ...(chunks.length ? { body: Buffer.concat(chunks) } : {}) });
       const standalone = /^\/api\/admin\/invoices\/([a-f0-9-]+)$/.exec(url.pathname), ordered = /^\/api\/admin\/orders\/([^/]+)\/documents$/.exec(url.pathname);
       const next = () => {
+        if (url.pathname === '/api/admin/invoice-numbering') return numbering[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request });
         const routes = standalone ? invoices : orderDocuments, id = (standalone || ordered)?.[1];
         if (id) return routes[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request, params: { id } });
         if (url.pathname === '/api/admin/invoices') return register({ env, request });
