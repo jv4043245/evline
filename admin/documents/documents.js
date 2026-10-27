@@ -3,7 +3,7 @@ import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
-import { contactEmail, deliveryDetails, emailDraftUrl, manualChatLinks } from './delivery.js?v=20261027-delivery2';
+import { contactEmail, deliveryDetails, emailAddress, manualChatLinks } from './delivery.js?v=20261027-email';
 
 const $ = s => document.querySelector(s);
 const pageUrl = new URL(location.href), orderId = pageUrl.searchParams.get('order') || '';
@@ -94,6 +94,8 @@ function refreshMode() {
   $('[data-action-document]').textContent = documentModes[outputMode()];
   $('[data-check-title]').textContent = `Перевірка · ${documentModes[outputMode()]}`;
   $('[data-delivery-status]').textContent = context.deliveries.filter(d => (d.id.includes(':') ? d.id.split(':').at(-1) : 'all') === outputMode()).map(d => `${d.status === 'sent' ? 'Надіслано в Telegram' : d.status === 'failed' ? 'Не надіслано' : 'Статус відправлення потребує перевірки'} · ${new Date(d.created_at).toLocaleString('uk-UA')}`).join('\n');
+  const emailHistory = (context.email_deliveries || []).filter(d => d.mode === outputMode()).map(d => `${d.status === 'sent' ? 'Надіслано на' : d.status === 'failed' ? 'Не надіслано на' : 'Перевірте відправлення на'} ${d.recipient} · ${new Date(d.created_at).toLocaleString('uk-UA')}`).join('\n');
+  $('[data-delivery-status]').textContent = [$('[data-delivery-status]').textContent, emailHistory].filter(Boolean).join('\n');
 }
 function refreshSummary() {
   let messages = [];
@@ -199,6 +201,8 @@ async function prepareSend() {
   try { canShare = !!navigator.share && !!navigator.canShare?.({ files: [sendFile] }); } catch { /* Download stays available when sharing is blocked. */ }
   $('[data-action="share"]').hidden = !canShare;
   $('[data-send-email]').value = contactEmail(data.buyer.contact);
+  $('[data-email-sender]').textContent = context.email?.enabled ? `Від: ${context.email.sender} · PDF у вкладенні` : 'Пошту для відправлення ще не підключено.';
+  updateEmailDelivery();
   const links = manualChatLinks(data.buyer, details);
   $('[data-send-chats]').innerHTML = links.map(link => `<a data-manual-chat href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">${icon('Share2')}${esc(link.name)}</a>`).join('');
   $('[data-manual-channels]').hidden = !links.length;
@@ -206,6 +210,16 @@ async function prepareSend() {
   error('', '[data-send-error]'); $('[data-send-dialog]').showModal();
 }
 function sendStatus(message) { $('[data-send-status]').textContent = message; $('[data-send-status]').hidden = !message; }
+function updateEmailDelivery() {
+  const address = $('[data-send-email]').value.trim().toLowerCase();
+  const previous = context.email_deliveries?.find(d => d.mode === sendMode && d.recipient === address);
+  const blocked = previous && previous.status !== 'failed';
+  $('[data-action="email"]').hidden = !context.email?.enabled || !!blocked;
+  const message = previous?.status === 'sent' ? `Надіслано на ${previous.recipient} · ${new Date(previous.created_at).toLocaleString('uk-UA')}`
+    : blocked ? 'Перевірте папку «Надіслані» Gmail: результат попереднього відправлення не підтверджено.' : '';
+  $('[data-email-result]').textContent = message;
+  $('[data-email-result]').hidden = !message;
+}
 function updateBotDelivery() {
   const key = sendMode === 'all' ? context.document.id : `${context.document.id}:${sendMode}`;
   const sent = context.deliveries?.find(d => d.id === key && d.status === 'sent');
@@ -249,11 +263,23 @@ async function action(name) {
     sendStatus('Файл передано в меню поширення. Завершіть відправлення у вибраному застосунку.');
   }
   else if (name === 'email') {
-    const input = $('[data-send-email]');
-    const href = emailDraftUrl(input.value, deliveryDetails(data, sendMode));
-    download(sendFile);
-    const link = document.createElement('a'); link.href = href; link.click();
-    sendStatus('PDF підготовлено до завантаження. Додайте його до листа перед відправленням.');
+    const recipient = emailAddress($('[data-send-email]').value);
+    const payload = new FormData();
+    payload.set('document_id', context.document.id); payload.set('recipient', recipient); payload.set('file', sendFile); payload.set('mode', sendMode);
+    const url = standalone ? `${endpoint}/email` : `/api/admin/orders/${encodeURIComponent(orderId)}/document-email`;
+    sendStatus('Відправляємо лист із PDF…');
+    $('[data-send-email]').disabled = true;
+    try {
+      const result = await api(url, { method: 'POST', body: payload });
+      // Preserve the confirmed result even if refreshing the document context fails.
+      context.email_deliveries = [{ mode: sendMode, recipient: recipient.toLowerCase(), status: 'sent', created_at: new Date().toISOString() }, ...(context.email_deliveries || [])];
+      updateEmailDelivery();
+      sendStatus(result.already_sent ? 'Цю версію вже надіслано на вказану адресу.' : `Лист із PDF надіслано на ${recipient}.`);
+    } catch (err) {
+      sendStatus('');
+      try { context.email_deliveries = (await api(`${endpoint}?version=${encodeURIComponent(context.document.id)}`)).email_deliveries; updateEmailDelivery(); } catch { /* The server still prevents duplicate sends. */ }
+      throw err;
+    } finally { $('[data-send-email]').disabled = false; }
   }
   else if (name === 'telegram') {
     if (!$('[data-confirm-recipient]')?.checked) throw new Error('Підтвердьте одержувача перед відправленням.');
@@ -424,3 +450,4 @@ $('[data-send-dialog]').addEventListener('click', e => {
   if (busy) { e.preventDefault(); return; }
   download(sendFile); sendStatus('PDF підготовлено до завантаження. Додайте файл у чаті.');
 });
+$('[data-send-email]').addEventListener('input', () => { updateEmailDelivery(); sendStatus(''); error('', '[data-send-error]'); });

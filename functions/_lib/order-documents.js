@@ -2,6 +2,7 @@ import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLE
 import { auditActor, recordAuditEvent } from './audit-log.js';
 import { INVOICE_SCHEMA, allDocumentRows, documentStore, savedRetry, writeDocumentVersion } from './invoice-numbering.js';
 import { contactPhone } from '../../admin/documents/delivery.js';
+import { EMAIL_DELIVERY_SCHEMA, emailConfiguration } from './document-email-config.js';
 
 export const DOCUMENT_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS order_documents (
@@ -26,6 +27,7 @@ export const DOCUMENT_SCHEMA = [
     created_at TEXT NOT NULL, actor TEXT NOT NULL, recipient TEXT NOT NULL,
     status TEXT NOT NULL, message_id TEXT, error TEXT
   )`,
+  EMAIL_DELIVERY_SCHEMA,
 ];
 export async function ensureDocuments(env) { for (const sql of DOCUMENT_SCHEMA) await env.DB.prepare(sql).run(); }
 export async function documentOrder(env, id) {
@@ -75,6 +77,7 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
   const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
   const items = standalone ? [] : (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
   const deliveries = saved ? (await env.DB.prepare(`SELECT id, created_at, actor, recipient, status, error FROM ${standalone ? 'invoice_deliveries' : 'document_deliveries'} WHERE document_id=? ORDER BY created_at DESC LIMIT 10`).bind(saved.id).all()).results : [];
+  const emailDeliveries = saved ? (await env.DB.prepare(`SELECT id,mode,created_at,recipient,status,error FROM document_email_deliveries WHERE ${standalone ? 'invoice_document_id' : 'order_document_id'}=? ORDER BY created_at DESC LIMIT 20`).bind(saved.id).all()).results : [];
   let defaults = { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id };
   defaults.invoice = { ...defaults.invoice, number: '', automatic: true };
   defaults.tax = profile.invoice_defaults.tax;
@@ -95,7 +98,8 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
     recipient_label: [standalone ? customer?.name : order.customer_name, standalone ? customer?.phone : order.customer_phone].filter(Boolean).join(' · '),
     versions, latest_revision: versions[0]?.revision || 0,
     document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, output_mode: saved.output_mode || '', actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
-    defaults, copied_from: copiedFrom, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
+    defaults, copied_from: copiedFrom, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries,
+    email: emailConfiguration(env), email_deliveries: emailDeliveries };
 }
 export function checkDocumentOrigin(request) {
   const origin = request.headers.get('origin');

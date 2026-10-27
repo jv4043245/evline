@@ -13,7 +13,7 @@ const source = await readFile(new URL('../admin/documents/documents.js', import.
 const deliverySource = await readFile(new URL('../admin/documents/delivery.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate) { for (let i=0;i<80;i++) { if(predicate())return; await tick(); } assert.ok(predicate(), 'UI settled'); }
-async function fixture(t, { connected=true, share=true, standalone=false }={}) {
+async function fixture(t, { connected=true, share=true, standalone=false, email=true, emailFailure=false }={}) {
   const dom = new JSDOM(html, {url:`https://example.test/admin/documents/?${standalone?'invoice=00000000-0000-4000-8000-000000000001':'order=test-order'}`,runScripts:'outside-only'});
   const w=dom.window,q=s=>w.document.querySelector(s),calls=[],links=[],shares=[],pdfs=[],popups=[];
   t.after(()=>w.close());
@@ -28,8 +28,13 @@ async function fixture(t, { connected=true, share=true, standalone=false }={}) {
   const body='3000010000000000000000000';defaults.seller={...defaults.seller,name:'Тестовий продавець',tax_id:'0000000000',bank:'Тестовий банк',iban:`UA${String(98-Number(BigInt(body+'301000')%97n)).padStart(2,'0')}${body}`};
   defaults.reviewed=true;defaults.tax='Без ПДВ';defaults.invoice.number='';defaults.invoice.automatic=true;
   let context={defaults,document:null,order:{id:'test-order',number:'O-TEST'},recipient:connected?'123456789':'',recipient_label:'Тестовий покупець · +380000000001',versions:[],deliveries:[],latest_revision:0,seller_profiles:[{id:'primary',seller:defaults.seller}],seller_revision:1};
+  context.email={enabled:email,sender:'sender@example.invalid'};context.email_deliveries=[];
   w.fetch=async (url,options={})=>{
     calls.push({url,options});assert.match(url,/^\/api\/admin\//,'No external request');
+    if(options.method==='POST' && /\/(email|document-email)$/.test(url)) {
+      context.email_deliveries=[{mode:'invoice',recipient:options.body.get('recipient').toLowerCase(),status:emailFailure?'unknown':'sent',created_at:'2026-10-27T12:00:00Z'}];
+      return Response.json(emailFailure?{error:'Перевірте Gmail: лист міг надійти.'}:{ok:true},{status:emailFailure?502:200});
+    }
     if(options.method==='POST' && /\/(send|document-send)$/.test(url)) {
       context.deliveries=[{id:`${context.document.id}:invoice`,status:'sent',created_at:'2026-10-27T12:00:00Z'}];return Response.json({ok:true});
     }
@@ -59,7 +64,7 @@ test('contact destinations reject active URLs and email headers; only valid cont
 test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
   const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
   assert.ok(deliverySource.includes(`from '${editorModel}'`));
-  assert.match(source,/delivery\.js\?v=20261027-delivery2/);assert.match(html,/documents\.js\?v=20261027-delivery2/);
+  assert.match(source,/delivery\.js\?v=20261027-email/);assert.match(html,/documents\.js\?v=20261027-email/);
 });
 test('issuing opens delivery choices without automatically contacting customer or duplicating invoice on download/print',async t=>{
   const p=await fixture(t);await p.click('issue-invoice');
@@ -84,11 +89,18 @@ test('standalone invoice uses standalone Telegram endpoint; file sharing passes 
   p.q('[data-confirm-recipient]').checked=true;await p.click('telegram');
   assert.ok(p.calls.some(c=>/^\/api\/admin\/invoices\/[^/]+\/send$/.test(c.url)));
 });
-test('without bot or native sharing, email draft and PDF stay available; no email is silently sent',async t=>{
+test('email sends attached PDF explicitly without downloading or opening mail client, then hides duplicate action',async t=>{
   const p=await fixture(t,{connected:false,share:false});await p.click('send');
   assert.equal(p.q('[data-bot-channel]').hidden,true);assert.equal(p.q('[data-action="share"]').hidden,true);
-  await p.click('email');assert.equal(p.links.length,2);assert.match(p.links[0].download,/\.pdf$/);assert.match(p.links[1].href,/^mailto:test%40example.invalid/);
-  assert.match(p.q('[data-send-status]').textContent,/Додайте його до листа/);
   assert.equal(p.calls.filter(c=>c.options.method==='POST').length,1);
-  p.q('[data-send-email]').value='invalid';await p.click('email');assert.equal(p.links.length,2);assert.match(p.q('[data-send-error]').textContent,/email/);
+  p.q('[data-send-email]').value='invalid';await p.click('email');assert.equal(p.links.length,0);assert.match(p.q('[data-send-error]').textContent,/email/);
+  p.q('[data-send-email]').value='test@example.invalid';await p.click('email');
+  const call=p.calls.find(c=>c.url.endsWith('/document-email'));assert.ok(call);assert.equal(call.options.body.get('file').type,'application/pdf');assert.equal(call.options.body.get('recipient'),'test@example.invalid');
+  assert.equal(p.links.length,0);assert.equal(p.q('[data-action="email"]').hidden,true);assert.match(p.q('[data-email-result]').textContent,/Надіслано на test@example.invalid/);
+  p.q('[data-send-email]').value='second@example.invalid';p.q('[data-send-email]').dispatchEvent(new p.w.Event('input'));assert.equal(p.q('[data-action="email"]').hidden,false);
+});
+test('standalone email uses invoice endpoint; unavailable Gmail and uncertain result remain explicit',async t=>{
+  const p=await fixture(t,{standalone:true});await p.click('send');await p.click('email');assert.ok(p.calls.some(c=>/^\/api\/admin\/invoices\/[^/]+\/email$/.test(c.url)));
+  const unavailable=await fixture(t,{email:false});await unavailable.click('send');assert.equal(unavailable.q('[data-action="email"]').hidden,true);assert.match(unavailable.q('[data-email-sender]').textContent,/ще не підключено/);
+  const failed=await fixture(t,{emailFailure:true});await failed.click('send');await failed.click('email');assert.match(failed.q('[data-send-error]').textContent,/міг надійти/);assert.equal(failed.q('[data-action="email"]').hidden,true);assert.equal(failed.q('[data-send-email]').disabled,false);
 });

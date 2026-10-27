@@ -14,8 +14,12 @@ import { onRequestGet as orderDetail } from '../functions/api/admin/orders/[id].
 import { onRequestGet as summary } from '../functions/api/admin/summary.js';
 import * as numbering from '../functions/api/admin/invoice-numbering.js';
 import { sendCustomerDocument } from '../functions/_lib/document-send.js';
+import { emailCustomerDocument } from '../functions/_lib/document-email.js';
 
 globalThis.fetch = async url => {
+  if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'synthetic-access' });
+  if (url === 'https://openidconnect.googleapis.com/v1/userinfo') return Response.json({ email: 'preview@example.invalid', email_verified: true });
+  if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'synthetic-message' });
   if (url !== 'https://api.telegram.org/botsynthetic-preview/sendDocument') throw new Error('External requests disabled in preview');
   return Response.json({ ok: true, result: { message_id: 123 } });
 };
@@ -23,7 +27,7 @@ globalThis.fetch = async url => {
 const root = path.resolve(import.meta.dirname, '..'), db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys=ON');
 for (const file of (await readdir(path.join(root, 'migrations'))).filter(f => f.endsWith('.sql')).sort()) db.exec(await readFile(path.join(root, 'migrations', file), 'utf8'));
-const env = { ADMIN_TOKEN: 'synthetic-admin', TELEGRAM_BOT_TOKEN: 'synthetic-preview', DB: { prepare(sql) {
+const env = { ADMIN_TOKEN: 'synthetic-admin', TELEGRAM_BOT_TOKEN: 'synthetic-preview', GMAIL_CLIENT_ID: 'synthetic-client', GMAIL_CLIENT_SECRET: 'synthetic-secret', GMAIL_REFRESH_TOKEN: 'synthetic-refresh', GMAIL_SENDER: 'preview@example.invalid', DB: { prepare(sql) {
   const s = db.prepare(sql); let args = []; return {
     bind(...values) { args = values; return this; }, _run() { return { meta: { changes: Number(s.run(...args).changes) } }; },
     async run() { return this._run(); }, async first() { return s.get(...args) || null; }, async all() { return { results: s.all(...args) }; },
@@ -49,6 +53,8 @@ const server = createServer(async (req, res) => {
       const request = new Request(url, { method: req.method, headers, ...(chunks.length ? { body: Buffer.concat(chunks) } : {}) });
       const standalone = /^\/api\/admin\/invoices\/([a-f0-9-]+)$/.exec(url.pathname), ordered = /^\/api\/admin\/orders\/([^/]+)\/documents$/.exec(url.pathname);
       const next = () => {
+        const mail = /^\/api\/admin\/(invoices|orders)\/([^/]+)\/(?:email|document-email)$/.exec(url.pathname);
+        if (mail && req.method === 'POST') return emailCustomerDocument({ env, request, params: { id: mail[2] } }, mail[1] === 'invoices');
         const delivery = /^\/api\/admin\/(invoices|orders)\/([^/]+)\/(?:send|document-send)$/.exec(url.pathname);
         if (delivery && req.method === 'POST') return sendCustomerDocument({ env, request, params: { id: delivery[2] } }, delivery[1] === 'invoices');
         if (url.pathname === '/api/admin/invoice-numbering') return numbering[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request });

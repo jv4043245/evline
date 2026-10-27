@@ -17,11 +17,116 @@ import { onRequestPost as createOrder } from '../functions/api/admin/orders.js';
 import { repeatOrderDraft, repeatOrderPayload } from '../admin/repeat-order.js';
 import { advanceInvoiceNumbering, invoiceNumberingState } from '../functions/_lib/invoice-numbering.js';
 import { onRequestGet as getNumbering, onRequestPost as setNumbering } from '../functions/api/admin/invoice-numbering.js';
+import { emailCustomerDocument } from '../functions/_lib/document-email.js';
 
 const migrationDir = new URL('../migrations/', import.meta.url);
 const schemas = await Promise.all((await readdir(migrationDir)).filter(f => f.endsWith('.sql')).sort().map(f => readFile(new URL(f, migrationDir), 'utf8')));
 const orderId = 'document-test-order';
 const req = () => new Request('https://evline.test/api/admin/documents', { headers: { authorization: 'Bearer test-admin' } });
+const mailEnv = env => Object.assign(env, { GMAIL_CLIENT_ID: 'test-client', GMAIL_CLIENT_SECRET: 'test-secret', GMAIL_REFRESH_TOKEN: 'test-refresh', GMAIL_SENDER: 'sender@example.invalid' });
+function mockMail(t, send = () => Response.json({ id: 'mail-test' }), identity = 'sender@example.invalid') {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push({ url, options });
+    if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'test-access' });
+    if (url === 'https://openidconnect.googleapis.com/v1/userinfo') return Response.json({ email: identity, email_verified: true });
+    assert.equal(url, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send');
+    return send();
+  });
+  return calls;
+}
+
+test('email sends the selected PDF, safely encodes Ukrainian text and retains a verified sender', async t => {
+  const { env, db } = await setup(t); mailEnv(env);
+  const context = await saveDocument(env, req(), orderId, payload());
+  const calls = mockMail(t);
+  const request = sendRequest(context.document.id, 'buyer@example.invalid', 'invoice');
+  const result = await emailCustomerDocument({ env, request, params: { id: orderId } });
+  assert.equal((await result.json()).ok, true);
+  const mime = Buffer.from(JSON.parse(calls.at(-1).options.body).raw, 'base64url').toString();
+  assert.match(mime, /From: =\?utf-8\?B\?RVZMaW5l\?= <sender@example.invalid>/);
+  assert.match(mime, /To: <buyer@example.invalid>/); assert.doesNotMatch(mime, /\n(?:Cc|Bcc):/);
+  assert.match(mime, /Content-Type: application\/pdf/); assert.match(mime, /Content-Disposition: attachment/);
+  const attachment = mime.match(/Content-Disposition: attachment;[^\r]+\r\n\r\n([A-Za-z0-9+/=\r\n]+)/)[1];
+  assert.equal(Buffer.from(attachment, 'base64').toString(), '%PDF-1.7\n' + 'synthetic'.repeat(20));
+  const message = mime.match(/Content-Type: text\/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=\r\n]+)/)[1];
+  assert.match(Buffer.from(message, 'base64').toString(), /Добрий день!/);
+  const subject = mime.match(/Subject: =\?utf-8\?B\?([^?]+)\?=/i);
+  assert.ok(subject); assert.match(Buffer.from(subject[1], 'base64').toString(), /Рахунок №/);
+  const history = (await getDocumentContext(env, orderId)).email_deliveries;
+  assert.equal(history[0].status, 'sent'); assert.equal(history[0].recipient, 'buyer@example.invalid');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM document_email_deliveries').get().n, 1);
+  assert.doesNotMatch(JSON.stringify(await getDocumentContext(env, orderId)), /test-secret|test-refresh|test-access/);
+});
+test('email duplicate and concurrent requests cannot send the same version/address twice; channels stay independent', async t => {
+  const { env, db } = await setup(t); mailEnv(env);
+  const c = await saveDocument(env, req(), orderId, payload()); const calls = mockMail(t);
+  const send = (address = 'buyer@example.invalid', mode = 'invoice') => emailCustomerDocument({ env, request: sendRequest(c.document.id, address, mode), params: { id: orderId } });
+  const results = await Promise.allSettled([send(), send()]);
+  assert.ok(results.some(r => r.status === 'fulfilled'));
+  assert.equal(calls.filter(c => c.url.endsWith('/messages/send')).length, 1);
+  assert.equal((await (await send('BUYER@example.invalid')).json()).already_sent, true);
+  await send('second@example.invalid'); await send('buyer@example.invalid', 'agreement');
+  assert.equal(calls.filter(c => c.url.endsWith('/messages/send')).length, 3);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM document_deliveries').get().n, 0);
+});
+test('email ambiguous failure is durable and blocks retries; explicit rejection permits retry', async t => {
+  const { env } = await setup(t); mailEnv(env);
+  const c = await saveDocument(env, req(), orderId, payload());
+  let outcome = 'timeout';
+  const calls = mockMail(t, () => { if (outcome === 'timeout') throw new Error('timeout'); return outcome === 'rejected' ? Response.json({ error: { code: 429 } }, { status: 429 }) : Response.json({ id: 'accepted' }); });
+  const send = address => emailCustomerDocument({ env, request: sendRequest(c.document.id, address, 'invoice'), params: { id: orderId } });
+  await assert.rejects(send('unknown@example.invalid'), /міг надійти/);
+  await assert.rejects(send('unknown@example.invalid'), e => e.status === 409);
+  assert.equal(calls.filter(c => c.url.endsWith('/messages/send')).length, 1);
+  outcome = 'rejected'; await assert.rejects(send('retry@example.invalid'), /не прийняв/);
+  outcome = 'accepted'; await send('retry@example.invalid');
+  assert.equal((await getDocumentContext(env, orderId)).email_deliveries.find(d => d.recipient === 'retry@example.invalid').status, 'sent');
+});
+test('email refuses missing setup, unsafe addresses, foreign origins, drafts, wrong document scope and wrong sender', async t => {
+  const { env, db } = await setup(t);
+  const c = await saveDocument(env, req(), orderId, payload());
+  const send = (request, id = orderId) => emailCustomerDocument({ env, request, params: { id } });
+  await assert.rejects(send(sendRequest(c.document.id, 'a@example.invalid', 'invoice')), e => e.status === 503);
+  mailEnv(env);
+  const calls = mockMail(t, undefined, 'wrong@example.invalid');
+  for (const address of ['not-email', 'a@example.invalid\r\nBcc: b@example.invalid', 'a@example.invalid,b@example.invalid', 'a'.repeat(255) + '@example.invalid']) await assert.rejects(send(sendRequest(c.document.id, address, 'invoice')), /email/);
+  const foreign = sendRequest(c.document.id, 'a@example.invalid', 'invoice'); foreign.headers.set('origin', 'https://evil.invalid');
+  await assert.rejects(send(foreign), e => e.status === 403);
+  await assert.rejects(send(sendRequest('wrong-version', 'a@example.invalid', 'invoice')), /підготуйте/);
+  const draft = await saveDocument(env, req(), orderId, payload(completeDocument(), 1, 'draft'));
+  await assert.rejects(send(sendRequest(draft.document.id, 'a@example.invalid', 'invoice')), /підготуйте/);
+  await assert.rejects(send(sendRequest(c.document.id, 'a@example.invalid', 'invoice')), /Лист не відправлено/);
+  assert.equal(calls.filter(c => c.url.endsWith('/messages/send')).length, 0);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM document_email_deliveries').get().n, 0);
+});
+test('standalone email works without a CRM customer or Telegram, and deleting its document cascades history', async t => {
+  const { env, db } = await setup(t); mailEnv(env); const id = crypto.randomUUID();
+  const c = await saveDocument(env, req(), id, { ...payload(), mode: 'invoice' }, true);
+  mockMail(t);
+  const result = await emailCustomerDocument({ env, request: sendRequest(c.document.id, 'buyer@example.invalid', 'invoice'), params: { id } }, true);
+  assert.equal((await result.json()).ok, true);
+  assert.equal((await getDocumentContext(env, id, '', true)).email_deliveries.length, 1);
+  await assert.rejects(emailCustomerDocument({ env, request: sendRequest(c.document.id, 'buyer@example.invalid', 'invoice'), params: { id: crypto.randomUUID() } }, true), /підготуйте/);
+  db.prepare('DELETE FROM standalone_documents WHERE id=?').run(c.document.id);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM document_email_deliveries').get().n, 0);
+});
+test('email endpoint remains authenticated, rejects invalid PDF and refresh failures do not create a send claim', async t => {
+  const { env, db } = await setup(t); mailEnv(env);
+  const c = await saveDocument(env, req(), orderId, payload());
+  const endpoint = request => emailCustomerDocument({ env, request, params: { id: orderId } });
+  const unauthorized = new Request('https://evline.test/api/admin/orders/test/document-email', { method: 'POST' });
+  const auth = await authorize({ env, request: unauthorized, next: () => { throw new Error('Must not reach sender'); } });
+  assert.equal(auth.status, 401);
+  for (const file of [new File(['not-pdf'.repeat(30)], 'bad.pdf', {type:'application/pdf'}), new File(['%PDF-'+'x'.repeat(200)], 'bad.txt', {type:'text/plain'}), new File(['%PDF-'+'x'.repeat(2_500_000)], 'large.pdf', {type:'application/pdf'})]) {
+    const form = new FormData();form.set('document_id',c.document.id);form.set('recipient','buyer@example.invalid');form.set('mode','invoice');form.set('file',file);
+    await assert.rejects(endpoint(new Request('https://evline.test/api/admin/orders/test/document-email',{method:'POST',body:form})), /PDF/);
+  }
+  const refresh = t.mock.method(globalThis,'fetch',async () => Response.json({error:'invalid_grant'},{status:400}));
+  await assert.rejects(endpoint(sendRequest(c.document.id,'buyer@example.invalid','invoice')), /Лист не відправлено/);
+  assert.equal(refresh.mock.callCount(),1);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM document_email_deliveries').get().n,0);
+});
 export function completeDocument() {
   const d = fromOrder({ id: orderId, order_number: 'O-TEST', customer_name: 'Тестовий Покупець', customer_phone: '+380000000001', car: 'BYD Yuan Plus 2023', vin: 'TESTVIN0000000001', item_name: 'Бампер', revenue_uah: 10000 });
   const iban = 'UA' + String(98 - Number(BigInt('3000010000000000000000000' + '301000') % 97n)).padStart(2, '0') + '3000010000000000000000000';

@@ -8,7 +8,7 @@
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
   <link rel="stylesheet" href="/admin/documents/documents.css?v=20261027-delivery">
-  <script type="module" src="/admin/documents/documents.js?v=20261027-delivery2"></script>
+  <script type="module" src="/admin/documents/documents.js?v=20261027-email"></script>
 </head>
 <body>
   <header class="app-header">
@@ -73,8 +73,9 @@
     </div>
     <section class="send-channel">
       <div class="send-email-row"><label>Email клієнта<input type="email" data-send-email autocomplete="email" maxlength="254" placeholder="name@example.com"></label>
-      <button type="button" data-action="email">Лист + PDF</button></div>
-      <p class="muted">У листі будуть адреса, тема й текст. Завантажений PDF потрібно прикріпити вручну.</p>
+      <button type="button" data-action="email">Надіслати PDF</button></div>
+      <p class="muted" data-email-sender></p>
+      <p class="muted" data-email-result role="status" hidden></p>
     </section>
     <section class="send-channel" data-manual-channels hidden>
       <h3>Відкрити чат клієнта</h3>
