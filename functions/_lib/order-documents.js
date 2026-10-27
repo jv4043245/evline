@@ -1,5 +1,6 @@
-import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode, invoiceAmount } from '../../admin/documents/model.js';
+import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode } from '../../admin/documents/model.js';
 import { auditActor, recordAuditEvent } from './audit-log.js';
+import { INVOICE_SCHEMA, allDocumentRows, documentStore, savedRetry, writeDocumentVersion } from './invoice-numbering.js';
 
 export const DOCUMENT_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS order_documents (
@@ -18,6 +19,7 @@ export const DOCUMENT_SCHEMA = [
     created_at TEXT NOT NULL, actor TEXT NOT NULL, recipient TEXT NOT NULL,
     status TEXT NOT NULL, message_id TEXT, error TEXT
   )`,
+  ...INVOICE_SCHEMA,
 ];
 export async function ensureDocuments(env) { for (const sql of DOCUMENT_SCHEMA) await env.DB.prepare(sql).run(); }
 export async function documentOrder(env, id) {
@@ -38,22 +40,33 @@ export async function sellerSettings(env) {
   const settings = value.profiles ? value : { profiles: [{ id: 'primary', seller: cleanSeller(value) }], default_id: 'primary' };
   return { ...settings, revision: row?.revision || 0 };
 }
-export async function getDocumentContext(env, orderId, versionId = '') {
-  const order = await documentOrder(env, orderId);
+export async function getDocumentContext(env, orderId, versionId = '', standalone = false) {
+  if (standalone && !/^[a-f0-9-]{36}$/.test(orderId)) throw fail('Некоректний ідентифікатор рахунку.');
+  const order = standalone ? { id: orderId, type: 'parts' } : await documentOrder(env, orderId);
+  const store = documentStore(standalone);
   await ensureDocuments(env);
-  const versions = (await env.DB.prepare('SELECT id, revision, created_at, actor, status FROM order_documents WHERE order_id=? ORDER BY revision DESC LIMIT 100').bind(orderId).all()).results;
+  const versions = (await env.DB.prepare(`SELECT id, revision, created_at, actor, status FROM ${store.table} WHERE ${store.key}=? ORDER BY revision DESC LIMIT 100`).bind(orderId).all()).results;
   const saved = versionId
-    ? await env.DB.prepare('SELECT * FROM order_documents WHERE order_id=? AND id=?').bind(orderId, versionId).first()
-    : await env.DB.prepare('SELECT * FROM order_documents WHERE order_id=? ORDER BY revision DESC LIMIT 1').bind(orderId).first();
+    ? await env.DB.prepare(`SELECT * FROM ${store.table} WHERE ${store.key}=? AND id=?`).bind(orderId, versionId).first()
+    : await env.DB.prepare(`SELECT * FROM ${store.table} WHERE ${store.key}=? ORDER BY revision DESC LIMIT 1`).bind(orderId).first();
   if (versionId && !saved) throw fail('Версію документа не знайдено.', 404);
   const settings = await sellerSettings(env);
+  const priceTerms = (await env.DB.prepare(`SELECT account,tax FROM (
+    SELECT REPLACE(json_extract(data_json,'$.seller.iban'),' ','') account,json_extract(data_json,'$.tax') tax,
+      ROW_NUMBER() OVER(PARTITION BY REPLACE(json_extract(data_json,'$.seller.iban'),' ','') ORDER BY created_at DESC,revision DESC) position
+    FROM (${allDocumentRows}) WHERE status='ready' AND output_mode IN ('invoice','all')) WHERE position=1`).all()).results || [];
+  settings.profiles = settings.profiles.map(p => ({ ...p, invoice_defaults: { tax: priceTerms.find(r => r.account === p.seller.iban?.replace(/\s/g,''))?.tax || '' } }));
   const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
-  const items = (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
-  const deliveries = saved ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
-  return { order: { id: order.id, number: order.order_number || order.id, customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
+  const items = standalone ? [] : (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
+  const deliveries = saved && !standalone ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
+  const defaults = { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id };
+  defaults.invoice = { ...defaults.invoice, number: '', automatic: true };
+  defaults.tax = profile.invoice_defaults.tax;
+  if (standalone) defaults.number = '';
+  return { standalone, order: { id: order.id, number: order.order_number || (standalone ? '' : order.id), customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
     recipient: documentRecipient(order), versions, latest_revision: versions[0]?.revision || 0,
     document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, output_mode: saved.output_mode || '', actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
-    defaults: { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id }, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
+    defaults, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
 }
 export function checkDocumentOrigin(request) {
   const origin = request.headers.get('origin');
@@ -67,44 +80,31 @@ export async function documentPayload(request) {
   if (raw.length > 110000) throw fail('Документ завеликий.', 413);
   try { return JSON.parse(raw); } catch { throw fail('Некоректний JSON.'); }
 }
-export async function saveDocument(env, request, orderId, payload) {
-  const order = await documentOrder(env, orderId);
+export async function saveDocument(env, request, orderId, payload, standalone = false) {
+  if (standalone && !/^[a-f0-9-]{36}$/.test(orderId)) throw fail('Некоректний ідентифікатор рахунку.');
+  const order = standalone ? { id: orderId } : await documentOrder(env, orderId);
   await ensureDocuments(env);
   if (!/^[a-f0-9-]{36}$/.test(payload.request_id || '')) throw fail('Некоректний ідентифікатор збереження.');
   if (!Number.isInteger(payload.expected_revision) || payload.expected_revision < 0) throw fail('Некоректна версія.');
   if (!['draft', 'ready'].includes(payload.status)) throw fail('Некоректний стан документа.');
   const data = normalizeDocument(payload.data);
   const mode = documentMode(payload.mode);
+  if (standalone && mode !== 'invoice') throw fail('Окремий рахунок формується без договору замовлення.');
+  if (data.invoice.automatic && data.invoice.number && !/^[1-9]\d{0,8}$/.test(data.invoice.number)) throw fail('Некоректний автоматичний номер рахунку.');
   if (data.seller_profile_id && !(await sellerSettings(env)).profiles.some(p => p.id === data.seller_profile_id)) throw fail('ФОПа не знайдено. Оновіть список реквізитів.');
   if (payload.status === 'ready') {
     const errors = validateReady(data, mode);
     if (errors.length) throw fail(`Заповніть або перевірте: ${errors.join('; ')}.`, 422);
   }
-  const serialized = JSON.stringify(data);
-  const existing = await env.DB.prepare('SELECT * FROM order_documents WHERE id=?').bind(payload.request_id).first();
-  if (existing) {
-    if (existing.order_id !== orderId || existing.data_json !== serialized || existing.status !== payload.status || (existing.output_mode && existing.output_mode !== mode)) throw fail('Цей ідентифікатор збереження вже використано.', 409);
-    return getDocumentContext(env, orderId, existing.id);
-  }
+  const store = documentStore(standalone);
+  const existing = await savedRetry(env, store, orderId, payload, data, mode);
+  if (existing) return getDocumentContext(env, orderId, existing, standalone);
   const now = new Date().toISOString(), actor = auditActor(request, env);
-  if(payload.status==='ready' && ['invoice','all'].includes(mode) && data.invoice.enabled) {
-    const normalized=s=>String(s || '').normalize('NFKC').toUpperCase().replace(/[‐‑–—]/g,'-').trim();
-    const iban=s=>String(s || '').replace(/\s/g,'').toUpperCase();
-    const issued=(await env.DB.prepare("SELECT order_id,data_json FROM order_documents WHERE status='ready' AND output_mode IN ('invoice','all')").all()).results || [];
-    for(const row of issued) {
-      let old;try{old=JSON.parse(row.data_json);}catch{continue;}
-      if(!old.invoice?.enabled || normalized(old.invoice.number)!==normalized(data.invoice.number) || iban(old.seller?.iban)!==iban(data.seller.iban))continue;
-      if(row.order_id!==orderId || invoiceAmount(old)!==invoiceAmount(data))throw fail('Цей номер рахунку вже виставлено для іншого замовлення або суми. Вкажіть новий унікальний номер; попередній рахунок збережено.',409);
-    }
-  }
-  const result = await env.DB.prepare(`INSERT INTO order_documents (id,order_id,revision,created_at,actor,status,data_json,output_mode)
-    SELECT ?,?,?,?,?,?,?,? WHERE ?=(SELECT COALESCE(MAX(revision),0) FROM order_documents WHERE order_id=?)`)
-    .bind(payload.request_id, orderId, payload.expected_revision + 1, now, actor, payload.status, serialized, mode, payload.expected_revision, orderId).run();
-  if (!result.meta.changes) throw fail('Інший менеджер уже зберіг нову версію. Оновіть сторінку перед збереженням; ваші правки поки залишаються на екрані.', 409);
-  await recordAuditEvent(env, { actor, action: 'document.save', entity_type: 'order_document', entity_id: payload.request_id,
-    entity_label: `${data.number} · v${payload.expected_revision + 1}`, order_id: orderId,
+  const written = await writeDocumentVersion(env, { standalone, id: orderId, payload, data, mode, actor, now });
+  if (written) await recordAuditEvent(env, { actor, action: 'document.save', entity_type: 'order_document', entity_id: payload.request_id,
+    entity_label: `${data.number || 'Рахунок'} · v${payload.expected_revision + 1}`, order_id: standalone ? null : orderId,
     details: { order_number: order.order_number, revision: payload.expected_revision + 1, status: payload.status, mode } });
-  return getDocumentContext(env, orderId, payload.request_id);
+  return getDocumentContext(env, orderId, payload.request_id, standalone);
 }
 export async function saveSeller(env, request, payload) {
   await ensureDocuments(env);

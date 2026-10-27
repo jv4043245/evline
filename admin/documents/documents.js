@@ -1,12 +1,16 @@
-import { normalizeDocument, validateReady, totals, money, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20260924-separate';
-import { previewHtml, pdfDefinition, documentText } from './render.js?v=20260924-separate';
+import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-invoices';
+import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-invoices';
+import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
 
 const $ = s => document.querySelector(s);
-const orderId = new URL(location.href).searchParams.get('order') || '';
-const endpoint = `/api/admin/orders/${encodeURIComponent(orderId)}/documents`;
-let context, data, baseline = '', view = 'edit', busy = false, pdfLoading, sendFile, sendMode, pendingSave, refreshChanges = [];
+const pageUrl = new URL(location.href), orderId = pageUrl.searchParams.get('order') || '';
+const standalone = !orderId;
+const workspaceId = standalone ? pageUrl.searchParams.get('invoice') || crypto.randomUUID() : '';
+if (standalone && !pageUrl.searchParams.has('invoice')) { pageUrl.searchParams.set('invoice', workspaceId); history.replaceState(null, '', pageUrl); }
+const endpoint = standalone ? `/api/admin/invoices/${encodeURIComponent(workspaceId)}` : `/api/admin/orders/${encodeURIComponent(orderId)}/documents`;
+let context, data, baseline = '', view = 'edit', busy = false, pdfLoading, sendFile, sendMode, pendingSave, refreshChanges = [], customers = [];
 const outputMode = () => $('[data-output-mode]').value;
 const dirty = () => data && JSON.stringify(data) !== baseline;
 const clone = v => structuredClone(v);
@@ -34,7 +38,7 @@ function renderEditor() {
   $('[data-editor]').innerHTML = `
     <section class="editor-section seller-section"><div class="seller-choice"><label>Продавець / ФОП<select data-seller-profile>${!profiles.some(p => p.id === data.seller_profile_id) ? '<option value="">Реквізити цієї версії</option>' : ''}${profiles.map(p => `<option value="${esc(p.id)}" ${p.id === data.seller_profile_id ? 'selected' : ''}>${esc(sellerLabel(p.seller.name))}</option>`).join('')}</select></label><button type="button" data-action="add-seller" aria-label="Додати ФОП" title="Додати ФОП">${icon('Plus')}Додати ФОП</button></div><p class="muted">${esc([s.tax_id && `РНОКПП ${s.tax_id}`, s.iban && `IBAN ${s.iban}`].filter(Boolean).join(' · '))}</p></section>
     <details class="editor-section" data-disclosure="agreement" data-agreement-fields><summary>Реквізити договору</summary><div class="fields three">${docInput('number')}${docInput('date', { type: 'date' })}${docInput('city')}</div></details>
-    <section class="editor-section buyer-section"><h2>Покупець</h2><div class="fields">
+    <section class="editor-section buyer-section"><div class="section-heading"><h2>Покупець</h2><div class="buyer-actions"><button type="button" data-action="find-customer">${icon('FileText')}Знайти в CRM</button><button type="button" data-action="retail-buyer">Кінцевий споживач</button></div></div><div class="fields">
       ${input('ПІБ / найменування', 'buyer.name', b.name)}${input('Телефон', 'buyer.phone', b.phone, { type: 'tel' })}
     </div><details class="field-details" data-disclosure="buyer"><summary>Контакти, авто та реквізити покупця</summary><div class="fields">
       ${input('Email / месенджер', 'buyer.contact', b.contact)}${input('Адреса', 'buyer.address', b.address)}
@@ -42,10 +46,10 @@ function renderEditor() {
       ${input('Код / РНОКПП, для бізнесу', 'buyer.code', b.code)}${docInput('car')}${docInput('vin')}
     </div></details></section>
     <section class="editor-section specification-section"><div class="section-heading"><h2>Специфікація</h2><button type="button" data-action="add-item">${icon('Plus')}Позиція</button></div>
-    ${data.items.map((r, i) => `<div class="spec-item"><div class="item-heading"><strong>Позиція ${i + 1}</strong><button type="button" class="icon-button" data-remove-item="${i}" ${data.items.length === 1 ? 'disabled' : ''} aria-label="Видалити позицію ${i + 1}" title="Видалити позицію">${icon('Trash2')}</button></div><div class="item-fields">
+    ${data.items.map((r, i) => `<div class="spec-item"><div class="item-heading"><strong>Позиція ${i + 1}</strong><span class="line-total" data-line-total="${i}"></span><button type="button" class="icon-button" data-remove-item="${i}" ${data.items.length === 1 ? 'disabled' : ''} aria-label="Видалити позицію ${i + 1}" title="Видалити позицію">${icon('Trash2')}</button></div><div class="item-fields">
       <label class="item-title">Найменування<input data-path="items.${i}.title" value="${esc(r.title)}" maxlength="2000"></label>
       ${input('Кількість', `items.${i}.quantity`, r.quantity, { type: 'number' })}${input('Ціна за одиницю, грн', `items.${i}.price`, r.price)}
-      ${input('Артикул / OEM-номер', `items.${i}.sku`, r.sku, { max: 160 })}${input('Тип запчастини', `items.${i}.kind`, r.kind, { options: Object.entries(kindLabels) })}
+      ${input('Артикул / OEM-номер', `items.${i}.sku`, r.sku, { max: 160 })}${input('Тип запчастини', `items.${i}.kind`, r.kind, { options: Object.entries(kindLabels) })}${input('Од. виміру', `items.${i}.unit`, r.unit || 'шт.', { options: [['шт.', 'шт.'], ['компл.', 'компл.'], ['пара', 'пара'], ['посл.', 'посл.'], ['кг', 'кг'], ...(r.unit && !['шт.','компл.','пара','посл.','кг'].includes(r.unit) ? [[r.unit,r.unit]] : [])] })}
       </div><details class="item-extra" data-disclosure="item-${i}"><summary>VIN позиції та комплектність</summary><div class="fields">${input('VIN, якщо інший автомобіль', `items.${i}.vin`, r.vin)}${input('Примітка до позиції', `items.${i}.notes`, r.notes)}</div></details></div>`).join('')}
       <div class="fields">${docInput('tax', { wide: true })}</div>
       <details class="field-details" data-disclosure="condition" data-agreement-fields><summary>Стан, гарантія та склад ціни</summary><div class="fields">${docInput('condition', { rows: 2 })}${docInput('warranty', { rows: 2 })}${docInput('included', { wide: true, rows: 2 })}</div></details>
@@ -54,9 +58,10 @@ function renderEditor() {
       <button type="button" data-action="add-extra">${icon('Plus')}Додати складову</button>${data.extras.length ? `<div class="fields">${docInput('allocation', { wide: true, rows: 2 })}</div>` : ''}</details>
     </section>
     <section class="editor-section finance-section"><div class="section-heading"><h2>Рахунок на оплату</h2><label class="check-label"><input type="checkbox" data-path="invoice.enabled" ${data.invoice.enabled ? 'checked' : ''}><span>Формувати рахунок</span></label></div><div class="fields invoice-fields" data-invoice-fields ${data.invoice.enabled ? '' : 'hidden'}>
-      ${input('Номер рахунку', 'invoice.number', data.invoice.number)}${input('Дата рахунку', 'invoice.date', data.invoice.date, { type: 'date' })}
+      <label>Номер рахунку<div class="invoice-number">${data.invoice.automatic ? `<input value="${esc(data.invoice.number || 'Автоматично при виставленні')}" readonly aria-label="Номер рахунку">` : `<input data-path="invoice.number" value="${esc(data.invoice.number)}" maxlength="80" aria-label="Номер рахунку">`}${data.invoice.number ? `<button type="button" class="icon-button" data-action="new-invoice-number" title="Новий рахунок з наступним номером" aria-label="Новий рахунок з наступним номером">${icon('Plus')}</button>` : ''}</div></label>${input('Дата рахунку', 'invoice.date', data.invoice.date, { type: 'date' })}
       ${input('Сума рахунку', 'invoice.mode', data.invoice.mode, { options: Object.entries(invoiceModes) })}${input('Сплатити до', 'invoice.due', data.invoice.due)}
       <div data-custom-invoice ${data.invoice.mode === 'custom' ? '' : 'hidden'}>${input('Погоджена сума рахунку, грн', 'invoice.amount', data.invoice.amount)}</div>
+      <details class="wide field-details" data-disclosure="invoice-note"><summary>Примітка в рахунку</summary>${input('Умови оплати / отримання', 'invoice.note', data.invoice.note || '', { rows: 2 })}</details>
     </div></section>
     <details class="editor-section finance-section" data-disclosure="payment"><summary>Передоплата та отримані кошти</summary><div class="fields">${input('Погоджена передоплата, грн', 'prepayment', data.prepayment)}${docInput('prepayment_due')}${docInput('balance_due', { wide: true })}</div>
       <p><label class="check-label"><input type="checkbox" data-path="receipt.enabled" ${data.receipt.enabled ? 'checked' : ''}><span>Додати підтвердження отриманої оплати</span></label></p>
@@ -83,6 +88,7 @@ function refreshMode() {
   $('[data-output-mode] option[value="invoice"]').disabled = !data.invoice.enabled;
   if ((outputMode() === 'invoice' && !data.invoice.enabled) || (outputMode() === 'receipt' && !data.receipt.enabled)) $('[data-output-mode]').value = 'agreement';
   document.querySelectorAll('[data-agreement-fields]').forEach(el => { el.hidden = outputMode() === 'invoice'; });
+  if (standalone) { $('[data-path="invoice.enabled"]').closest('label').hidden = true; $('[data-output-mode]').hidden = true; }
   $('[data-action-document]').textContent = documentModes[outputMode()];
   $('[data-check-title]').textContent = `Перевірка · ${documentModes[outputMode()]}`;
   $('[data-delivery-status]').textContent = context.deliveries.filter(d => (d.id.includes(':') ? d.id.split(':').at(-1) : 'all') === outputMode()).map(d => `${d.status === 'sent' ? 'Надіслано в Telegram' : d.status === 'failed' ? 'Не надіслано' : 'Статус відправлення потребує перевірки'} · ${new Date(d.created_at).toLocaleString('uk-UA')}`).join('\n');
@@ -91,9 +97,12 @@ function refreshSummary() {
   let messages = [];
   try {
     const normalized = normalizeDocument(data), t = totals(normalized);
+    for (const [i, row] of normalized.items.entries()) $(`[data-line-total="${i}"]`).textContent = cents(row.price) == null ? '' : `${money(cents(row.price) * row.quantity)} грн`;
     messages = validateReady({ ...normalized, reviewed: true }, outputMode());
     $('[data-totals]').innerHTML = `<div><dt>Позиції (${data.items.length})</dt><dd>${money(t.items)} грн</dd></div>${data.extras.length ? `<div><dt>Окремі витрати</dt><dd>${money(t.extras)} грн</dd></div>` : ''}<div class="total-row"><dt>Разом</dt><dd>${money(t.total)} грн</dd></div><div><dt>Передоплата</dt><dd>${data.prepayment === '' ? '—' : `${money(t.total - t.balance)} грн`}</dd></div>${data.receipt.enabled ? `<div><dt>Отримано</dt><dd>${money(t.received)} грн</dd></div>` : ''}`;
     if (data.invoice.enabled) $('[data-totals]').innerHTML += `<div class="invoice-total"><dt>Рахунок до сплати</dt><dd>${invoiceAmount(normalized) == null ? '—' : `${money(invoiceAmount(normalized))} грн`}</dd></div>`;
+    const payable = invoiceAmount(normalized);
+    $('[data-amount-words]').textContent = payable != null && payable >= 0 ? amountWords(payable) : '';
   } catch (e) { messages = [e.message]; }
   $('[data-checks]').innerHTML = messages.length ? `<details><summary>Не заповнено / потребує перевірки: ${messages.length}</summary><ul class="checks-list">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul></details>` : '<p class="checks-ok">Обов’язкові поля заповнено</p>';
   $('[data-reviewed]').checked = data.reviewed;
@@ -115,10 +124,14 @@ function setView(next) {
 }
 function adopt(result, initial = false) {
   context = result; data = clone(result.document?.data || result.defaults); baseline = JSON.stringify(data);
+  if (result.document) { const url = new URL(location.href); url.searchParams.set('version', result.document.id); history.replaceState(null, '', url); }
   data.invoice ||= invoiceDefaults(data);
   data.seller_profile_id ||= '';
   baseline = JSON.stringify(data);
-  if (initial) { document.title = `${context.order.number} · Документи | EVLine CRM`; $('[data-order-number]').textContent = context.order.number; $('[data-customer]').textContent = [context.order.customer_name, context.order.customer_phone].filter(Boolean).join(' · '); }
+  document.title = `${standalone ? data.invoice.number ? `Рахунок № ${data.invoice.number}` : 'Новий рахунок' : context.order.number} · EVLine CRM`;
+  $('[data-order-number]').textContent = standalone ? data.invoice.number ? `№ ${data.invoice.number}` : 'Без замовлення' : context.order.number;
+  $('[data-customer]').textContent = [data.buyer.name, data.buyer.phone].filter(Boolean).join(' · ');
+  if (initial && standalone) { $('h1').textContent = 'Рахунок клієнту'; $('[data-order-refresh]').hidden = true; }
   $('[data-versions]').innerHTML = result.versions.length ? result.versions.map(v => `<option value="${esc(v.id)}" ${v.id === result.document?.id ? 'selected' : ''}>Версія ${v.revision} · ${v.status === 'ready' ? 'підготовлено' : 'чернетка'}</option>`).join('') : '<option value="">Ще не збережено</option>';
   $('[data-version-info]').textContent = result.document ? `${new Date(result.document.created_at).toLocaleString('uk-UA')} · ${result.document.actor}` : '';
   renderEditor(); refreshSummary(); setView(view);
@@ -167,7 +180,7 @@ async function pdfFile(draft = false, autoPrint = false) {
     const timeout = setTimeout(() => reject(new Error('Створення PDF триває надто довго. Спробуйте ще раз.')), 30000);
     try { window.pdfMake.createPdf(model).getBlob(b => { clearTimeout(timeout); resolve(b); }, { autoPrint }); } catch (e) { clearTimeout(timeout); reject(e); }
   });
-  return new File([blob], `EVLine-${context.order.number}-${outputMode()}-v${context.document.revision}${draft ? '-draft' : ''}.pdf`, { type: 'application/pdf' });
+  return new File([blob], `EVLine-${outputMode() === 'invoice' ? `invoice-${data.invoice.number || 'draft'}` : `${context.order.number}-${outputMode()}`}-v${context.document.revision}${draft ? '-draft' : ''}.pdf`, { type: 'application/pdf' });
 }
 function download(file) { const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
 async function prepareSend() {
@@ -182,7 +195,7 @@ async function action(name) {
   if (name === 'save') await save();
   else if (name === 'issue-invoice') {
     if(!['invoice','all'].includes(outputMode()))throw new Error('Оберіть документ «Рахунок» або «Повний комплект».');
-    await save('ready');status('Рахунок готовий і доступний у «Надходження». Передайте PDF клієнту; автоматичного надсилання не було.');
+    await save('ready');status(`Рахунок № ${data.invoice.number} виставлено. Автоматичного надсилання клієнту не було.`);
   }
   else if (name === 'pdf' || name === 'draft-pdf') download(await pdfFile(name === 'draft-pdf'));
   else if (name === 'print') {
@@ -196,7 +209,8 @@ async function action(name) {
   else if (name === 'copy') {
     const normalized = normalizeDocument(data), errors = validateReady(normalized, outputMode());
     if (errors.length) { revealIncompleteSections(); throw new Error(`Потрібно перевірити: ${errors.join('; ')}.`); }
-    const text = documentText(normalized, outputMode());
+    await save('ready');
+    const text = documentText(data, outputMode());
     try { await navigator.clipboard.writeText(text); status('Текст документа скопійовано'); }
     catch { $('[data-copy-text]').value = text; $('[data-copy-dialog]').showModal(); $('[data-copy-text]').select(); }
   }
@@ -233,6 +247,19 @@ async function action(name) {
     context.seller_revision = result.revision; context.seller_profiles = result.profiles; renderEditor(); status('Реквізити цього ФОПа збережено');
   }
   else if (name === 'add-seller') { error('', '[data-seller-error]'); $('[data-new-seller-name]').value = ''; $('[data-seller-dialog]').showModal(); }
+  else if (name === 'new-invoice-number') {
+    if (!confirm('Створити новий рахунок з наступним номером? Позиції та покупець залишаться, попередній рахунок збережеться у списку.')) return;
+    data.invoice.number = ''; data.invoice.automatic = true; data.invoice.date = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).format(new Date());
+    data.reviewed = false; renderEditor(); status('Новий номер буде присвоєно при виставленні');
+  }
+  else if (name === 'retail-buyer') {
+    if (data.buyer.name && data.buyer.name !== 'Кінцевий споживач' && !confirm('Замінити ім’я покупця на «Кінцевий споживач»?')) return;
+    data.buyer.name = 'Кінцевий споживач'; data.reviewed = false; renderEditor();
+  }
+  else if (name === 'find-customer') {
+    $('[data-customer-query]').value = data.buyer.phone || data.buyer.name; $('[data-customer-results]').replaceChildren();
+    error('', '[data-customer-error]'); $('[data-customer-dialog]').showModal(); $('[data-customer-query]').focus();
+  }
   else if (name === 'create-seller') {
     const seller = cleanSeller({ name: $('[data-new-seller-name]').value });
     const result = await api('/api/admin/document-settings', { method: 'POST', body: JSON.stringify({ profile_id: crypto.randomUUID(), create: true, seller, expected_revision: context.seller_revision }) });
@@ -293,6 +320,7 @@ $('[data-editor]').addEventListener('change', e => {
   if (!profile || profile.id === data.seller_profile_id) return;
   if (!confirm('Змінити ФОПа та його реквізити в поточному рахунку й договорі? Збережені версії залишаться без змін.')) { e.target.value = data.seller_profile_id || ''; return; }
   data.seller = clone(profile.seller); data.seller_profile_id = profile.id; data.reviewed = false;
+  data.tax = profile.invoice_defaults?.tax || '';
   renderEditor(); if (!data.seller.tax_id || !data.seller.iban) $('[data-disclosure="seller"]').open = true; refreshSummary(); status('');
 });
 $('[data-reviewed]').addEventListener('change', e => { if (busy) return; data.reviewed = e.target.checked; refreshSummary(); });
@@ -317,8 +345,8 @@ $('[data-versions]').addEventListener('change', async e => {
 window.addEventListener('beforeunload', e => { if (dirty() || busy) { e.preventDefault(); e.returnValue = ''; } });
 
 async function boot() {
-  $('[data-back]').href = `/admin/?order=${encodeURIComponent(orderId)}`;
-  $('[data-back]').innerHTML = `${icon('ArrowLeft')} До замовлення`;
+  $('[data-back]').href = standalone ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
+  $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${standalone ? 'До рахунків' : 'До замовлення'}`;
   for (const [name, symbol] of Object.entries({ save: 'Save', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw' })) {
     const b = $(`[data-action="${name}"]`), label = b.textContent.trim();
     b.setAttribute('aria-label', b.getAttribute('aria-label') || label);
@@ -327,7 +355,23 @@ async function boot() {
   }
   const toolbar = $('.document-toolbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--toolbar-height', `${toolbar.getBoundingClientRect().height}px`)).observe(toolbar);
-  if (!orderId) throw new Error('Відкрийте документи з картки конкретного замовлення.');
-  adopt(await api(endpoint), true); $('[data-workspace]').hidden = false;
+  adopt(await api(`${endpoint}${pageUrl.searchParams.has('version') ? `?version=${encodeURIComponent(pageUrl.searchParams.get('version'))}` : ''}`), true); $('[data-workspace]').hidden = false;
 }
 boot().catch(e => { error(e.message); $('[data-state]').textContent = 'Не завантажено'; });
+
+$('[data-customer-search]').addEventListener('submit', async e => {
+  e.preventDefault(); const query = $('[data-customer-query]').value.trim(); if (query.length < 2) return;
+  const button = $('[data-customer-search] button'); button.disabled = true; error('', '[data-customer-error]');
+  try {
+    customers = (await api(`/api/admin/invoices?customers=${encodeURIComponent(query)}`)).customers;
+    $('[data-customer-results]').innerHTML = customers.length ? customers.map((c, i) => `<button type="button" data-pick-customer="${i}"><strong>${esc(c.name || c.phone)}</strong><span>${esc([c.name && c.phone, c.email].filter(Boolean).join(' · '))}</span></button>`).join('') : '<p>Не знайдено. Дані можна заповнити вручну.</p>';
+  } catch (err) { error(err.message, '[data-customer-error]'); } finally { button.disabled = false; }
+});
+$('[data-customer-results]').addEventListener('click', e => {
+  const button = e.target.closest('[data-pick-customer]'); if (!button || busy) return;
+  const c = customers[Number(button.dataset.pickCustomer)]; if (!c) return;
+  if ((data.buyer.name || data.buyer.phone || data.buyer.code) && !confirm('Замінити покупця в документі вибраним клієнтом? Дані самого замовлення не зміняться.')) return;
+  data.buyer = { name: c.name || '', phone: c.phone || '', contact: c.email || c.telegram || '', address: '', code: '', purpose: '' };
+  data.recipient = [c.name, c.phone].filter(Boolean).join(', '); data.reviewed = false;
+  renderEditor(); refreshSummary(); $('[data-customer-dialog]').close();
+});

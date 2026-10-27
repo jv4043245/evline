@@ -51,7 +51,7 @@ export function fromOrder(order, rows = [], seller = DEFAULT_SELLER) {
     seller: { ...DEFAULT_SELLER, ...seller }, buyer: { name: order.customer_name || '', phone: order.customer_phone || '', contact: order.customer_email || order.customer_telegram || '', address: '', code: '', purpose: '' },
     car: order.car || '', vin: order.vin || '', recipient: [order.customer_name, order.customer_phone].filter(Boolean).join(', '),
     route: { air: 'Авіа', sea: 'Море', combined: 'Комбінований' }[order.shipping_mode] || '',
-    items: rows.length ? rows.map(row => ({ title: row.title || '', sku: row.sku || '', quantity: Number(row.quantity) || 1, price: Number(row.unit_price_uah) > 0 ? Number(row.unit_price_uah).toFixed(2) : '', kind: '', vin: '', notes: '' })) : [{ title: order.item_name || order.service_name || '', sku: '', quantity: 1, price, kind: '', vin: '', notes: '' }],
+    items: rows.length ? rows.map(row => ({ title: row.title || '', sku: row.sku || '', quantity: Number(row.quantity) || 1, unit: 'шт.', price: Number(row.unit_price_uah) > 0 ? Number(row.unit_price_uah).toFixed(2) : '', kind: '', vin: '', notes: '' })) : [{ title: order.item_name || order.service_name || '', sku: '', quantity: 1, unit: 'шт.', price, kind: '', vin: '', notes: '' }],
     extras: [], prepayment: '', receipt: { enabled: false, amount: '', date: '', method: '', reference: '', confirmed: false },
     terms: structuredClone(AGREEMENT_TERMS), reviewed: false,
   };
@@ -71,7 +71,7 @@ export function orderRefreshChanges(current, source) {
     const items = source.items.map(row => {
       const matches = current.items.filter(old => row.sku ? old.sku === row.sku : old.title === row.title);
       const old = matches.length === 1 ? matches[0] : null;
-      return { ...row, ...(old ? { kind: old.kind, vin: old.vin, notes: old.notes, price: row.price || old.price } : {}) };
+      return { ...row, ...(old ? { kind: old.kind, unit: old.unit || 'шт.', vin: old.vin, notes: old.notes, price: row.price || old.price } : {}) };
     });
     if (JSON.stringify(items) !== JSON.stringify(current.items)) changes.push({ path: 'items', label: 'Позиції та ціни', before: current.items, after: items });
   }
@@ -89,7 +89,7 @@ export function normalizeDocument(input) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) throw fail('Кількість: ціле число від 1 до 1000.');
     const kind = str(row.kind, 20);
     if (kind && !kindLabels[kind]) throw fail('Невідомий тип запчастини.');
-    return { title: str(row.title, 2000), sku: str(row.sku, 160), quantity, price: amount(cents(row.price, 'Ціна позиції')), kind, vin: str(row.vin, 200), notes: str(row.notes, 1500) };
+    return { title: str(row.title, 2000), sku: str(row.sku, 160), quantity, unit: str(row.unit || 'шт.', 30), price: amount(cents(row.price, 'Ціна позиції')), kind, vin: str(row.vin, 200), notes: str(row.notes, 1500) };
   });
   if (!Array.isArray(input.extras) || input.extras.length > 10) throw fail('Не більше 10 окремих витрат.');
   d.extras = input.extras.map(row => ({ title: str(row.title, 300), price: amount(cents(row.price, 'Окремі витрати')) }));
@@ -97,7 +97,7 @@ export function normalizeDocument(input) {
   d.receipt = { enabled: input.receipt?.enabled === true, amount: amount(cents(input.receipt?.amount, 'Отримано від клієнта')), date: str(input.receipt?.date, 20), method: str(input.receipt?.method, 200), reference: str(input.receipt?.reference, 300), confirmed: input.receipt?.confirmed === true };
   const invoice = input.invoice || invoiceDefaults(d);
   if (!invoiceModes[invoice.mode]) throw fail('Невідомий тип суми рахунку.');
-  d.invoice = { enabled: invoice.enabled === true, number: str(invoice.number, 80), date: str(invoice.date, 20), mode: invoice.mode, amount: amount(cents(invoice.amount, 'Сума рахунку')), due: str(invoice.due, 300) };
+  d.invoice = { enabled: invoice.enabled === true, number: str(invoice.number, 80), automatic: invoice.automatic === true, date: str(invoice.date, 20), mode: invoice.mode, amount: amount(cents(invoice.amount, 'Сума рахунку')), due: str(invoice.due, 300), note: str(invoice.note, 3000) };
   if (!Array.isArray(input.terms) || input.terms.length !== AGREEMENT_TERMS.length) throw fail('Некоректні розділи договору.');
   d.terms = input.terms.map((s, i) => ({ title: AGREEMENT_TERMS[i].title, text: str(s.text, 15000) }));
   syncStandardTerms(d);
@@ -147,7 +147,7 @@ export function validateReady(d, mode = 'all') {
   }
   if (invoice) {
     if (!d.invoice?.enabled) errors.push('Рахунок не ввімкнено');
-    required(d.invoice.number, 'Номер рахунку');
+    if (!d.invoice.automatic) required(d.invoice.number, 'Номер рахунку');
     if (!validDate(d.invoice.date)) errors.push('Дата рахунку');
     const payable = invoiceAmount(d);
     if (payable == null || payable <= 0 || payable > t.total) errors.push('Сума рахунку від 0,01 до вартості замовлення');

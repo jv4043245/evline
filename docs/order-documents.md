@@ -162,3 +162,15 @@ The smoke script uses a disposable SQLite database and an isolated local server,
 tests 1440/1024/768/390/320px, saves real PDFs and a long specification to `/tmp`.
 It never creates live orders or sends client messages. Also run the existing
 admin usability smoke test, full test suite, form audit and link audit.
+
+## Customer Invoice Register (2026-10-27)
+
+- `/admin/invoices/` is the shared register of issued invoices and current drafts. The admin navigation links to it beside the accounting/payment sections. `/admin/documents/?invoice=<uuid>` uses the existing editor without creating an order, lead or customer.
+- New order drafts and standalone invoices use the same automatic sequence. The owner confirmed external invoice 8 as the last issued number; allocation begins at 9, or above an existing numeric invoice. Drafts, previews and failed transactions do not consume numbers. Existing document numbers are not rewritten.
+- Issuing runs as one D1 batch: optimistic revision insert, sequence increment, number reservation, finalized JSON and request fingerprint. Concurrent operators get distinct numbers; retrying the same request returns the same snapshot. The fingerprint is a SHA-256 digest, not a second copy of customer data.
+- Correcting buyer details retains the issued number. A different payable amount or seller account requires the `+` action beside the number to start a new invoice; previous snapshots and payment references remain available. PDFs, printing and copying ready text also finalize the number before output.
+- The invoice template has separate article, quantity, unit, unit price and amount columns, optional vehicle/VIN and invoice note, and Ukrainian amount in words derived from integer kopecks. Contract and receipt outputs remain independent. VAT wording is explicit, not inferred from the seller's income-tax status; a new draft may reuse the same seller account's last issued price-tax wording.
+- Customer lookup copies only explicitly selected CRM name/contact data into the document. It does not change the order or silently select a Telegram recipient. Standalone invoices support PDF, printing, text copying and the device share dialog; automatic Telegram delivery remains limited to the verified recipient of an existing order.
+- Bank reconciliation includes standalone invoices by the same account/currency/invoice-reference rules. Their receipts have an invoice key but no fabricated order/document foreign key. They do not modify order payment statuses or appear as unassigned receipts.
+- Migration `0043_customer_invoices.sql` is additive and idempotent. The existing runtime schema initialization also creates these tables, so publication does not depend on manually applying a destructive migration. No real seller or customer details belong in source control.
+- QA: `node --test tests/order-documents.test.mjs tests/pumb-incoming.test.mjs tests/bank-notifications.test.mjs`; `node scripts/invoices-preview.mjs` provides synthetic in-memory browser fixtures on localhost only.

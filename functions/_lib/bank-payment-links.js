@@ -75,7 +75,7 @@ export async function linkPayment(env,payload,invoices,actor) {
 const nameWords=s=>String(s || '').toLocaleUpperCase('uk-UA').replace(/ФО-П|ФОП|ФІЗИЧНА ОСОБА|ПІДПРИЄМЕЦЬ/g,'').match(/[\p{L}]{3,}/gu) || [];
 export function invoiceSuggestions(tx,invoices) {
   const words=nameWords(tx.payer_name);
-  return invoices.filter(i=>i.iban===tx.account_iban && i.currency===tx.currency && i.order_status!=='canceled').map(i=>{
+  return invoices.filter(i=>i.order_id && i.iban===tx.account_iban && i.currency===tx.currency && i.order_status!=='canceled').map(i=>{
     const reasons=[];
     if(i.amount_minor===tx.amount_minor)reasons.push('amount');
     if(nameWords(i.customer_name).some(w=>words.includes(w)))reasons.push('name');

@@ -1,4 +1,5 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20260924-separate';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-invoices';
+import { amountWords } from './amount-words.js';
 
 const value = v => String(v || '').trim() || '________________';
 const p = text => ({ type: 'p', text });
@@ -14,21 +15,30 @@ const pdfText = text => String(text).replace(/[^\s\u200b]{35,}/gu, word => word.
 export function documentBlocks(d, mode = 'all') {
   const t = totals(d);
   const itemsTable = { type: 'table', headers: ['№', 'Запчастина / артикул', 'К-сть', 'Ціна, грн/шт.', 'Сума, грн'], rows: d.items.map((r, i) => [String(i + 1), [r.title, r.sku && `Артикул: ${r.sku}`, kindLabels[r.kind], r.vin && `VIN: ${r.vin}`, r.notes].filter(Boolean).join('\n'), String(r.quantity), cents(r.price) == null ? '____' : money(cents(r.price)), cents(r.price) == null ? '____' : money(cents(r.price) * r.quantity)]) };
+  const invoiceTable = { type: 'table', invoice: true, widths: [14, '*', 54, 25, 25, 56, 60], headers: ['№', 'Товари / послуги', 'Код', 'К-сть', 'Од.', 'Ціна, грн', 'Сума, грн'],
+    rows: [...d.items.map((r, i) => [String(i + 1), [r.title, kindLabels[r.kind], r.vin && `VIN: ${r.vin}`, r.notes].filter(Boolean).join('\n'), r.sku || '', String(r.quantity), r.unit || 'шт.', cents(r.price) == null ? '____' : money(cents(r.price)), cents(r.price) == null ? '____' : money(cents(r.price) * r.quantity)]),
+      ...d.extras.map((r, i) => [String(d.items.length + i + 1), r.title, '', '1', 'посл.', money(cents(r.price)), money(cents(r.price))])] };
+  const payable = invoiceAmount(d);
   const invoice = d.invoice?.enabled ? [
     { type: 'title', text: 'Рахунок на оплату' },
-    p(`№ ${value(d.invoice.number)} від ${dateLabel(d.invoice.date)}`),
+    p(`${d.invoice.number ? `№ ${d.invoice.number}` : 'Номер буде присвоєно при виставленні'} від ${dateLabel(d.invoice.date)}`),
     field('Постачальник / одержувач коштів', d.seller.name),
     field('РНОКПП / ЄДРПОУ', d.seller.tax_id), field('IBAN', d.seller.iban), field('Банк', d.seller.bank),
     field('Адреса постачальника', d.seller.address), field('Телефон', d.seller.phone),
     ...(d.seller.tax_status ? [field('Податковий статус постачальника', d.seller.tax_status)] : []),
     field('Покупець', d.buyer.name), ...(d.buyer.code ? [field('Код / РНОКПП покупця', d.buyer.code)] : []),
-    itemsTable,
-    ...d.extras.map(row => field(row.title || 'Погоджені витрати', `${money(cents(row.price))} грн`)),
-    field('Повна вартість замовлення', `${money(t.total)} грн`), field('Податковий статус ціни', d.tax),
-    field('Платіж', invoiceModes[d.invoice.mode]),
+    ...(d.buyer.phone ? [field('Телефон покупця', d.buyer.phone)] : []),
+    ...(d.car ? [field('Автомобіль', d.car)] : []), ...(d.vin ? [field('VIN', d.vin)] : []),
+    invoiceTable,
+    field('Разом', `${money(t.total)} грн`), field('Податковий статус ціни', d.tax),
+    ...(d.invoice.mode !== 'total' ? [field('Платіж', invoiceModes[d.invoice.mode])] : []),
     { type: 'total', text: `До сплати за цим рахунком: ${invoiceAmount(d) == null ? '____' : money(invoiceAmount(d))} грн` },
+    p(`Всього найменувань: ${d.items.length + d.extras.length}.`),
+    ...(payable != null && payable >= 0 ? [p(`${amountWords(payable)}.`)] : []),
     ...(d.invoice.due ? [field('Сплатити до', d.invoice.due)] : []),
     field('Призначення платежу', `Оплата автозапчастин за рахунком № ${value(d.invoice.number)} від ${dateLabel(d.invoice.date)}. ${value(d.tax)}.`),
+    ...(d.invoice.note ? [p(d.invoice.note)] : []),
+    field('Виписав(ла)', d.seller.name),
     p('Рахунок не підтверджує отримання коштів.'),
   ] : [];
   const contract = [
@@ -80,14 +90,14 @@ export function documentText(data, mode) {
 }
 
 export function previewHtml(data, mode, isDraft) {
-  return `<article class="paper">${isDraft ? '<div class="draft-mark">Чернетка</div>' : ''}${documentBlocks(data, mode).map(b => {
+  return `<article class="paper${mode === 'invoice' ? ' paper-invoice' : ''}">${isDraft ? '<div class="draft-mark">Чернетка</div>' : ''}${documentBlocks(data, mode).map(b => {
     const page = b.pageBreak ? ' class="page-break"' : '';
     if (b.type === 'title') return `<h2${page}>${esc(b.text)}</h2>`;
     if (b.type === 'heading') return `<h3>${esc(b.text)}</h3>`;
     if (b.type === 'field') return `<p><strong>${esc(b.label)}:</strong> ${esc(b.text)}</p>`;
     if (b.type === 'total') return `<p class="document-total">${esc(b.text)}</p>`;
     if (b.type === 'signatures') return '<div class="signatures"><span>Продавець ____________________</span><span>Покупець ____________________</span></div>';
-    if (b.type === 'table') return `<div class="spec-table-wrap"><table class="spec-table"><thead><tr>${b.headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(row => `<tr>${row.map(c => `<td>${esc(c).replaceAll('\n', '<br>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    if (b.type === 'table') return `<div class="spec-table-wrap"><table class="spec-table${b.invoice ? ' invoice-table' : ''}"><thead><tr>${b.headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(row => `<tr>${row.map(c => `<td>${esc(c).replaceAll('\n', '<br>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     return `<p>${esc(b.text).replaceAll('\n', '<br>')}</p>`;
   }).join('')}</article>`;
 }
@@ -100,7 +110,7 @@ export function pdfDefinition(data, { mode = 'all', draft = false, revision = 0 
     if (b.type === 'total') return { text: b.text, bold: true, fontSize: 12, margin: [0, 8, 0, 10] };
     if (b.type === 'field') return { text: [{ text: `${pdfText(b.label)}: `, bold: true }, pdfText(b.text)], margin: [0, 0, 0, 5] };
     if (b.type === 'signatures') return { columns: [{ text: 'Продавець ____________________' }, { text: 'Покупець ____________________', alignment: 'right' }], margin: [0, 20, 0, 14], unbreakable: true };
-    if (b.type === 'table') return { table: { headerRows: 1, widths: [16, '*', 28, 65, 65], body: [b.headers.map(text => ({ text, bold: true, fillColor: '#f0f4f2' })), ...b.rows.map(row => row.map((text, i) => ({ text: pdfText(text), alignment: i > 1 ? 'right' : 'left' })))] }, fontSize: 9, layout: { hLineColor: () => '#c9d4cf', vLineColor: () => '#c9d4cf', paddingTop: () => 7, paddingBottom: () => 7, paddingLeft: () => 5, paddingRight: () => 5 }, margin: [0, 10, 0, 12] };
+    if (b.type === 'table') return { table: { headerRows: 1, widths: b.widths || [16, '*', 28, 65, 65], body: [b.headers.map(text => ({ text, bold: true, fillColor: '#f0f4f2' })), ...b.rows.map(row => row.map((text, i) => ({ text: pdfText(text), alignment: (b.invoice ? [3,5,6].includes(i) : i > 1) ? 'right' : 'left' })))] }, fontSize: 9, layout: { hLineColor: () => '#c9d4cf', vLineColor: () => '#c9d4cf', paddingTop: () => 6, paddingBottom: () => 6, paddingLeft: () => 4, paddingRight: () => 4 }, margin: [0, 10, 0, 12] };
     return { text: pdfText(b.text), margin: [0, 0, 0, 7] };
   });
   const deliveryStart = blocks.findIndex(b => b.type === 'field' && b.label === 'Маршрут');

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow"><meta name="referrer" content="same-origin">
+  <title>Рахунки клієнтам | EVLine CRM</title>
+  <link rel="icon" href="/assets/images/favicon.png">
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261027-invoices">
+  <link rel="stylesheet" href="/admin/invoices/invoices.css?v=20261027-invoices">
+  <script type="module" src="/admin/invoices/invoices.js?v=20261027-invoices"></script>
+</head>
+<body>
+  <header class="app-header"><a class="brand" href="/admin/"><img src="/assets/images/logo.png" width="98" height="40" alt="EVLine"><span>CRM</span></a><a href="/admin/">До замовлень</a></header>
+  <main class="invoice-register">
+    <div class="register-heading"><h1>Рахунки клієнтам</h1><a class="button primary" href="/admin/documents/" data-new>Створити рахунок</a></div>
+    <form data-filters class="register-filters">
+      <label>Пошук<input name="q" type="search" placeholder="Номер, клієнт, телефон" maxlength="100" autocomplete="off"></label>
+      <label>Стан<select name="status"><option value="">Усі рахунки</option value="ready">Виставлені</option><option value="draft">Чернетки</option></select></label>
+      <button type="submit">Знайти</button><button type="button" class="icon-button" data-reload title="Оновити список" aria-label="Оновити список"></button>
+    </form>
+    <p data-error class="notice error" role="alert" hidden></p>
+    <p data-auth class="notice" hidden>Потрібен <a href="/admin/">вхід до адмінки</a>.</p>
+    <div data-results aria-live="polite">Завантаження…</div>
+    <nav class="register-pagination" aria-label="Сторінки рахунків"><button type="button" data-prev>Назад</button><span data-page></span><button type="button" data-next>Далі</button></nav>
+  </main>
+</body>
+</html>
