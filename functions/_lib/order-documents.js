@@ -1,4 +1,4 @@
-import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode } from '../../admin/documents/model.js';
+import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode, invoiceCopyDefaults } from '../../admin/documents/model.js';
 import { auditActor, recordAuditEvent } from './audit-log.js';
 import { INVOICE_SCHEMA, allDocumentRows, documentStore, savedRetry, writeDocumentVersion } from './invoice-numbering.js';
 
@@ -40,7 +40,7 @@ export async function sellerSettings(env) {
   const settings = value.profiles ? value : { profiles: [{ id: 'primary', seller: cleanSeller(value) }], default_id: 'primary' };
   return { ...settings, revision: row?.revision || 0 };
 }
-export async function getDocumentContext(env, orderId, versionId = '', standalone = false) {
+export async function getDocumentContext(env, orderId, versionId = '', standalone = false, copyId = '') {
   if (standalone && !/^[a-f0-9-]{36}$/.test(orderId)) throw fail('Некоректний ідентифікатор рахунку.');
   const order = standalone ? { id: orderId, type: 'parts' } : await documentOrder(env, orderId);
   const store = documentStore(standalone);
@@ -59,14 +59,24 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
   const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
   const items = standalone ? [] : (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
   const deliveries = saved && !standalone ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
-  const defaults = { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id };
+  let defaults = { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id };
   defaults.invoice = { ...defaults.invoice, number: '', automatic: true };
   defaults.tax = profile.invoice_defaults.tax;
   if (standalone) defaults.number = '';
+  let copiedFrom = '';
+  if (copyId) {
+    if (!standalone || versions.length || versionId) throw fail('Копію можна створити тільки як новий окремий рахунок.', 409);
+    const source = await env.DB.prepare(`SELECT data_json FROM (${allDocumentRows}) WHERE id=?`).bind(copyId).first();
+    if (!source) throw fail('Рахунок для копіювання не знайдено.', 404);
+    const original = JSON.parse(source.data_json);
+    if (!original.invoice?.enabled) throw fail('У цьому документі немає рахунку.');
+    defaults = invoiceCopyDefaults(original, defaults, settings.profiles);
+    copiedFrom = original.invoice.number || 'чернетки';
+  }
   return { standalone, order: { id: order.id, number: order.order_number || (standalone ? '' : order.id), customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
     recipient: documentRecipient(order), versions, latest_revision: versions[0]?.revision || 0,
     document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, output_mode: saved.output_mode || '', actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
-    defaults, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
+    defaults, copied_from: copiedFrom, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
 }
 export function checkDocumentOrigin(request) {
   const origin = request.headers.get('origin');

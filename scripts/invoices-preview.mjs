@@ -9,6 +9,9 @@ import * as orderDocuments from '../functions/api/admin/orders/[id]/documents.js
 import * as invoices from '../functions/api/admin/invoices/[id].js';
 import { onRequestGet as register } from '../functions/api/admin/invoices.js';
 import { onRequestPost as seller } from '../functions/api/admin/document-settings.js';
+import * as orders from '../functions/api/admin/orders.js';
+import { onRequestGet as orderDetail } from '../functions/api/admin/orders/[id].js';
+import { onRequestGet as summary } from '../functions/api/admin/summary.js';
 
 const root = path.resolve(import.meta.dirname, '..'), db = new DatabaseSync(':memory:');
 db.exec('PRAGMA foreign_keys=ON');
@@ -41,6 +44,12 @@ const server = createServer(async (req, res) => {
         if (id) return routes[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({ env, request, params: { id } });
         if (url.pathname === '/api/admin/invoices') return register({ env, request });
         if (url.pathname === '/api/admin/document-settings') return seller({ env, request });
+        if (url.pathname === '/api/admin/session') return Response.json({user:{id:'andrii',name:'Тестовий менеджер'}});
+        if (url.pathname === '/api/admin/orders') return orders[req.method === 'GET' ? 'onRequestGet' : 'onRequestPost']({env,request});
+        const detail = /^\/api\/admin\/orders\/([^/]+)$/.exec(url.pathname);
+        if (detail && req.method === 'GET') return orderDetail({env,request,params:{id:detail[1]}});
+        if (url.pathname === '/api/admin/summary') return summary({env,request});
+        if (req.method === 'GET' && /^\/api\/admin\/(?:shipping|contact-events|supplier-requests|suppliers|supplier-documents|google-ads|bank-notifications)/.test(url.pathname)) return Response.json({});
         return Response.json({ error: 'Preview only: route unavailable' }, { status: 404 });
       };
       const response = await middleware({ env, request, next }); res.writeHead(response.status, Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer())); return;
