@@ -3,7 +3,7 @@ import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
-import { contactEmail, deliveryDetails, emailDraftUrl, manualChatLinks } from './delivery.js?v=20261027-delivery';
+import { contactEmail, deliveryDetails, emailDraftUrl, manualChatLinks } from './delivery.js?v=20261027-delivery2';
 
 const $ = s => document.querySelector(s);
 const pageUrl = new URL(location.href), orderId = pageUrl.searchParams.get('order') || '';

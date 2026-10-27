@@ -10,6 +10,7 @@ import { icon } from '../admin/documents/icons.js';
 
 const html = await readFile(new URL('../admin/documents/index.html', import.meta.url), 'utf8');
 const source = await readFile(new URL('../admin/documents/documents.js', import.meta.url), 'utf8');
+const deliverySource = await readFile(new URL('../admin/documents/delivery.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate) { for (let i=0;i<80;i++) { if(predicate())return; await tick(); } assert.ok(predicate(), 'UI settled'); }
 async function fixture(t, { connected=true, share=true, standalone=false }={}) {
@@ -54,6 +55,11 @@ test('contact destinations reject active URLs and email headers; only valid cont
   for(const email of ['', 'a@test.com\r\nBcc:other@test.com','a@test.com?bcc=x@test.com','not-email'])assert.throws(()=>delivery.emailDraftUrl(email,{subject:'Invoice',text:'Test'}));
   const url=delivery.emailDraftUrl('a@test.com',{subject:'Рахунок № 10 & test',text:'Добрий день!'});
   assert.match(url,/^mailto:a%40test.com\?subject=/);assert.equal(new URL(url).searchParams.get('subject'),'Рахунок № 10 & test');
+});
+test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
+  const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
+  assert.ok(deliverySource.includes(`from '${editorModel}'`));
+  assert.match(source,/delivery\.js\?v=20261027-delivery2/);assert.match(html,/documents\.js\?v=20261027-delivery2/);
 });
 test('issuing opens delivery choices without automatically contacting customer or duplicating invoice on download/print',async t=>{
   const p=await fixture(t);await p.click('issue-invoice');
