@@ -268,6 +268,23 @@ test('Ukrainian amount in words handles feminine forms, teens, thousands, millio
   assert.throws(() => amountWords(-1)); assert.throws(() => amountWords(1.5));
 });
 const autoPayload = (data = completeDocument(), revision = 0, status = 'ready') => ({ ...payload({ ...data, invoice: { ...data.invoice, number: '', automatic: true } }, revision, status), mode: 'invoice' });
+test('external invoice 9 advances an existing counter without renumbering or rewinding invoices', async t => {
+  const { env, db } = await setup(t), old = completeDocument(); old.invoice.number = '9';
+  await saveDocument(env, req(), orderId, { ...payload(old), mode: 'invoice' });
+  const before = db.prepare('SELECT * FROM order_documents').all();
+  const migration = await readFile(new URL('../migrations/0044_invoice_start_10.sql', import.meta.url), 'utf8');
+  for (const [previous, expected] of [[9,10], [10,10], [27,27]]) {
+    db.prepare('UPDATE invoice_sequence SET next_number=? WHERE id=1').run(previous);
+    await ensureDocuments(env); await ensureDocuments(env);
+    assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, expected);
+    db.prepare('UPDATE invoice_sequence SET next_number=? WHERE id=1').run(previous);
+    db.exec(migration); db.exec(migration);
+    assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, expected);
+  }
+  assert.deepEqual(db.prepare('SELECT * FROM order_documents').all(), before);
+  const issued = await saveDocument(env, req(), crypto.randomUUID(), autoPayload(), true);
+  assert.equal(issued.document.data.invoice.number, '27');
+});
 test('new order and standalone drafts use automatic numbering, but do not consume a number or create an order', async t => {
   const { env, db } = await setup(t), id = crypto.randomUUID();
   const blank = await getDocumentContext(env, id, '', true);
@@ -275,24 +292,24 @@ test('new order and standalone drafts use automatic numbering, but do not consum
   assert.equal(blank.recipient, ''); assert.equal(blank.standalone, true);
   await saveDocument(env, req(), id, autoPayload(completeDocument(), 0, 'draft'), true);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM orders').get().n, 1);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 10);
   assert.equal((await getDocumentContext(env, orderId)).defaults.invoice.automatic, true);
 });
-test('number 9 onward is shared across standalone and ordered invoices, with atomic concurrent issue and retry', async t => {
+test('number 10 onward is shared across standalone and ordered invoices, with atomic concurrent issue and retry', async t => {
   const { env, db } = await setup(t), ids = [crypto.randomUUID(), crypto.randomUUID()];
   const inputs = [autoPayload(), autoPayload(), autoPayload()];
   const results = await Promise.all([saveDocument(env, req(), orderId, inputs[0]), ...ids.map((id, i) => saveDocument(env, req(), id, inputs[i + 1], true))]);
-  assert.deepEqual(results.map(r => Number(r.document.data.invoice.number)).sort((a,b) => a-b), [9,10,11]);
+  assert.deepEqual(results.map(r => Number(r.document.data.invoice.number)).sort((a,b) => a-b), [10,11,12]);
   assert.equal((await saveDocument(env, req(), ids[0], inputs[1], true)).document.data.invoice.number, results[1].document.data.invoice.number);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 12);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 13);
   const saved = results[1].document.data; saved.buyer.name = 'Виправлене ім’я';
   const corrected = await saveDocument(env, req(), ids[0], { ...payload(saved, 1), mode: 'invoice' }, true);
   assert.equal(corrected.document.data.invoice.number, saved.invoice.number);
   saved.items[0].price = '20000';
   await assert.rejects(saveDocument(env, req(), ids[0], { ...payload(saved, 2), mode: 'invoice' }, true), e => e.status === 409);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 12);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 13);
   const next = await saveDocument(env, req(), ids[0], autoPayload(saved, 2), true);
-  assert.equal(next.document.data.invoice.number, '12');
+  assert.equal(next.document.data.invoice.number, '13');
 });
 test('stale save and simultaneous duplicate requests never spend extra invoice numbers', async t => {
   const { env, db } = await setup(t), id = crypto.randomUUID(), p = autoPayload();
@@ -300,7 +317,7 @@ test('stale save and simultaneous duplicate requests never spend extra invoice n
   assert.equal(same[0].document.id, same[1].document.id);
   const competing = await Promise.allSettled([saveDocument(env, req(), id, autoPayload(completeDocument(), 1), true), saveDocument(env, req(), id, autoPayload(completeDocument(), 1), true)]);
   assert.equal(competing.filter(r => r.status === 'fulfilled').length, 1);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 11);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 12);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 2);
 });
 test('legacy numeric invoices advance sequence, and historical number, amount and PDF remain unchanged', async t => {
@@ -343,21 +360,21 @@ test('standalone invoice remains matchable by the bank, but does not update or c
   assert.equal(incoming.summary.review_count, 0); assert.equal((await readIncoming(env, { unmatched: true })).rows.length, 0);
   assert.deepEqual(db.prepare('SELECT * FROM orders').all(), before);
 });
-test('atomic rollback keeps number 9 available after an intermediate database failure', async t => {
+test('atomic rollback keeps number 10 available after an intermediate database failure', async t => {
   const { env, db } = await setup(t), id = crypto.randomUUID(), p = autoPayload();
   db.exec("CREATE TRIGGER fail_number BEFORE INSERT ON invoice_numbers BEGIN SELECT RAISE(ABORT,'synthetic failure'); END");
   await assert.rejects(saveDocument(env, req(), id, p, true), /synthetic failure/);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 0);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 10);
   db.exec('DROP TRIGGER fail_number');
-  assert.equal((await saveDocument(env, req(), id, p, true)).document.data.invoice.number, '9');
+  assert.equal((await saveDocument(env, req(), id, p, true)).document.data.invoice.number, '10');
 });
 test('manual-number races have one winner; automatic numbers cannot be impersonated', async t => {
   const { env, db } = await setup(t), d = completeDocument(); d.invoice.number = 'MANUAL-TEST';
   const results = await Promise.allSettled([crypto.randomUUID(),crypto.randomUUID()].map(id => saveDocument(env, req(), id, { ...payload(d), mode:'invoice' }, true)));
   assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 1);
-  d.invoice.number = '9'; d.invoice.automatic = true;
+  d.invoice.number = '10'; d.invoice.automatic = true;
   await assert.rejects(saveDocument(env, req(), crypto.randomUUID(), { ...payload(d), mode:'invoice' }, true), e => e.status === 409);
 });
 test('issuing replaces the pending draft in the register, and seller tax terms seed the next draft only', async t => {
@@ -369,7 +386,7 @@ test('issuing replaces the pending draft in the register, and seller tax terms s
   assert.equal(result.rows.length, 1); assert.equal(result.rows[0].status, 'ready');
   const fresh = await getDocumentContext(env, crypto.randomUUID(), '', true);
   assert.equal(fresh.defaults.tax, 'Без ПДВ'); assert.equal(fresh.defaults.buyer.name, ''); assert.equal(fresh.defaults.invoice.note, undefined);
-  assert.equal((await getDocumentContext(env, id, ready.document.id, true)).document.data.invoice.number, '9');
+  assert.equal((await getDocumentContext(env, id, ready.document.id, true)).document.data.invoice.number, '10');
 });
 
 test('seller invoice defaults are reusable before first issue and survive legacy profile edits', async t => {
@@ -381,7 +398,7 @@ test('seller invoice defaults are reusable before first issue and survive legacy
   fresh = await getDocumentContext(env, crypto.randomUUID(), '', true);
   assert.equal(fresh.defaults.tax, 'Без податку (ПДВ)');
   assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n, 0);
-  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 9);
+  assert.equal(db.prepare('SELECT next_number FROM invoice_sequence').get().next_number, 10);
 });
 
 test('invoice does not require contract address and does not print an empty address', () => {
@@ -406,7 +423,7 @@ test('invoice copy keeps buyer and positions but resets number, dates, payment a
   assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n,0);
   copy.defaults.items[0].price='12000'; copy.defaults.reviewed=true;
   const issued=await saveDocument(env,req(),id,{...payload(copy.defaults),mode:'invoice'},true);
-  assert.equal(issued.document.data.invoice.number,'9');
+  assert.equal(issued.document.data.invoice.number,'10');
   assert.equal((await getDocumentContext(env,orderId,saved.document.id)).document.data.items[0].price,old.items[0].price);
   await assert.rejects(getDocumentContext(env,id,'',true,saved.document.id),e=>e.status===409);
   await assert.rejects(getDocumentContext(env,crypto.randomUUID(),'',true,'missing'),e=>e.status===404);
