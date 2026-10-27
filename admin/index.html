@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/admin/accounting-bank-expenses.css?v=20261015-receipts">
     <link rel="stylesheet" href="/admin/accounting-bank-sources.css?v=20261015-sources">
     <link rel="stylesheet" href="/admin/bank-incoming.css?v=20261022-receipt-order-link">
-    <script type="module" src="/admin/admin.js?v=20261027-invoices"></script>
+    <script type="module" src="/admin/admin.js?v=20261027-repeat"></script>
   </head>
   <body class="admin-shell">
     <header class="admin-header">
@@ -177,13 +177,15 @@
             <p class="order-filter-result" data-orders-visible-count role="status" aria-live="polite"></p>
           </div>
           <form class="manual-order-form" data-manual-order-form hidden>
+            <input type="hidden" name="repeat_order_id" value="">
+            <input type="hidden" name="manager_contact" value="">
             <input type="hidden" name="status" value="new">
             <input type="hidden" name="source" value="manual">
             <input type="hidden" name="payment_status" value="unknown">
             <div class="manual-order-form__head">
               <div>
-                <strong>Нова заявка вручну</strong>
-                <span>Для дзвінків, пошти, Viber та інших каналів поза сайтом.</span>
+                <strong data-manual-order-title>Нова заявка вручну</strong>
+                <span data-manual-order-source>Для дзвінків, пошти, Viber та інших каналів поза сайтом.</span>
               </div>
               <button class="admin-btn admin-btn--small" type="button" data-manual-order-cancel>Скасувати</button>
             </div>
@@ -204,6 +206,7 @@
                 <option value="telegram">Telegram</option>
                 <option value="instagram">Instagram</option>
                 <option value="other">Інше</option>
+                <option value="repeat">Повторне звернення</option>
               </select>
             </label>
             <label>
@@ -233,6 +236,10 @@
             <label class="manual-order-form__wide">
               Що потрібно
               <input name="item_name" placeholder="бампер, блок ABS, комплект ТО...">
+            </label>
+            <label>
+              Ціна для клієнта, грн
+              <input name="revenue_uah" type="number" min="0" step="0.01" inputmode="decimal" placeholder="за наявності">
             </label>
             <label class="manual-order-form__wide">
               Коментар

@@ -11,6 +11,7 @@ import {
 import { googleAdsEventTypesForStatus, queueGoogleAdsConversionsForOrder } from "../../_lib/google-ads.js";
 import { auditActor, recordAuditEvent } from "../../_lib/audit-log.js";
 import { linkedBankPaymentSql } from "../../_lib/bank-payment-links.js";
+import { repeatOrderPayload } from '../../../admin/repeat-order.js';
 
 function supplierPaymentStateSql(options) {
   const legacy = "CASE WHEN orders.status = 'paid' THEN 'paid' ELSE 'unpaid' END";
@@ -324,9 +325,12 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const payload = await readPayload(request);
+  let payload = await readPayload(request);
+  const repeatedFrom = payload.repeat_order_id ? await loadOrder(env, text(payload.repeat_order_id)) : null;
+  if (payload.repeat_order_id && !repeatedFrom) return json({ error: 'Попереднє замовлення не знайдено.' }, { status: 404 });
+  if (repeatedFrom) payload = repeatOrderPayload(repeatedFrom, payload);
   const now = new Date().toISOString();
-  const customerId = await upsertCustomer(env, payload);
+  const customerId = repeatedFrom?.customer_id || await upsertCustomer(env, payload);
   const type = text(payload.type) || "parts";
   const leadId = crypto.randomUUID();
   const leadNumber = await nextPublicNumber(env, "lead", "L");
@@ -443,7 +447,7 @@ export async function onRequestPost({ request, env }) {
       id, created_at, order_id, previous_status, status, actor, comment, notify_customer, notification_status
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(crypto.randomUUID(), now, orderId, "", status, auditActor(request, env), "Замовлення створено вручну", 0, "not_queued")
+    .bind(crypto.randomUUID(), now, orderId, "", status, auditActor(request, env), repeatedFrom ? `Повторне замовлення на основі ${repeatedFrom.order_number || repeatedFrom.id}` : "Замовлення створено вручну", 0, "not_queued")
     .run();
 
   const order = await loadOrder(env, orderId);
@@ -468,6 +472,7 @@ export async function onRequestPost({ request, env }) {
       vin: order.vin,
       item_name: order.item_name,
       source: order.source || "manual",
+      ...(repeatedFrom ? { repeated_from: repeatedFrom.id, repeated_from_number: repeatedFrom.order_number } : {}),
     },
   });
   return json({ ok: true, order, google_ads_conversions });

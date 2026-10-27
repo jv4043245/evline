@@ -1,4 +1,4 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-invoice-defaults';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-repeat';
 import { amountWords } from './amount-words.js';
 
 const value = v => String(v || '').trim() || '________________';

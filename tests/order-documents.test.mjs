@@ -12,6 +12,8 @@ import { onRequestDelete as deleteOrder } from '../functions/api/admin/orders/[i
 import { onRequestGet as listInvoices } from '../functions/api/admin/invoices.js';
 import { amountWords } from '../admin/documents/amount-words.js';
 import { invoiceIndex, ingestTransactions, reconcile, readIncoming } from '../functions/_lib/bank-incoming.js';
+import { onRequestPost as createOrder } from '../functions/api/admin/orders.js';
+import { repeatOrderDraft, repeatOrderPayload } from '../admin/repeat-order.js';
 
 const migrationDir = new URL('../migrations/', import.meta.url);
 const schemas = await Promise.all((await readdir(migrationDir)).filter(f => f.endsWith('.sql')).sort().map(f => readFile(new URL(f, migrationDir), 'utf8')));
@@ -387,4 +389,62 @@ test('invoice does not require contract address and does not print an empty addr
   assert.deepEqual(validateReady(d, 'invoice'), []);
   assert.ok(validateReady(d, 'agreement').includes('Адреса продавця'));
   assert.doesNotMatch(documentText(d, 'invoice'), /Адреса постачальника/);
+});
+
+test('invoice copy keeps buyer and positions but resets number, dates, payment and review', async t => {
+  const { env, db } = await setup(t), old = completeDocument();
+  old.invoice.date = '2026-09-24'; old.invoice.note = 'Узгоджена примітка';
+  old.receipt = { enabled:true, amount:'5000', date:'2026-09-24', method:'IBAN', reference:'old-payment', confirmed:true };
+  const saved = await saveDocument(env, req(), orderId, {...payload(old),mode:'invoice'});
+  const id = crypto.randomUUID(), copy = await getDocumentContext(env,id,'',true,saved.document.id);
+  assert.deepEqual(copy.defaults.buyer,old.buyer); assert.deepEqual(copy.defaults.items,old.items);
+  assert.equal(copy.defaults.invoice.number,''); assert.equal(copy.defaults.invoice.automatic,true);
+  assert.notEqual(copy.defaults.invoice.date,old.invoice.date); assert.equal(copy.defaults.invoice.note,old.invoice.note);
+  assert.equal(copy.defaults.receipt.enabled,false); assert.equal(copy.defaults.receipt.amount,'');
+  assert.equal(copy.defaults.prepayment,''); assert.equal(copy.defaults.reviewed,false); assert.equal(copy.defaults.number,'');
+  assert.equal(copy.recipient,''); assert.equal(copy.document,null);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM standalone_documents').get().n,0);
+  copy.defaults.items[0].price='12000'; copy.defaults.reviewed=true;
+  const issued=await saveDocument(env,req(),id,{...payload(copy.defaults),mode:'invoice'},true);
+  assert.equal(issued.document.data.invoice.number,'9');
+  assert.equal((await getDocumentContext(env,orderId,saved.document.id)).document.data.items[0].price,old.items[0].price);
+  await assert.rejects(getDocumentContext(env,id,'',true,saved.document.id),e=>e.status===409);
+  await assert.rejects(getDocumentContext(env,crypto.randomUUID(),'',true,'missing'),e=>e.status===404);
+});
+
+test('repeat order whitelist excludes paid states, supplier costs, documents and advertising identifiers', () => {
+  const source={id:'old',type:'parts',customer_name:'Клієнт',customer_phone:'+380000000001',car:'BYD',vin:'VIN',item_name:'Бампер',revenue_uah:12000,
+    status:'paid',payment_status:'paid',tracking_number:'old-track',purchase_cost_uah:6000,gclid:'old-click',campaign:'old-ad',telegram_chat_id:'old-chat'};
+  const draft=repeatOrderDraft(source); assert.equal(draft.customer_phone,source.customer_phone); assert.equal(draft.revenue_uah,'12000');
+  const copied=repeatOrderPayload(source,{...source,item_name:'Крило',revenue_uah:'2000',customer_phone:'+380000000002'});
+  assert.equal(copied.status,'new'); assert.equal(copied.payment_status,'unknown'); assert.equal(copied.item_name,'Крило');
+  assert.equal(copied.customer_phone,'+380000000002'); assert.equal(copied.medium,'repeat');
+  assert.doesNotMatch(JSON.stringify(copied),/old-track|6000|old-click|old-ad|old-chat/);
+  const service=repeatOrderPayload({...source,type:'byd',item_name:'',service_name:'SIM'},{service_name:'Програмування'});
+  assert.equal(service.service_name,'Програмування'); assert.equal(service.item_name,'');
+});
+
+test('repeat creates a new unpaid order for the same customer and leaves source records unchanged', async t => {
+  const {env,db}=await setup(t);
+  const before=db.prepare('SELECT * FROM orders WHERE id=?').get(orderId), customer=db.prepare('SELECT * FROM customers WHERE id=?').get(before.customer_id);
+  const request=new Request('https://evline.test/api/admin/orders',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({repeat_order_id:orderId,customer_phone:'+380000000002',item_name:'Нова деталь',revenue_uah:2000,status:'paid',payment_status:'paid',purchase_cost_uah:900,tracking_number:'old',gclid:'old',telegram_chat_id:'old'})});
+  const result=await (await createOrder({env,request})).json();
+  assert.notEqual(result.order.id,orderId); assert.notEqual(result.order.order_number,before.order_number);
+  assert.equal(result.order.customer_id,before.customer_id); assert.equal(result.order.customer_phone,'+380000000002');
+  assert.equal(result.order.item_name,'Нова деталь'); assert.equal(result.order.revenue_uah,2000);
+  assert.equal(result.order.status,'new'); assert.equal(result.order.payment_status,'unknown');
+  for(const key of ['purchase_cost_uah','delivery_cost_uah','ad_cost_uah'])assert.equal(result.order[key],0);
+  for(const key of ['gclid','tracking_number','telegram_chat_id'])assert.ok(!result.order[key]);
+  assert.deepEqual(db.prepare('SELECT * FROM orders WHERE id=?').get(orderId),before);
+  assert.deepEqual(db.prepare('SELECT * FROM customers WHERE id=?').get(before.customer_id),customer);
+  assert.match(db.prepare('SELECT comment FROM order_status_events WHERE order_id=?').get(result.order.id).comment,/O-TEST/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM order_documents WHERE order_id=?').get(result.order.id).n,0);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM supplier_payments WHERE order_id=?').get(result.order.id).n,0);
+});
+
+test('repeat cannot create an orphan when source is missing', async t => {
+  const {env,db}=await setup(t), count=db.prepare('SELECT COUNT(*) n FROM orders').get().n;
+  const request=new Request('https://evline.test/api/admin/orders',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({repeat_order_id:'missing'})});
+  assert.equal((await createOrder({env,request})).status,404);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM orders').get().n,count);
 });

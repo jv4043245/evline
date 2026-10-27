@@ -1,5 +1,5 @@
-import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-invoice-defaults';
-import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-invoice-defaults';
+import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-repeat';
+import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-repeat';
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
@@ -83,6 +83,7 @@ function renderEditor() {
   refreshMode();
 }
 function refreshMode() {
+  $('[data-action="duplicate-invoice"]').hidden = !context.document || !data.invoice.enabled;
   $('[data-action="issue-invoice"]').hidden = !['invoice','all'].includes(outputMode());
   $('[data-output-mode] option[value="receipt"]').disabled = !data.receipt.enabled;
   $('[data-output-mode] option[value="invoice"]').disabled = !data.invoice.enabled;
@@ -124,7 +125,7 @@ function setView(next) {
 }
 function adopt(result, initial = false) {
   context = result; data = clone(result.document?.data || result.defaults); baseline = JSON.stringify(data);
-  if (result.document) { const url = new URL(location.href); url.searchParams.set('version', result.document.id); history.replaceState(null, '', url); }
+  if (result.document) { const url = new URL(location.href); url.searchParams.set('version', result.document.id); url.searchParams.delete('copy_invoice'); history.replaceState(null, '', url); }
   data.invoice ||= invoiceDefaults(data);
   data.seller_profile_id ||= '';
   baseline = JSON.stringify(data);
@@ -132,6 +133,7 @@ function adopt(result, initial = false) {
   $('[data-order-number]').textContent = standalone ? data.invoice.number ? `№ ${data.invoice.number}` : 'Без замовлення' : context.order.number;
   $('[data-customer]').textContent = [data.buyer.name, data.buyer.phone].filter(Boolean).join(' · ');
   if (initial && standalone) { $('h1').textContent = 'Рахунок клієнту'; $('[data-order-refresh]').hidden = true; }
+  if (initial && result.copied_from) status(`Нова копія рахунку ${result.copied_from}.`);
   $('[data-versions]').innerHTML = result.versions.length ? result.versions.map(v => `<option value="${esc(v.id)}" ${v.id === result.document?.id ? 'selected' : ''}>Версія ${v.revision} · ${v.status === 'ready' ? 'підготовлено' : 'чернетка'}</option>`).join('') : '<option value="">Ще не збережено</option>';
   $('[data-version-info]').textContent = result.document ? `${new Date(result.document.created_at).toLocaleString('uk-UA')} · ${result.document.actor}` : '';
   renderEditor(); refreshSummary(); setView(view);
@@ -193,6 +195,11 @@ async function prepareSend() {
 }
 async function action(name) {
   if (name === 'save') await save();
+  else if (name === 'duplicate-invoice') {
+    if (dirty() || !context.document) throw new Error('Спочатку збережіть поточні зміни, потім створіть копію.');
+    busy = false;
+    location.assign(`/admin/documents/?copy_invoice=${encodeURIComponent(context.document.id)}`);
+  }
   else if (name === 'issue-invoice') {
     if(!['invoice','all'].includes(outputMode()))throw new Error('Оберіть документ «Рахунок» або «Повний комплект».');
     await save('ready');status(`Рахунок № ${data.invoice.number} виставлено. Автоматичного надсилання клієнту не було.`);
@@ -347,7 +354,7 @@ window.addEventListener('beforeunload', e => { if (dirty() || busy) { e.preventD
 async function boot() {
   $('[data-back]').href = standalone ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
   $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${standalone ? 'До рахунків' : 'До замовлення'}`;
-  for (const [name, symbol] of Object.entries({ save: 'Save', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw' })) {
+  for (const [name, symbol] of Object.entries({ save: 'Save', 'duplicate-invoice': 'Copy', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw' })) {
     const b = $(`[data-action="${name}"]`), label = b.textContent.trim();
     b.setAttribute('aria-label', b.getAttribute('aria-label') || label);
     b.title ||= name === 'pdf' ? 'Завантажити PDF' : label;
@@ -355,7 +362,9 @@ async function boot() {
   }
   const toolbar = $('.document-toolbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--toolbar-height', `${toolbar.getBoundingClientRect().height}px`)).observe(toolbar);
-  adopt(await api(`${endpoint}${pageUrl.searchParams.has('version') ? `?version=${encodeURIComponent(pageUrl.searchParams.get('version'))}` : ''}`), true); $('[data-workspace]').hidden = false;
+  const query = new URLSearchParams();
+  for (const key of ['version', 'copy_invoice']) if (pageUrl.searchParams.has(key)) query.set(key, pageUrl.searchParams.get(key));
+  adopt(await api(`${endpoint}${query.size ? `?${query}` : ''}`), true); $('[data-workspace]').hidden = false;
 }
 boot().catch(e => { error(e.message); $('[data-state]').textContent = 'Не завантажено'; });
 

@@ -15,6 +15,7 @@ import { createAccountingBankSourcesView } from "./accounting-bank-sources.js?v=
 import { createBankIncomingView, mountBankOrderSummary } from './bank-incoming.js?v=20261027-invoices';
 import { createOrderPaymentPicker, orderPaymentButton } from './order-payment-picker.js?v=20261027-invoices';
 import { createBankNotifications } from './bank-notifications.js?v=20261021-badge-states';
+import { repeatOrderDraft } from './repeat-order.js';
 
 const state = {
   range: "30d",
@@ -3500,6 +3501,7 @@ function renderOrderEditor(order, preserveDraft = true) {
           ${badge(order.status || "new", true)}
         </div>
         <div class="order-editor__tools">
+          <button class="admin-btn admin-btn--small" type="button" data-repeat-order>${documentIcon('Copy')}Повторити замовлення</button>
           ${order.type === 'parts' ? `<button class="admin-btn admin-btn--small" type="button" data-order-documents>${documentIcon('FileText')}Документи</button>` : ''}
           <button class="admin-btn admin-btn--small" type="button" data-order-tab="history">Історія</button>
         </div>
@@ -4268,6 +4270,28 @@ function setManualOrderFormOpen(open) {
   }
 }
 
+function resetManualOrderForm() {
+  document.querySelector('[data-manual-order-form]')?.reset();
+  document.querySelector('[data-manual-order-title]').textContent = 'Нова заявка вручну';
+  document.querySelector('[data-manual-order-source]').textContent = 'Для дзвінків, пошти, Viber та інших каналів поза сайтом.';
+}
+
+function repeatSelectedOrder() {
+  if (!state.selectedOrder || orderSaving || orderDocumentsController?.isBusy()) return;
+  if (orderIsDirty()) { alert('Спочатку збережіть зміни поточного замовлення.'); return; }
+  const form = document.querySelector('[data-manual-order-form]');
+  if (!form.hidden && manualOrderHasUsefulData(manualOrderPayload(form)) && !confirm('Замінити незбережену нову заявку копією цього замовлення?')) return;
+  const order = state.selectedOrder, draft = repeatOrderDraft(order);
+  if (!closeOrderDetail({ clearSelection: true })) return;
+  resetManualOrderForm();
+  for (const [key, value] of Object.entries(draft)) if (form.elements.namedItem(key)) form.elements.namedItem(key).value = value;
+  document.querySelector('[data-manual-order-title]').textContent = 'Повторне замовлення';
+  document.querySelector('[data-manual-order-source]').textContent = `На основі ${order.order_number || order.id}`;
+  setManualOrderFormOpen(true);
+  form.scrollIntoView({ block: 'start' });
+  form.elements.item_name.focus();
+}
+
 function manualOrderPayload(form) {
   const payload = Object.fromEntries(new FormData(form));
   const channel = plainText(payload.medium) || "phone";
@@ -4654,8 +4678,7 @@ document.querySelector("[data-market-lookup-open]")?.addEventListener("click", (
 });
 
 document.querySelector("[data-manual-order-cancel]")?.addEventListener("click", () => {
-  const form = document.querySelector("[data-manual-order-form]");
-  form?.reset();
+  resetManualOrderForm();
   setManualOrderFormOpen(false);
 });
 
@@ -4676,7 +4699,7 @@ document.querySelector("[data-manual-order-form]")?.addEventListener("submit", a
       method: "POST",
       body: JSON.stringify(payload),
     });
-    form.reset();
+    resetManualOrderForm();
     setManualOrderFormOpen(false);
     await refresh();
     if (result.order?.id) await openOrder(result.order.id, { scroll: false });
@@ -5201,6 +5224,7 @@ document.querySelector("[data-china-preorders]")?.addEventListener("click", hand
 document.querySelector("[data-china-preorder-panel]")?.addEventListener("click", handleChinaPreorderClick);
 
 document.addEventListener("click", (event) => {
+  if (event.target.closest('[data-repeat-order]')) { repeatSelectedOrder(); return; }
   if (!event.target.closest("[data-close-order]")) return;
   closeOrderDetail({ clearSelection: true });
 });
@@ -5319,7 +5343,7 @@ document.querySelector("[data-market-lookup-panel]")?.addEventListener("click", 
   if (event.target.closest("[data-market-lookup-create-order]")) {
     const form = document.querySelector("[data-manual-order-form]");
     if (!form) return;
-    form.reset();
+    resetManualOrderForm();
     if (form.elements.type) form.elements.type.value = "parts";
     if (form.elements.medium) form.elements.medium.value = "phone";
     if (form.elements.car) form.elements.car.value = state.marketLookup.draft.car;

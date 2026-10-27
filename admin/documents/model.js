@@ -156,6 +156,19 @@ export function validateReady(d, mode = 'all') {
   if (!d.reviewed) errors.push('Перевірка менеджером');
   return errors;
 }
+export function invoiceCopyDefaults(source, defaults, profiles) {
+  const data = structuredClone(defaults);
+  for (const key of ['buyer', 'car', 'vin', 'items', 'extras', 'tax']) data[key] = structuredClone(source[key]);
+  const profile = profiles.find(p => p.id === source.seller_profile_id)
+    || profiles.find(p => p.seller.iban && p.seller.iban === source.seller.iban);
+  data.seller = structuredClone(profile?.seller || source.seller);
+  data.seller_profile_id = profile?.id || '';
+  data.invoice = { ...data.invoice, enabled: true, number: '', automatic: true, mode: 'total', amount: '', due: '', note: source.invoice?.note || '' };
+  // New customer purchase: no old receipt, prepayment, contract number or confirmed review.
+  data.reviewed = false;
+  return normalizeDocument(data);
+}
+
 export function validDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value; }
 export function validIban(value) {
   const v = value.replace(/\s/g, '').toUpperCase();
