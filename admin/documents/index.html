@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261027-repeat">
-  <script type="module" src="/admin/documents/documents.js?v=20261027-repeat"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261027-delivery">
+  <script type="module" src="/admin/documents/documents.js?v=20261027-delivery"></script>
 </head>
 <body>
   <header class="app-header">
@@ -60,8 +60,29 @@
   <dialog data-send-dialog aria-labelledby="send-title">
     <form method="dialog"><div class="dialog-heading"><h2 id="send-title">Надіслати клієнту</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>
     <div data-send-content></div>
+    <section class="send-channel" data-bot-channel hidden>
+      <div class="recipient" data-send-recipient></div>
+      <label class="check-label" data-recipient-confirmation><input type="checkbox" data-confirm-recipient><span>Документ і одержувача перевірено</span></label>
+      <button type="button" data-action="telegram" class="primary">Надіслати через Telegram-бота</button>
+      <p class="muted" data-bot-result role="status" hidden></p>
+    </section>
+    <div class="send-file-actions">
+      <button type="button" data-action="share" class="primary" hidden>Поділитися файлом</button>
+      <button type="button" data-action="send-download">Завантажити PDF</button>
+      <button type="button" data-action="send-print">Друкувати</button>
+    </div>
+    <section class="send-channel">
+      <div class="send-email-row"><label>Email клієнта<input type="email" data-send-email autocomplete="email" maxlength="254" placeholder="name@example.com"></label>
+      <button type="button" data-action="email">Лист + PDF</button></div>
+      <p class="muted">У листі будуть адреса, тема й текст. Завантажений PDF потрібно прикріпити вручну.</p>
+    </section>
+    <section class="send-channel" data-manual-channels hidden>
+      <h3>Відкрити чат клієнта</h3>
+      <div class="send-chat-links" data-send-chats></div>
+      <p class="muted">PDF завантажиться. Прикріпіть його в чаті.</p>
+    </section>
+    <p data-send-status class="muted" role="status" hidden></p>
     <p data-send-error class="error" role="alert" hidden></p>
-    <div class="dialog-actions"><button type="button" data-action="send-download">Завантажити PDF</button><button type="button" data-action="share" hidden>Поділитися файлом</button><button type="button" data-action="telegram" class="primary" hidden>Надіслати в Telegram</button></div>
   </dialog>
   <dialog data-refresh-dialog aria-labelledby="refresh-title">
     <form method="dialog"><div class="dialog-heading"><h2 id="refresh-title">Зміни з замовлення</h2><button value="cancel" class="icon-button" aria-label="Закрити">×</button></div></form>

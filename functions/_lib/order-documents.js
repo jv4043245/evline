@@ -1,6 +1,7 @@
 import { fromOrder, normalizeDocument, validateReady, cleanSeller, DEFAULT_SELLER, fail, documentMode, invoiceCopyDefaults } from '../../admin/documents/model.js';
 import { auditActor, recordAuditEvent } from './audit-log.js';
 import { INVOICE_SCHEMA, allDocumentRows, documentStore, savedRetry, writeDocumentVersion } from './invoice-numbering.js';
+import { contactPhone } from '../../admin/documents/delivery.js';
 
 export const DOCUMENT_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS order_documents (
@@ -20,6 +21,11 @@ export const DOCUMENT_SCHEMA = [
     status TEXT NOT NULL, message_id TEXT, error TEXT
   )`,
   ...INVOICE_SCHEMA,
+  `CREATE TABLE IF NOT EXISTS invoice_deliveries (
+    id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES standalone_documents(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL, actor TEXT NOT NULL, recipient TEXT NOT NULL,
+    status TEXT NOT NULL, message_id TEXT, error TEXT
+  )`,
 ];
 export async function ensureDocuments(env) { for (const sql of DOCUMENT_SCHEMA) await env.DB.prepare(sql).run(); }
 export async function documentOrder(env, id) {
@@ -32,6 +38,16 @@ export async function documentOrder(env, id) {
 export function documentRecipient(order) {
   const id = String(order.telegram_chat_id || order.customer_telegram_chat_id || '');
   return /^[1-9]\d{3,15}$/.test(id) ? id : '';
+}
+export function orderDocumentRecipient(order, data) {
+  return contactPhone(order.customer_phone) && contactPhone(order.customer_phone) === contactPhone(data?.buyer?.phone) ? documentRecipient(order) : '';
+}
+export async function invoiceCustomer(env, data) {
+  if (!data?.crm_customer_id) return null;
+  const customer = await env.DB.prepare('SELECT name,phone,telegram_chat_id FROM customers WHERE id=?').bind(data.crm_customer_id).first();
+  // Never infer a Telegram recipient from a phone search or a typed @username.
+  if (!customer || !contactPhone(data.buyer?.phone) || contactPhone(customer.phone) !== contactPhone(data.buyer.phone)) return null;
+  return customer;
 }
 export async function sellerSettings(env) {
   const row = await env.DB.prepare('SELECT * FROM document_seller_settings WHERE id=1').first();
@@ -58,7 +74,7 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
   settings.profiles = settings.profiles.map(p => ({ ...p, invoice_defaults: { tax: p.invoice_defaults?.tax ?? priceTerms.find(r => r.account === p.seller.iban?.replace(/\s/g,''))?.tax ?? '' } }));
   const profile = settings.profiles.find(p => p.id === settings.default_id) || settings.profiles[0];
   const items = standalone ? [] : (await env.DB.prepare('SELECT title, sku, quantity, unit_price_uah FROM order_items WHERE order_id=? ORDER BY created_at, id').bind(orderId).all()).results;
-  const deliveries = saved && !standalone ? (await env.DB.prepare('SELECT id, created_at, actor, recipient, status, error FROM document_deliveries WHERE document_id=? ORDER BY created_at DESC LIMIT 10').bind(saved.id).all()).results : [];
+  const deliveries = saved ? (await env.DB.prepare(`SELECT id, created_at, actor, recipient, status, error FROM ${standalone ? 'invoice_deliveries' : 'document_deliveries'} WHERE document_id=? ORDER BY created_at DESC LIMIT 10`).bind(saved.id).all()).results : [];
   let defaults = { ...fromOrder(order, items, profile.seller), seller_profile_id: profile.id };
   defaults.invoice = { ...defaults.invoice, number: '', automatic: true };
   defaults.tax = profile.invoice_defaults.tax;
@@ -73,8 +89,11 @@ export async function getDocumentContext(env, orderId, versionId = '', standalon
     defaults = invoiceCopyDefaults(original, defaults, settings.profiles);
     copiedFrom = original.invoice.number || 'чернетки';
   }
+  const customer = standalone ? await invoiceCustomer(env, saved ? JSON.parse(saved.data_json) : defaults) : null;
   return { standalone, order: { id: order.id, number: order.order_number || (standalone ? '' : order.id), customer_name: order.customer_name || '', customer_phone: order.customer_phone || '', type: order.type, updated_at: order.updated_at },
-    recipient: documentRecipient(order), versions, latest_revision: versions[0]?.revision || 0,
+    recipient: standalone ? documentRecipient(customer || {}) : orderDocumentRecipient(order, saved ? JSON.parse(saved.data_json) : defaults),
+    recipient_label: [standalone ? customer?.name : order.customer_name, standalone ? customer?.phone : order.customer_phone].filter(Boolean).join(' · '),
+    versions, latest_revision: versions[0]?.revision || 0,
     document: saved ? { id: saved.id, revision: saved.revision, status: saved.status, output_mode: saved.output_mode || '', actor: saved.actor, created_at: saved.created_at, data: JSON.parse(saved.data_json) } : null,
     defaults, copied_from: copiedFrom, seller_profiles: settings.profiles, seller_revision: settings.revision, deliveries };
 }

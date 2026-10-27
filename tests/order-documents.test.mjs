@@ -7,6 +7,7 @@ import { AGREEMENT_TERMS } from '../admin/documents/agreement-template.js';
 import { documentBlocks, previewHtml, pdfDefinition, documentText } from '../admin/documents/render.js';
 import { getDocumentContext, saveDocument, saveSeller, ensureDocuments, documentRecipient, documentPayload } from '../functions/_lib/order-documents.js';
 import { onRequestPost as sendDocument } from '../functions/api/admin/orders/[id]/document-send.js';
+import { onRequestPost as sendInvoice } from '../functions/api/admin/invoices/[id]/send.js';
 import { onRequest as authorize } from '../functions/api/admin/_middleware.js';
 import { onRequestDelete as deleteOrder } from '../functions/api/admin/orders/[id].js';
 import { onRequestGet as listInvoices } from '../functions/api/admin/invoices.js';
@@ -263,6 +264,55 @@ test('Telegram sends once, retains audit/version and refuses uncertain delivery 
   await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(next.request_id) }), /міг надійти/);
   await assert.rejects(sendDocument({ env, params: { id: orderId }, request: sendRequest(next.request_id) }), /дублікат/); assert.equal(calls, 2);
   assert.equal(db.prepare('SELECT status FROM document_deliveries WHERE id=?').get(next.request_id).status, 'unknown');
+});
+test('standalone invoice sends only to explicitly selected CRM customer and deduplicates', async t => {
+  const {env,db}=await setup(t), id=crypto.randomUUID(), data=completeDocument();
+  data.crm_customer_id='test-customer';
+  db.prepare("UPDATE customers SET telegram_chat_id='123456789' WHERE id='test-customer'").run();
+  const saved=await saveDocument(env,req(),id,{...payload(data),mode:'invoice'},true);
+  assert.equal(saved.recipient,'123456789'); assert.match(saved.recipient_label,/Тест/);
+  const originalFetch=globalThis.fetch;t.after(()=>{globalThis.fetch=originalFetch;});let calls=0;
+  globalThis.fetch=async (url,options)=>{calls++;assert.equal(options.body.get('chat_id'),'123456789');assert.match(options.body.get('document').name,/invoice-v1.pdf$/);return Response.json({ok:true,result:{message_id:55}});};
+  const send=()=>sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'123456789','invoice')});
+  await send();assert.equal((await(await send()).json()).already_sent,true);assert.equal(calls,1);
+  const after=await getDocumentContext(env,id,'',true);assert.equal(after.deliveries[0].status,'sent');
+  assert.equal(db.prepare('SELECT count(*) n FROM document_deliveries').get().n,0);
+  assert.equal(db.prepare("SELECT count(*) n FROM admin_audit_log WHERE action='document.send'").get().n,1);
+  await assert.rejects(sendInvoice({env,params:{id:crypto.randomUUID()},request:sendRequest(saved.document.id,'123456789','invoice')}),/перевірте/);
+  await assert.rejects(sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'123456789','agreement')}),/Оберіть рахунок/);
+});
+test('standalone invoice never guesses recipient by phone; changed phones, groups and recipient changes are blocked',async t=>{
+  const {env,db}=await setup(t),id=crypto.randomUUID(),data=completeDocument();
+  db.prepare("UPDATE customers SET telegram_chat_id='123456789' WHERE id='test-customer'").run();
+  let saved=await saveDocument(env,req(),id,{...payload(data),mode:'invoice'},true);
+  assert.equal(saved.recipient,'');
+  await assert.rejects(sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'123456789','invoice')}),/не підключено/);
+  data.crm_customer_id='test-customer';data.buyer.phone='+380000000099';
+  saved=await saveDocument(env,req(),id,{...payload(data,1),mode:'invoice'},true);assert.equal(saved.recipient,'');
+  data.buyer.phone='+380000000001';db.prepare("UPDATE customers SET telegram_chat_id='-100123456' WHERE id='test-customer'").run();
+  saved=await saveDocument(env,req(),id,{...payload(data,2),mode:'invoice'},true);assert.equal(saved.recipient,'');
+  await assert.rejects(sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'-100123456','invoice')}),/не підключено/);
+  db.prepare("UPDATE customers SET telegram_chat_id='987654321' WHERE id='test-customer'").run();
+  await assert.rejects(sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'123456789','invoice')}),/Одержувач змінився/);
+});
+test('changed invoice buyer cannot receive documents through original order Telegram',async t=>{
+  const {env}=await setup(t),data=completeDocument();data.buyer.phone='+380000000099';
+  const saved=await saveDocument(env,req(),orderId,payload(data));assert.equal(saved.recipient,'');
+  await assert.rejects(sendDocument({env,params:{id:orderId},request:sendRequest(saved.document.id)}),/не підключено/);
+});
+test('standalone delivery requires admin auth, same origin and valid PDF; ambiguous sends are not retried',async t=>{
+  const {env,db}=await setup(t),id=crypto.randomUUID(),data=completeDocument();data.crm_customer_id='test-customer';
+  db.prepare("UPDATE customers SET telegram_chat_id='123456789' WHERE id='test-customer'").run();
+  const saved=await saveDocument(env,req(),id,{...payload(data),mode:'invoice'},true);
+  const request=sendRequest(saved.document.id,'123456789','invoice');request.headers.set('origin','https://other.test');
+  await assert.rejects(sendInvoice({env,params:{id},request}),e=>e.status===403);
+  const unauthorized=await authorize({env,request:new Request(`https://evline.test/api/admin/invoices/${id}/send`,{method:'POST'}),next:()=>{throw new Error('must not send');}});assert.equal(unauthorized.status,401);
+  const bad=sendRequest(saved.document.id,'123456789','invoice'),form=await bad.formData();form.set('file',new File(['invalid'.repeat(30)],'bad.pdf',{type:'application/pdf'}));
+  await assert.rejects(sendInvoice({env,params:{id},request:new Request(bad.url,{method:'POST',body:form})}),/Некоректний файл/);
+  const originalFetch=globalThis.fetch;t.after(()=>{globalThis.fetch=originalFetch;});let calls=0;
+  globalThis.fetch=async ()=>{calls++;throw new Error('timeout');};
+  const send=()=>sendInvoice({env,params:{id},request:sendRequest(saved.document.id,'123456789','invoice')});
+  await assert.rejects(send(),/міг надійти/);await assert.rejects(send(),/дублікат/);assert.equal(calls,1);
 });
 
 test('Ukrainian amount in words handles feminine forms, teens, thousands, millions and kopecks', () => {

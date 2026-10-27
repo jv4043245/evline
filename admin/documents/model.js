@@ -83,6 +83,10 @@ export function normalizeDocument(input) {
   const d = { schema: 1, template_version: TEMPLATE_VERSION, seller: cleanSeller(input.seller), seller_profile_id: str(input.seller_profile_id, 80), buyer: {}, reviewed: input.reviewed === true };
   for (const key of TEXT_FIELDS) d[key] = str(input[key], ['number', 'date', 'deadline_days'].includes(key) ? 80 : 3000);
   for (const key of BUYER_FIELDS) d.buyer[key] = str(input.buyer?.[key], 1000);
+  if (input.crm_customer_id) {
+    d.crm_customer_id = str(input.crm_customer_id, 100);
+    if (!/^[a-zA-Z0-9_-]+$/.test(d.crm_customer_id)) throw fail('Некоректний клієнт CRM.');
+  }
   if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 40) throw fail('У специфікації має бути від 1 до 40 позицій.');
   d.items = input.items.map(row => {
     const quantity = Number(row.quantity);
@@ -159,6 +163,7 @@ export function validateReady(d, mode = 'all') {
 export function invoiceCopyDefaults(source, defaults, profiles) {
   const data = structuredClone(defaults);
   for (const key of ['buyer', 'car', 'vin', 'items', 'extras', 'tax']) data[key] = structuredClone(source[key]);
+  if (source.crm_customer_id) data.crm_customer_id = source.crm_customer_id;
   const profile = profiles.find(p => p.id === source.seller_profile_id)
     || profiles.find(p => p.seller.iban && p.seller.iban === source.seller.iban);
   data.seller = structuredClone(profile?.seller || source.seller);
