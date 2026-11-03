@@ -7,13 +7,15 @@ import * as render from '../admin/documents/render.js';
 import * as delivery from '../admin/documents/delivery.js';
 import { amountWords } from '../admin/documents/amount-words.js';
 import { icon } from '../admin/documents/icons.js';
+import { LEGACY_AGREEMENT_TERMS } from '../admin/documents/agreement-template-20260923.js';
 
 const html = await readFile(new URL('../admin/documents/index.html', import.meta.url), 'utf8');
 const source = await readFile(new URL('../admin/documents/documents.js', import.meta.url), 'utf8');
 const deliverySource = await readFile(new URL('../admin/documents/delivery.js', import.meta.url), 'utf8');
+const renderSource = await readFile(new URL('../admin/documents/render.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate) { for (let i=0;i<80;i++) { if(predicate())return; await tick(); } assert.ok(predicate(), 'UI settled'); }
-async function fixture(t, { connected=true, share=true, standalone=false, email=true, emailFailure=false }={}) {
+async function fixture(t, { connected=true, share=true, standalone=false, email=true, emailFailure=false, legacy=false }={}) {
   const dom = new JSDOM(html, {url:`https://example.test/admin/documents/?${standalone?'invoice=00000000-0000-4000-8000-000000000001':'order=test-order'}`,runScripts:'outside-only'});
   const w=dom.window,q=s=>w.document.querySelector(s),calls=[],links=[],shares=[],pdfs=[],popups=[];
   t.after(()=>w.close());
@@ -27,6 +29,7 @@ async function fixture(t, { connected=true, share=true, standalone=false, email=
   const defaults=model.fromOrder({id:'test-order',order_number:'O-TEST',customer_name:'Тестовий покупець',customer_phone:'+380000000001',customer_email:'test@example.invalid',item_name:'Бампер',revenue_uah:2000});
   const body='3000010000000000000000000';defaults.seller={...defaults.seller,name:'Тестовий продавець',tax_id:'0000000000',bank:'Тестовий банк',iban:`UA${String(98-Number(BigInt(body+'301000')%97n)).padStart(2,'0')}${body}`};
   defaults.reviewed=true;defaults.tax='Без ПДВ';defaults.invoice.number='';defaults.invoice.automatic=true;
+  if(legacy) {defaults.template_version='2026-09-23';defaults.terms=structuredClone(LEGACY_AGREEMENT_TERMS);}
   let context={defaults,document:null,order:{id:'test-order',number:'O-TEST'},recipient:connected?'123456789':'',recipient_label:'Тестовий покупець · +380000000001',versions:[],deliveries:[],latest_revision:0,seller_profiles:[{id:'primary',seller:defaults.seller}],seller_revision:1};
   context.email={enabled:email,sender:'sender@example.invalid'};context.email_deliveries=[];
   w.fetch=async (url,options={})=>{
@@ -64,7 +67,17 @@ test('contact destinations reject active URLs and email headers; only valid cont
 test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
   const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
   assert.ok(deliverySource.includes(`from '${editorModel}'`));
-  assert.match(source,/delivery\.js\?v=20261027-email/);assert.match(html,/documents\.js\?v=20261027-email/);
+  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-simple/);
+  assert.ok(renderSource.includes(`from '${editorModel}'`));
+});
+test('old template updates only after explicit confirmation and never auto-saves or sends',async t=>{
+  const p=await fixture(t,{legacy:true});
+  const before=p.q('[data-path="terms.2.text"]').value;
+  p.w.confirm=()=>false;await p.click('update-agreement-template');assert.equal(p.q('[data-path="terms.2.text"]').value,before);
+  p.w.confirm=()=>true;await p.click('update-agreement-template');
+  assert.match(p.q('[data-path="terms.4.text"]').value,/не встановлює додаткових договірних штрафів/);
+  assert.equal(p.q('[data-action="update-agreement-template"]'),null);assert.equal(p.q('[data-reviewed]').checked,false);
+  assert.equal(p.calls.filter(c=>c.options.method==='POST').length,0);
 });
 test('issuing opens delivery choices without automatically contacting customer or duplicating invoice on download/print',async t=>{
   const p=await fixture(t);await p.click('issue-invoice');

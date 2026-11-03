@@ -1,9 +1,9 @@
-import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261027-delivery';
-import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261027-repeat';
+import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, updateAgreementTemplate, TEMPLATE_VERSION, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261103-simple';
+import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261103-simple';
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';
-import { contactEmail, deliveryDetails, emailAddress, manualChatLinks } from './delivery.js?v=20261027-email';
+import { contactEmail, deliveryDetails, emailAddress, manualChatLinks } from './delivery.js?v=20261103-simple';
 
 const $ = s => document.querySelector(s);
 const pageUrl = new URL(location.href), orderId = pageUrl.searchParams.get('order') || '';
@@ -78,7 +78,7 @@ function renderEditor() {
     <details class="editor-section" data-disclosure="seller" ${!s.tax_id || !s.iban ? 'open' : ''}><summary>Реквізити продавця</summary><div class="fields">
       ${SELLER_FIELDS.map(key => input({ name: 'Продавець', tax_id: 'РНОКПП / ЄДРПОУ', address: 'Адреса реєстрації та для звернень', iban: 'IBAN', bank: 'Банк', phone: 'Телефон', email: 'Email', tax_status: 'Податковий статус ФОПа' }[key], `seller.${key}`, s[key], { wide: ['address', 'name', 'tax_status'].includes(key) })).join('')}
       <div class="wide"><button type="button" data-action="save-seller">Зберегти реквізити цього ФОПа</button></div></div></details>
-    <details class="editor-section" data-disclosure="terms" data-agreement-fields><summary>Текст договору</summary>${data.terms.map((s, i) => `<details class="contract-section" data-disclosure="term-${i}"><summary>${esc(s.title)}</summary><textarea data-path="terms.${i}.text" rows="10" maxlength="15000" aria-label="${esc(s.title)}">${esc(s.text)}</textarea></details>`).join('')}</details>
+    <details class="editor-section" data-disclosure="terms" data-agreement-fields><summary>Текст договору</summary>${data.template_version !== TEMPLATE_VERSION ? `<button type="button" data-action="update-agreement-template">${icon('RefreshCw')}Оновити шаблон</button>` : ''}${data.terms.map((s, i) => `<details class="contract-section" data-disclosure="term-${i}"><summary>${esc(s.title)}</summary><textarea data-path="terms.${i}.text" rows="10" maxlength="15000" aria-label="${esc(s.title)}">${esc(s.text)}</textarea></details>`).join('')}</details>
   `;
   for (const el of document.querySelectorAll('[data-disclosure]')) if (expanded.has(el.dataset.disclosure)) el.open = expanded.get(el.dataset.disclosure);
   refreshMode();
@@ -230,6 +230,11 @@ function updateBotDelivery() {
 }
 async function action(name) {
   if (name === 'save') await save();
+  else if (name === 'update-agreement-template') {
+    if (!confirm('Замінити текст договору на скорочений шаблон від 03.11.2026? Індивідуальні правки умов буде замінено. Дані покупця, ціни та доставка залишаться. Попередня збережена версія не зміниться.')) return;
+    data = updateAgreementTemplate(data); renderEditor();
+    status('Новий шаблон у чернетці. Перевірте умови перед збереженням.');
+  }
   else if (name === 'duplicate-invoice') {
     if (dirty() || !context.document) throw new Error('Спочатку збережіть поточні зміни, потім створіть копію.');
     busy = false;
