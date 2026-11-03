@@ -1,5 +1,5 @@
 import { normalizeDocument, validateReady, totals, money, cents, escapeHtml as esc, fieldLabels, SELLER_FIELDS, kindLabels, syncStandardTerms, updateAgreementTemplate, TEMPLATE_VERSION, cleanSeller, invoiceDefaults, invoiceModes, invoiceAmount, documentModes, orderRefreshChanges, validIban, validDate } from './model.js?v=20261103-simple';
-import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261103-simple';
+import { previewHtml, pdfDefinition, documentText } from './render.js?v=20261103-brand';
 import { amountWords } from './amount-words.js';
 import { icon } from './icons.js?v=20260924-separate';
 import { adminApiError } from '../../assets/js/admin-api-errors.js';

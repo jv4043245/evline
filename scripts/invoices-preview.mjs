@@ -75,7 +75,7 @@ const server = createServer(async (req, res) => {
     const file = path.resolve(root, '.' + decodeURIComponent(url.pathname), ...(url.pathname.endsWith('/') ? ['index.html'] : []));
     if (!file.startsWith(root + path.sep)) throw new Error('outside root');
     const content = await readFile(file);
-    res.writeHead(200, { 'content-type': ({ '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.png':'image/png' })[path.extname(file)] || 'application/octet-stream', 'cache-control':'no-store' }); res.end(content);
+    res.writeHead(200, { 'content-type': ({ '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.png':'image/png', '.svg':'image/svg+xml' })[path.extname(file)] || 'application/octet-stream', 'cache-control':'no-store' }); res.end(content);
   } catch (e) { res.writeHead(500, { 'content-type':'application/json' }); res.end(JSON.stringify({ error:e.message })); }
 });
 server.listen(Number(process.env.PORT || 8796), '127.0.0.1', () => console.log(`Synthetic invoice preview: http://127.0.0.1:${server.address().port}/admin/invoices/`));

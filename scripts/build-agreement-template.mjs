@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { fromOrder } from '../admin/documents/model.js';
 import { documentBlocks } from '../admin/documents/render.js';
 
@@ -26,6 +26,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { values } = parseArgs({ options: { python: { type: 'string' } } });
   if (!values.python) throw new Error('Pass --python with the bundled Python runtime path.');
   const output = new URL('../docs/evline-order-agreement-2026-11-03.docx', import.meta.url);
+  const logo = (await readFile(new URL('../assets/logo.svg', import.meta.url), 'utf8')).trim();
+  await writeFile(new URL('../admin/documents/agreement-logo.js', import.meta.url), `// Generated from assets/logo.svg by build-agreement-template.mjs.\nexport default ${JSON.stringify(logo)};\n`);
   const blocks = agreementTemplateBlocks();
   const result = spawnSync(values.python, [fileURLToPath(new URL('./build-agreement-docx.py', import.meta.url)), fileURLToPath(output)], { input: JSON.stringify(blocks), encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || 'Word build failed');
