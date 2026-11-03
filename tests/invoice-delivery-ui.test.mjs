@@ -8,6 +8,7 @@ import * as delivery from '../admin/documents/delivery.js';
 import { amountWords } from '../admin/documents/amount-words.js';
 import { icon } from '../admin/documents/icons.js';
 import { LEGACY_AGREEMENT_TERMS } from '../admin/documents/agreement-template-20260923.js';
+import agreementLogo from '../admin/documents/agreement-logo.js';
 
 const html = await readFile(new URL('../admin/documents/index.html', import.meta.url), 'utf8');
 const source = await readFile(new URL('../admin/documents/documents.js', import.meta.url), 'utf8');
@@ -19,7 +20,7 @@ async function fixture(t, { connected=true, share=true, standalone=false, email=
   const dom = new JSDOM(html, {url:`https://example.test/admin/documents/?${standalone?'invoice=00000000-0000-4000-8000-000000000001':'order=test-order'}`,runScripts:'outside-only'});
   const w=dom.window,q=s=>w.document.querySelector(s),calls=[],links=[],shares=[],pdfs=[],popups=[];
   t.after(()=>w.close());
-  Object.assign(w,model,render,delivery,{esc:model.escapeHtml,amountWords,icon,structuredClone,adminApiError:async r=>(await r.json()).error});
+  Object.assign(w,model,render,delivery,{esc:model.escapeHtml,amountWords,icon,agreementLogo,structuredClone,adminApiError:async r=>(await r.json()).error});
   w.ResizeObserver=class {observe(){}}; w.URL.createObjectURL=()=> 'blob:synthetic-pdf'; w.URL.revokeObjectURL=()=>{};
   w.HTMLAnchorElement.prototype.click=function(){links.push({href:this.href,download:this.download});};
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
@@ -67,7 +68,7 @@ test('contact destinations reject active URLs and email headers; only valid cont
 test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
   const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
   assert.ok(deliverySource.includes(`from '${editorModel}'`));
-  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-simple/);
+  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-brand/);
   assert.ok(renderSource.includes(`from '${editorModel}'`));
 });
 test('old template updates only after explicit confirmation and never auto-saves or sends',async t=>{

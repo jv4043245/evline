@@ -1,5 +1,6 @@
 import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes, TEMPLATE_VERSION } from './model.js?v=20261103-simple';
 import { amountWords } from './amount-words.js';
+import agreementLogo from './agreement-logo.js?v=20261103-brand';
 
 const value = v => String(v || '').trim() || '________________';
 const p = text => ({ type: 'p', text });
@@ -93,28 +94,31 @@ export function documentText(data, mode) {
 }
 
 export function previewHtml(data, mode, isDraft) {
+  let brandedTitle = 0;
   return `<article class="paper${mode === 'invoice' ? ' paper-invoice' : ''}">${isDraft ? '<div class="draft-mark">Чернетка</div>' : ''}${documentBlocks(data, mode).map(b => {
     const page = b.pageBreak ? ' class="page-break"' : '';
+    if (b.type === 'title' && b.compact) return `<div class="agreement-letterhead${b.pageBreak ? ' page-break' : ''}">${brandedTitle++ === 0 ? '<img src="/assets/logo.svg" alt="EVLine" width="104" height="42">' : '<strong>EVLine</strong>'}<a href="https://evline.com.ua/" target="_blank" rel="noopener noreferrer">evline.com.ua</a></div><h2 class="agreement-title">${esc(b.text)}</h2>`;
     if (b.type === 'title') return `<h2${page}>${esc(b.text)}</h2>`;
-    if (b.type === 'heading') return `<h3>${esc(b.text)}</h3>`;
-    if (b.type === 'field') return `<p><strong>${esc(b.label)}:</strong> ${esc(b.text)}</p>`;
-    if (b.type === 'total') return `<p class="document-total">${esc(b.text)}</p>`;
+    if (b.type === 'heading') return `<h3${b.compact ? ' class="agreement-heading"' : ''}>${esc(b.text)}</h3>`;
+    if (b.type === 'field') return `<p${b.compact ? ' class="agreement-field"' : ''}><strong>${esc(b.label)}:</strong> ${esc(b.text)}</p>`;
+    if (b.type === 'total') return `<p class="document-total${b.compact ? ' agreement-total' : ''}">${esc(b.text)}</p>`;
     if (b.type === 'signatures') return '<div class="signatures"><span>Продавець ____________________</span><span>Покупець ____________________</span></div>';
-    if (b.type === 'table') return `<div class="spec-table-wrap"><table class="spec-table${b.invoice ? ' invoice-table' : ''}"><thead><tr>${b.headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(row => `<tr>${row.map(c => `<td>${esc(c).replaceAll('\n', '<br>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
-    return `<p>${esc(b.text).replaceAll('\n', '<br>')}</p>`;
+    if (b.type === 'table') return `<div class="spec-table-wrap"><table class="spec-table${b.invoice ? ' invoice-table' : ''}${b.compact ? ' agreement-table' : ''}"><thead><tr>${b.headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(row => `<tr>${row.map(c => `<td>${esc(c).replaceAll('\n', '<br>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    return `<p${b.compact ? ' class="agreement-paragraph"' : ''}>${esc(b.text).replaceAll('\n', '<br>')}</p>`;
   }).join('')}</article>`;
 }
 
 export function pdfDefinition(data, { mode = 'all', draft = false, revision = 0 } = {}) {
   const blocks = documentBlocks(data, mode);
+  const branded = data.template_version === TEMPLATE_VERSION && !['invoice', 'receipt'].includes(mode);
   const content = blocks.map(b => {
-    if (b.type === 'title') return { text: b.text, style: 'title', ...(b.compact ? { fontSize: 17, margin: [0, 0, 0, 9] } : {}), pageBreak: b.pageBreak ? 'before' : undefined };
+    if (b.type === 'title') return { text: b.text, style: 'title', ...(b.compact ? { fontSize: 17, alignment: 'center', margin: [0, 0, 0, 9] } : {}), pageBreak: b.pageBreak ? 'before' : undefined };
     if (b.type === 'heading') return { text: b.text, style: 'heading', ...(b.compact ? { margin: [0, 5, 0, 2] } : {}), headlineLevel: 1 };
-    if (b.type === 'total') return { text: b.text, bold: true, fontSize: 12, margin: [0, 8, 0, 10] };
+    if (b.type === 'total') return { text: b.text, bold: true, fontSize: 12, ...(b.compact ? { alignment: 'right' } : {}), margin: [0, 8, 0, 10] };
     if (b.type === 'field') return { text: [{ text: `${pdfText(b.label)}: `, bold: true }, pdfText(b.text)], ...(b.compact ? { lineHeight: 1.05 } : {}), margin: [0, 0, 0, b.compact ? 2 : 5] };
     if (b.type === 'signatures') return { columns: [{ text: 'Продавець ____________________' }, { text: 'Покупець ____________________', alignment: 'right' }], margin: b.compact ? [0, 6, 0, 4] : [0, 20, 0, 14], unbreakable: true };
-    if (b.type === 'table') return { table: { headerRows: 1, widths: b.widths || [16, '*', 28, 65, 65], body: [b.headers.map(text => ({ text, bold: true, fillColor: '#f0f4f2' })), ...b.rows.map(row => row.map((text, i) => ({ text: pdfText(text), alignment: (b.invoice ? [3,5,6].includes(i) : i > 1) ? 'right' : 'left' })))] }, fontSize: 9, layout: { hLineColor: () => '#c9d4cf', vLineColor: () => '#c9d4cf', paddingTop: () => 6, paddingBottom: () => 6, paddingLeft: () => 4, paddingRight: () => 4 }, margin: [0, 10, 0, 12] };
-    return { text: pdfText(b.text), ...(b.compact ? { lineHeight: 1.05 } : {}), margin: [0, 0, 0, b.compact ? 2 : 7] };
+    if (b.type === 'table') return { table: { headerRows: 1, widths: b.widths || [16, '*', 28, 65, 65], body: [b.headers.map(text => ({ text, bold: true, ...(b.compact ? { alignment: 'center' } : {}), fillColor: '#f0f4f2' })), ...b.rows.map(row => row.map((text, i) => ({ text: pdfText(text), alignment: b.compact ? [0,2].includes(i) ? 'center' : i > 2 ? 'right' : 'left' : (b.invoice ? [3,5,6].includes(i) : i > 1) ? 'right' : 'left' })))] }, fontSize: 9, layout: { hLineColor: () => '#c9d4cf', vLineColor: () => '#c9d4cf', paddingTop: () => 6, paddingBottom: () => 6, paddingLeft: () => 4, paddingRight: () => 4 }, margin: [0, 10, 0, 12] };
+    return { text: pdfText(b.text), ...(b.compact ? { lineHeight: 1.05, alignment: /^\d+\.\d+\./.test(b.text) ? 'justify' : b.text.startsWith('Додаток №') ? 'center' : 'left' } : {}), margin: [0, 0, 0, b.compact ? 2 : 7] };
   });
   const deliveryStart = blocks.findIndex(b => b.type === 'field' && b.label === 'Маршрут');
   const deliveryEnd = blocks.findIndex(b => b.type === 'p' && b.text === 'Дата підписання ____________________');
@@ -124,11 +128,11 @@ export function pdfDefinition(data, { mode = 'all', draft = false, revision = 0 
     content.splice(deliveryStart, 0, { stack: tail, unbreakable: true });
   }
   const number = mode === 'invoice' ? data.invoice.number : data.number;
-  return { info: { title: `EVLine ${documentModes[mode] || ''} ${number}`, author: 'EVLine' }, pageSize: 'A4', pageMargins: [42, 50, 42, 46],
+  return { info: { title: `EVLine ${documentModes[mode] || ''} ${number}`, author: 'EVLine' }, pageSize: 'A4', pageMargins: branded ? [42, 62, 42, 40] : [42, 50, 42, 46],
     defaultStyle: { font: 'Roboto', fontSize: 10, lineHeight: 1.2, color: '#17221e' },
     styles: { title: { fontSize: 19, bold: true, margin: [0, 0, 0, 13] }, heading: { fontSize: 11, bold: true, margin: [0, 10, 0, 7] } },
-    header: { text: 'EVLine', color: '#08754f', bold: true, fontSize: 11, margin: [42, 22, 0, 0] },
-    footer: (page, pages) => ({ columns: [{ text: pdfText(`${number} · версія ${revision}${draft ? ' · ЧЕРНЕТКА' : ''}`) }, { text: `${page} / ${pages}`, alignment: 'right' }], fontSize: 8, color: '#5e6a65', margin: [42, 12, 42, 0] }),
+    header: branded ? page => ({ columns: [page === 1 ? { svg: agreementLogo, width: 76 } : { text: 'EVLine', bold: true, fontSize: 11, color: '#3f633d', margin: [0, 11, 0, 0] }, { text: 'evline.com.ua', link: 'https://evline.com.ua/', alignment: 'right', fontSize: 10, color: '#3f633d', margin: [0, 11, 0, 0] }], margin: [42, 16, 42, 0] }) : { text: 'EVLine', color: '#08754f', bold: true, fontSize: 11, margin: [42, 22, 0, 0] },
+    footer: (page, pages) => ({ columns: [{ text: pdfText(branded ? `${number}${draft ? ' · ЧЕРНЕТКА' : ''}` : `${number} · версія ${revision}${draft ? ' · ЧЕРНЕТКА' : ''}`) }, { text: `${page} / ${pages}`, alignment: 'right' }], fontSize: 8, color: '#5e6a65', margin: [42, 12, 42, 0] }),
     ...(draft ? { watermark: { text: 'ЧЕРНЕТКА', color: '#84948d', opacity: 0.12, bold: true } } : {}),
     pageBreakBefore: (node, following) => node.headlineLevel === 1 && following.length === 0,
     content,
