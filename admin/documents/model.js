@@ -1,19 +1,24 @@
-import { AGREEMENT_TERMS } from './agreement-template.js';
+import { AGREEMENT_TERMS, TEMPLATE_VERSION, LEGACY_TEMPLATE_VERSION } from './agreement-template.js?v=20261103-simple';
+import { LEGACY_AGREEMENT_TERMS } from './agreement-template-20260923.js';
 
-export const TEMPLATE_VERSION = '2026-09-23';
+export { TEMPLATE_VERSION };
 export const SELLER_FIELDS = ['name', 'tax_id', 'address', 'iban', 'bank', 'phone', 'email', 'tax_status'];
 export const BUYER_FIELDS = ['name', 'address', 'code', 'phone', 'contact', 'purpose'];
 export const TEXT_FIELDS = ['number', 'date', 'city', 'car', 'vin', 'condition', 'warranty', 'tax', 'included', 'allocation', 'prepayment_due', 'balance_due', 'route', 'forecast', 'deadline_days', 'handover', 'recipient', 'partial', 'notes'];
 export const DEFAULT_SELLER = { name: 'ФОП Ванюшин Євген Анатолійович', phone: '+38 (093) 525-10-24', email: 'evlineukraine@gmail.com', tax_id: '', address: '', iban: '', bank: '' };
 export const fieldLabels = { number: 'Номер договору', date: 'Дата договору', city: 'Місто', car: 'Авто / модель / рік', vin: 'VIN', condition: 'Стан та комплектність', warranty: 'Гарантійні умови', tax: 'Податковий статус ціни', included: 'Що включено в ціни позицій', allocation: 'Розподіл спільних витрат', prepayment_due: 'Строк передоплати', balance_due: 'Умови сплати залишку', route: 'Маршрут', forecast: 'Прогноз доставки', deadline_days: 'Погоджений строк, календарних днів', handover: 'Місце та спосіб отримання', recipient: 'Одержувач і телефон', partial: 'Часткова передача', notes: 'Додаткові умови' };
 export const kindLabels = { original: 'Оригінал', oem: 'OEM', analog: 'Аналог' };
-const mixedTerms = structuredClone(AGREEMENT_TERMS);
+const mixedTerms = structuredClone(LEGACY_AGREEMENT_TERMS);
 mixedTerms[0].text = mixedTerms[0].text.replace('Продавець гарантує оригінальність замовлених автозапчастин та їх відповідність', 'Продавець гарантує відповідність замовлених автозапчастин погодженому у Специфікації типу (оригінал, OEM або аналог), а також').replace('Оригінальними є запчастини', 'Оригінальність гарантується для позицій, прямо позначених у Специфікації як «Оригінал». Оригінальними є запчастини');
 mixedTerms[3].text = mixedTerms[3].text.replace('Якщо передана автозапчастина не є оригінальною або не відповідає погодженій Специфікації', 'Якщо передана автозапчастина не відповідає погодженому типу або іншим умовам Специфікації').replace('на погоджену оригінальну запчастину', 'на запчастину погодженого у Специфікації типу');
 
 export function syncStandardTerms(d) {
-  const target = d.items.some(r => r.kind && r.kind !== 'original') ? mixedTerms : AGREEMENT_TERMS;
-  for (const i of [0, 3]) if ([AGREEMENT_TERMS[i].text, mixedTerms[i].text].includes(d.terms[i].text)) d.terms[i].text = target[i].text;
+  if (d.template_version !== LEGACY_TEMPLATE_VERSION && d.template_version) return;
+  const target = d.items.some(r => r.kind && r.kind !== 'original') ? mixedTerms : LEGACY_AGREEMENT_TERMS;
+  for (const i of [0, 3]) if ([LEGACY_AGREEMENT_TERMS[i].text, mixedTerms[i].text].includes(d.terms[i].text)) d.terms[i].text = target[i].text;
+}
+export function updateAgreementTemplate(d) {
+  return normalizeDocument({ ...structuredClone(d), template_version: TEMPLATE_VERSION, terms: structuredClone(AGREEMENT_TERMS), reviewed: false });
 }
 export function fail(message, status = 400) { return Object.assign(new Error(message), { status }); }
 const str = (v, max = 3000) => { if (v != null && typeof v !== 'string') throw fail('Некоректний текст документа.'); const s = String(v ?? '').trim(); if (s.length > max) throw fail(`Текст перевищує ${max} символів.`); return s; };
@@ -80,7 +85,10 @@ export function orderRefreshChanges(current, source) {
 
 export function normalizeDocument(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw fail('Документ відсутній.');
-  const d = { schema: 1, template_version: TEMPLATE_VERSION, seller: cleanSeller(input.seller), seller_profile_id: str(input.seller_profile_id, 80), buyer: {}, reviewed: input.reviewed === true };
+  const version = str(input.template_version || LEGACY_TEMPLATE_VERSION, 80);
+  if (![TEMPLATE_VERSION, LEGACY_TEMPLATE_VERSION].includes(version)) throw fail('Невідома версія шаблону договору. Оновіть сторінку.');
+  const standardTerms = version === LEGACY_TEMPLATE_VERSION ? LEGACY_AGREEMENT_TERMS : AGREEMENT_TERMS;
+  const d = { schema: 1, template_version: version, seller: cleanSeller(input.seller), seller_profile_id: str(input.seller_profile_id, 80), buyer: {}, reviewed: input.reviewed === true };
   for (const key of TEXT_FIELDS) d[key] = str(input[key], ['number', 'date', 'deadline_days'].includes(key) ? 80 : 3000);
   for (const key of BUYER_FIELDS) d.buyer[key] = str(input.buyer?.[key], 1000);
   if (input.crm_customer_id) {
@@ -102,8 +110,8 @@ export function normalizeDocument(input) {
   const invoice = input.invoice || invoiceDefaults(d);
   if (!invoiceModes[invoice.mode]) throw fail('Невідомий тип суми рахунку.');
   d.invoice = { enabled: invoice.enabled === true, number: str(invoice.number, 80), automatic: invoice.automatic === true, date: str(invoice.date, 20), mode: invoice.mode, amount: amount(cents(invoice.amount, 'Сума рахунку')), due: str(invoice.due, 300), note: str(invoice.note, 3000) };
-  if (!Array.isArray(input.terms) || input.terms.length !== AGREEMENT_TERMS.length) throw fail('Некоректні розділи договору.');
-  d.terms = input.terms.map((s, i) => ({ title: AGREEMENT_TERMS[i].title, text: str(s.text, 15000) }));
+  if (!Array.isArray(input.terms) || input.terms.length !== standardTerms.length) throw fail('Некоректні розділи договору.');
+  d.terms = input.terms.map((s, i) => ({ title: standardTerms[i].title, text: str(s.text, 15000) }));
   syncStandardTerms(d);
   if (JSON.stringify(d).length > 100000) throw fail('Документ завеликий.');
   if (totals(d).total > 9999999999) throw fail('Загальна ціна завелика.');

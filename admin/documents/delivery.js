@@ -1,4 +1,4 @@
-import { documentModes, invoiceAmount, money } from './model.js?v=20261027-delivery';
+import { documentModes, invoiceAmount, money } from './model.js?v=20261103-simple';
 
 export function contactEmail(value) {
   const match = String(value || '').match(/(?:^|[\s,;<(])([A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+)(?=$|[\s,;>)])/i);

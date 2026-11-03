@@ -1,4 +1,4 @@
-import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes } from './model.js?v=20261027-repeat';
+import { cents, totals, money, dateLabel, escapeHtml as esc, kindLabels, invoiceAmount, invoiceModes, documentModes, TEMPLATE_VERSION } from './model.js?v=20261103-simple';
 import { amountWords } from './amount-words.js';
 
 const value = v => String(v || '').trim() || '________________';
@@ -44,8 +44,9 @@ export function documentBlocks(d, mode = 'all') {
   const contract = [
     { type: 'title', text: 'Договір замовлення автозапчастин', pageBreak: mode === 'all' && invoice.length > 0 },
     p(`№ ${value(d.number)} від ${dateLabel(d.date)} · м. ${value(d.city)}`),
-    p(`Продавець: ${value(d.seller.name)}, який працює під торговим найменуванням EVLine; реквізити наведені в розділі 7.`),
-    p(`Покупець: ${value(d.buyer.name)}. Мета придбання: ${value(d.buyer.purpose)}.`),
+    ...(d.template_version === TEMPLATE_VERSION
+      ? [p('Продавець і Покупець, зазначені в розділі 7, погодили це замовлення та Специфікацію.')]
+      : [p(`Продавець: ${value(d.seller.name)}, який працює під торговим найменуванням EVLine; реквізити наведені в розділі 7.`), p(`Покупець: ${value(d.buyer.name)}. Мета придбання: ${value(d.buyer.purpose)}.`)]),
     ...d.terms.flatMap(s => [heading(s.title), ...s.text.split(/\n\s*\n/).map(p)]),
     heading('7 Реквізити та підписи'), ...party(d), signatures(),
   ];
@@ -53,6 +54,7 @@ export function documentBlocks(d, mode = 'all') {
     { type: 'title', text: 'Специфікація замовлення', pageBreak: mode === 'all' || mode === 'agreement' },
     p(`Додаток № 1 до Договору № ${value(d.number)} від ${dateLabel(d.date)}`),
     field('Автомобіль', d.car), ...(d.vin ? [field('VIN', d.vin)] : []),
+    ...(d.template_version === TEMPLATE_VERSION && d.buyer.purpose ? [field('Мета придбання', d.buyer.purpose)] : []),
     itemsTable,
     field('Стан та комплектність', d.condition), field('Гарантійні умови', d.warranty),
     field('Сума позицій, грн', money(t.items)), field('У ціну позицій включено', d.included),
@@ -79,6 +81,7 @@ export function documentBlocks(d, mode = 'all') {
     p('Це підтвердження Продавця щодо отриманої оплати. Воно не є фіскальним чеком і не замінює розрахунковий документ у випадках, коли його видача передбачена законом.'),
     p('Продавець ____________________'),
   ] : [];
+  if (d.template_version === TEMPLATE_VERSION) for (const block of [...contract, ...specification]) block.compact = true;
   return mode === 'invoice' ? invoice : mode === 'agreement' ? [...contract, ...specification] : mode === 'contract' ? contract : mode === 'specification' ? specification : mode === 'receipt' ? receipt : [...invoice, ...contract, ...specification, ...receipt];
 }
 
@@ -105,13 +108,13 @@ export function previewHtml(data, mode, isDraft) {
 export function pdfDefinition(data, { mode = 'all', draft = false, revision = 0 } = {}) {
   const blocks = documentBlocks(data, mode);
   const content = blocks.map(b => {
-    if (b.type === 'title') return { text: b.text, style: 'title', pageBreak: b.pageBreak ? 'before' : undefined };
-    if (b.type === 'heading') return { text: b.text, style: 'heading', headlineLevel: 1 };
+    if (b.type === 'title') return { text: b.text, style: 'title', ...(b.compact ? { fontSize: 17, margin: [0, 0, 0, 9] } : {}), pageBreak: b.pageBreak ? 'before' : undefined };
+    if (b.type === 'heading') return { text: b.text, style: 'heading', ...(b.compact ? { margin: [0, 5, 0, 2] } : {}), headlineLevel: 1 };
     if (b.type === 'total') return { text: b.text, bold: true, fontSize: 12, margin: [0, 8, 0, 10] };
-    if (b.type === 'field') return { text: [{ text: `${pdfText(b.label)}: `, bold: true }, pdfText(b.text)], margin: [0, 0, 0, 5] };
-    if (b.type === 'signatures') return { columns: [{ text: 'Продавець ____________________' }, { text: 'Покупець ____________________', alignment: 'right' }], margin: [0, 20, 0, 14], unbreakable: true };
+    if (b.type === 'field') return { text: [{ text: `${pdfText(b.label)}: `, bold: true }, pdfText(b.text)], ...(b.compact ? { lineHeight: 1.05 } : {}), margin: [0, 0, 0, b.compact ? 2 : 5] };
+    if (b.type === 'signatures') return { columns: [{ text: 'Продавець ____________________' }, { text: 'Покупець ____________________', alignment: 'right' }], margin: b.compact ? [0, 6, 0, 4] : [0, 20, 0, 14], unbreakable: true };
     if (b.type === 'table') return { table: { headerRows: 1, widths: b.widths || [16, '*', 28, 65, 65], body: [b.headers.map(text => ({ text, bold: true, fillColor: '#f0f4f2' })), ...b.rows.map(row => row.map((text, i) => ({ text: pdfText(text), alignment: (b.invoice ? [3,5,6].includes(i) : i > 1) ? 'right' : 'left' })))] }, fontSize: 9, layout: { hLineColor: () => '#c9d4cf', vLineColor: () => '#c9d4cf', paddingTop: () => 6, paddingBottom: () => 6, paddingLeft: () => 4, paddingRight: () => 4 }, margin: [0, 10, 0, 12] };
-    return { text: pdfText(b.text), margin: [0, 0, 0, 7] };
+    return { text: pdfText(b.text), ...(b.compact ? { lineHeight: 1.05 } : {}), margin: [0, 0, 0, b.compact ? 2 : 7] };
   });
   const deliveryStart = blocks.findIndex(b => b.type === 'field' && b.label === 'Маршрут');
   const deliveryEnd = blocks.findIndex(b => b.type === 'p' && b.text === 'Дата підписання ____________________');
