@@ -16,8 +16,8 @@ const deliverySource = await readFile(new URL('../admin/documents/delivery.js', 
 const renderSource = await readFile(new URL('../admin/documents/render.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate) { for (let i=0;i<80;i++) { if(predicate())return; await tick(); } assert.ok(predicate(), 'UI settled'); }
-async function fixture(t, { connected=true, share=true, standalone=false, email=true, emailFailure=false, legacy=false }={}) {
-  const dom = new JSDOM(html, {url:`https://example.test/admin/documents/?${standalone?'invoice=00000000-0000-4000-8000-000000000001':'order=test-order'}`,runScripts:'outside-only'});
+async function fixture(t, { connected=true, share=true, standalone=false, email=true, emailFailure=false, legacy=false, mode='', saved=false, newerOrder=false, invoiceDisabled=false }={}) {
+  const dom = new JSDOM(html, {url:`https://example.test/admin/documents/?${standalone?'invoice=00000000-0000-4000-8000-000000000001':'order=test-order'}&mode=${encodeURIComponent(mode)}`,runScripts:'outside-only'});
   const w=dom.window,q=s=>w.document.querySelector(s),calls=[],links=[],shares=[],pdfs=[],popups=[];
   t.after(()=>w.close());
   Object.assign(w,model,render,delivery,{esc:model.escapeHtml,amountWords,icon,agreementLogo,structuredClone,adminApiError:async r=>(await r.json()).error});
@@ -32,6 +32,12 @@ async function fixture(t, { connected=true, share=true, standalone=false, email=
   defaults.reviewed=true;defaults.tax='Без ПДВ';defaults.invoice.number='';defaults.invoice.automatic=true;
   if(legacy) {defaults.template_version='2026-09-23';defaults.terms=structuredClone(LEGACY_AGREEMENT_TERMS);}
   let context={defaults,document:null,order:{id:'test-order',number:'O-TEST'},recipient:connected?'123456789':'',recipient_label:'Тестовий покупець · +380000000001',versions:[],deliveries:[],latest_revision:0,seller_profiles:[{id:'primary',seller:defaults.seller}],seller_revision:1};
+  if(saved) {
+    const data=structuredClone(defaults);if(invoiceDisabled)data.invoice.enabled=false;
+    context.document={id:'saved-version',data,status:'draft',revision:1,output_mode:'invoice',actor:'Тест',created_at:'2026-10-27T12:00:00Z'};
+    context.latest_revision=1;context.versions=[{...context.document}];
+    if(newerOrder) {context.order.updated_at='2026-11-03T12:00:00Z';defaults.buyer.name='Уточнене ім’я';defaults.items[0].price='2500.00';}
+  }
   context.email={enabled:email,sender:'sender@example.invalid'};context.email_deliveries=[];
   w.fetch=async (url,options={})=>{
     calls.push({url,options});assert.match(url,/^\/api\/admin\//,'No external request');
@@ -68,8 +74,47 @@ test('contact destinations reject active URLs and email headers; only valid cont
 test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
   const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
   assert.ok(deliverySource.includes(`from '${editorModel}'`));
-  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-brand/);
+  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-order-documents/);
   assert.ok(renderSource.includes(`from '${editorModel}'`));
+});
+test('order actions open the requested document with shared buyer and prices without saving or issuing a number',async t=>{
+  for(const mode of ['invoice','agreement','all']) {
+    const p=await fixture(t,{mode});
+    assert.equal(p.q('[data-output-mode]').value,mode);
+    assert.equal(p.q('[data-path="buyer.name"]').value,'Тестовий покупець');
+    assert.equal(p.q('[data-path="items.0.price"]').value,'2000.00');
+    assert.equal(p.q('[data-disclosure="agreement"]').hidden,mode==='invoice');
+    assert.equal(p.calls.filter(c=>c.options.method==='POST').length,0);
+    p.q('[data-output-mode]').value='invoice';p.q('[data-output-mode]').dispatchEvent(new p.w.Event('change'));
+    assert.equal(new URL(p.w.location.href).searchParams.get('mode'),'invoice');
+  }
+  for(const options of [{mode:'unknown'},{mode:'receipt'},{mode:'agreement',standalone:true}]) {
+    const p=await fixture(t,options);assert.equal(p.q('[data-output-mode]').value,'invoice');
+  }
+});
+test('explicit invoice action can start an invoice from a saved agreement without replacing the saved snapshot',async t=>{
+  const p=await fixture(t,{saved:true,invoiceDisabled:true,mode:'invoice'});
+  assert.equal(p.q('[data-output-mode]').value,'invoice');
+  assert.equal(p.q('[data-path="invoice.enabled"]').checked,true);
+  assert.equal(p.q('[data-reviewed]').checked,false);
+  assert.match(p.q('[data-state]').textContent,/Незбережені/);
+  assert.equal(p.calls.filter(c=>c.options.method==='POST').length,0);
+});
+test('newer order differences are offered for explicit review, never overwrite the saved buyer or prices automatically',async t=>{
+  const p=await fixture(t,{saved:true,newerOrder:true,mode:'agreement'});
+  assert.equal(p.q('[data-source-changes]').hidden,false);
+  assert.equal(p.q('[data-path="buyer.name"]').value,'Тестовий покупець');
+  assert.equal(p.q('[data-path="items.0.price"]').value,'2000.00');
+  await p.click('refresh-order');assert.equal(p.q('[data-refresh-dialog]').open,true);
+  const choices=[...p.w.document.querySelectorAll('[data-refresh-index]')];
+  assert.ok(choices.length>=2);assert.ok(choices.every(c=>!c.checked));
+  for(const choice of choices)choice.checked=true;
+  await p.click('apply-order');
+  assert.equal(p.q('[data-path="buyer.name"]').value,'Уточнене ім’я');
+  assert.equal(p.q('[data-path="items.0.price"]').value,'2500.00');
+  assert.equal(p.q('[data-source-changes]').hidden,true);
+  assert.equal(p.calls.filter(c=>c.options.method==='POST').length,0);
+  const noChange=await fixture(t,{saved:true});assert.equal(noChange.q('[data-source-changes]').hidden,true);
 });
 test('old template updates only after explicit confirmation and never auto-saves or sends',async t=>{
   const p=await fixture(t,{legacy:true});
