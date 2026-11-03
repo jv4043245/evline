@@ -163,6 +163,30 @@ test('only customer-facing order fields seed a draft; paid supplier is never cus
   assert.equal(result.defaults.items[0].kind, ''); assert.equal(result.defaults.forecast, '');
   assert.doesNotMatch(JSON.stringify(result), /7777|purchase_cost|supplier_payments|manager_notes/);
 });
+test('order documents work at every order status and seed all saved item rows with customer prices', async t => {
+  const {env,db}=await setup(t);
+  for(const [id,title,sku,quantity,price] of [['part-1','Фара права','OEM-1',2,3000],['part-2','Бампер','OEM-2',1,4000]]) db.prepare('INSERT INTO order_items(id,created_at,updated_at,order_id,title,sku,quantity,unit_price_uah,unit_cost_uah,notes) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,'2026-11-03','2026-11-03',orderId,title,sku,quantity,price,999,'Внутрішня нотатка');
+  for(const status of ['new','awaiting_payment','paid','completed','canceled']) {
+    db.prepare('UPDATE orders SET status=? WHERE id=?').run(status,orderId);
+    const c=await getDocumentContext(env,orderId);
+    assert.equal(c.document,null);assert.deepEqual(c.defaults.items.map(r=>[r.title,r.sku,r.quantity,r.price]),[['Фара права','OEM-1',2,'3000.00'],['Бампер','OEM-2',1,'4000.00']]);
+    assert.equal(totals(c.defaults).total,1000000);
+    assert.doesNotMatch(JSON.stringify(c),/Внутрішня нотатка|unit_cost_uah/);
+  }
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM order_documents').get().n,0);
+});
+test('blank order contacts use the linked customer, but explicit or mismatched order contacts are never replaced',async t=>{
+  const {env,db}=await setup(t);
+  db.prepare('UPDATE customers SET name=?,email=?,telegram_username=? WHERE id=?').run('Ім’я з CRM','crm@example.invalid','@crm_customer','test-customer');
+  db.prepare("UPDATE orders SET customer_name='',customer_phone='',customer_email='',customer_telegram='' WHERE id=?").run(orderId);
+  let c=await getDocumentContext(env,orderId);
+  assert.equal(c.defaults.buyer.name,'Ім’я з CRM');assert.equal(c.defaults.buyer.phone,'+380000000001');assert.equal(c.defaults.buyer.contact,'crm@example.invalid');
+  db.prepare('UPDATE orders SET customer_name=?,customer_phone=?,customer_email=? WHERE id=?').run('Ім’я замовлення','380000000001','order@example.invalid',orderId);
+  c=await getDocumentContext(env,orderId);assert.equal(c.defaults.buyer.name,'Ім’я замовлення');assert.equal(c.defaults.buyer.contact,'order@example.invalid');
+  db.prepare("UPDATE orders SET customer_name='',customer_phone='+380000000002',customer_email='',customer_telegram='' WHERE id=?").run(orderId);
+  c=await getDocumentContext(env,orderId);assert.equal(c.defaults.buyer.name,'');assert.equal(c.defaults.buyer.contact,'');
+  assert.equal(c.defaults.buyer.phone,'+380000000002');
+});
 test('issued invoice number cannot be reused for another order or amount; drafts and identical revisions remain possible',async t=>{
   const {env,db}=await setup(t),data=completeDocument();
   await saveDocument(env,req(),orderId,{...payload(data),mode:'invoice'});

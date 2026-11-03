@@ -114,6 +114,10 @@ function refreshSummary() {
   $('[data-state]').textContent = dirty() ? 'Незбережені зміни' : ready ? 'Підготовлено' : 'Чернетка';
   $('[data-state]').classList.toggle('ready', ready);
   $('[data-action="save"]').disabled = !dirty() && !!context.document;
+  const newerOrder = !standalone && context.document && Date.parse(context.order.updated_at) > Date.parse(context.document.created_at);
+  const sourceChanges = newerOrder ? orderRefreshChanges(data, context.defaults) : [];
+  $('[data-source-changes]').hidden = !sourceChanges.length;
+  $('[data-source-count]').textContent = sourceChanges.length ? `Відмінності із замовленням: ${sourceChanges.length}` : '';
   if (view === 'preview') renderPreview();
 }
 function renderPreview() {
@@ -132,6 +136,13 @@ function adopt(result, initial = false) {
   data.invoice ||= invoiceDefaults(data);
   data.seller_profile_id ||= '';
   baseline = JSON.stringify(data);
+  const requestedMode = pageUrl.searchParams.get('mode');
+  if (initial && !standalone && ['invoice', 'agreement', 'all'].includes(requestedMode)) {
+    if (requestedMode === 'invoice' && !data.invoice.enabled) {
+      data.invoice = { ...data.invoice, enabled: true, number: '', automatic: true }; data.reviewed = false;
+    }
+    $('[data-output-mode]').value = requestedMode;
+  }
   document.title = `${standalone ? data.invoice.number ? `Рахунок № ${data.invoice.number}` : 'Новий рахунок' : context.order.number} · EVLine CRM`;
   $('[data-order-number]').textContent = standalone ? data.invoice.number ? `№ ${data.invoice.number}` : 'Без замовлення' : context.order.number;
   $('[data-customer]').textContent = [data.buyer.name, data.buyer.phone].filter(Boolean).join(' · ');
@@ -297,6 +308,7 @@ async function action(name) {
   else if (name === 'refresh-order') {
     const fresh = await api(endpoint);
     if (fresh.latest_revision !== context.latest_revision) throw new Error('Інший менеджер зберіг нову версію документів. Спочатку відкрийте її у списку версій або оновіть сторінку.');
+    context.defaults = fresh.defaults; context.order = fresh.order;
     refreshChanges = orderRefreshChanges(data, fresh.defaults);
     const describe = value => Array.isArray(value) ? value.map(r => `${r.title} · ${r.quantity} × ${r.price || '—'} грн`).join('\n') : value || '—';
     $('[data-refresh-changes]').innerHTML = refreshChanges.length ? refreshChanges.map((c, i) => `<label class="check-label refresh-change"><input type="checkbox" data-refresh-index="${i}"><span><strong>${esc(c.label)}</strong><span class="muted">${esc(describe(c.before))}</span><span>${esc(describe(c.after))}</span></span></label>`).join('') : '<p>Немає нових заповнених даних.</p>';
@@ -396,7 +408,12 @@ $('[data-editor]').addEventListener('change', e => {
   renderEditor(); if (!data.seller.tax_id || !data.seller.iban) $('[data-disclosure="seller"]').open = true; refreshSummary(); status('');
 });
 $('[data-reviewed]').addEventListener('change', e => { if (busy) return; data.reviewed = e.target.checked; refreshSummary(); });
-$('[data-output-mode]').addEventListener('change', () => { refreshMode(); if (outputMode() === 'receipt') $('[data-disclosure="payment"]').open = true; refreshSummary(); error(''); status(''); });
+$('[data-output-mode]').addEventListener('change', () => {
+  refreshMode();
+  if (!standalone) { const url = new URL(location.href); url.searchParams.set('mode', outputMode()); history.replaceState(null, '', url); }
+  if (outputMode() === 'receipt') $('[data-disclosure="payment"]').open = true;
+  refreshSummary(); error(''); status('');
+});
 $('[data-back]').addEventListener('click', async e => {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   if (busy) { e.preventDefault(); return; }
@@ -420,10 +437,12 @@ async function boot() {
   $('[data-back]').href = standalone ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
   $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${standalone ? 'До рахунків' : 'До замовлення'}`;
   for (const [name, symbol] of Object.entries({ save: 'Save', 'duplicate-invoice': 'Copy', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw', 'send-download': 'Download', 'send-print': 'Printer', share: 'Share2', telegram: 'Share2', email: 'FileText' })) {
-    const b = $(`[data-action="${name}"]`), label = b.textContent.trim();
-    b.setAttribute('aria-label', b.getAttribute('aria-label') || label);
-    b.title ||= name === 'pdf' ? 'Завантажити PDF' : label;
-    b.innerHTML = icon(symbol) + (label ? `<span class="button-label">${esc(label)}</span>` : '');
+    for (const b of document.querySelectorAll(`[data-action="${name}"]`)) {
+      const label = b.textContent.trim();
+      b.setAttribute('aria-label', b.getAttribute('aria-label') || label);
+      b.title ||= name === 'pdf' ? 'Завантажити PDF' : label;
+      b.innerHTML = icon(symbol) + (label ? `<span class="button-label">${esc(label)}</span>` : '');
+    }
   }
   const toolbar = $('.document-toolbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--toolbar-height', `${toolbar.getBoundingClientRect().height}px`)).observe(toolbar);

@@ -3504,7 +3504,7 @@ function renderOrderEditor(order, preserveDraft = true) {
         </div>
         <div class="order-editor__tools">
           <button class="admin-btn admin-btn--small" type="button" data-repeat-order>${documentIcon('Copy')}Повторити замовлення</button>
-          ${order.type === 'parts' ? `<button class="admin-btn admin-btn--small" type="button" data-order-documents>${documentIcon('FileText')}Документи</button>` : ''}
+          ${order.type === 'parts' ? `<button class="admin-btn admin-btn--small" type="button" data-order-documents="invoice">${documentIcon('FileText')}Рахунок</button><button class="admin-btn admin-btn--small" type="button" data-order-documents="agreement">${documentIcon('FileText')}Договір</button>` : ''}
           <button class="admin-btn admin-btn--small" type="button" data-order-tab="history">Історія</button>
         </div>
       </div>
@@ -5474,9 +5474,12 @@ document.addEventListener("click", event => {
 });
 
 document.querySelector("[data-order-editor]")?.addEventListener("click", async (event) => {
-  if (event.target.closest("[data-order-documents]")) {
+  const documentButton = event.target.closest("[data-order-documents]");
+  if (documentButton) {
+    if (orderSaving || orderDocumentsController?.isBusy()) return;
     if (orderIsDirty()) { alert("Спочатку збережіть зміни замовлення, щоб вони потрапили в документи."); return; }
-    if (state.selectedOrder?.id) location.href = `/admin/documents/?order=${encodeURIComponent(state.selectedOrder.id)}`;
+    const mode = documentButton.dataset.orderDocuments === 'agreement' ? 'agreement' : 'invoice';
+    if (state.selectedOrder?.id) location.href = `/admin/documents/?order=${encodeURIComponent(state.selectedOrder.id)}&mode=${mode}`;
     return;
   }
   if (event.target.closest("[data-open-supplier-payment]")) {

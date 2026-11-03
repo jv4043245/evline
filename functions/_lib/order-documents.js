@@ -31,10 +31,18 @@ export const DOCUMENT_SCHEMA = [
 ];
 export async function ensureDocuments(env) { for (const sql of DOCUMENT_SCHEMA) await env.DB.prepare(sql).run(); }
 export async function documentOrder(env, id) {
-  const order = await env.DB.prepare(`SELECT o.*, c.telegram_chat_id AS customer_telegram_chat_id
+  const order = await env.DB.prepare(`SELECT o.*, c.telegram_chat_id AS customer_telegram_chat_id,
+    c.name AS linked_customer_name, c.phone AS linked_customer_phone,
+    c.email AS linked_customer_email, c.telegram_username AS linked_customer_telegram
     FROM orders o LEFT JOIN customers c ON c.id=o.customer_id WHERE o.id=?`).bind(id).first();
   if (!order) throw fail('Замовлення не знайдено.', 404);
   if (order.type !== 'parts') throw fail('Цей шаблон призначено для замовлень автозапчастин. Для послуг потрібен окремий договір.');
+  // Prefer this order's contacts; use the linked customer only if phones agree or the order has none.
+  const matchingCustomer = !String(order.customer_phone || '').trim()
+    || (contactPhone(order.customer_phone) && contactPhone(order.customer_phone) === contactPhone(order.linked_customer_phone));
+  if (matchingCustomer) for (const field of ['name', 'phone', 'email', 'telegram']) {
+    if (!String(order[`customer_${field}`] || '').trim()) order[`customer_${field}`] = order[`linked_customer_${field}`] || '';
+  }
   return order;
 }
 export function documentRecipient(order) {

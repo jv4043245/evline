@@ -1,14 +1,16 @@
 # Customer Documents in CRM
 
-Entry: a parts order card, **Документи**, next to **Історія**. Existing order
+Entry: a parts order card, **Рахунок** and **Договір**, next to **Історія**, at any order status. Existing order
 tabs, supplier payment requests, logistics, and notifications are unchanged.
-The editor is at `/admin/documents/?order=<order-id>` and returns to that order.
+The editor is at `/admin/documents/?order=<order-id>&mode=invoice` (or `mode=agreement`) and returns to that order.
 Unsaved changes in the order must be saved first. The supplied agreement is for
 auto parts, so this action is intentionally not offered on programming services.
 
 ## Workflow
 
 1. Buyer name/contact, car, VIN, saved order items and customer price seed a draft.
+   Blank contacts may use the linked CRM customer when the order phone is blank
+   or matches that customer; explicit order values always take precedence.
    Without item rows, one editable position uses the order title and customer
    price. The manager must split a multi-part request into agreed line items.
 2. Review the buyer, specification, prices, agreed payment and delivery terms.
@@ -62,6 +64,9 @@ auto parts, so this action is intentionally not offered on programming services.
    connection. Telegram requires an explicit recipient check. No public document
    URL is created, and no document is sent automatically.
 7. Existing snapshots are never silently replaced by current order data.
+   A newer saved order with differing buyer/item data displays a compact review
+   action above the editor. Opening either document never issues a number, saves
+   a snapshot or sends anything to a client.
    **Оновити з замовлення** shows field-by-field differences; only checked
    changes are applied to the shared draft. Blank source fields do not erase
    manual values. Matching item metadata is retained. Seller and contract text

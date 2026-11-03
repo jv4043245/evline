@@ -7,8 +7,8 @@
   <meta name="referrer" content="same-origin">
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
-  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261103-brand">
-  <script type="module" src="/admin/documents/documents.js?v=20261103-brand"></script>
+  <link rel="stylesheet" href="/admin/documents/documents.css?v=20261103-order-documents">
+  <script type="module" src="/admin/documents/documents.js?v=20261103-order-documents"></script>
 </head>
 <body>
   <header class="app-header">
@@ -37,6 +37,7 @@
           <button type="button" data-action="send">Надіслати</button>
         </div>
       </nav>
+      <div class="source-changes" data-source-changes hidden role="status"><span data-source-count></span><button type="button" data-action="refresh-order">Перевірити зміни</button></div>
       <div class="document-layout">
         <div class="document-main">
           <form id="editor" data-editor autocomplete="off"></form>

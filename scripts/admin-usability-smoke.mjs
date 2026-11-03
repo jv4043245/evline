@@ -184,7 +184,8 @@ try {
     if (width <= 760) for (const cell of await emptyCells.all()) assert.equal(await cell.isVisible(), false);
     assert.equal(await form.locator('.order-editor__tabs [data-order-tab]').count(), 5);
     assert.equal(await form.locator('[data-order-pane="messages"]').count(), 0);
-    assert.equal(await form.locator('[data-order-documents]').isVisible(), true);
+    assert.equal(await form.locator('[data-order-documents="invoice"]').isVisible(), true);
+    assert.equal(await form.locator('[data-order-documents="agreement"]').isVisible(), true);
     assert.deepEqual(await form.locator('[data-order-pane="main"] .editor-band > h3').allTextContents(), ['Робота із замовленням', 'Клієнт', 'Авто та запит']);
     const bandColors = await form.locator('[data-order-pane="main"] .editor-band').evaluateAll(nodes => nodes.map(el => getComputedStyle(el).backgroundColor));
     assert.equal(new Set(bandColors).size, 3);
@@ -200,7 +201,7 @@ try {
     await page.screenshot({ path: `${output}/order-${width}.png` });
     await form.locator('[name="manager_notes"]').fill('Незбережена нотатка');
     page.once('dialog', dialog => { assert.match(dialog.message(), /Спочатку збережіть/); return dialog.accept(); });
-    await form.locator('[data-order-documents]').click();
+    await form.locator('[data-order-documents="invoice"]').click();
     assert.equal(new URL(page.url()).pathname, '/admin/');
     assert.equal(await form.locator('[name="manager_notes"]').inputValue(), 'Незбережена нотатка');
     await form.locator('[data-order-tab="market"]').click();
