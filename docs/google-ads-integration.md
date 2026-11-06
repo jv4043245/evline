@@ -30,7 +30,9 @@ The site and CRM also preserve attribution context:
 The CRM queues conversion events in `google_ads_conversion_events`:
 
 - `lead` when a site lead becomes a CRM order
-- `paid` when an order reaches paid or later statuses
+- `paid` only after explicit customer `payment_status=paid`, independently of the workflow stage. A supplier receipt or `status=paid` alone is not a customer sale.
+
+Since 2026-11-06 manual customer-payment confirmation and full linked bank settlement prepare this event. Its timestamp is the first CRM confirmation of full customer payment, kept unchanged when finance is edited or the queue is rebuilt. It is not the supplier `paid_at`, the exact bank booking time, or a fresh timestamp on each CSV export. Paid events use internal `crm_status=customer_paid` as the provenance marker. Legacy queued supplier-stage events are excluded from exports; historical uploaded rows are not rewritten. A legacy customer payment without a verified confirmation timestamp requires review rather than an invented date.
 
 Conversion value is `0` for leads. For paid orders the default value is gross profit:
 
@@ -121,7 +123,7 @@ Until these are configured, the admin panel shows the queue and exports CSV. Aft
 
 The upload uses the official Google Ads API `uploadClickConversions` method with `partialFailure=true`. Rows with `gclid`, `gbraid`, or `wbraid` are sent with the click ID. Rows without click IDs can still be sent as enhanced conversions when email or phone is available; email and phone are normalized and SHA-256 hashed before upload.
 
-Paid orders are not exported/uploaded until at least one finance field is filled. This prevents sending a real paid order with a temporary `0` value before managers add revenue and costs.
+Paid orders are not exported/uploaded until revenue is positive and, in gross-profit mode, purchase cost is positive. This is minimum financial readiness, not proof that every delivery, customs or other cost has been reconciled. Managers still need to complete those fields before using the resulting margin for business decisions. Revenue-only and supplier-cost-only records must not become a falsely profitable or zero-valued purchase. Explicit revenue mode requires positive revenue. Refunded/canceled/unconfirmed customer payments are excluded from new uploads. This does not automatically retract an already imported Google conversion; such corrections require a separately verified adjustment.
 
 Important 2026 limitation: Google Ads API no longer accepts new offline conversion import adopters after June 15, 2026. If upload returns `CUSTOMER_NOT_ALLOWLISTED_FOR_THIS_FEATURE`, keep using the CRM queue/CSV export and switch the direct upload path to Google Data Manager / Data Manager API or ask Google for the required access.
 
@@ -152,7 +154,7 @@ After applying the migration, open `/admin/`, go to `Аналітика і ре�
 1. Google Ads click lands on the site with auto-tagging (`gclid`, `gbraid`, or `wbraid`) and UTM suffix.
 2. Frontend stores attribution in browser storage for 90 days and submits it with the form.
 3. `/api/leads` writes the lead and creates an order with the same attribution.
-4. Manager updates order status and fills revenue/cost fields.
+4. Manager confirms customer payment separately from workflow/supplier payment and fills revenue/cost fields; verified full bank settlement can confirm customer payment automatically.
 5. CRM calculates margin and campaign performance in `/api/admin/summary`.
 6. Google Ads queue prepares `lead` and `paid` conversion events.
 7. Admin validates/uploads queued events from `/admin/`, or Google Ads imports the scheduled HTTPS CSV.
@@ -176,22 +178,28 @@ Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Curr
 
 Only rows with `gclid` are included in this scheduled CSV. Rows that only have `gbraid`/`wbraid` are still available to the API path.
 
+The scheduled CSV does not receive an import acknowledgment back from Google.
+Its CRM rows can therefore remain `queued` after Google has accepted them.
+An unchanged order ID is for deduplication, not for automatic value correction.
+Check native import results before any historical correction or re-upload; the
+CRM's `uploaded` immutability flag only covers rows acknowledged through that path.
+
 ## Keyword profitability
 
 The admin panel has a `Прибутковість ключів` report. It combines:
 
 - Google Ads keyword/search-term costs from `google_ads_keyword_stats`;
-- CRM leads/orders matched by `utm_campaign + utm_term`;
-- uploaded Google Ads conversion value for search-term rows when Google Ads attributes offline conversions back to search terms.
+- CRM leads/orders matched by `utm_campaign + utm_term` only when the campaign/keyword has exactly one candidate criterion across the loaded period;
+- separately labelled Google conversion value, never substituted for CRM margin.
 
 Recommended interpretation:
 
-- `Масштабувати` - value/profit ROAS is strong enough to increase attention or budget.
-- `Кандидат у мінус-слова` - clicks and spend exist, but CRM/Google value is still zero.
-- `Перевірити` - there is value, but it does not cover spend.
+- `Перевірити зіставлення` - attribution is missing or ambiguous; a purchased UTM keyword is not the actual search query.
+- `Перевірити результат` - qualify the enquiry and record its outcome before judging the keyword.
+- `Перевірити економіку` - customer payment exists, but completeness of revenue and costs must still be checked.
 - `Спостерігати` - not enough data yet.
 
-Important nuance: `utm_term={keyword}` stores the matched keyword, not always the exact user search phrase. Exact search-term profitability becomes available after Google Ads receives offline conversions and reports `metrics.conversions_value` in `search_term_view`; Google may hide some low-volume search terms for privacy reasons.
+Missing CRM matches and unknown financial completeness are null, not verified zero. No automatic scale/negative recommendation is made from zero-filled finance. Ambiguous CRM aggregates appear once in separate UTM rows, with unknown Ads traffic. Totals do not add overlapping keyword and search-term traffic. A row-limit warning indicates incomplete account coverage. CRM counts are by creation date with a UTC period boundary, not a click-cohort ROI calculation; repeated enquiry records are not deduplicated into unique customers. Native Google search-query conversion value remains a separate attribution source and does not prove fully reconciled CRM profit.
 
 Apply the keyword stats migration before using the report:
 

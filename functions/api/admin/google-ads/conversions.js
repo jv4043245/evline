@@ -2,6 +2,7 @@ import { csv, escapeCsv, integer, json, rangeStart, readPayload, text } from "..
 import {
   GOOGLE_ADS_CUSTOMER_ID,
   googleAdsEventTypesForStatus,
+  googleAdsConversionValueMode,
   queueGoogleAdsConversionsForOrder,
 } from "../../../_lib/google-ads.js";
 import { googleAdsApiConfigStatus, uploadGoogleAdsConversions } from "../../../_lib/google-ads-api.js";
@@ -81,6 +82,7 @@ function importStart(env) {
 }
 
 async function loadUploadCandidates(env, limit) {
+  const valueMode = await googleAdsConversionValueMode(env);
   const rows = await env.DB.prepare(
     `${conversionSelect()}
     WHERE e.status IN ('queued', 'failed')
@@ -88,18 +90,13 @@ async function loadUploadCandidates(env, limit) {
       AND e.conversion_time >= ?
       AND (
         e.event_type = 'lead'
-        OR o.revenue_uah > 0
-        OR o.purchase_cost_uah > 0
-        OR o.delivery_cost_uah > 0
-        OR o.customs_cost_uah > 0
-        OR o.processing_cost_uah > 0
-        OR o.ad_cost_uah > 0
-        OR o.other_cost_uah > 0
+        OR (e.crm_status = 'customer_paid' AND o.payment_status = 'paid' AND o.status <> 'canceled'
+          AND o.revenue_uah > 0 AND (? = 'revenue' OR o.purchase_cost_uah > 0))
       )
     ORDER BY e.created_at ASC
     LIMIT ?`
   )
-    .bind(importStart(env), limit)
+    .bind(importStart(env), valueMode, limit)
     .all();
   return rows.results || [];
 }
@@ -275,7 +272,7 @@ export async function onRequestPost({ request, env }) {
 
     for (const order of orders.results || []) {
       processed += 1;
-      const results = await queueGoogleAdsConversionsForOrder(env, order, googleAdsEventTypesForStatus(order.status));
+      const results = await queueGoogleAdsConversionsForOrder(env, order, googleAdsEventTypesForStatus(order.status, order));
       queued += results.length;
       for (const result of results) {
         statuses[result.status || "unknown"] = (statuses[result.status || "unknown"] || 0) + 1;

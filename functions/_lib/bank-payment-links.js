@@ -1,5 +1,6 @@
 import { bankError } from './pumb-api.js';
 import { recordAuditEvent } from './audit-log.js';
+import { queueGoogleAdsConversionsForOrder } from './google-ads.js';
 
 const first=(env,sql,...args)=>env.DB.prepare(sql).bind(...args).first();
 const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()).results || [];
@@ -24,9 +25,14 @@ export async function refreshOrderPaymentStatus(env,orderId,actor='ПУМБ') {
       ON CONFLICT(order_id) DO UPDATE SET last_status=excluded.last_status,updated_at=excluded.updated_at`).bind(at,orderId),
   ]);
   if(results[0].meta.changes) {
-    const updated=await first(env,'SELECT payment_status FROM orders WHERE id=?',orderId);
+    const updated=await first(env,'SELECT * FROM orders WHERE id=?',orderId);
     await recordAuditEvent(env,{actor,action:'bank.order_payment_status',entity_type:'order',entity_id:orderId,order_id:orderId,
       details:{payment_status_from:order.payment_status,payment_status_to:updated?.payment_status}});
+    if(updated?.payment_status==='paid') {
+      // First CRM confirmation of full settlement, not supplier paid_at or an
+      // offset-less bank date. Repeated syncs preserve the event's timestamp.
+      await queueGoogleAdsConversionsForOrder(env,{...updated,customer_paid_at:at},['paid']);
+    }
   }
 }
 

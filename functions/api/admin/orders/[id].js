@@ -225,9 +225,11 @@ export async function onRequestPatch({ request, params, env }) {
   let googleAdsConversions = [];
   const updated = await loadOrder(env, params.id);
   const financeChanged = financeBefore !== financeFingerprint(updated);
+  const customerPaymentConfirmed = current.payment_status !== "paid" && updated.payment_status === "paid";
+  const conversionOrder = customerPaymentConfirmed ? { ...updated, customer_paid_at: now } : updated;
 
   if (statusChanged) {
-    googleAdsConversions = await queueGoogleAdsConversionsForStatus(env, updated, nextStatus);
+    googleAdsConversions = await queueGoogleAdsConversionsForStatus(env, conversionOrder, nextStatus);
 
     const shouldNotify = boolFromPayload(payload.notify_customer, true);
     eventId = await insertStatusEvent(env, {
@@ -249,10 +251,10 @@ export async function onRequestPatch({ request, params, env }) {
         message,
       });
     }
-  } else if (financeChanged) {
-    const valueEvents = googleAdsEventTypesForStatus(updated.status).filter((eventType) => eventType !== "lead");
+  } else if (financeChanged || customerPaymentConfirmed) {
+    const valueEvents = googleAdsEventTypesForStatus(updated.status, updated).filter((eventType) => eventType !== "lead");
     if (valueEvents.length) {
-      googleAdsConversions = await queueGoogleAdsConversionsForOrder(env, updated, valueEvents);
+      googleAdsConversions = await queueGoogleAdsConversionsForOrder(env, conversionOrder, valueEvents);
     }
   }
 
