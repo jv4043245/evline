@@ -10,16 +10,6 @@ const ORDER_COST_SQL = `
   - COALESCE(other_cost_uah, 0)
 `;
 
-const PAID_STATUSES = new Set([
-  "paid",
-  "sourcing_china",
-  "china_warehouse",
-  "left_china",
-  "in_ukraine",
-  "ready_for_pickup",
-  "completed",
-]);
-
 function isMissingTableError(error) {
   return /no such table: google_ads_keyword_stats|no such column/i.test(error?.message || String(error));
 }
@@ -71,80 +61,61 @@ function addOrder(map, row) {
   map.set(key, item);
 }
 
-function termOnlyMap(campaignTermMap) {
-  const map = new Map();
-  for (const item of campaignTermMap.values()) {
-    const key = normalizeKey(item.term);
-    const existing = map.get(key) || emptyMetrics({ source: item.source, campaign: "усі кампанії", term: item.term });
-    existing.leads += item.leads;
-    existing.orders += item.orders;
-    existing.paid_orders += item.paid_orders;
-    existing.completed_orders += item.completed_orders;
-    existing.revenue_uah += item.revenue_uah;
-    existing.gross_profit_uah += item.gross_profit_uah;
-    map.set(key, existing);
-  }
-  return map;
-}
-
-function crmForStat(stat, campaignTermMap, termMap) {
-  const terms = [
-    stat.level === "search_term" ? stat.search_term : stat.keyword_text,
-    stat.keyword_text,
-    stat.search_term,
-  ].filter(Boolean);
+function crmForStat(stat, campaignTermMap, candidateCounts) {
+  // A stored UTM term names the purchased keyword, not the actual search query.
+  if (stat.level === "search_term") return { matched_by: "search_query_unavailable" };
+  const terms = [stat.keyword_text].filter(Boolean);
   const campaigns = [stat.campaign_id, stat.campaign, stat.campaign_name].filter(Boolean);
 
   for (const campaign of campaigns) {
     for (const term of terms) {
       const exact = campaignTermMap.get(mapKey(campaign, term));
-      if (exact) return { ...exact, matched_by: "campaign_term" };
+      if (exact) {
+        if (candidateCounts.get(mapKey(campaign, term)) !== 1) {
+          return { matched_by: "ambiguous_campaign_term" };
+        }
+        return { ...exact, matched_by: "campaign_term", metric_key: mapKey(exact.campaign, exact.term) };
+      }
     }
   }
 
-  for (const term of terms) {
-    const fallback = termMap.get(normalizeKey(term));
-    if (fallback) return { ...fallback, matched_by: "term_only" };
-  }
-
-  return emptyMetrics();
+  // Same text in another campaign is not evidence of attribution.
+  return { matched_by: "unmatched" };
 }
 
 function recommendationFor(row) {
   const spend = Number(row.spend_uah || 0);
   const clicks = Number(row.clicks || 0);
-  const value = Number(row.value_uah || 0);
-  const profitRoas = Number(row.profit_roas || 0);
-
-  if (spend > 0 && value > 0 && profitRoas >= 3) {
-    return {
-      code: "scale",
-      label: "Масштабувати",
-      reason: "Є маржа і profit ROAS вище 3x.",
-    };
-  }
-
-  if (spend >= 500 && clicks >= 10 && value <= 0) {
-    return {
-      code: "negative_candidate",
-      label: "Кандидат у мінус-слова",
-      reason: "Є витрати та кліки, але немає маржі або оплат.",
-    };
-  }
-
-  if (spend > 0 && value > 0 && profitRoas < 1) {
+  if (!row.crm_metrics_available) {
     return {
       code: "review",
-      label: "Перевірити",
-      reason: "Маржа нижча за витрати на рекламу.",
+      label: "Перевірити зіставлення",
+      reason: row.crm_match === "search_query_unavailable"
+        ? "UTM містить куплений ключ, а не пошуковий запит. Результат CRM не можна приписати цьому запиту."
+        : row.crm_match === "ambiguous_campaign_term"
+          ? "Однаковий ключ є в кількох групах або типах відповідності. Підсумок CRM показано окремо, без дублювання."
+          : "Немає однозначного зіставлення з CRM. Це не означає, що заявок або оплат не було.",
     };
   }
-
-  if (value > 0 && spend <= 0) {
+  if (Number(row.paid_orders || 0) > 0) {
     return {
-      code: "missing_cost",
-      label: "Немає витрат",
-      reason: "CRM бачить маржу, але Google Ads статистика ще не синхронізована.",
+      code: "review",
+      label: "Перевірити економіку",
+      reason: "Є оплата клієнта. Перевірте повноту виручки й витрат та атрибуцію перед рішенням про масштабування.",
+    };
+  }
+  if (Number(row.leads || 0) > 0 || Number(row.orders || 0) > 0) {
+    return {
+      code: "review",
+      label: "Перевірити результат",
+      reason: "Є звернення. Потрібні результат контакту й повна економіка; незаповнені суми не є підставою для мінус-слів.",
+    };
+  }
+  if (spend >= 500 && clicks >= 10) {
+    return {
+      code: "review",
+      label: "Перевірити дані",
+      reason: "Перевірте атрибуцію, дзвінки та якість запитів. Нуль у звіті не доводить відсутність корисних звернень.",
     };
   }
 
@@ -159,17 +130,17 @@ function enrichRow(row) {
   const spend = Number(row.spend_uah || 0);
   const leads = Number(row.leads || 0);
   const paidOrders = Number(row.paid_orders || 0);
-  const crmProfit = Number(row.gross_profit_uah || 0);
-  const googleValue = Number(row.google_conversion_value || 0);
-  const value = crmProfit || googleValue;
   const result = {
     ...row,
-    value_uah: value,
-    cpl_uah: leads && spend ? spend / leads : 0,
-    cpa_uah: paidOrders && spend ? spend / paidOrders : 0,
-    roas: spend ? Number(row.revenue_uah || 0) / spend : 0,
-    profit_roas: spend ? value / spend : 0,
-    lead_to_paid_rate: leads ? paidOrders / leads : 0,
+    // Financial fields default to zero and have no completeness confirmation.
+    // Google conversion value may have different semantics; never substitute it.
+    value_uah: null,
+    economics_status: "not_verified",
+    cpl_uah: row.crm_metrics_available && leads && spend ? spend / leads : null,
+    cpa_uah: row.crm_metrics_available && paidOrders && spend ? spend / paidOrders : null,
+    roas: null,
+    profit_roas: null,
+    lead_to_paid_rate: row.crm_metrics_available && leads ? paidOrders / leads : null,
   };
   return {
     ...result,
@@ -214,6 +185,11 @@ async function loadCrmMaps(env, start) {
   const orderWhere = start ? "WHERE created_at >= ?" : "";
   const leadBinds = start ? [new Date(`${start}T00:00:00.000Z`).toISOString()] : [];
   const orderBinds = leadBinds;
+  const paidSource = `COALESCE(term, '') <> '' AND (
+    COALESCE(gclid, '') <> '' OR COALESCE(gbraid, '') <> '' OR COALESCE(wbraid, '') <> ''
+    OR (LOWER(COALESCE(source, '')) = 'google' AND LOWER(COALESCE(medium, '')) IN ('cpc', 'ppc', 'paid', 'paidsearch')
+      AND COALESCE(campaign, '') <> '')
+  )`;
 
   const leads = await env.DB.prepare(
     `SELECT
@@ -224,7 +200,7 @@ async function loadCrmMaps(env, start) {
     FROM leads ${leadWhere}
     WHERE_PLACEHOLDER
     GROUP BY COALESCE(NULLIF(source, ''), 'google'), COALESCE(NULLIF(campaign, ''), 'без кампанії'), term`
-      .replace("WHERE_PLACEHOLDER", leadWhere ? "AND COALESCE(term, '') <> ''" : "WHERE COALESCE(term, '') <> ''")
+      .replace("WHERE_PLACEHOLDER", `${leadWhere ? "AND" : "WHERE"} ${paidSource}`)
   )
     .bind(...leadBinds)
     .all();
@@ -235,16 +211,16 @@ async function loadCrmMaps(env, start) {
       COALESCE(NULLIF(campaign, ''), 'без кампанії') AS campaign,
       term,
       COUNT(*) AS orders,
-      SUM(CASE WHEN status IN (${Array.from(PAID_STATUSES).map(() => "?").join(", ")}) THEN 1 ELSE 0 END) AS paid_orders,
+      SUM(CASE WHEN payment_status = 'paid' AND status <> 'canceled' THEN 1 ELSE 0 END) AS paid_orders,
       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
       COALESCE(SUM(revenue_uah), 0) AS revenue_uah,
       COALESCE(SUM(${ORDER_COST_SQL}), 0) AS gross_profit_uah
     FROM orders ${orderWhere}
     WHERE_PLACEHOLDER
     GROUP BY COALESCE(NULLIF(source, ''), 'google'), COALESCE(NULLIF(campaign, ''), 'без кампанії'), term`
-      .replace("WHERE_PLACEHOLDER", orderWhere ? "AND COALESCE(term, '') <> ''" : "WHERE COALESCE(term, '') <> ''")
+      .replace("WHERE_PLACEHOLDER", `${orderWhere ? "AND" : "WHERE"} ${paidSource}`)
   )
-    .bind(...Array.from(PAID_STATUSES), ...(start ? [new Date(`${start}T00:00:00.000Z`).toISOString()] : []))
+    .bind(...orderBinds)
     .all();
 
   for (const row of leads.results || []) addLead(campaignTermMap, row);
@@ -252,8 +228,28 @@ async function loadCrmMaps(env, start) {
 
   return {
     campaignTermMap,
-    termMap: termOnlyMap(campaignTermMap),
   };
+}
+
+async function loadCandidateCounts(env, start) {
+  // Independent of display filters/limit: a hidden sibling must still prevent
+  // attributing a campaign-level UTM result to one specific criterion.
+  const result = await env.DB.prepare(`SELECT DISTINCT
+    campaign_id, campaign, campaign_name, keyword_text, ad_group_id, criterion_id, match_type
+    FROM google_ads_keyword_stats WHERE level = 'keyword'${start ? " AND stat_date >= ?" : ""}`)
+    .bind(...(start ? [start] : [])).all();
+  const candidates = new Map();
+  for (const row of result.results || []) {
+    const identity = JSON.stringify([row.campaign_id || row.campaign || row.campaign_name,
+      row.ad_group_id, row.criterion_id, normalizeKey(row.keyword_text), row.match_type]);
+    for (const campaign of new Set([row.campaign_id, row.campaign, row.campaign_name].filter(Boolean))) {
+      const key = mapKey(campaign, row.keyword_text);
+      const ids = candidates.get(key) || new Set();
+      ids.add(identity);
+      candidates.set(key, ids);
+    }
+  }
+  return new Map([...candidates].map(([key, ids]) => [key, ids.size]));
 }
 
 async function loadStats(env, url) {
@@ -297,17 +293,14 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const { stats, start, q, limit } = await loadStats(env, url);
-    const { campaignTermMap, termMap } = await loadCrmMaps(env, start);
+    const { campaignTermMap } = await loadCrmMaps(env, start);
+    const candidateCounts = await loadCandidateCounts(env, start);
     const rows = [];
     const seenCrmKeys = new Set();
 
     for (const stat of stats) {
-      const crm = crmForStat(stat, campaignTermMap, termMap);
-      if (crm.term && crm.matched_by === "term_only") {
-        for (const [key, item] of campaignTermMap.entries()) {
-          if (normalizeKey(item.term) === normalizeKey(crm.term)) seenCrmKeys.add(key);
-        }
-      } else if (crm.term) {
+      const crm = crmForStat(stat, campaignTermMap, candidateCounts);
+      if (crm.term) {
         seenCrmKeys.add(mapKey(crm.campaign, crm.term));
       }
       rows.push(enrichRow({
@@ -315,12 +308,14 @@ export async function onRequestGet({ request, env }) {
         source: "google",
         term: stat.level === "search_term" ? text(stat.search_term || stat.keyword_text) : text(stat.keyword_text || stat.search_term),
         crm_match: crm.matched_by || "",
-        leads: crm.leads,
-        orders: crm.orders,
-        paid_orders: crm.paid_orders,
-        completed_orders: crm.completed_orders,
-        revenue_uah: crm.revenue_uah,
-        gross_profit_uah: crm.gross_profit_uah,
+        crm_metrics_available: Boolean(crm.term),
+        crm_metric_key: crm.metric_key || "",
+        leads: crm.leads ?? null,
+        orders: crm.orders ?? null,
+        paid_orders: crm.paid_orders ?? null,
+        completed_orders: crm.completed_orders ?? null,
+        revenue_uah: crm.revenue_uah ?? null,
+        gross_profit_uah: crm.gross_profit_uah ?? null,
       }));
     }
 
@@ -340,13 +335,15 @@ export async function onRequestGet({ request, env }) {
         match_type: "",
         search_term: "",
         term: crm.term,
-        spend_uah: 0,
-        clicks: 0,
-        impressions: 0,
-        google_conversions: 0,
-        google_conversion_value: 0,
+        spend_uah: null,
+        clicks: null,
+        impressions: null,
+        google_conversions: null,
+        google_conversion_value: null,
         currency_code: "UAH",
         crm_match: "utm_term_only",
+        crm_metrics_available: true,
+        crm_metric_key: key,
         leads: crm.leads,
         orders: crm.orders,
         paid_orders: crm.paid_orders,
@@ -362,17 +359,24 @@ export async function onRequestGet({ request, env }) {
       Number(b.clicks || 0) - Number(a.clicks || 0)
     );
 
+    const trafficLevel = url.searchParams.get("level") === "search_term" ? "search_term" : "keyword";
+    const summarizedCrmKeys = new Set();
     const summary = rows.reduce(
       (total, row) => {
         total.rows += 1;
-        total.spend_uah += Number(row.spend_uah || 0);
-        total.clicks += Number(row.clicks || 0);
-        total.impressions += Number(row.impressions || 0);
-        total.leads += Number(row.leads || 0);
-        total.paid_orders += Number(row.paid_orders || 0);
-        total.revenue_uah += Number(row.revenue_uah || 0);
-        total.gross_profit_uah += Number(row.gross_profit_uah || 0);
-        total.value_uah += Number(row.value_uah || 0);
+        // Keyword and search-query reports describe overlapping traffic.
+        if (row.level === trafficLevel) {
+          total.spend_uah += Number(row.spend_uah || 0);
+          total.clicks += Number(row.clicks || 0);
+          total.impressions += Number(row.impressions || 0);
+        }
+        if (row.crm_metrics_available && !summarizedCrmKeys.has(row.crm_metric_key)) {
+          summarizedCrmKeys.add(row.crm_metric_key);
+          total.leads += Number(row.leads || 0);
+          total.paid_orders += Number(row.paid_orders || 0);
+          total.revenue_uah += Number(row.revenue_uah || 0);
+          total.gross_profit_uah += Number(row.gross_profit_uah || 0);
+        }
         if (row.recommendation?.code === "negative_candidate") total.negative_candidates += 1;
         if (row.recommendation?.code === "scale") total.scale_candidates += 1;
         return total;
@@ -386,12 +390,15 @@ export async function onRequestGet({ request, env }) {
         paid_orders: 0,
         revenue_uah: 0,
         gross_profit_uah: 0,
-        value_uah: 0,
+        value_uah: null,
+        traffic_level: trafficLevel,
+        coverage: "loaded_rows",
+        stats_limit_reached: stats.length >= limit,
         negative_candidates: 0,
         scale_candidates: 0,
       }
     );
-    summary.profit_roas = summary.spend_uah ? summary.value_uah / summary.spend_uah : 0;
+    summary.profit_roas = null;
 
     if (wantsCsv) {
       const columns = [
@@ -430,8 +437,11 @@ export async function onRequestGet({ request, env }) {
       migration_required: false,
       range: url.searchParams.get("range") || "30d",
       summary,
-      keywords: rows.slice(0, limit),
+      // The display limit bounds Ads rows. Never discard the separate CRM
+      // aggregates that explain otherwise ambiguous attribution.
+      keywords: rows,
       limit,
+      limit_applies_to: "ads_rows",
     });
   } catch (error) {
     if (isMissingTableError(error)) {

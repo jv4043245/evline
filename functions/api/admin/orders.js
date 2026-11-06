@@ -453,8 +453,8 @@ export async function onRequestPost({ request, env }) {
   const order = await loadOrder(env, orderId);
   const google_ads_conversions = await queueGoogleAdsConversionsForOrder(
     env,
-    order,
-    googleAdsEventTypesForStatus(order.status)
+    { ...order, customer_paid_at: order.payment_status === "paid" ? now : undefined },
+    googleAdsEventTypesForStatus(order.status, order)
   );
   await recordAuditEvent(env, {
     actor: auditActor(request, env),

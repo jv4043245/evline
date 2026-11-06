@@ -20,17 +20,17 @@ const EVENT_DEFINITIONS = {
   },
 };
 
-const PAID_OR_LATER = new Set([
-  "paid",
-  "sourcing_china",
-  "china_warehouse",
-  "left_china",
-  "in_ukraine",
-  "ready_for_pickup",
-  "completed",
-]);
-
 const VALUE_MODES = new Set(["gross_profit", "revenue"]);
+
+export function googleAdsCustomerPaid(order = {}) {
+  return text(order.payment_status).toLowerCase() === "paid" && text(order.status) !== "canceled";
+}
+
+// Minimum readiness, not a claim that every cost has been reconciled.
+export function googleAdsFinanceReady(order = {}, valueMode = "gross_profit") {
+  return number(order.revenue_uah) > 0 &&
+    (normalizeValueMode(valueMode) === "revenue" || number(order.purchase_cost_uah) > 0);
+}
 
 function costTotal(row) {
   return (
@@ -105,28 +105,40 @@ async function googleAdsSetting(env, key, fallback = "") {
   }
 }
 
-async function googleAdsConversionValueMode(env) {
+export async function googleAdsConversionValueMode(env) {
   const envMode = text(env.GOOGLE_ADS_CONVERSION_VALUE_MODE);
   if (envMode) return normalizeValueMode(envMode);
   return normalizeValueMode(await googleAdsSetting(env, "conversion_value_mode", "gross_profit"));
 }
 
-export function googleAdsEventTypesForStatus(status) {
-  const normalized = text(status) || "new";
+export function googleAdsEventTypesForStatus(status, order = {}) {
   const events = ["lead"];
-  if (PAID_OR_LATER.has(normalized)) events.push("paid");
+  if (googleAdsCustomerPaid({ ...order, status })) events.push("paid");
   return events;
 }
 
-export function googleAdsEventTypesForStatusChange(status) {
-  const normalized = text(status) || "new";
-  if (PAID_OR_LATER.has(normalized)) return ["paid"];
+export function googleAdsEventTypesForStatusChange(status, order = {}) {
+  if (googleAdsCustomerPaid({ ...order, status })) return ["paid"];
   return [];
 }
 
 export async function queueGoogleAdsConversion(env, order, eventType) {
   const definition = EVENT_DEFINITIONS[eventType];
   if (!definition || !order?.id) return null;
+
+  let customerPaidTime = "";
+  if (eventType === "paid") {
+    // Workflow stages and supplier receipts are not proof of customer payment.
+    if (!googleAdsCustomerPaid(order)) return null;
+    const existing = await env.DB.prepare(
+      "SELECT status, crm_status, conversion_time, conversion_value, gross_profit_uah, currency_code FROM google_ads_conversion_events WHERE order_id = ? AND event_type = 'paid'"
+    ).bind(order.id).first();
+    if (existing?.status === "uploaded") return { event_type: eventType, ...existing };
+    customerPaidTime = existing?.crm_status === "customer_paid" ? text(existing.conversion_time) : text(order.customer_paid_at);
+    if (!customerPaidTime || Number.isNaN(new Date(customerPaidTime.replace(" ", "T")).getTime())) {
+      return { event_type: eventType, status: "skipped", skip_reason: "Потрібна дата підтвердження оплати клієнта. Етап замовлення не підтверджує оплату." };
+    }
+  }
 
   const now = new Date().toISOString();
   const customerId = text(env.GOOGLE_ADS_CUSTOMER_ID) || (await googleAdsSetting(env, "customer_id", GOOGLE_ADS_CUSTOMER_ID));
@@ -138,7 +150,13 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
   const profit = grossProfit(order);
   const hasClickId = orderHasClickId(order) ? 1 : 0;
   const hasCustomerIdentifier = orderHasCustomerIdentifier(order) ? 1 : 0;
-  const { status, skip_reason } = queueStatusFor(order);
+  const paymentFinanceReady = eventType !== "paid" || googleAdsFinanceReady(order, valueMode);
+  const { status, skip_reason } = paymentFinanceReady ? queueStatusFor(order) : {
+    status: "skipped",
+    skip_reason: "Заповніть виручку та собівартість перед передачею цінності оплати в Google Ads.",
+  };
+  const crmStatus = eventType === "paid" ? "customer_paid" : definition.crm_status;
+  const conversionTime = eventType === "paid" ? formatGoogleConversionTime(customerPaidTime.replace(" ", "T")) : conversionTimeFor(order, eventType);
   const orderIdForGoogle = `${order.id}_${eventType}`;
 
   const values = [
@@ -148,11 +166,11 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
     order.id,
     text(order.lead_id),
     eventType,
-    definition.crm_status,
+    crmStatus,
     customerId,
     conversionAction,
     conversionActionName,
-    conversionTimeFor(order, eventType),
+    conversionTime,
     conversionValue,
     profit,
     currency,
@@ -188,7 +206,7 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
       google_ads_customer_id = ?,
       conversion_action = COALESCE(NULLIF(?, ''), conversion_action),
       conversion_action_name = ?,
-      conversion_time = CASE WHEN status = 'uploaded' THEN conversion_time ELSE ? END,
+      conversion_time = CASE WHEN status = 'uploaded' OR (event_type = 'paid' AND crm_status = 'customer_paid') THEN conversion_time ELSE ? END,
       conversion_value = CASE WHEN status = 'uploaded' THEN conversion_value ELSE ? END,
       gross_profit_uah = CASE WHEN status = 'uploaded' THEN gross_profit_uah ELSE ? END,
       currency_code = ?,
@@ -202,15 +220,15 @@ export async function queueGoogleAdsConversion(env, order, eventType) {
       has_customer_identifier = ?,
       status = CASE WHEN status = 'uploaded' THEN status ELSE ? END,
       skip_reason = CASE WHEN status = 'uploaded' THEN skip_reason ELSE ? END
-    WHERE order_id = ? AND event_type = ?`
+    WHERE order_id = ? AND event_type = ? AND (event_type <> 'paid' OR status <> 'uploaded')`
   )
     .bind(
       now,
-      definition.crm_status,
+      crmStatus,
       customerId,
       conversionAction,
       conversionActionName,
-      conversionTimeFor(order, eventType),
+      conversionTime,
       conversionValue,
       profit,
       currency,
@@ -254,5 +272,5 @@ export async function queueGoogleAdsConversionsForOrder(env, order, eventTypes) 
 }
 
 export async function queueGoogleAdsConversionsForStatus(env, order, status) {
-  return queueGoogleAdsConversionsForOrder(env, order, googleAdsEventTypesForStatusChange(status));
+  return queueGoogleAdsConversionsForOrder(env, order, googleAdsEventTypesForStatusChange(status, order));
 }

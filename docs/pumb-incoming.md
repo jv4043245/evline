@@ -37,8 +37,12 @@ identity can have broader rights. Do not describe it as bank-enforced read-only.
 - This is a separate bank ledger, not a second revenue source. Linked verified
   receipts update `orders.payment_status` against the full `revenue_uah` order
   price (not an advance invoice amount). Without a positive order price the status
-  is partial, never paid. Revenue, supplier payments, notifications, conversions
-  and order workflow remain untouched. Manual paid/refunded states are preserved;
+  is partial, never paid. Revenue, supplier payments, notifications
+  and order workflow remain untouched. Since 2026-11-06 a transition to fully
+  paid prepares a Google Ads customer-paid event, with the first CRM confirmation
+  timestamp; export still requires customer-paid evidence and minimum financial
+  readiness. It does not send a conversion directly or rewrite uploaded history.
+  Manual paid/refunded states are preserved;
   bank-managed states can be corrected to unknown if their bank evidence changes.
   `bank_order_payment_state` records bank-managed states; apply additive migration
   **0040_bank_payment_status.sql** before deploying this version. No existing money

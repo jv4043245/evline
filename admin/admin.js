@@ -1128,10 +1128,19 @@ function renderGoogleAdsKeywords(data = state.googleAdsKeywords) {
   if (data.error) {
     statusNode.textContent = `Звіт по ключах: ${data.error}`;
   } else {
-    statusNode.textContent = "Ключові слова і пошукові запити: витрати Google Ads + маржа CRM.";
+    statusNode.textContent = "Витрати Google Ads і звернення CRM. Незаповнена економіка — не нульовий прибуток. UTM-ключ — не фактичний пошуковий запит. CRM — за датою створення (межа періоду UTC), не когортна окупність; повторні звернення рахуються окремо.";
   }
 
   const summary = data.summary || {};
+  const metric = (value, formatter) => value === null || value === undefined ? "—" : formatter.format(value);
+  const ratio = (value) => value === null || value === undefined ? "—" : `${Number(value).toFixed(1)}x`;
+  const matchLabels = {
+    campaign_term: "Збіг кампанії та UTM-ключа",
+    utm_term_only: "CRM за UTM-ключем, без розподілу між критеріями",
+    ambiguous_campaign_term: "Кілька критеріїв — точний розподіл невідомий",
+    search_query_unavailable: "CRM не визначає фактичний пошуковий запит",
+    unmatched: "Немає точного зіставлення з CRM",
+  };
   summaryRoot.innerHTML = `
     <div class="google-ads-summary__item">
       <span>Рядків</span>
@@ -1142,35 +1151,38 @@ function renderGoogleAdsKeywords(data = state.googleAdsKeywords) {
       <strong>${money.format(summary.spend_uah || 0)}</strong>
     </div>
     <div class="google-ads-summary__item">
-      <span>Оплати</span>
+      <span>Оплачені клієнтом</span>
       <strong>${numberFmt.format(summary.paid_orders || 0)}</strong>
     </div>
     <div class="google-ads-summary__item">
-      <span>Value / маржа</span>
-      <strong>${money.format(summary.value_uah || 0)}</strong>
+      <span>Підтверджена маржа</span>
+      <strong>${metric(summary.value_uah, money)}</strong>
     </div>
     <div class="google-ads-summary__item">
       <span>Profit ROAS</span>
-      <strong>${Number(summary.profit_roas || 0).toFixed(1)}x</strong>
+      <strong>${ratio(summary.profit_roas)}</strong>
     </div>
-    <p class="muted">Масштабувати: ${numberFmt.format(summary.scale_candidates || 0)} · кандидати у мінус-слова: ${numberFmt.format(summary.negative_candidates || 0)}</p>
+    <p class="muted">Підсумок завантажених рядків${summary.traffic_level === "keyword" ? ": витрати лише рівня ключів, без повторного додавання пошукових запитів" : ""}.${summary.stats_limit_reached ? " Досягнуто ліміт рекламних рядків: це не повний підсумок кампаній." : ""} Для рішення потрібні результат звернення та перевірена економіка.</p>
   `;
 
   tableRoot.innerHTML = data.keywords?.length
     ? data.keywords
         .map((row) => {
           const term = row.search_term || row.keyword_text || row.term || "-";
-          const level = keywordLevelLabels[row.level] || row.level || "Ключ";
+          const level = row.level === "utm_term" ? "CRM: UTM-ключ" : keywordLevelLabels[row.level] || row.level || "Ключ";
           const recommendation = row.recommendation || {};
-          const profitRoas = Number(row.profit_roas || 0).toFixed(1);
-          const cpa = row.cpa_uah ? money.format(row.cpa_uah) : "-";
+          const profitRoas = ratio(row.profit_roas);
+          const cpa = metric(row.cpa_uah, money);
+          const crmMetrics = row.crm_metrics_available === false
+            ? "— лідів · — оплат"
+            : `${metric(row.leads, numberFmt)} лідів · ${metric(row.paid_orders, numberFmt)} оплат клієнта`;
           return `
             <tr>
               <td><strong>${textOrDash(term)}</strong><br><span class="muted">${escapeHtml(level)}${row.match_type ? ` · ${escapeHtml(row.match_type)}` : ""}</span></td>
               <td>${textOrDash(row.campaign_name || row.campaign_id || row.campaign)}<br><span class="muted">${textOrDash(row.ad_group_name || row.ad_group_id)}</span></td>
-              <td>${money.format(row.spend_uah || 0)}<br><span class="muted">${numberFmt.format(row.clicks || 0)} кліків · ${numberFmt.format(row.impressions || 0)} показів</span></td>
-              <td>${numberFmt.format(row.leads || 0)} лідів · ${numberFmt.format(row.paid_orders || 0)} оплат<br><span class="muted">CPA ${escapeHtml(cpa)}${row.crm_match ? ` · ${escapeHtml(row.crm_match)}` : ""}</span></td>
-              <td>${money.format(row.value_uah || 0)}<br><span class="muted">CRM ${money.format(row.gross_profit_uah || 0)} · Google ${money.format(row.google_conversion_value || 0)} · ${profitRoas}x</span></td>
+              <td>${metric(row.spend_uah, money)}<br><span class="muted">${metric(row.clicks, numberFmt)} кліків · ${metric(row.impressions, numberFmt)} показів</span></td>
+              <td>${crmMetrics}<br><span class="muted">CPA ${escapeHtml(cpa)}${row.crm_match ? ` · ${escapeHtml(matchLabels[row.crm_match] || row.crm_match)}` : ""}</span></td>
+              <td>${metric(row.value_uah, money)}<br><span class="muted">Записано в CRM: ${metric(row.gross_profit_uah, money)} · цінність Google: ${metric(row.google_conversion_value, money)} · ROAS ${profitRoas}</span></td>
               <td><span class="conversion-status conversion-status--${safeClass(recommendation.code || "watch")}">${textOrDash(recommendation.label || "Спостерігати")}</span><br><span class="muted">${textOrDash(recommendation.reason)}</span></td>
             </tr>
           `;
