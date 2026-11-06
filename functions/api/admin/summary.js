@@ -119,6 +119,7 @@ export async function onRequestGet({ request, env }) {
       SUM(CASE WHEN status NOT IN ('completed', 'canceled') THEN 1 ELSE 0 END) AS active_orders,
       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
       SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) AS canceled_orders,
+      SUM(CASE WHEN payment_status = 'paid' AND status <> 'canceled' THEN 1 ELSE 0 END) AS paid_orders,
       COALESCE(SUM(revenue_uah), 0) AS revenue_uah,
       COALESCE(SUM(purchase_cost_uah), 0) AS purchase_cost_uah,
       COALESCE(SUM(delivery_cost_uah), 0) AS delivery_cost_uah,
@@ -165,7 +166,7 @@ export async function onRequestGet({ request, env }) {
       COALESCE(NULLIF(campaign, ''), 'без кампанії') AS campaign,
       COALESCE(NULLIF(source, ''), 'direct') AS source,
       COUNT(*) AS orders,
-      SUM(CASE WHEN status IN ('paid', 'sourcing_china', 'china_warehouse', 'left_china', 'in_ukraine', 'ready_for_pickup', 'completed') THEN 1 ELSE 0 END) AS paid_orders,
+      SUM(CASE WHEN payment_status = 'paid' AND status <> 'canceled' THEN 1 ELSE 0 END) AS paid_orders,
       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
       COALESCE(SUM(revenue_uah), 0) AS revenue_uah,
       COALESCE(SUM(COALESCE(revenue_uah, 0) - (${orderCostSql})), 0) AS gross_profit_uah
@@ -216,6 +217,7 @@ export async function onRequestGet({ request, env }) {
 
   const leads = Number(leadTotals.leads || 0);
   const completed = Number(orderTotals.completed_orders || 0);
+  const paidOrders = Number(orderTotals.paid_orders || 0);
   const orders = Number(orderTotals.orders || 0);
   const adSpend = Number(costs.ad_spend_uah || 0);
   const revenue = Number(orderTotals.revenue_uah || 0);
@@ -236,7 +238,7 @@ export async function onRequestGet({ request, env }) {
       close_rate: leads ? completed / leads : 0,
       order_completion_rate: orders ? completed / orders : 0,
       cpl_uah: leads && adSpend ? adSpend / leads : 0,
-      cpa_uah: completed && adSpend ? adSpend / completed : 0,
+      cpa_uah: paidOrders && adSpend ? adSpend / paidOrders : 0,
       roas: adSpend ? revenue / adSpend : 0,
       profit_roas: adSpend ? grossProfit / adSpend : 0,
     },
