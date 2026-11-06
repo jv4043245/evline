@@ -903,7 +903,7 @@ function renderCampaigns(campaigns) {
           return `
             <div class="source-item">
               <strong title="${escapeHtml(campaign.campaign)}">${textOrDash(named?.campaign_name || campaign.campaign)}</strong>
-              <span>${textOrDash(campaign.source)} · ${numberFmt.format(campaign.leads || 0)} лідів · ${numberFmt.format(campaign.paid_orders || 0)} оплат</span>
+              <span>${textOrDash(campaign.source)} · ${numberFmt.format(campaign.leads || 0)} лідів · ${numberFmt.format(campaign.paid_orders || 0)} оплат клієнта</span>
               <span>${money.format(campaign.ad_spend_uah || 0)} витрати · ${money.format(campaign.gross_profit_uah || 0)} маржа · ${escapeHtml(profitRoas)}x</span>
               <span>${paidRate}% лід → оплата</span>
               <div class="source-meter"><span style="width:${width}%"></span></div>
