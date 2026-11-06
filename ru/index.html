@@ -12,7 +12,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2">
+<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20261106-lead-resilience-1">
 <title>Запчасти для китайских авто из Китая | EVLine Украина</title>
 <meta name="description" content="Оригинальные и OEM запчасти для китайских авто: BYD, ZEEKR, Xiaomi и другие. Подбор по VIN, проверка в Китае, доставка в Украину.">
 <link rel="canonical" href="https://evline.com.ua/ru/">
@@ -1010,15 +1010,16 @@ function trackingPayload(form){
   var ttlMs=90*24*60*60*1000;
   function readStore(store,key){try{return JSON.parse(store.getItem(key)||'{}')||{};}catch(e){return {};}}
   function writeStore(store,key,value){try{store.setItem(key,JSON.stringify(value));}catch(e){}}
+  function storage(name){try{return window[name]||null;}catch(e){return null;}}
   var current={
     utm_source:p.get('utm_source')||'',utm_medium:p.get('utm_medium')||'',utm_campaign:p.get('utm_campaign')||'',
     utm_term:p.get('utm_term')||'',utm_content:p.get('utm_content')||'',gclid:p.get('gclid')||'',gbraid:p.get('gbraid')||'',wbraid:p.get('wbraid')||'',fbclid:p.get('fbclid')||'',
     landing_page:window.location.href,referrer:document.referrer,page_url:window.location.href,submitted_at:now
   };
   var keys=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid'];
-  var saved=readStore(localStorage,storageKey);
+  var saved=readStore(storage('localStorage'),storageKey);
   if(saved.expires_at&&Number(saved.expires_at)<Date.now()) saved={};
-  if(!Object.keys(saved).length) saved=readStore(sessionStorage,sessionKey);
+  if(!Object.keys(saved).length) saved=readStore(storage('sessionStorage'),sessionKey);
   var hasTracking=keys.some(function(k){return !!current[k];});
   if(hasTracking){
     saved=Object.assign({},saved,current,{
@@ -1027,8 +1028,8 @@ function trackingPayload(form){
       tracking_captured_at:saved.tracking_captured_at||now,
       expires_at:Date.now()+ttlMs
     });
-    writeStore(localStorage,storageKey,saved);
-    writeStore(sessionStorage,sessionKey,saved);
+    writeStore(storage('localStorage'),storageKey,saved);
+    writeStore(storage('sessionStorage'),sessionKey,saved);
   }
   keys.forEach(function(k){if(!current[k]&&saved[k]) current[k]=saved[k];});
   current.landing_page=saved.landing_page||current.landing_page;
@@ -1165,6 +1166,6 @@ function submitLead(formId){
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script defer src="/assets/js/contact-tracking.js?v=20260922-footer-contacts-2"></script>
+<script defer src="/assets/js/contact-tracking.js?v=20261106-lead-resilience-1"></script>
 </body>
 </html>

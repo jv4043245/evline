@@ -22,6 +22,11 @@
     return "evl-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
   }
 
+  function optionalStorage(name) {
+    // A denied getter is distinct from denied getItem/setItem methods.
+    try { return window[name] || null; } catch (_) { return null; }
+  }
+
   function storageId(store, key) {
     try {
       var value = store.getItem(key);
@@ -36,8 +41,8 @@
   }
 
   var identity = {
-    visitor_id: storageId(window.localStorage, VISITOR_KEY),
-    session_id: storageId(window.sessionStorage, SESSION_KEY),
+    visitor_id: storageId(optionalStorage("localStorage"), VISITOR_KEY),
+    session_id: storageId(optionalStorage("sessionStorage"), SESSION_KEY),
   };
 
   function readStore(store, key) {
@@ -87,8 +92,8 @@
       tracking_captured_at: now,
       expires_at: Date.now() + 90 * 24 * 60 * 60 * 1000,
     };
-    writeStore(window.localStorage, ATTRIBUTION_KEY, fresh);
-    writeStore(window.sessionStorage, SESSION_ATTRIBUTION_KEY, fresh);
+    writeStore(optionalStorage("localStorage"), ATTRIBUTION_KEY, fresh);
+    writeStore(optionalStorage("sessionStorage"), SESSION_ATTRIBUTION_KEY, fresh);
   }
 
   captureFreshPaidClick();
@@ -96,9 +101,9 @@
 
   function attribution() {
     var params = new URLSearchParams(window.location.search);
-    var saved = readStore(window.localStorage, ATTRIBUTION_KEY);
+    var saved = readStore(optionalStorage("localStorage"), ATTRIBUTION_KEY);
     if (saved.expires_at && Number(saved.expires_at) < Date.now()) saved = {};
-    if (!Object.keys(saved).length) saved = readStore(window.sessionStorage, SESSION_ATTRIBUTION_KEY);
+    if (!Object.keys(saved).length) saved = readStore(optionalStorage("sessionStorage"), SESSION_ATTRIBUTION_KEY);
     function pick(name) {
       return params.get(name) || saved[name] || "";
     }
@@ -249,7 +254,7 @@
 
   function marketingConsentGranted() {
     try {
-      var consent = JSON.parse(window.localStorage.getItem("evline_privacy_consent_v1") || "{}");
+      var consent = JSON.parse(optionalStorage("localStorage").getItem("evline_privacy_consent_v1") || "{}");
       return consent.version === "2026-07-30" && consent.marketing === true;
     } catch (_) {
       return false;
@@ -263,7 +268,7 @@
     prepared.marketing_consent = marketingConsentGranted() ? 1 : 0;
     prepared.consent_version = "2026-07-30";
     try {
-      var consent = JSON.parse(window.localStorage.getItem("evline_privacy_consent_v1") || "{}");
+      var consent = JSON.parse(optionalStorage("localStorage").getItem("evline_privacy_consent_v1") || "{}");
       prepared.marketing_consent_at = consent.decided_at || "";
     } catch (_) {}
     return prepared;

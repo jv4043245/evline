@@ -4,6 +4,7 @@ import { parse } from 'node-html-parser';
 import { publicHtmlFiles } from './seller-identity.mjs';
 
 export const footerContactsVersion = '20260922-footer-contacts-2';
+export const leadTrackingVersion = '20261106-lead-resilience-1';
 const footerContactsCss = (await readFile(new URL('../../assets/css/footer-contacts.css', import.meta.url), 'utf8')).trim();
 
 export function footerContactsMarkup(language = 'uk') {
@@ -36,7 +37,7 @@ export function withFooterContacts(html) {
     ? updated.replace(existingStyle.outerHTML, stylesheet)
     : updated.replace(/<\/head>/i, `${stylesheet}\n</head>`);
   // All public pages must load the tracker that recognizes the footer's explicit intent.
-  return updated.replace(/(assets\/js\/(?:main|contact-tracking)\.js)(?:\?[^"']*)?(?=["'])/g, `$1?v=${footerContactsVersion}`);
+  return updated.replace(/(assets\/js\/(?:main|contact-tracking)\.js)(?:\?[^"']*)?(?=["'])/g, `$1?v=${leadTrackingVersion}`);
 }
 
 export async function syncFooterContacts(root, { check = false } = {}) {

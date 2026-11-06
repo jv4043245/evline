@@ -31,7 +31,7 @@ function ensureMetaTracking() {
 function ensureContactTracking() {
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/contact-tracking.js?v=20260922-footer-contacts-2";
+  script.src = "/assets/js/contact-tracking.js?v=20261106-lead-resilience-1";
   script.async = false;
   script.dataset.evlineContactTracking = "";
   document.head.append(script);
@@ -79,6 +79,11 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeLanguageSwitches();
 });
 
+function optionalTrackingStorage(name) {
+  // Accessing the Storage property itself can throw when the browser blocks it.
+  try { return window[name] || null; } catch { return null; }
+}
+
 function readTrackingStore(store, key) {
   try {
     return JSON.parse(store.getItem(key) || "{}") || {};
@@ -113,8 +118,8 @@ function trackingData(form) {
     referrer: document.referrer,
     page_url: window.location.href,
     submitted_at: now,
-    visitor_id: readOrCreateTrackingId(localStorage, "evline_visitor_id_v1"),
-    session_id: readOrCreateTrackingId(sessionStorage, "evline_session_id_v1"),
+    visitor_id: readOrCreateTrackingId(optionalTrackingStorage("localStorage"), "evline_visitor_id_v1"),
+    session_id: readOrCreateTrackingId(optionalTrackingStorage("sessionStorage"), "evline_session_id_v1"),
   };
   const hasFreshMetaClick = Boolean(params.get("fbclid"));
   const hasFreshGoogleClick = Boolean(params.get("gclid") || params.get("gbraid") || params.get("wbraid"));
@@ -128,11 +133,11 @@ function trackingData(form) {
     current.fbclid = "";
   }
   const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid"];
-  let saved = readTrackingStore(localStorage, storageKey);
+  let saved = readTrackingStore(optionalTrackingStorage("localStorage"), storageKey);
   if (saved.expires_at && Number(saved.expires_at) < Date.now()) {
     saved = {};
   }
-  if (!Object.keys(saved).length) saved = readTrackingStore(sessionStorage, sessionKey);
+  if (!Object.keys(saved).length) saved = readTrackingStore(optionalTrackingStorage("sessionStorage"), sessionKey);
   if (hasFreshMetaClick || hasFreshGoogleClick) {
     saved = {};
   }
@@ -147,8 +152,8 @@ function trackingData(form) {
       tracking_captured_at: saved.tracking_captured_at || now,
       expires_at: Date.now() + ttlMs,
     };
-    writeTrackingStore(localStorage, storageKey, saved);
-    writeTrackingStore(sessionStorage, sessionKey, saved);
+    writeTrackingStore(optionalTrackingStorage("localStorage"), storageKey, saved);
+    writeTrackingStore(optionalTrackingStorage("sessionStorage"), sessionKey, saved);
   }
   keys.forEach((key) => {
     if (!current[key] && saved[key]) current[key] = saved[key];
@@ -197,7 +202,58 @@ function setFormMessage(form, message, isError = false) {
     (form.querySelector(".form__actions") || form).append(node);
   }
   node.textContent = message;
-  node.style.color = isError ? "#fecaca" : "rgba(255, 255, 255, 0.78)";
+  node.setAttribute("role", "status");
+  node.setAttribute("aria-live", "polite");
+  const lightForm = form.matches(".brand-seo-form") && !form.closest(".byd-seo-page");
+  node.style.color = lightForm
+    ? (isError ? "#b91c1c" : "#17633a")
+    : (isError ? "#fecaca" : "rgba(255, 255, 255, 0.78)");
+  return node;
+}
+
+const pendingLeadForms = new WeakSet();
+
+function formFeedbackCopy(form) {
+  const language = (form.dataset.lang || document.documentElement.lang).toLowerCase();
+  if (language.startsWith("ru")) return {
+    pending: "Отправляем...",
+    saved: "Заявка сохранена. Менеджер EVLine свяжется с вами.",
+    failed: "Не удалось подтвердить отправку заявки. Данные остались в форме. Свяжитесь с менеджером:",
+    telegram: "Написать в Telegram",
+    phone: "Позвонить",
+  };
+  if (language.startsWith("ro")) return {
+    pending: "Se trimite...",
+    saved: "Solicitarea a fost salvată. Un manager EVLine te va contacta.",
+    failed: "Nu am putut confirma trimiterea solicitării. Datele au rămas în formular. Contactează managerul:",
+    telegram: "Scrie pe Telegram",
+    phone: "Sună",
+  };
+  return {
+    pending: "Надсилаємо...",
+    saved: "Заявку збережено. Менеджер EVLine зв’яжеться з вами.",
+    failed: "Не вдалося підтвердити надсилання заявки. Дані залишилися у формі. Зв’яжіться з менеджером:",
+    telegram: "Написати в Telegram",
+    phone: "Зателефонувати",
+  };
+}
+
+function showLeadFallback(form, message, type) {
+  const copy = formFeedbackCopy(form);
+  const node = setFormMessage(form, copy.failed, true);
+  const telegram = document.createElement("a");
+  telegram.href = `https://t.me/${telegramUsernameForType(type)}?text=${encodeURIComponent(message)}`;
+  telegram.target = "_blank";
+  telegram.rel = "noopener";
+  telegram.textContent = copy.telegram;
+  const phone = document.createElement("a");
+  phone.href = type === "byd" ? "tel:+380630630304" : "tel:+380935251024";
+  phone.textContent = copy.phone;
+  for (const link of [telegram, phone]) {
+    link.style.color = "inherit";
+    link.style.textDecoration = "underline";
+  }
+  node.append(" ", telegram, " · ", phone);
 }
 
 function detectLeadType(payload = {}) {
@@ -237,10 +293,13 @@ function openTelegramMessage(message, username = "evline_support", ctaText = "")
     window.__EVLINE_PENDING_CONTACT_EVENTS__ = window.__EVLINE_PENDING_CONTACT_EVENTS__ || [];
     window.__EVLINE_PENDING_CONTACT_EVENTS__.push(contactEvent);
   }
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).catch(() => {});
-  }
-  window.open(`https://t.me/${username}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  try {
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  } catch {}
+  // With noopener a successful open can also return null. Never infer delivery from it.
+  try {
+    window.open(`https://t.me/${username}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  } catch {}
 }
 
 function isRussianPage() {
@@ -255,7 +314,7 @@ function prepareMetaLeadPayload(payload) {
     payload.meta_event_id = `evline-lead-${window.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`}`;
   }
   try {
-    const consent = JSON.parse(localStorage.getItem("evline_privacy_consent_v1") || "{}");
+    const consent = JSON.parse(optionalTrackingStorage("localStorage").getItem("evline_privacy_consent_v1") || "{}");
     payload.marketing_consent = consent.marketing === true ? 1 : 0;
     payload.marketing_consent_at = consent.decided_at || "";
     payload.consent_version = consent.version || "2026-07-30";
@@ -306,6 +365,7 @@ async function sendLeadToCrm(payload) {
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (pendingLeadForms.has(form)) return;
     const submitText = event.submitter?.textContent || form.querySelector("button[type='submit']")?.textContent || "";
     const data = Object.fromEntries(new FormData(form));
     const car = String(data.car || "").trim();
@@ -344,13 +404,32 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
       ...trackingData(form),
     };
 
+    const copy = formFeedbackCopy(form);
+    const button = form.querySelector("button[type='submit']");
+    const originalButtonText = button?.textContent || "";
+    pendingLeadForms.add(form);
+    form.setAttribute("aria-busy", "true");
+    if (button) {
+      button.disabled = true;
+      button.textContent = copy.pending;
+    }
+    setFormMessage(form, copy.pending);
+
     sendLeadToCrm(payload)
       .then(() => {
         form.reset();
-        setFormMessage(form, ru ? "Telegram открыт с готовым текстом. Менеджер получит ваш запрос." : "Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.");
+        setFormMessage(form, copy.saved);
       })
       .catch(() => {
-        setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
+        showLeadFallback(form, lines.join("\n"), type);
+      })
+      .finally(() => {
+        pendingLeadForms.delete(form);
+        form.removeAttribute("aria-busy");
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalButtonText;
+        }
       });
 
     openTelegramMessage(lines.join("\n"), telegramUsernameForType(type), submitText);
@@ -360,6 +439,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
 document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (pendingLeadForms.has(form)) return;
     const data = Object.fromEntries(new FormData(form));
     const car = String(data.car || "").trim();
     const vin = String(data.vin || "").trim().toUpperCase();
@@ -370,6 +450,7 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
     const type = "byd";
     const button = form.querySelector("button[type='submit']");
     const originalButtonText = button?.textContent || "";
+    const copy = formFeedbackCopy(form);
 
     const lines = ru
       ? [
@@ -408,31 +489,25 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
       payload.form_name = `SEO-форма BYD: ${topic}`;
     }
 
+    pendingLeadForms.add(form);
+    form.setAttribute("aria-busy", "true");
     if (button) {
       button.disabled = true;
-      button.textContent = ru ? "Сохраняем..." : "Зберігаємо...";
+      button.textContent = copy.pending;
     }
+    setFormMessage(form, copy.pending);
 
     sendLeadToCrm(payload)
       .then(() => {
         form.reset();
-        setFormMessage(
-          form,
-          ru
-            ? "Заявка сохранена в CRM. Telegram открыт с готовым текстом."
-            : "Заявку збережено в CRM. Telegram відкрито з готовим текстом.",
-        );
+        setFormMessage(form, copy.saved);
       })
       .catch(() => {
-        setFormMessage(
-          form,
-          ru
-            ? "Telegram открыт, но заявку не удалось сохранить в CRM."
-            : "Telegram відкрито, але заявку не вдалося зберегти в CRM.",
-          true,
-        );
+        showLeadFallback(form, lines.join("\n"), type);
       })
       .finally(() => {
+        pendingLeadForms.delete(form);
+        form.removeAttribute("aria-busy");
         if (button) {
           button.disabled = false;
           button.textContent = originalButtonText;
@@ -446,6 +521,7 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
 document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((form) => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (pendingLeadForms.has(form)) return;
     const button = form.querySelector("button[type='submit']");
     const originalButtonText = button?.textContent || "";
     const payload = {
@@ -455,17 +531,21 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
     payload.type = detectLeadType(payload);
 
     const ru = isRussianPage();
+    const copy = formFeedbackCopy(form);
 
+    pendingLeadForms.add(form);
+    form.setAttribute("aria-busy", "true");
     if (button) {
       button.disabled = true;
-      button.textContent = ru ? "Отправляем..." : "Відправляємо...";
+      button.textContent = copy.pending;
     }
+    setFormMessage(form, copy.pending);
 
     try {
       await sendLeadToCrm(payload);
 
       form.reset();
-      setFormMessage(form, ru ? "Заявка сохранена. Менеджер EVLine свяжется с вами." : "Заявку збережено. Менеджер EVLine зв'яжеться з вами.");
+      setFormMessage(form, copy.saved);
     } catch (error) {
       const topic = payload.topic || "Запит EVLine";
       const lines = ru
@@ -485,9 +565,11 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
           ];
       if (payload.part) lines.push(ru ? `Запчасть: ${payload.part}` : `Запчастина: ${payload.part}`);
       lines.push(ru ? `Что нужно: ${payload.message || "-"}` : `Що потрібно: ${payload.message || "-"}`);
-      setFormMessage(form, ru ? "Telegram открыт с готовым текстом." : "Telegram відкрито з готовим текстом.");
+      showLeadFallback(form, lines.join("\n"), payload.type);
       openTelegramMessage(lines.join("\n"), telegramUsernameForType(payload.type), originalButtonText);
     } finally {
+      pendingLeadForms.delete(form);
+      form.removeAttribute("aria-busy");
       if (button) {
         button.disabled = false;
         button.textContent = originalButtonText;
