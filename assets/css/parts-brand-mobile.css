@@ -1,0 +1,204 @@
+/* Loaded only by the advertising brand/model landings. Desktop stays unchanged. */
+.parts-brand-contactbar {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .parts-page.brand-seo-page {
+    padding-bottom: 80px;
+  }
+
+  .parts-page.brand-seo-page .floating-chat {
+    display: none;
+  }
+
+  .parts-page.brand-seo-page .parts-brand-contactbar {
+    display: flex;
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 60;
+    gap: 10px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid #dce5df;
+    background: #fff;
+  }
+
+  .parts-page.brand-seo-page .parts-brand-contactbar a {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border-radius: 8px;
+    background: #edf7f0;
+    color: #17633a;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .parts-page.brand-seo-page .parts-brand-contactbar a:last-child {
+    background: #3fa66a;
+    color: #fff;
+  }
+
+  .parts-page.brand-seo-page .topbar__inner {
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .parts-page.brand-seo-page .topbar__inner a[href^="mailto:"],
+  .parts-page.brand-seo-page .topbar__inner [aria-hidden="true"] {
+    display: none;
+  }
+
+  .parts-page.brand-seo-page .topbar__inner a[href^="tel:"] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .parts-page.brand-seo-page .site-header {
+    position: relative;
+    overflow: visible;
+  }
+
+  .parts-page.brand-seo-page .site-header__inner {
+    min-height: 60px;
+    gap: 12px;
+  }
+
+  .parts-page.brand-seo-page .brand img {
+    width: auto;
+    height: 40px;
+    max-width: 154px;
+  }
+
+  .parts-page.brand-seo-page .language-switch summary {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .parts-page.brand-seo-page .nav {
+    position: absolute;
+    inset: 100% 0 auto;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero {
+    padding: 18px 0 28px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero__grid {
+    width: calc(100% - 32px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero__grid > div:first-child {
+    display: contents;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-breadcrumb {
+    order: 0;
+    gap: 4px 6px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-kicker {
+    display: none;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero h1 {
+    order: 1;
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.12;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero .brand-seo-form {
+    order: 2;
+    width: 100%;
+    max-width: none;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .parts-page.brand-seo-page .brand-seo-form strong {
+    font-size: 19px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-form input,
+  .parts-page.brand-seo-page .brand-seo-form textarea {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-form button {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-form > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-lead {
+    order: 3;
+    margin: 4px 0 0;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-tags {
+    order: 4;
+    margin-top: 0;
+    gap: 6px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-tags span {
+    min-height: 30px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .parts-page.brand-seo-page .brand-seo-hero {
+    padding-top: 12px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero__grid {
+    gap: 8px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-hero .brand-seo-form {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .parts-page.brand-seo-page .brand-seo-form strong {
+    font-size: 18px;
+  }
+}
