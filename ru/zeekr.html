@@ -393,7 +393,7 @@ function buildMsg(f){
     +"Подскажите, пожалуйста, доступные обновления и стоимость.";
 }
 function openTelegramMsg(msg){
-  try{if(navigator.clipboard){navigator.clipboard.writeText(msg).catch(function(){});}}catch(_){} 
+  try{if(navigator.clipboard){navigator.clipboard.writeText(msg).catch(function(){});}}catch(_){}
   window.open('https://t.me/evline_tech?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 function trackingPayload(form){
