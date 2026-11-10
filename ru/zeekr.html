@@ -522,6 +522,7 @@ function showInlineLeadMessage(form, state, payload, message) {
     : state === 'pending'
       ? (ru ? 'Отправляем...' : 'Надсилаємо...')
       : (ru ? 'Не удалось подтвердить отправку заявки. Данные остались в форме. Свяжитесь с менеджером:' : 'Не вдалося підтвердити надсилання заявки. Дані залишилися у формі. Зв’яжіться з менеджером:');
+  if (state === 'saved' && window.EVLineLeadNextSteps) { try { window.EVLineLeadNextSteps.render(node, { lang: document.documentElement.lang, type: payload && payload.type }); } catch (_) {} }
   if (state !== 'failed') return;
 
   var telegram = document.createElement('a');
@@ -624,6 +625,7 @@ function orderService(name){
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script src="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1"></script>
+<script src="/assets/js/contact-tracking.js?v=20261110-next-steps-1"></script>
+<script src="/assets/js/lead-next-steps.js?v=20261110-next-steps-1" defer></script>
 </body>
 </html>

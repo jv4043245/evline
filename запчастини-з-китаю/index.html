@@ -37,7 +37,7 @@
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"Яка передоплата і як відбувається оплата?","acceptedAnswer":{"@type":"Answer","text":"Працюємо за передоплатою — розмір залежить від позиції та підтверджується до оплати разом із фінальною ціною. Надаємо рахунок і підтвердження замовлення. Оплата карткою або на рахунок ФОП/ТОВ."}},
+{"@type":"Question","name":"Яка передоплата і як відбувається оплата?","acceptedAnswer":{"@type":"Answer","text":"Сума передоплати й остаточна ціна фіксуються в рахунку та договорі ще до оплати — без доплат «потім». Оплата лише офіційно, на рахунок ФОП, якого можна перевірити у відкритих реєстрах: ви отримуєте рахунок, договір зі специфікацією та квитанцію. Гроші не «комусь на картку»."}},
 {"@type":"Question","name":"Що буде, якщо деталь не підійде?","acceptedAnswer":{"@type":"Answer","text":"Ми перевіряємо сумісність по VIN перед замовленням. Якщо помилка наша — вирішуємо за наш рахунок."}},
 {"@type":"Question","name":"Скільки реально їде запчастина?","acceptedAnswer":{"@type":"Answer","text":"Авіа — від 20 днів, море — 60 днів від моменту відправки. Плюс 1–4 дні на підбір та перевірку в Китаї. Авіа «під ключ» — від 20 днів; точний строк підтвердить менеджер."}},
 {"@type":"Question","name":"Розмитнення — це мій клопіт?","acceptedAnswer":{"@type":"Answer","text":"Ні. Ціна «під ключ» вже включає доставку та митні платежі. Сума фіксується до оплати й не змінюється."}},
@@ -305,7 +305,13 @@
     .trust-panel__grid{grid-template-columns:1fr 1fr}
   }
   @media(max-width:900px){
-    .hero .wrap{grid-template-columns:1fr}
+    .hero .wrap{grid-template-columns:1fr;gap:18px}
+    .hero .wrap>div:first-child{display:contents}
+    .hero h1{order:1;margin-bottom:0}
+    .hero .sub{order:2;margin-bottom:0}
+    .hero .leadbox{order:3}
+    .hero .chips{order:4}
+    .hero .mini-steps{order:5;margin-top:0}
     .hero h1{font-size:34px}
     .grid2,.grid3,.grid4{grid-template-columns:1fr}
     .cat .grid2{grid-template-columns:1fr 1fr}
@@ -331,11 +337,12 @@
   }
 </style>
 <link rel="stylesheet" href="/assets/css/footer-contacts.css?v=20260922-footer-contacts-2" data-footer-contacts-style>
+<link rel="stylesheet" href="/assets/css/parts-ad.css?v=20261110-funnel-release-1">
 </head>
-<body>
+<body class="parts-ad-page">
 
 <!-- ═══════════ ШАПКА ═══════════ -->
-<div class="topbar">📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a> · ✉️ <!--email_off--><a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a><!--/email_off--></div>
+<div class="topbar">📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a><span class="topbar-email"> · ✉️ <!--email_off--><a href="mailto:evlineukraine@gmail.com">evlineukraine@gmail.com</a><!--/email_off--></span></div>
 <header class="site">
   <div class="wrap">
     <a class="logo" href="../"><img src="../assets/logo.svg" alt="EVLine — запчастини з Китаю" style="height:52px;display:block"></a>
@@ -365,18 +372,18 @@
       <p class="sub">Оригінал та OEM від офіційних дилерів. Підбираємо по VIN — помилку виключено. Авіа від 20 днів · море 60 днів.</p>
       <div class="chips">
         <span class="chip">🔍 Перевірка <b>перед відправкою</b></span>
-        <span class="chip">🔩 Привеземо <b>навіть один болт</b></span>
+        <span class="chip">🚗 Кузов і оптика <b>після ДТП</b></span>
         <span class="chip">📦 З Китаєм <b>з 2021 року</b></span>
       </div>
       <div class="mini-steps">
         <div class="mini-step"><span class="n">1</span><b>Надсилаєте VIN</b>через форму або Telegram</div>
-        <div class="mini-step"><span class="n">2</span><b>До 30 хвилин</b>ціна «під ключ» і строк</div>
+        <div class="mini-step"><span class="n">2</span><b>Зазвичай до 30 хвилин</b>ціна «під ключ» і строк у робочий час</div>
         <div class="mini-step"><span class="n">3</span><b>Від 20 днів</b>деталь у вас, авіа з Китаю</div>
       </div>
     </div>
     <form class="leadbox" id="hero-form" data-form-name="Рекламна форма запчастини" onsubmit="return submitLead('hero-form')">
-      <h3>Дізнайтеся ціну та строк за 30 хвилин</h3>
-      <p class="small">Надішліть VIN — менеджер перевірить сумісність і надішле точну ціну з доставкою «під ключ»</p>
+      <h3>Дізнайтеся ціну та строк</h3>
+      <p class="small">Перевіримо VIN і порахуємо ціну з доставкою.</p>
       <label>VIN-код</label>
       <input name="vin" placeholder="LGXC74C44N0000000" maxlength="17">
       <label>Що потрібно?</label>
@@ -384,7 +391,8 @@
       <label>Телефон</label>
       <input name="contact" placeholder="+380…" required>
       <button class="btn" type="submit">Отримати ціну та строк</button>
-      <p class="privacy">Без спаму. Відповідаємо в робочий час до 30 хв.</p>
+      <p class="privacy">Зазвичай відповідаємо до 30 хвилин у робочий час.</p>
+      <p class="privacy" data-payment-note>Оплата — лише на рахунок ФОП. Ціну фіксуємо в рахунку та договорі до оплати.</p>
     </form>
   </div>
 </section>
@@ -404,11 +412,11 @@
 <section class="cat" style="padding:36px 0">
   <div class="wrap">
     <div class="center"><span class="tag">Що ми привеземо</span>
-      <h2>Будь-яка деталь — від витратників до кузова</h2>
+      <h2>Запчастини для кузова, оптики, електроніки та ходової</h2>
     </div>
     <div class="grid2" style="margin-top:16px">
-      <div class="card"><div class="ico">⚙️</div><div><h3>ТО та витратні</h3><p>Фільтри · щітки · колодки · свічки</p></div></div>
-      <div class="card"><div class="ico">🚗</div><div><h3>Кузов та оптика</h3><p>Бампери · крила · двері · фари · скло</p></div></div>
+      <div class="card"><div class="ico">🚗</div><div><h3>Кузовні деталі після ДТП</h3><p>Бампери · крила · двері · підсилювачі</p></div></div>
+      <div class="card"><div class="ico">💡</div><div><h3>Оптика та скло</h3><p>Фари · ліхтарі · скло · дзеркала</p></div></div>
       <div class="card"><div class="ico">⚡</div><div><h3>Електрика та електроніка</h3><p>АКБ · датчики · блоки керування · проводка</p></div></div>
       <div class="card"><div class="ico">🛞</div><div><h3>Підвіска та ходова</h3><p>Амортизатори · важелі · диски · стійки</p></div></div>
     </div>
@@ -476,7 +484,6 @@
     <div style="margin-top:34px;overflow-x:auto">
       <table class="price-table">
         <tr><th>Запчастина</th><th>Приклад авто</th><th>Ціна від</th></tr>
-        <tr><td>Гальмівні колодки (комплект)</td><td>BYD Han / Seal</td><td>від $45*</td></tr>
         <tr><td>Фара передня</td><td>Zeekr 001</td><td>від $350</td></tr>
         <tr><td>Бампер передній</td><td>BYD Song Plus</td><td>від $220</td></tr>
         <tr><td>Лобове скло</td><td>Li Auto L7</td><td>від $280</td></tr>
@@ -586,7 +593,7 @@
       <h2>Усе, що питають перед першим замовленням</h2>
     </div>
     <div style="margin-top:30px">
-      <details><summary>Яка передоплата і як відбувається оплата?</summary><div class="a">Працюємо за передоплатою — розмір залежить від позиції та підтверджується до оплати разом із фінальною ціною. Усі оплати — офіційно, на розрахунковий рахунок ФОП з багаторічною чистою історією: ви отримуєте рахунок, квитанцію та повний пакет документів. Гроші не «комусь на картку», а підприємцю, якого можна перевірити у відкритих реєстрах.</div></details>
+      <details><summary>Яка передоплата і як відбувається оплата?</summary><div class="a">Сума передоплати й остаточна ціна фіксуються в рахунку та договорі ще до оплати — без доплат «потім». Оплата лише офіційно, на рахунок ФОП, якого можна перевірити у відкритих реєстрах: ви отримуєте рахунок, договір зі специфікацією та квитанцію. Гроші не «комусь на картку».</div></details>
       <details><summary>Що буде, якщо деталь не підійде?</summary><div class="a">Ми перевіряємо сумісність по VIN перед замовленням, тому таких випадків майже не буває. Якщо помилка наша — вирішуємо за наш рахунок. Якщо ви замовили без перевірки VIN (на свій ризик) — допоможемо перепродати або підібрати правильну.</div></details>
       <details><summary>Скільки реально їде запчастина?</summary><div class="a">Авіа — від 20 днів, море — 60 днів від моменту відправки. Плюс 1–4 дні на підбір, погодження та перевірку в Китаї. Тобто авіа «під ключ» — від 20 днів; точний строк підтвердить менеджер.</div></details>
       <details><summary>Чи можна відстежити замовлення?</summary><div class="a">Так. Після відправки ви отримуєте трек-номер, а менеджер повідомляє статуси на ключових етапах: викуп → перевірка → відправка → митниця → доставка по Україні.</div></details>
@@ -598,28 +605,6 @@
   </div>
 </section>
 
-<!-- ═══════════ 8. КРОС-СЕЛЛ: програмування BYD ═══════════ -->
-<section class="byd" id="byd">
-  <div class="wrap">
-    <div class="center"><span class="tag" style="background:rgba(127,214,164,.15);color:#7fd6a4">Додатково</span>
-      <h2>Не всі проблеми вирішуються запчастинами</h2>
-      <p class="lead" style="margin:0 auto">Часто причина — у програмному забезпеченні автомобіля</p>
-    </div>
-    <div class="warn">⚠️ За нашою статистикою діагностик, до 90% авто в Україні їздять без актуальних оновлень блоків</div>
-    <div class="grid4">
-      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B4%D1%96%D0%B0%D0%B3%D0%BD%D0%BE%D1%81%D1%82%D0%B8%D0%BA%D0%B0%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%20BYD.%20%D0%9F%D1%96%D0%B4%D0%BA%D0%B0%D0%B6%D1%96%D1%82%D1%8C%2C%20%D0%B1%D1%83%D0%B4%D1%8C%20%D0%BB%D0%B0%D1%81%D0%BA%D0%B0%2C%20%D1%89%D0%BE%20%D0%BF%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%BE%20%D0%B4%D0%BB%D1%8F%20%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D1%96%D1%80%D0%BA%D0%B8%20%D0%B0%D0%B2%D1%82%D0%BE%3F" target="_blank" rel="noopener"><h3>🔍 Діагностика систем</h3><div class="pr">50$</div><p>Перевіряємо всі системи авто</p></a>
-      <a class="card" style="border-color:var(--green)" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BE%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F%20%D0%B1%D0%BB%D0%BE%D0%BA%D1%96%D0%B2%20BYD.%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B4%D1%96%D0%B7%D0%BD%D0%B0%D1%82%D0%B8%D1%81%D1%8F%2C%20%D1%8F%D0%BA%D1%96%20%D0%BE%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F%20%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D1%96%20%D0%B4%D0%BB%D1%8F%20%D0%BC%D0%BE%D0%B3%D0%BE%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚡ Оновлення блоків</h3><div class="pr">від 250$</div><p>Актуальні версії систем — найчастіше замовляють</p></a>
-      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F%20BYD.%20%D0%9F%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D1%96%D1%8F%20%D0%BF%D0%BE%20%D0%BD%D0%B0%D0%BB%D0%B0%D1%88%D1%82%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8E%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚙️ Програмування</h3><div class="pr">від 50$</div><p>Налаштування під вас</p></a>
-      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BA%D0%B0%D0%BB%D1%96%D0%B1%D1%80%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F%20BYD.%20%D0%9F%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D1%96%D1%8F%20%D0%BF%D0%BE%20%D1%81%D1%82%D0%B0%D0%B1%D1%96%D0%BB%D1%8C%D0%BD%D1%96%D0%B9%20%D1%80%D0%BE%D0%B1%D0%BE%D1%82%D1%96%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC." target="_blank" rel="noopener"><h3>🧠 Калібрування</h3><div class="pr">від 100$</div><p>Стабільна робота систем</p></a>
-    </div>
-    <div class="center" style="margin-top:30px">
-      <a class="btn" href="/byd">Перевірити своє авто →</a>
-      <p style="margin-top:16px">Програмування BYD: <a href="tel:+380630630304" style="color:inherit;white-space:nowrap;text-decoration:underline">+38 (063) 063-03-04</a></p>
-      <p class="btn-note" style="color:#9aa6a0">Якщо причина не в запчастині — ми знайдемо її</p>
-    </div>
-  </div>
-</section>
-
 <!-- ═══════════ 9. ФІНАЛЬНА ФОРМА ═══════════ -->
 <section class="final" id="vin-form">
   <div class="wrap">
@@ -627,7 +612,7 @@
       <div>
         <span class="tag">Останній крок</span>
         <h2>Надішліть VIN — далі все зробимо ми</h2>
-        <p class="lead">Перевіримо сумісність, порахуємо ціну «під ключ» і строк доставки. Відповідаємо в робочий час до 30 хвилин.</p>
+        <p class="lead">Перевіримо сумісність, порахуємо ціну «під ключ» і строк доставки. Зазвичай відповідаємо в робочий час до 30 хвилин.</p>
         <div class="contact-list" style="margin-top:22px">
           📞 <a href="tel:+380935251024">+38 (093) 525-10-24</a><br>
           ✈️ <a href="https://t.me/evline_support" target="_blank">Telegram-чат з менеджером</a><br>
@@ -650,6 +635,28 @@
         <button class="btn" type="submit">Надіслати на підбір</button>
         <p class="privacy">Надсилаючи форму, ви погоджуєтесь на обробку даних</p>
       </form>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 8. КРОС-СЕЛЛ: програмування BYD ═══════════ -->
+<section class="byd" id="byd">
+  <div class="wrap">
+    <div class="center"><span class="tag" style="background:rgba(127,214,164,.15);color:#7fd6a4">Додатково</span>
+      <h2>Не всі проблеми вирішуються запчастинами</h2>
+      <p class="lead" style="margin:0 auto">Часто причина — у програмному забезпеченні автомобіля</p>
+    </div>
+    <div class="warn">⚠️ За нашою статистикою діагностик, до 90% авто в Україні їздять без актуальних оновлень блоків</div>
+    <div class="grid4">
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B4%D1%96%D0%B0%D0%B3%D0%BD%D0%BE%D1%81%D1%82%D0%B8%D0%BA%D0%B0%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%20BYD.%20%D0%9F%D1%96%D0%B4%D0%BA%D0%B0%D0%B6%D1%96%D1%82%D1%8C%2C%20%D0%B1%D1%83%D0%B4%D1%8C%20%D0%BB%D0%B0%D1%81%D0%BA%D0%B0%2C%20%D1%89%D0%BE%20%D0%BF%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%BE%20%D0%B4%D0%BB%D1%8F%20%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D1%96%D1%80%D0%BA%D0%B8%20%D0%B0%D0%B2%D1%82%D0%BE%3F" target="_blank" rel="noopener"><h3>🔍 Діагностика систем</h3><div class="pr">50$</div><p>Перевіряємо всі системи авто</p></a>
+      <a class="card" style="border-color:var(--green)" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BE%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F%20%D0%B1%D0%BB%D0%BE%D0%BA%D1%96%D0%B2%20BYD.%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B4%D1%96%D0%B7%D0%BD%D0%B0%D1%82%D0%B8%D1%81%D1%8F%2C%20%D1%8F%D0%BA%D1%96%20%D0%BE%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F%20%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%BD%D1%96%20%D0%B4%D0%BB%D1%8F%20%D0%BC%D0%BE%D0%B3%D0%BE%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚡ Оновлення блоків</h3><div class="pr">від 250$</div><p>Актуальні версії систем — найчастіше замовляють</p></a>
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F%20BYD.%20%D0%9F%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D1%96%D1%8F%20%D0%BF%D0%BE%20%D0%BD%D0%B0%D0%BB%D0%B0%D1%88%D1%82%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8E%20%D0%B0%D0%B2%D1%82%D0%BE." target="_blank" rel="noopener"><h3>⚙️ Програмування</h3><div class="pr">від 50$</div><p>Налаштування під вас</p></a>
+      <a class="card" href="https://t.me/evline_tech?text=%D0%94%D0%BE%D0%B1%D1%80%D0%B8%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C!%20%D0%A6%D1%96%D0%BA%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%BA%D0%B0%D0%BB%D1%96%D0%B1%D1%80%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F%20BYD.%20%D0%9F%D0%BE%D1%82%D1%80%D1%96%D0%B1%D0%BD%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%81%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%86%D1%96%D1%8F%20%D0%BF%D0%BE%20%D1%81%D1%82%D0%B0%D0%B1%D1%96%D0%BB%D1%8C%D0%BD%D1%96%D0%B9%20%D1%80%D0%BE%D0%B1%D0%BE%D1%82%D1%96%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC." target="_blank" rel="noopener"><h3>🧠 Калібрування</h3><div class="pr">від 100$</div><p>Стабільна робота систем</p></a>
+    </div>
+    <div class="center" style="margin-top:30px">
+      <a class="btn" href="/byd">Перевірити своє авто →</a>
+      <p style="margin-top:16px">Програмування BYD: <a href="tel:+380630630304" style="color:inherit;white-space:nowrap;text-decoration:underline">+38 (063) 063-03-04</a></p>
+      <p class="btn-note" style="color:#9aa6a0">Якщо причина не в запчастині — ми знайдемо її</p>
     </div>
   </div>
 </section>
@@ -848,6 +855,7 @@ function showInlineLeadMessage(form, state, payload, message) {
     : state === 'pending'
       ? (ru ? 'Отправляем...' : 'Надсилаємо...')
       : (ru ? 'Не удалось подтвердить отправку заявки. Данные остались в форме. Свяжитесь с менеджером:' : 'Не вдалося підтвердити надсилання заявки. Дані залишилися у формі. Зв’яжіться з менеджером:');
+  if (state === 'saved' && window.EVLineLeadNextSteps) { try { window.EVLineLeadNextSteps.render(node, { lang: document.documentElement.lang, type: payload && payload.type }); } catch (_) {} }
   if (state !== 'failed') return;
   var tech = payload.type === 'byd';
   var telegram = document.createElement('a');
@@ -955,6 +963,7 @@ function submitLead(formId){
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script src="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1"></script>
+<script src="/assets/js/contact-tracking.js?v=20261110-next-steps-1"></script>
+<script src="/assets/js/lead-next-steps.js?v=20261110-next-steps-1" defer></script>
 </body>
 </html>

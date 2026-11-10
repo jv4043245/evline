@@ -1,0 +1,47 @@
+/* Compact mobile layout for the two advertising landings only. */
+.parts-ad-contactbar { display:none; }
+@media (max-width:700px) {
+  .parts-ad-page .topbar { padding:6px 12px; font-size:13px; }
+  .parts-ad-page .topbar-email { display:none; }
+  .parts-ad-page .language-switch summary { width:44px; min-width:44px; height:44px; min-height:44px; }
+  .parts-ad-page header.site .wrap { gap:4px; padding-top:6px; padding-bottom:6px; }
+  .parts-ad-page header.site .logo img { height:38px!important; max-width:160px; }
+  .parts-ad-page nav.main { flex-wrap:wrap; justify-content:space-between; gap:0 8px; overflow:visible; padding-bottom:0; }
+  .parts-ad-page nav.main a { display:inline-flex; align-items:center; min-height:44px; margin:0; font-size:11px; letter-spacing:0; }
+  .parts-ad-page .hero { padding:20px 0 28px; }
+  .parts-ad-page .hero .wrap { gap:12px; }
+  .parts-ad-page .hero h1 { font-size:30px; letter-spacing:0; }
+  .parts-ad-page .hero .sub { order:4; font-size:16px; }
+  .parts-ad-page .hero .chips { order:5; }
+  .parts-ad-page .hero .mini-steps { order:6; }
+  .parts-ad-page .leadbox { padding:16px; }
+  .parts-ad-page .leadbox label { margin-top:8px; }
+  .parts-ad-page .leadbox input { min-height:44px; font-size:16px; }
+  .parts-ad-page .leadbox .btn { min-height:44px; margin-top:10px; padding:10px 16px; }
+  .parts-ad-page .leadbox .privacy { margin-top:6px; }
+
+  .parts-ad-page.parts-page .topbar { padding:0; }
+  .parts-ad-page.parts-page .topbar__inner { min-height:32px; padding:6px 0; }
+  .parts-ad-page.parts-page .site-header { position:relative; overflow:visible; }
+  .parts-ad-page.parts-page .site-header__inner { min-height:64px; gap:12px; }
+  .parts-ad-page.parts-page .brand img { width:auto; height:44px; }
+  .parts-ad-page.parts-page .nav { position:absolute; inset:100% 0 auto; }
+  .parts-ad-page.parts-page main { display:flex; flex-direction:column; }
+  .parts-ad-page.parts-page .origin-hero,
+  .parts-ad-page.parts-page .origin-hero__inner { display:contents; }
+  .parts-ad-page.parts-page .origin-hero__head { order:-2; padding:20px 16px 0; margin:0; }
+  .parts-ad-page.parts-page .origin-hero__head h1 { font-size:30px; line-height:1.15; letter-spacing:0; }
+  .parts-ad-page.parts-page .origin-hero__head p { margin-top:8px; font-size:16px; }
+  .parts-ad-page.parts-page .quick-request { order:-1; padding:12px 0 20px; background:#fff; }
+  .parts-ad-page.parts-page .parts-request-intro { margin-bottom:12px; padding:0; border:0; border-radius:0; box-shadow:none; }
+  .parts-ad-page.parts-page .parts-request-intro strong { font-size:19px; }
+  .parts-ad-page.parts-page .quick-request__row { gap:8px; }
+  .parts-ad-page.parts-page .quick-request input { min-height:44px; font-size:16px; }
+  .parts-ad-page.parts-page .quick-request__button { min-height:44px; margin-top:8px; font-size:16px; }
+  .parts-ad-page.parts-page .origin-category-grid { margin:12px 16px 24px; }
+  .parts-ad-page.parts-page { padding-bottom:80px; }
+  .parts-ad-page.parts-page .floating-chat { display:none; }
+  .parts-ad-page .parts-ad-contactbar { display:flex; position:fixed; inset:auto 0 0; z-index:60; gap:10px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid #dce5df; background:#fff; }
+  .parts-ad-contactbar a { display:flex; flex:1; min-height:44px; align-items:center; justify-content:center; border-radius:8px; background:#edf7f0; color:#17633a; font-size:15px; font-weight:700; text-decoration:none; }
+  .parts-ad-contactbar a:last-child { background:#3fa66a; color:#fff; }
+}

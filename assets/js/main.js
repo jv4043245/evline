@@ -22,16 +22,25 @@ function ensureCoreNavItems() {
 function ensureMetaTracking() {
   if (window.__EVLINE_META_TRACKING_LOADED__ || document.querySelector('script[data-evline-meta-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/meta-tracking.js?v=20260730-consent-1";
+  script.src = "/assets/js/meta-tracking.js?v=20261110-compact-consent-1";
   script.async = false;
   script.dataset.evlineMetaTracking = "";
+  document.head.append(script);
+}
+
+function ensureLeadNextSteps() {
+  if (window.EVLineLeadNextSteps || document.querySelector('script[data-evline-lead-next-steps]')) return;
+  const script = document.createElement("script");
+  script.src = "/assets/js/lead-next-steps.js?v=20261110-next-steps-1";
+  script.defer = true;
+  script.dataset.evlineLeadNextSteps = "";
   document.head.append(script);
 }
 
 function ensureContactTracking() {
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1";
+  script.src = "/assets/js/contact-tracking.js?v=20261110-next-steps-1";
   script.async = false;
   script.dataset.evlineContactTracking = "";
   document.head.append(script);
@@ -39,6 +48,7 @@ function ensureContactTracking() {
 
 ensureMetaTracking();
 ensureContactTracking();
+ensureLeadNextSteps();
 
 ensureCoreNavItems();
 
@@ -282,6 +292,17 @@ function formFeedbackCopy(form) {
   };
 }
 
+function showLeadSaved(form, type) {
+  const node = setFormMessage(form, formFeedbackCopy(form).saved);
+  const language = (form.dataset.lang || document.documentElement.lang || "").toLowerCase();
+  if (language.startsWith("ro") || !window.EVLineLeadNextSteps) return node;
+  try {
+    const intent = form.dataset.leadIntent || type;
+    window.EVLineLeadNextSteps.render(node, { lang: language, type: intent });
+  } catch {}
+  return node;
+}
+
 function showLeadFallback(form, message, type) {
   const copy = formFeedbackCopy(form);
   const node = setFormMessage(form, copy.failed, true);
@@ -402,6 +423,20 @@ async function sendLeadToCrm(payload, form) {
   return result;
 }
 
+// Trust note under parts request forms: how payment works.
+document.querySelectorAll("form[data-telegram-parts-form]").forEach((form) => {
+  if (form.querySelector("[data-payment-note]")) return;
+  const language = (form.dataset.lang || document.documentElement.lang || "").toLowerCase();
+  if (language.startsWith("ro")) return;
+  const note = document.createElement("p");
+  note.dataset.paymentNote = "";
+  note.textContent = language.startsWith("ru")
+    ? "Оплата — только на счет ФОП. Цену фиксируем в счете и договоре до оплаты."
+    : "Оплата — лише на рахунок ФОП. Ціну фіксуємо в рахунку та договорі до оплати.";
+  note.style.cssText = "margin:4px 0 0;font-size:12.5px;line-height:1.4;opacity:.75;grid-column:1/-1";
+  form.append(note);
+});
+
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -458,7 +493,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
     sendLeadToCrm(payload, form)
       .then(() => {
         form.reset();
-        setFormMessage(form, copy.saved);
+        showLeadSaved(form, type);
       })
       .catch(() => {
         showLeadFallback(form, lines.join("\n"), type);
@@ -540,7 +575,7 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
     sendLeadToCrm(payload, form)
       .then(() => {
         form.reset();
-        setFormMessage(form, copy.saved);
+        showLeadSaved(form, type);
       })
       .catch(() => {
         showLeadFallback(form, lines.join("\n"), type);
@@ -585,7 +620,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
       await sendLeadToCrm(payload, form);
 
       form.reset();
-      setFormMessage(form, copy.saved);
+      showLeadSaved(form, payload.type);
     } catch (error) {
       const topic = payload.topic || "Запит EVLine";
       const lines = ru
