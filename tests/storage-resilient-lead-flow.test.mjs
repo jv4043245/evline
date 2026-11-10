@@ -51,7 +51,7 @@ for (const surface of ['main-parts', 'main-lead', 'index.html', 'ru/index.html']
       // Every request is stubbed. External scripts are never loaded in outside-only mode.
       window.fetch = async (endpoint, options) => {
         requests.push({ endpoint, method: options.method, payload: JSON.parse(options.body) });
-        return { ok: true, json: async () => ({ ok: true }) };
+        return { ok: true, json: async () => ({ ok: true, lead_id: "synthetic-existing-test" }) };
       };
       window.open = href => { opened.push(href); return null; };
       window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });

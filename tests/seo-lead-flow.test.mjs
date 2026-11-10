@@ -19,7 +19,7 @@ for (const pathname of pages) {
       const opened = [];
       window.fetch = async (endpoint, options) => {
         requests.push({ endpoint, payload: JSON.parse(options.body), method: options.method });
-        return { ok: success, json: async () => ({ ok: success }) };
+        return { ok: success, json: async () => ({ ok: success, lead_id: "synthetic-existing-test" }) };
       };
       window.open = href => { opened.push(href); return null; };
       window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });

@@ -31,7 +31,7 @@ function ensureMetaTracking() {
 function ensureContactTracking() {
   if (window.__EVLINE_CONTACT_TRACKING_LOADED__ || document.querySelector('script[data-evline-contact-tracking]')) return;
   const script = document.createElement("script");
-  script.src = "/assets/js/contact-tracking.js?v=20261106-lead-resilience-1";
+  script.src = "/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1";
   script.async = false;
   script.dataset.evlineContactTracking = "";
   document.head.append(script);
@@ -212,6 +212,50 @@ function setFormMessage(form, message, isError = false) {
 }
 
 const pendingLeadForms = new WeakSet();
+const leadAttempts = new WeakMap();
+
+// A timed-out request may already be saved. Never retry automatically; reuse
+// the event ID for an explicit retry of unchanged fields in this page session.
+function prepareLeadAttempt(form, payload) {
+  const fingerprint = form ? JSON.stringify(Array.from(new FormData(form))) : "";
+  const previous = form && leadAttempts.get(form);
+  if (previous?.fingerprint === fingerprint) payload.meta_event_id = previous.eventId;
+  payload = prepareMetaLeadPayload(payload);
+  if (form) leadAttempts.set(form, { fingerprint, eventId: payload.meta_event_id });
+  return payload;
+}
+
+async function requestLeadConfirmation(payload) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  let timer;
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(leadEndpoint(), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true,
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        if (!response.ok) throw new Error("lead_not_confirmed");
+        const result = await response.json();
+        if (result?.ok !== true || typeof result.lead_id !== "string" || !result.lead_id.trim()) {
+          throw new Error("lead_not_confirmed");
+        }
+        return result;
+      })(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error("lead_confirmation_timeout"));
+          controller?.abort();
+        }, 15000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function formFeedbackCopy(form) {
   const language = (form.dataset.lang || document.documentElement.lang).toLowerCase();
@@ -334,8 +378,8 @@ function trackMetaLead(payload) {
   window.__EVLINE_PENDING_META_LEADS__.push(payload);
 }
 
-async function sendLeadToCrm(payload) {
-  payload = prepareMetaLeadPayload(payload);
+async function sendLeadToCrm(payload, form) {
+  payload = prepareLeadAttempt(form, payload);
   const eventPayload = {
     event: "evline_lead_submit",
     lead_type: payload.type || detectLeadType(payload),
@@ -349,17 +393,13 @@ async function sendLeadToCrm(payload) {
     has_gbraid: Boolean(payload.gbraid),
     has_wbraid: Boolean(payload.wbraid),
   };
-  const response = await fetch(leadEndpoint(), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-    keepalive: true,
-  });
-  if (!response.ok) throw new Error("Не вдалося зберегти заявку");
-  if (window.dataLayer) window.dataLayer.push(eventPayload);
-  if (typeof window.gtag === "function") window.gtag("event", "generate_lead", eventPayload);
-  trackMetaLead(payload);
-  return response.json().catch(() => ({}));
+  const result = await requestLeadConfirmation(payload);
+  if (form) leadAttempts.delete(form);
+  // Analytics failure must not hide a confirmed CRM save.
+  try { if (window.dataLayer) window.dataLayer.push(eventPayload); } catch {}
+  try { if (typeof window.gtag === "function") window.gtag("event", "generate_lead", eventPayload); } catch {}
+  try { trackMetaLead(payload); } catch {}
+  return result;
 }
 
 document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
@@ -415,7 +455,7 @@ document.querySelectorAll("[data-telegram-parts-form]").forEach((form) => {
     }
     setFormMessage(form, copy.pending);
 
-    sendLeadToCrm(payload)
+    sendLeadToCrm(payload, form)
       .then(() => {
         form.reset();
         setFormMessage(form, copy.saved);
@@ -497,7 +537,7 @@ document.querySelectorAll("[data-byd-seo-form]").forEach((form) => {
     }
     setFormMessage(form, copy.pending);
 
-    sendLeadToCrm(payload)
+    sendLeadToCrm(payload, form)
       .then(() => {
         form.reset();
         setFormMessage(form, copy.saved);
@@ -542,7 +582,7 @@ document.querySelectorAll("[data-lead-form], [data-telegram-form]").forEach((for
     setFormMessage(form, copy.pending);
 
     try {
-      await sendLeadToCrm(payload);
+      await sendLeadToCrm(payload, form);
 
       form.reset();
       setFormMessage(form, copy.saved);

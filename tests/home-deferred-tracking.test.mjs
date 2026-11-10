@@ -31,7 +31,7 @@ for (const page of ['index.html', 'ru/index.html']) {
             window.document.addEventListener('DOMContentLoaded', () => { window.domReadySeen = true; });
             window.fetch = async (endpoint, options) => {
               requests.push({ endpoint, payload: JSON.parse(options.body) });
-              return { ok: success, json: async () => ({ ok: success }) };
+              return { ok: success, json: async () => ({ ok: success, lead_id: "synthetic-existing-test" }) };
             };
             window.open = href => { opened.push(href); return null; };
             window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
