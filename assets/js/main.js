@@ -297,7 +297,8 @@ function showLeadSaved(form, type) {
   const language = (form.dataset.lang || document.documentElement.lang || "").toLowerCase();
   if (language.startsWith("ro") || !window.EVLineLeadNextSteps) return node;
   try {
-    window.EVLineLeadNextSteps.render(node, { lang: language, type });
+    const intent = form.dataset.leadIntent || type;
+    window.EVLineLeadNextSteps.render(node, { lang: language, type: intent });
   } catch {}
   return node;
 }
@@ -423,7 +424,7 @@ async function sendLeadToCrm(payload, form) {
 }
 
 // Trust note under parts request forms: how payment works.
-document.querySelectorAll("form.brand-seo-form, form[data-telegram-parts-form]").forEach((form) => {
+document.querySelectorAll("form[data-telegram-parts-form]").forEach((form) => {
   if (form.querySelector("[data-payment-note]")) return;
   const language = (form.dataset.lang || document.documentElement.lang || "").toLowerCase();
   if (language.startsWith("ro")) return;

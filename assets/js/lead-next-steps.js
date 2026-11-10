@@ -1,6 +1,6 @@
 // Text shown after a lead is confirmed by the CRM: what happens next and when.
-// Working hours: Mon–Fri 10:00–18:00 Kyiv time. Outside them we promise
-// the next working day, but say we may answer earlier.
+// Working hours: Mon–Fri 10:00–18:00 Kyiv time. Reply times are an estimate,
+// not a guarantee of the manager's availability.
 (function () {
   "use strict";
 
@@ -38,18 +38,26 @@
 
   var COPY = {
     uk: {
-      open: "Заявку отримали ✅ Менеджер зв’яжеться з вами протягом 30 хвилин.",
-      closed: "Заявку отримали ✅ Зараз неробочий час (Пн–Пт 10:00–18:00). Постараємося відповісти раніше, але не пізніше ніж {when} після 10:00.",
+      open: "Заявку отримали. Зазвичай відповідаємо протягом 30 хвилин у робочий час (Пн–Пт 10:00–18:00).",
+      closed: "Заявку отримали. Зараз неробочий час (Пн–Пт 10:00–18:00). Менеджер зможе відповісти {when} після 10:00.",
       when: { today: "сьогодні", tomorrow: "завтра", monday: "у понеділок" },
-      photo: "Щоб пришвидшити підбір, надішліть фото деталі або техпаспорта в Telegram:",
-      telegram: "Надіслати фото в Telegram",
+      followup: {
+        parts: ["Для підбору можете надіслати фото деталі або її маркування.", "Надіслати фото в Telegram"],
+        byd: ["Можете надіслати VIN, фото помилки або версію програмного забезпечення.", "Написати майстру в Telegram"],
+        sto: ["Менеджер уточнить ваші потреби та умови співпраці.", "Написати менеджеру в Telegram"],
+        general: ["Додаткові подробиці звернення можна надіслати менеджеру.", "Написати менеджеру в Telegram"],
+      },
     },
     ru: {
-      open: "Заявку получили ✅ Менеджер свяжется с вами в течение 30 минут.",
-      closed: "Заявку получили ✅ Сейчас нерабочее время (Пн–Пт 10:00–18:00). Постараемся ответить раньше, но не позже чем {when} после 10:00.",
+      open: "Заявку получили. Обычно отвечаем в течение 30 минут в рабочее время (Пн–Пт 10:00–18:00).",
+      closed: "Заявку получили. Сейчас нерабочее время (Пн–Пт 10:00–18:00). Менеджер сможет ответить {when} после 10:00.",
       when: { today: "сегодня", tomorrow: "завтра", monday: "в понедельник" },
-      photo: "Чтобы ускорить подбор, отправьте фото детали или техпаспорта в Telegram:",
-      telegram: "Отправить фото в Telegram",
+      followup: {
+        parts: ["Для подбора можете отправить фото детали или её маркировки.", "Отправить фото в Telegram"],
+        byd: ["Можете отправить VIN, фото ошибки или версию программного обеспечения.", "Написать мастеру в Telegram"],
+        sto: ["Менеджер уточнит ваши потребности и условия сотрудничества.", "Написать менеджеру в Telegram"],
+        general: ["Дополнительные подробности обращения можно отправить менеджеру.", "Написать менеджеру в Telegram"],
+      },
     },
   };
 
@@ -68,14 +76,16 @@
   function render(node, options) {
     options = options || {};
     var copy = COPY[language(options.lang)];
-    var username = options.type === "byd" ? "evline_tech" : "evline_support";
-    node.textContent = text(options.lang, options.date) + " " + copy.photo + " ";
+    var type = Object.hasOwn(copy.followup, options.type) ? options.type : "general";
+    var followup = copy.followup[type];
+    var username = type === "byd" ? "evline_tech" : "evline_support";
+    node.textContent = text(options.lang, options.date) + " " + followup[0] + " ";
     var link = document.createElement("a");
     link.href = "https://t.me/" + username;
     link.target = "_blank";
     link.rel = "noopener";
-    link.textContent = copy.telegram;
-    link.dataset.contactIntent = options.type === "byd" ? "byd" : "parts";
+    link.textContent = followup[1];
+    link.dataset.contactIntent = type;
     link.dataset.contactId = "lead-saved-telegram";
     link.style.cssText = "color:inherit;text-decoration:underline;font-weight:700;display:inline-block;padding:4px 0";
     node.appendChild(link);
