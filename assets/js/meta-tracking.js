@@ -285,7 +285,7 @@
       ".evline-consent__actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}.evline-consent button{min-height:42px;padding:0 16px;border:1px solid #3fa66a;border-radius:999px;background:#3fa66a;color:#fff;font-weight:750;cursor:pointer}" +
       ".evline-consent button[data-consent=\"necessary\"]{background:transparent;color:#fff;border-color:#6f7c75}" +
       ".evline-consent-settings{position:fixed;z-index:2147482000;right:112px;bottom:16px;padding:8px 12px;border:1px solid #68746e;border-radius:999px;background:#111513;color:#fff;font:12px/1.2 -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;cursor:pointer}" +
-      "@media(max-width:560px){.evline-consent{left:10px;right:10px;bottom:10px}.evline-consent__actions{display:grid}.evline-consent button{width:100%}.evline-consent-settings{right:88px;bottom:18px}}";
+      "@media(max-width:560px){.evline-consent{left:8px;right:8px;bottom:8px;padding:12px 14px;border-radius:14px;font-size:12.5px;line-height:1.4}.evline-consent h2{font-size:14.5px;margin-bottom:4px}.evline-consent__actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.evline-consent button{width:100%;min-height:38px;padding:0 10px;font-size:13px}.evline-consent-settings{display:none}}";
     document.head.appendChild(style);
   }
 

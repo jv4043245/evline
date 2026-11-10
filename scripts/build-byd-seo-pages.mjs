@@ -882,7 +882,7 @@ function pageHtml(page, lang) {
     <meta name="twitter:image" content="${siteUrl}/assets/${page.image}">
     <link rel="stylesheet" href="${rel}assets/css/styles.css?v=layout-4">
     <link rel="stylesheet" href="${rel}assets/css/parts-clean.css?v=byd-seo-1">
-    <script src="${rel}assets/js/main.js?v=20261110-lead-confirmation-1" defer></script>
+    <script src="${rel}assets/js/main.js?v=20261110-next-steps-1" defer></script>
     <script type="application/ld+json">${jsonLd(page, lang)}</script>
   </head>
   <body class="parts-page brand-seo-page byd-seo-page">

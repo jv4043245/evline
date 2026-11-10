@@ -12,7 +12,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1">
+<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20261110-next-steps-1">
 <title>Запчасти для китайских авто из Китая | EVLine Украина</title>
 <meta name="description" content="Оригинальные и OEM запчасти для китайских авто: BYD, ZEEKR, Xiaomi и другие. Подбор по VIN, проверка в Китае, доставка в Украину.">
 <link rel="canonical" href="https://evline.com.ua/ru/">
@@ -37,7 +37,7 @@
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","inLanguage":"ru-UA","mainEntity":[
-{"@type":"Question","name":"Какая предоплата и как происходит оплата?","acceptedAnswer":{"@type":"Answer","text":"Работаем по предоплате — размер зависит от позиции и подтверждается до оплаты вместе с финальной ценой. Все оплаты официально: на расчетный счет ФОП, с квитанцией и пакетом документов."}},
+{"@type":"Question","name":"Какая предоплата и как происходит оплата?","acceptedAnswer":{"@type":"Answer","text":"Сумма предоплаты и окончательная цена фиксируются в счете и договоре еще до оплаты — без доплат «потом». Оплата только официально, на счет ФОП, которого можно проверить в открытых реестрах: вы получаете счет, договор со спецификацией и квитанцию. Деньги не «кому-то на карту»."}},
 {"@type":"Question","name":"Что будет, если деталь не подойдет?","acceptedAnswer":{"@type":"Answer","text":"Мы проверяем совместимость по VIN перед заказом. Если ошибка наша — решаем за наш счет."}},
 {"@type":"Question","name":"Сколько реально едет запчасть?","acceptedAnswer":{"@type":"Answer","text":"Авиа — от 20 дней, море — от 60 дней с момента отправки. Плюс 1–4 дня на подбор и проверку в Китае. Авиа «под ключ» занимает от 20 дней; точный срок подтвердит менеджер."}},
 {"@type":"Question","name":"Растаможка — это моя забота?","acceptedAnswer":{"@type":"Answer","text":"Нет. Цена «под ключ» уже включает доставку и таможенные платежи. Сумма фиксируется до оплаты и не меняется."}},
@@ -547,6 +547,7 @@ footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outlin
       <input id="hero-need" name="need" placeholder="Напр.: передний бампер, левая фара…">
       <button class="btn" type="submit">Получить цену и срок</button>
       <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
+      <p class="privacy" data-payment-note>Оплата — только на счет ФОП. Цену фиксируем в счете и договоре до оплаты.</p>
     </form>
   </div>
 </section>
@@ -603,6 +604,7 @@ footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outlin
       <input id="mobile-need" name="need" placeholder="Напр.: передний бампер, левая фара…">
       <button class="btn" type="submit">Получить цену и срок</button>
       <p class="privacy">Без спама. Отвечаем в рабочее время до 30 минут.</p>
+      <p class="privacy" data-payment-note>Оплата — только на счет ФОП. Цену фиксируем в счете и договоре до оплаты.</p>
     </form>
   </div>
 </section>
@@ -774,7 +776,7 @@ footer .footer-contacts__link:focus-visible { outline: 3px solid #45b887; outlin
       <h2>Все, что спрашивают перед первым заказом</h2>
     </div>
     <div style="margin-top:30px">
-      <details><summary>Какая предоплата и как происходит оплата?</summary><div class="a">Работаем по предоплате — размер зависит от позиции и подтверждается до оплаты вместе с финальной ценой. Все оплаты официально, на расчетный счет ФОП с многолетней чистой историей: вы получаете счет, квитанцию и полный пакет документов. Деньги уходят не «кому-то на карту», а предпринимателю, которого можно проверить в открытых реестрах.</div></details>
+      <details><summary>Какая предоплата и как происходит оплата?</summary><div class="a">Сумма предоплаты и окончательная цена фиксируются в счете и договоре еще до оплаты — без доплат «потом». Оплата только официально, на счет ФОП, которого можно проверить в открытых реестрах: вы получаете счет, договор со спецификацией и квитанцию. Деньги не «кому-то на карту».</div></details>
       <details><summary>Что будет, если деталь не подойдет?</summary><div class="a">Мы проверяем совместимость по VIN перед заказом, поэтому такие случаи почти не происходят. Если ошибка наша — решаем за наш счет. Если вы заказали без проверки VIN на свой риск — поможем перепродать или подобрать правильную деталь.</div></details>
       <details><summary>Сколько реально едет запчасть?</summary><div class="a">Авиа — от 20 дней, море — от 60 дней с момента отправки. Плюс 1–4 дня на подбор, согласование и проверку в Китае. То есть авиа «под ключ» — от 20 дней; точный срок подтвердит менеджер.</div></details>
       <details><summary>Можно ли отследить заказ?</summary><div class="a">Да. После отправки вы получаете трек-номер, а менеджер сообщает статусы на ключевых этапах: выкуп → проверка → отправка → таможня → доставка по Украине.</div></details>
@@ -1133,6 +1135,7 @@ function showInlineLeadMessage(form, state, payload, message) {
     : state === 'pending'
       ? (ru ? 'Отправляем...' : 'Надсилаємо...')
       : (ru ? 'Не удалось подтвердить отправку заявки. Данные остались в форме. Свяжитесь с менеджером:' : 'Не вдалося підтвердити надсилання заявки. Дані залишилися у формі. Зв’яжіться з менеджером:');
+  if (state === 'saved' && window.EVLineLeadNextSteps) { try { window.EVLineLeadNextSteps.render(node, { lang: document.documentElement.lang, type: payload && payload.type }); } catch (_) {} }
   if (state !== 'failed') return;
   var tech = payload.type === 'byd';
   var telegram = document.createElement('a');
@@ -1255,6 +1258,7 @@ function submitLead(formId){
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script defer src="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1"></script>
+<script defer src="/assets/js/contact-tracking.js?v=20261110-next-steps-1"></script>
+<script src="/assets/js/lead-next-steps.js?v=20261110-next-steps-1" defer></script>
 </body>
 </html>

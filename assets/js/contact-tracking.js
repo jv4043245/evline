@@ -5,7 +5,7 @@
   function ensureMetaTracking() {
     if (window.__EVLINE_META_TRACKING_LOADED__ || document.querySelector("script[data-evline-meta-tracking]")) return;
     var script = document.createElement("script");
-    script.src = "/assets/js/meta-tracking.js?v=20260730-consent-1";
+    script.src = "/assets/js/meta-tracking.js?v=20261110-compact-consent-1";
     script.async = false;
     script.dataset.evlineMetaTracking = "";
     document.head.appendChild(script);
