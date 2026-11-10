@@ -30,7 +30,7 @@ function fixture(language, kind, popupThrows = false) {
   window.fetch = (endpoint, options) => {
     requests.push({ endpoint, method: options.method, payload: JSON.parse(options.body) });
     return new Promise((resolve, reject) => {
-      finish = ok => ok instanceof Error ? reject(ok) : resolve({ ok, json: async () => ({ ok }) });
+      finish = ok => ok instanceof Error ? reject(ok) : resolve({ ok, json: async () => ({ ok, lead_id: "synthetic-existing-test" }) });
     });
   };
   window.open = href => {

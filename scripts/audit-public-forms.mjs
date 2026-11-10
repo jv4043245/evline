@@ -137,8 +137,8 @@ for (const absolutePath of files) {
     mainScriptVersions.add(match[1]);
   }
 
-  for (const line of html.split("\n")) {
-    if (line.includes("fetch(leadEndpoint()") && !line.includes("keepalive:true")) {
+  for (const match of html.matchAll(/fetch\(leadEndpoint\(\),\s*\{([\s\S]*?)\}\)/g)) {
+    if (!/\bkeepalive\s*:\s*true/.test(match[1])) {
       failures.push(`${relativePath}: inline CRM request is missing keepalive`);
     }
   }

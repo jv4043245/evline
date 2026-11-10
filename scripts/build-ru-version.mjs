@@ -1110,7 +1110,7 @@ function brandPageRu(brand) {
     <meta name="twitter:image" content="${siteUrl}/assets/images/seo-photos/${brand.photo}">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
     <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
-    <script src="../../assets/js/main.js?v=20261106-lead-resilience-1" defer></script>
+    <script src="../../assets/js/main.js?v=20261110-lead-confirmation-1" defer></script>
     <script type="application/ld+json">${ruJsonLd(brand)}</script>
   </head>
   <body class="parts-page brand-seo-page">
@@ -1289,7 +1289,7 @@ function hubPageRu() {
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="../../assets/css/styles.css?v=layout-5">
     <link rel="stylesheet" href="../../assets/css/parts-clean.css?v=language-switch-3">
-    <script src="../../assets/js/main.js?v=20261106-lead-resilience-1" defer></script>
+    <script src="../../assets/js/main.js?v=20261110-lead-confirmation-1" defer></script>
     <script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@graph": [

@@ -12,7 +12,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20261106-lead-resilience-1">
+<link rel="preload" as="script" href="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1">
 <meta name="facebook-domain-verification" content="tdp2vza03g2rqklsnitrrngs6u2sqo">
 <title>Запчастини для китайських авто з Китаю | EVLine Україна</title>
 <meta name="description" content="Оригінальні та OEM запчастини для китайських авто: BYD, ZEEKR, Xiaomi та інші. Підбір по VIN, перевірка в Китаї, доставка в Україну.">
@@ -1053,7 +1053,7 @@ function buildMsg(f){
     +"Підкажіть, будь ласка, ціну та строк доставки.";
 }
 function openTelegramMsg(msg){
-  if(navigator.clipboard){navigator.clipboard.writeText(msg);}
+  try{if(navigator.clipboard){navigator.clipboard.writeText(msg).catch(function(){});}}catch(_){} 
   window.open('https://t.me/evline_support?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 function trackingPayload(form){
@@ -1134,8 +1134,102 @@ function fieldValue(form,name){
   var x=form.querySelector('[name='+name+']');
   return x&&x.value?x.value.trim():'';
 }
+const inlinePendingLeadForms = new WeakSet();
+const inlineLeadAttempts = new WeakMap();
+async function requestLeadConfirmation(payload) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  let timer;
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(leadEndpoint(), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+          keepalive: true,
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+        if (!response.ok) throw new Error("lead_not_confirmed");
+        const result = await response.json();
+        if (result?.ok !== true || typeof result.lead_id !== "string" || !result.lead_id.trim()) {
+          throw new Error("lead_not_confirmed");
+        }
+        return result;
+      })(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error("lead_confirmation_timeout"));
+          controller?.abort();
+        }, 15000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
+function showInlineLeadMessage(form, state, payload, message) {
+  var ru = document.documentElement.lang.toLowerCase().startsWith('ru');
+  var node = form.querySelector('[data-form-message]');
+  if (!node) {
+    node = document.createElement('div');
+    node.setAttribute('data-form-message', '');
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
+    node.style.cssText = 'margin-top:12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere;grid-column:1/-1';
+    form.appendChild(node);
+    form.style.height = 'auto';
+  }
+  node.style.color = state === 'failed' ? '#b91c1c' : '#17633a';
+  node.textContent = state === 'saved'
+    ? (ru ? 'Заявка сохранена. Менеджер EVLine свяжется с вами.' : 'Заявку збережено. Менеджер EVLine зв’яжеться з вами.')
+    : state === 'pending'
+      ? (ru ? 'Отправляем...' : 'Надсилаємо...')
+      : (ru ? 'Не удалось подтвердить отправку заявки. Данные остались в форме. Свяжитесь с менеджером:' : 'Не вдалося підтвердити надсилання заявки. Дані залишилися у формі. Зв’яжіться з менеджером:');
+  if (state !== 'failed') return;
+  var tech = payload.type === 'byd';
+  var telegram = document.createElement('a');
+  telegram.href = 'https://t.me/' + (tech ? 'evline_tech' : 'evline_support') + '?text=' + encodeURIComponent(message);
+  telegram.target = '_blank';
+  telegram.rel = 'noopener';
+  telegram.textContent = ru ? 'Написать в Telegram' : 'Написати в Telegram';
+  var phone = document.createElement('a');
+  phone.href = tech ? 'tel:+380630630304' : 'tel:+380935251024';
+  phone.textContent = ru ? 'Позвонить' : 'Зателефонувати';
+  [telegram, phone].forEach(function(link) { link.style.cssText = 'color:inherit;text-decoration:underline;display:inline-block;padding:5px 0'; });
+  node.append(' ', telegram, ' · ', phone);
+}
+
+function submitInlineLead(form, payload, message, button, originalText) {
+  var fingerprint = JSON.stringify(Array.from(new FormData(form)));
+  var previous = inlineLeadAttempts.get(form);
+  // Keep an explicit retry of unchanged fields tied to the original CRM event.
+  payload.meta_event_id = previous && previous.fingerprint === fingerprint ? previous.eventId
+    : payload.meta_event_id || ('evline-lead-' + (window.crypto?.randomUUID?.() || (Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12))));
+  inlineLeadAttempts.set(form, { fingerprint: fingerprint, eventId: payload.meta_event_id });
+  inlinePendingLeadForms.add(form);
+  form.setAttribute('aria-busy', 'true');
+  showInlineLeadMessage(form, 'pending', payload, message);
+  requestLeadConfirmation(payload)
+    .then(function() {
+      inlineLeadAttempts.delete(form);
+      try { trackLeadSubmit(payload); } catch (_) {}
+      form.reset();
+      showInlineLeadMessage(form, 'saved', payload, message);
+    })
+    .catch(function() { showInlineLeadMessage(form, 'failed', payload, message); })
+    .finally(function() {
+      inlinePendingLeadForms.delete(form);
+      form.removeAttribute('aria-busy');
+      if (button) { button.disabled = false; button.textContent = originalText; }
+    });
+  try { openTelegramMsg(message); } catch (_) {}
+}
+
 function submitLead(formId){
   var el=document.getElementById(formId);
+  if(inlinePendingLeadForms.has(el)) return false;
   var f={
     brand:fieldValue(el,'brand'),
     year:fieldValue(el,'year'),
@@ -1162,12 +1256,7 @@ function submitLead(formId){
     channel:f.channel,
     page_url:window.location.href
   });
-  fetch(leadEndpoint(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),keepalive:true})
-    .then(function(res){if(!res.ok) throw new Error('CRM error');return res.json().catch(function(){return {};});})
-    .then(function(){trackLeadSubmit(payload);el.reset();showLeadToast('Telegram відкрито з готовим текстом. Менеджер отримає ваш запит.');})
-    .catch(function(){showLeadToast('Telegram відкрито з готовим текстом.');})
-    .finally(function(){if(button){button.disabled=false;button.textContent=originalText;}});
-  openTelegramMsg(msg);
+  submitInlineLead(el,payload,msg,button,originalText);
   return false;
 }
 // лайтбокс для фото галереї
@@ -1220,6 +1309,6 @@ function submitLead(formId){
   window.addEventListener('resize',updateStickyCta);
 })();
 </script>
-<script defer src="/assets/js/contact-tracking.js?v=20261106-lead-resilience-1"></script>
+<script defer src="/assets/js/contact-tracking.js?v=20261110-lead-confirmation-1"></script>
 </body>
 </html>

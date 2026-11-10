@@ -4,7 +4,7 @@ import { parse } from 'node-html-parser';
 import { publicHtmlFiles } from './seller-identity.mjs';
 
 export const footerContactsVersion = '20260922-footer-contacts-2';
-export const leadTrackingVersion = '20261106-lead-resilience-1';
+export const leadTrackingVersion = '20261110-lead-confirmation-1';
 const footerContactsCss = (await readFile(new URL('../../assets/css/footer-contacts.css', import.meta.url), 'utf8')).trim();
 
 export function footerContactsMarkup(language = 'uk') {
