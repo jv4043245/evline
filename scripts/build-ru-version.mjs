@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { withPriorityPartsContent } from "./lib/parts-priority-content.mjs";
+import { withPartsMobileFunnel } from "./lib/parts-mobile-funnel.mjs";
 import { withResponsivePartsImages } from "./lib/responsive-parts-images.mjs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -1489,7 +1490,7 @@ await writeFile(path.join(root, "ru/zapchasti-kitajskih-avto/index.html"), curre
 
 for (const brand of brands) {
   await mkdir(path.join(root, "ru", brand.ruSlug), { recursive: true });
-  const content = withPriorityPartsContent(currentDeliveryCopy(brandPageRu(brand)));
+  const content = withPartsMobileFunnel(withPriorityPartsContent(currentDeliveryCopy(brandPageRu(brand))));
   await writeFile(path.join(root, "ru", brand.ruSlug, "index.html"), content.includes('data-parts-selection') ? withResponsivePartsImages(content) : content);
 }
 
