@@ -55,6 +55,15 @@ for (const item of stock) {
       assert.equal(product.offers.itemCondition, item.isNew ? "https://schema.org/NewCondition" : undefined);
       const badges = [...document.querySelectorAll(".stock-badges .stock-badge--attribute")].map((badge) => badge.textContent);
       assert.deepEqual(badges, [item.isGenuine && "Оригінал", item.isNew && "Нова"].filter(Boolean));
+      assert.equal(document.querySelector(".stock-placement strong").textContent, item.position);
+      const activeWheels = document.querySelectorAll(".stock-placement-car .car-wheel.is-active").length;
+      assert.equal(activeWheels, item.placement?.side === "both" ? 2 : 1);
+      const copies = [...document.querySelectorAll(".stock-numbers [data-copy]")].map((b) => b.dataset.copy);
+      assert.deepEqual(copies, [item.sku, item.cross]);
+      const fit = [...document.querySelectorAll(".stock-fit li strong")].map((li) => li.textContent);
+      assert.deepEqual(fit, [`${item.brand} ${item.model}`, ...(item.alsoListedFor || [])]);
+      assert.ok(document.querySelector(".stock-about p").textContent.includes(item.description));
+      assert.ok(document.querySelector('script[src^="/assets/js/stock-card.js"]'));
       if (item.image) {
         assert.equal(product.image, site + item.image);
         assert.equal(document.querySelector("meta[property='og:image']").content, product.image);
@@ -101,6 +110,10 @@ for (const item of stock) {
       const checkout = window.document.querySelector(".stock-checkout");
       assert.equal(checkout.open, false);
       assert.equal(checkout.querySelector("summary").textContent, "Купити");
+      const sticky = window.document.querySelector(".stock-sticky");
+      assert.ok(sticky.hidden);
+      assert.equal(sticky.querySelector("[data-open-checkout]").getAttribute("href"), "#buy");
+      assert.ok(sticky.textContent.includes(money(item.price)));
       const terms = window.document.querySelector(".stock-terms");
       assert.match(terms.textContent, /Доставка по всій Україні/);
       assert.match(terms.textContent, /Відправлення завтра/);
