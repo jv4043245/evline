@@ -87,6 +87,10 @@ for (const item of stock) {
           assert.equal(markingImage.alt, item.marking.alt);
           assert.equal(markingImage.closest("a").getAttribute("href"), item.marking.src);
           assert.equal(markingImage.closest("a").classList.contains("stock-marking-crop"), Boolean(item.marking.tightCrop));
+          // The real photo sits in a corner of the main photo, not in a separate tile.
+          assert.ok(markingImage.closest(".stock-stage"), "marking photo is pinned to the main photo");
+          assert.equal(markingImage.closest("a").classList.contains("stock-marking-right"), item.marking.corner === "right");
+          assert.equal(document.querySelectorAll(".stock-tiles > *").length, 1, "only the fits tile stays under the photo");
           const jpg = await readFile(new URL(`.${item.marking.src}`, root));
           assert.equal(jpg.readUInt16BE(0), 0xffd8);
         }

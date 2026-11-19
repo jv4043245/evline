@@ -57,7 +57,8 @@
       "label": "Другий ракурс і маркування",
       "width": 960,
       "height": 1280,
-      "tightCrop": true
+      "tightCrop": true,
+      "corner": "right"
     },
     "price": 4409.1,
     "isNew": true,
