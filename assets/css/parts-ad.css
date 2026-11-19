@@ -39,6 +39,9 @@
   .parts-ad-page.parts-page .quick-request input { min-height:44px; font-size:16px; }
   .parts-ad-page.parts-page .quick-request__button { min-height:44px; margin-top:8px; font-size:16px; }
   .parts-ad-page.parts-page .origin-category-grid { margin:12px 16px 24px; }
+  .parts-ad-page.parts-page .parts-gallery__rail img {
+    flex:0 0 auto; width:auto; max-width:78%; height:180px; object-fit:contain;
+  }
   .parts-ad-page.parts-page { padding-bottom:80px; }
   .parts-ad-page.parts-page .floating-chat { display:none; }
   .parts-ad-page .parts-ad-contactbar { display:flex; position:fixed; inset:auto 0 0; z-index:60; gap:10px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid #dce5df; background:#fff; }

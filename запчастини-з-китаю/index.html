@@ -248,7 +248,7 @@
   .rev .who{margin-top:12px;font-size:13px;color:var(--muted);font-weight:600}
   /* faq */
   details{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
-  summary{cursor:pointer;font-weight:700;font-size:16px;padding:18px 22px;list-style:none;position:relative}
+  summary{cursor:pointer;font-weight:700;font-size:16px;padding:18px 48px 18px 22px;list-style:none;position:relative}
   summary::-webkit-details-marker{display:none}
   summary:after{content:"+";position:absolute;right:20px;top:14px;font-size:22px;color:var(--green)}
   details[open] summary:after{content:"–"}
@@ -331,13 +331,14 @@
     .hdr-cta{display:flex}
     .hdr-cta .btn{display:none}
     .tl,.gbar .items,.cat .grid2{grid-template-columns:1fr}
+    .gal{flex-basis:auto;width:auto;max-width:70%;height:144px;object-fit:contain;background:var(--bg2)}
     .trust-panel{padding:22px}
     .trust-panel__grid{grid-template-columns:1fr}
     .proof-card__media{height:180px}
   }
 </style>
 <link rel="stylesheet" href="/assets/css/footer-contacts.css?v=20260922-footer-contacts-2" data-footer-contacts-style>
-<link rel="stylesheet" href="/assets/css/parts-ad.css?v=20261110-funnel-release-1">
+<link rel="stylesheet" href="/assets/css/parts-ad.css?v=20261119-mobile-gallery-1">
 </head>
 <body class="parts-ad-page">
 
@@ -559,23 +560,23 @@
     <span class="gal-nav prev" onclick="document.getElementById('galrow').scrollBy({left:-531,behavior:'smooth'})">‹</span>
     <span class="gal-nav next" onclick="document.getElementById('galrow').scrollBy({left:531,behavior:'smooth'})">›</span>
     <div class="gal-row" id="galrow">
-      <img class="gal" src="../assets/gallery-1.jpg" alt="Пневмостійка в заводській упаковці" loading="lazy">
-      <img class="gal" src="../assets/gallery-2.jpg" alt="Перевірка деталі перед відправкою" loading="lazy">
-      <img class="gal" src="../assets/gallery-3.jpg" alt="Оригінальні запчастини з Китаю" loading="lazy">
-      <img class="gal" src="../assets/gallery-4.jpg" alt="Пакування замовлення клієнта" loading="lazy">
-      <img class="gal" src="../assets/gallery-5.jpg" alt="Оригінальна олива та розхідники" loading="lazy">
-      <img class="gal" src="../assets/gallery-6.jpg" alt="Деталь із маркуванням виробника" loading="lazy">
-      <img class="gal" src="../assets/gallery-7.jpg" alt="Підготовка замовлення до відправки" loading="lazy">
-      <img class="gal" src="../assets/gallery-8.jpg" alt="Запчастини для електроавто з Китаю" loading="lazy">
-      <img class="gal" src="../assets/gallery-9.jpg" alt="Кругла кришка автозапчастини перед відправкою" loading="lazy">
-      <img class="gal" src="../assets/gallery-10.jpg" alt="Корпус кришки з маркуванням виробника" loading="lazy">
-      <img class="gal" src="../assets/gallery-11.jpg" alt="Оригінальна деталь з заводським маркуванням" loading="lazy">
-      <img class="gal" src="../assets/gallery-12.jpg" alt="Зовнішня кришка для кузовного вузла" loading="lazy">
-      <img class="gal" src="../assets/gallery-13.jpg" alt="Пластикова деталь салону або кузова перед пакуванням" loading="lazy">
-      <img class="gal" src="../assets/gallery-14.jpg" alt="Алюмінієвий кронштейн з маркуванням виробника" loading="lazy">
-      <img class="gal" src="../assets/gallery-15.jpg" alt="Запаковані деталі перед відправкою клієнту" loading="lazy">
-      <img class="gal" src="../assets/gallery-16.jpg" alt="Дзеркало у зборі з проводкою та маркуванням" loading="lazy">
-      <img class="gal" src="../assets/gallery-17.jpg" alt="Корпус дзеркала у зборі перед доставкою" loading="lazy">
+      <img class="gal" src="../assets/thumbs/gallery-1.webp" data-full="../assets/gallery-1.jpg" alt="Пневмостійка в заводській упаковці" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-2.webp" data-full="../assets/gallery-2.jpg" alt="Перевірка деталі перед відправкою" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-3.webp" data-full="../assets/gallery-3.jpg" alt="Оригінальні запчастини з Китаю" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-4.webp" data-full="../assets/gallery-4.jpg" alt="Пакування замовлення клієнта" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-5.webp" data-full="../assets/gallery-5.jpg" alt="Оригінальна олива та розхідники" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-6.webp" data-full="../assets/gallery-6.jpg" alt="Деталь із маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-7.webp" data-full="../assets/gallery-7.jpg" alt="Підготовка замовлення до відправки" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-8.webp" data-full="../assets/gallery-8.jpg" alt="Запчастини для електроавто з Китаю" width="480" height="853" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-9.webp" data-full="../assets/gallery-9.jpg" alt="Кругла кришка автозапчастини перед відправкою" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-10.webp" data-full="../assets/gallery-10.jpg" alt="Корпус кришки з маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-11.webp" data-full="../assets/gallery-11.jpg" alt="Оригінальна деталь з заводським маркуванням" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-12.webp" data-full="../assets/gallery-12.jpg" alt="Зовнішня кришка для кузовного вузла" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-13.webp" data-full="../assets/gallery-13.jpg" alt="Пластикова деталь салону або кузова перед пакуванням" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-14.webp" data-full="../assets/gallery-14.jpg" alt="Алюмінієвий кронштейн з маркуванням виробника" width="480" height="640" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-15.webp" data-full="../assets/gallery-15.jpg" alt="Запаковані деталі перед відправкою клієнту" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-16.webp" data-full="../assets/gallery-16.jpg" alt="Дзеркало у зборі з проводкою та маркуванням" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
+      <img class="gal" src="../assets/thumbs/gallery-17.webp" data-full="../assets/gallery-17.jpg" alt="Корпус дзеркала у зборі перед доставкою" width="480" height="360" loading="lazy" decoding="async" fetchpriority="low">
     </div>
     </div>
     <div class="grid3" style="margin-top:22px">
@@ -931,7 +932,7 @@ function submitLead(formId){
   document.body.appendChild(lb);
   lb.onclick=function(){lb.classList.remove('show')};
   document.querySelectorAll('.gal').forEach(function(g){
-    g.onclick=function(){lb.querySelector('img').src=g.src;lb.classList.add('show')};
+    g.onclick=function(){lb.querySelector('img').src=g.dataset.full||g.currentSrc||g.src;lb.classList.add('show')};
   });
 })();
 // закриваємо меню мови при кліку поза ним або Esc
