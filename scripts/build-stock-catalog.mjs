@@ -88,6 +88,7 @@ const iconPaths = {
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.26a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/>',
   telegram: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
 };
 const icon = (name, size = 20) => `<svg class="stock-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
 
@@ -115,12 +116,12 @@ function productGallery(item) {
           <a href="${escape(item.image)}" aria-label="Збільшити фото деталі" data-lightbox data-caption="${escape(`${item.name} ${modelName(item)} · ${item.sku}`)}">
             <img class="stock-image" src="${escape(item.image)}"${srcset} alt="${escape(`${item.name} ${item.sku}`)}" width="1440" height="480" fetchpriority="high">
           </a>
-        </figure>
-        <div class="stock-tiles">
-${fitCars(item)}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
+${marking ? `          <a class="stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}${marking.corner === "right" ? " stock-marking-right" : ""}" href="${escape(marking.src)}" aria-label="Відкрити реальне фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
             <img src="${escape(marking.src)}" alt="${escape(marking.alt)}" width="${marking.width}" height="${marking.height}" loading="lazy" decoding="async">
-            <div><span>Реальне фото</span><strong>Маркування</strong></div>
-          </a>\n` : ""}        </div>
+            <span>${icon("camera", 14)}Реальне фото</span>
+          </a>\n` : ""}        </figure>
+        <div class="stock-tiles">
+${fitCars(item)}        </div>
       </div>\n`;
 }
 
@@ -169,7 +170,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-9">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-10">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
