@@ -19,6 +19,7 @@ const priceLabel = (price) => `${new Intl.NumberFormat("uk-UA", {
 }).format(price)} грн`;
 const availability = ({ inStock }) => inStock ? "В наявності" : "Немає в наявності";
 const badge = (item) => `<span class="stock-badge${item.inStock ? "" : " stock-badge--unavailable"}">${availability(item)}</span>`;
+const attributeBadge = (text) => `<span class="stock-badge stock-badge--attribute">${text}</span>`;
 const vehiclePhotos = {
   // JustAnotherCarDesigner, Wikimedia Commons, CC0 1.0.
   // https://commons.wikimedia.org/wiki/File:Denza_N7_facelift_011.jpg
@@ -75,7 +76,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-photos-2">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-1">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -164,6 +165,7 @@ function productPage(item) {
         priceCurrency: "UAH",
         price: item.price.toFixed(2),
         availability: `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`,
+        ...(item.isNew ? { itemCondition: "https://schema.org/NewCondition" } : {}),
         seller: { "@type": "Organization", name: "EVLine Україна" },
       },
     }],
@@ -186,11 +188,11 @@ ${productGallery(item)}      <div class="stock-specs">
         <p>${escape(item.fitment)}</p>
       </div>
       <section class="stock-order" aria-label="Замовлення">
-        ${badge(item)}
+        <div class="stock-badges">${badge(item)}${item.isGenuine ? attributeBadge("Оригінал") : ""}${item.isNew ? attributeBadge("Нова") : ""}</div>
         <p class="stock-total">${priceLabel(item.price)}</p>
         ${item.inStock ? `<details class="stock-checkout">
           <summary>Купити</summary>
-          <form class="stock-form" action="/api/leads" method="post" aria-label="Оформлення замовлення" data-lead-form data-light-form data-form-name="${escape(`Склад: ${item.sku}`)}" data-lead-success="Замовлення прийнято. Менеджер зв’яжеться з вами, щоб підтвердити доставку та надіслати рахунок.">
+          <form class="stock-form" action="/api/leads" method="post" aria-label="Оформлення замовлення" data-lead-form data-light-form data-form-name="${escape(`Склад: ${item.sku}`)}" data-lead-success="Замовлення прийнято. Менеджер зв’яжеться з вами, щоб підтвердити доставку.">
             <input type="hidden" name="type" value="parts">
             <input type="hidden" name="topic" value="Замовлення зі складу">
             <input type="hidden" name="car" value="${escape(modelName(item))}">
@@ -202,11 +204,17 @@ ${productGallery(item)}      <div class="stock-specs">
             <p class="form__note" data-form-message role="status"></p>
           </form>
         </details>` : ""}
-        <dl class="stock-terms">
-          <div><dt>Доставка по Україні</dt><dd>Вартість і строк відправлення уточнить менеджер.</dd></div>
-          <div><dt>Оплата за рахунком</dt><dd>Рахунок надсилаємо після підтвердження замовлення.</dd></div>
-        </dl>
-        <a class="stock-call" href="tel:${phone}">Питання про товар: +38 (093) 525-10-24</a>
+        <div class="stock-terms">
+          <div>
+            <p class="stock-shipping"><strong>Доставка по всій Україні</strong>${item.inStock ? "<span>Відправлення завтра</span>" : ""}</p>
+            <p class="stock-buyers">Працюємо з фізичними та юридичними особами</p>
+          </div>
+          <a class="stock-call" href="tel:${phone}" data-contact-intent="parts" data-contact-id="stock-product-call" aria-label="Зателефонувати: +38 (093) 525-10-24" title="Зателефонувати">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.26a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+          </a>
+        </div>
       </section>
     </div>`,
   });

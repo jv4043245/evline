@@ -21,6 +21,8 @@
       "height": 1150
     },
     "price": 6090.30,
+    "isNew": true,
+    "isGenuine": true,
     "inStock": true
   },
   {
@@ -46,6 +48,8 @@
       "tightCrop": true
     },
     "price": 4409.10,
+    "isNew": true,
+    "isGenuine": true,
     "inStock": true
   }
 ]
