@@ -7,6 +7,11 @@ const site = "https://evline.com.ua";
 const stock = JSON.parse(await readFile(new URL("./stock-catalog.json", import.meta.url), "utf8"));
 const root = new URL("../", import.meta.url);
 const phone = "+380935251024";
+const termsPath = "/v-nayavnosti/umovy/";
+// Owner-confirmed terms (19.11.2026): Nova Poshta at carrier rates paid by the
+// buyer, dispatch next working day, 1–3 days in transit; 14-day returns of
+// unfitted parts, return shipping paid by the buyer unless the error is ours.
+const terms = { returnDays: 14, handlingDays: [0, 1], transitDays: [1, 3] };
 const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 })[c]);
@@ -129,7 +134,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-4">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-5">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -154,6 +159,7 @@ ${content}
   <footer class="stock-footer"><div class="stock-wrap">
     <span>EVLine Україна</span>
     <a href="tel:${phone}">+38 (093) 525-10-24</a>
+    <a href="${termsPath}">Доставка, оплата та повернення</a>
     <a href="/privacy/">Конфіденційність</a>
   </div></footer>
 </body>
@@ -222,6 +228,15 @@ function productPage(item) {
         availability: `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`,
         ...(item.isNew ? { itemCondition: "https://schema.org/NewCondition" } : {}),
         seller: { "@type": "Organization", name: "EVLine Україна" },
+        hasMerchantReturnPolicy: {
+          "@type": "MerchantReturnPolicy",
+          applicableCountry: "UA",
+          returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+          merchantReturnDays: terms.returnDays,
+          returnMethod: "https://schema.org/ReturnByMail",
+          returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+          merchantReturnLink: site + termsPath,
+        },
       },
     }],
     content: `    <nav class="stock-crumb" aria-label="Навігаційний шлях">
@@ -276,6 +291,7 @@ ${item.isGenuine ? `          <li class="stock-fact">${icon("genuine", 22)}<span
           <ul>
             <li>${icon("truck")}<span>Доставка по всій Україні</span></li>
 ${item.inStock ? `            <li>${icon("clock")}<span>Відправлення завтра</span></li>\n` : ""}            <li>${icon("buyers")}<span>Працюємо з фізичними та юридичними особами</span></li>
+            <li class="stock-terms-link"><a href="${termsPath}">Умови доставки й повернення</a></li>
           </ul>
           <a class="stock-call" href="tel:${phone}" data-contact-intent="parts" data-contact-id="stock-product-call" aria-label="Зателефонувати: +38 (093) 525-10-24" title="Зателефонувати">${icon("phone")}</a>
         </div>
@@ -288,6 +304,76 @@ ${item.inStock ? `    <div class="stock-sticky" hidden>
   });
 }
 
+const termsPage = page({
+  path: termsPath,
+  title: "Доставка, оплата та повернення",
+  description: "Умови для запчастин зі складу EVLine: доставка Новою поштою по Україні, оплата рахунком або накладеним платежем, повернення протягом 14 днів.",
+  schema: [breadcrumbs([home, catalogCrumb, ["Доставка, оплата та повернення", termsPath]])],
+  content: `    <nav class="stock-crumb" aria-label="Навігаційний шлях">
+      <a href="${catalog}">Запчастини в наявності</a>
+    </nav>
+    <h1>Доставка, оплата та повернення</h1>
+    <p class="stock-intro">Умови для запчастин, які є в наявності на складі EVLine.</p>
+    <div class="stock-policy">
+      <section>
+        <h2>${icon("truck", 22)}Доставка</h2>
+        <ul>
+          <li>Новою поштою по всій Україні — у відділення, поштомат або кур’єром.</li>
+          <li>Відправляємо наступного робочого дня після підтвердження замовлення.</li>
+          <li>У дорозі зазвичай 1–3 дні.</li>
+          <li>Вартість доставки — за тарифами Нової пошти, сплачує покупець при отриманні.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>${icon("buyers", 22)}Оплата</h2>
+        <ul>
+          <li>Рахунок на ФОП — для фізичних і юридичних осіб.</li>
+          <li>Накладений платіж — оплата при отриманні у Новій пошті.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>${icon("genuine", 22)}Повернення</h2>
+        <ul>
+          <li>Повернути деталь можна протягом ${terms.returnDays} днів з дня отримання.</li>
+          <li>Деталь не встановлювалась на авто, без слідів монтажу, з цілими упаковкою та маркуванням.</li>
+          <li>Зворотну доставку сплачує покупець. Якщо ми помилились із деталлю — повернення за наш рахунок.</li>
+          <li>Щоб оформити повернення, напишіть або зателефонуйте менеджеру: <a href="tel:${phone}">+38 (093) 525-10-24</a>.</li>
+        </ul>
+      </section>
+    </div>
+    <p class="stock-more"><a href="${catalog}">← Запчастини в наявності</a></p>`,
+});
+
+// Product feed for Google Merchant Center (RSS 2.0 with the g: namespace).
+const xml = (value) => String(value).replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;",
+})[c]);
+const feed = `<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated by scripts/build-stock-catalog.mjs -->
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>EVLine — запчастини в наявності</title>
+    <link>${site}${catalog}</link>
+    <description>Запчастини зі складу EVLine з доставкою по Україні</description>
+${stock.map((item) => `    <item>
+      <g:id>${xml(item.sku)}</g:id>
+      <g:title>${xml(`${item.name} ${modelName(item)} ${item.sku}`)}</g:title>
+      <g:description>${xml(`${item.description} Крос-номер: ${item.cross}. ${item.fitmentCheck || ""}`.trim())}</g:description>
+      <g:link>${site}${productPath(item)}</g:link>
+${item.image ? `      <g:image_link>${site}${xml(item.image)}</g:image_link>
+` : ""}${item.marking ? `      <g:additional_image_link>${site}${xml(item.marking.src)}</g:additional_image_link>
+` : ""}      <g:availability>${item.inStock ? "in_stock" : "out_of_stock"}</g:availability>
+      <g:price>${item.price.toFixed(2)} UAH</g:price>
+      <g:condition>${item.isNew ? "new" : "used"}</g:condition>
+${item.partBrand ? `      <g:brand>${xml(item.partBrand)}</g:brand>
+` : ""}      <g:mpn>${xml(item.sku)}</g:mpn>
+      <g:google_product_category>Vehicles &amp; Parts &gt; Vehicle Parts &amp; Accessories &gt; Motor Vehicle Parts</g:google_product_category>
+      <g:product_type>${xml(`Запчастини > ${modelName(item)} > ${item.design}`)}</g:product_type>
+    </item>`).join("\n")}
+  </channel>
+</rss>
+`;
+
 async function writePage(path, html) {
   const folder = new URL(`.${path}`, root);
   await mkdir(folder, { recursive: true });
@@ -296,5 +382,7 @@ async function writePage(path, html) {
 
 await Promise.all([
   writePage(catalog, list),
+  writePage(termsPath, termsPage),
+  writeFile(new URL("merchant-feed.xml", root), feed),
   ...stock.map((item) => writePage(productPath(item), productPage(item))),
 ]);

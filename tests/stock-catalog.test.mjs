@@ -155,3 +155,31 @@ for (const item of stock) {
     } finally { window.close(); }
   });
 }
+
+test("terms page, return policy and Merchant Center feed match the stock data", async () => {
+  const termsHtml = await pathHtml(`${catalog}umovy/`);
+  assert.match(termsHtml, /Новою поштою/);
+  assert.match(termsHtml, /Накладений платіж/);
+  assert.match(termsHtml, /протягом 14 днів/);
+  assert.ok(sitemap.includes(`<loc>${site}${catalog}umovy/</loc>`));
+  const feed = await read("merchant-feed.xml");
+  const { window } = new JSDOM(feed, { contentType: "text/xml" });
+  try {
+    const items = [...window.document.getElementsByTagName("item")];
+    assert.equal(items.length, stock.length);
+    for (const item of stock) {
+      const node = items.find((el) => el.getElementsByTagName("g:id")[0].textContent === item.sku);
+      const field = (name) => node.getElementsByTagName("g:" + name)[0]?.textContent;
+      assert.equal(field("link"), site + pathFor(item));
+      assert.equal(field("price"), `${item.price.toFixed(2)} UAH`);
+      assert.equal(field("availability"), item.inStock ? "in_stock" : "out_of_stock");
+      assert.equal(field("mpn"), item.sku);
+      if (item.image) assert.equal(field("image_link"), site + item.image);
+      const html = await pathHtml(pathFor(item));
+      assert.ok(html.includes(`href="${catalog}umovy/"`));
+      const product = JSON.parse(html.match(/ld\+json">(.*?)<\/script>/s)[1])["@graph"].find((n) => n["@type"] === "Product");
+      assert.equal(product.offers.hasMerchantReturnPolicy.merchantReturnDays, 14);
+      assert.equal(product.offers.hasMerchantReturnPolicy.applicableCountry, "UA");
+    }
+  } finally { window.close(); }
+});

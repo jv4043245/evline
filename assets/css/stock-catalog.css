@@ -257,6 +257,12 @@ a.stock-tile:hover { border-color: var(--stock-green); color: inherit; }
 .stock-call:hover { background: #e5f6ec; }
 
 .stock-sticky { display: none; }
+.stock-terms-link a { font-size: 13px; }
+.stock-policy { display: grid; gap: 14px; margin-top: 20px; max-width: 760px; }
+.stock-policy section { padding: 16px 18px; border: 1px solid var(--stock-line); border-radius: 8px; background: #fff; }
+.stock-policy h2 { display: flex; align-items: center; gap: 10px; font-size: 20px; }
+.stock-policy h2 .stock-icon { color: var(--stock-green); }
+.stock-policy ul { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 6px; }
 @media (min-width: 671px) { .stock-order { position: sticky; top: 16px; } }
 .stock-footer { border-top: 1px solid var(--stock-line); padding-block: 17px; font-size: 14px; }
 :focus-visible { outline: 2px solid #2078bd; outline-offset: 3px; }
