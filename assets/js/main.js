@@ -214,7 +214,8 @@ function setFormMessage(form, message, isError = false) {
   node.textContent = message;
   node.setAttribute("role", "status");
   node.setAttribute("aria-live", "polite");
-  const lightForm = form.matches(".brand-seo-form") && !form.closest(".byd-seo-page");
+  const lightForm = form.matches("[data-light-form]") ||
+    (form.matches(".brand-seo-form") && !form.closest(".byd-seo-page"));
   node.style.color = lightForm
     ? (isError ? "#b91c1c" : "#17633a")
     : (isError ? "#fecaca" : "rgba(255, 255, 255, 0.78)");
