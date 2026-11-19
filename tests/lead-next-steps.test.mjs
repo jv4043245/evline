@@ -109,7 +109,7 @@ test("mobile ad styles stay scoped to the noindex advertising pages", async () =
   for (const page of ["запчастини-з-китаю/index.html", "ru/zapchasti-iz-kitaya/index.html"]) {
     const html = await readFile(new URL(`../${page}`, import.meta.url), "utf8");
     assert.match(html, /<body class="[^"]*parts-ad-page/);
-    assert.match(html, /parts-ad\.css\?v=20261110-funnel-release-1/);
+    assert.match(html, /parts-ad\.css\?v=20261119-mobile-gallery-1/);
     assert.match(html, /noindex/);
   }
   for (const page of ["index.html", "ru/index.html"]) {
