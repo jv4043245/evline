@@ -52,6 +52,9 @@ for (const item of stock) {
       assert.equal(product.offers.priceCurrency, "UAH");
       assert.equal(product.offers.price, item.price.toFixed(2));
       assert.equal(product.offers.availability, `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`);
+      assert.equal(product.offers.itemCondition, item.isNew ? "https://schema.org/NewCondition" : undefined);
+      const badges = [...document.querySelectorAll(".stock-badges .stock-badge--attribute")].map((badge) => badge.textContent);
+      assert.deepEqual(badges, [item.isGenuine && "Оригінал", item.isNew && "Нова"].filter(Boolean));
       if (item.image) {
         assert.equal(product.image, site + item.image);
         assert.equal(document.querySelector("meta[property='og:image']").content, product.image);
@@ -98,7 +101,15 @@ for (const item of stock) {
       const checkout = window.document.querySelector(".stock-checkout");
       assert.equal(checkout.open, false);
       assert.equal(checkout.querySelector("summary").textContent, "Купити");
-      assert.match(window.document.querySelector(".stock-terms").textContent, /Доставка по Україні/);
+      const terms = window.document.querySelector(".stock-terms");
+      assert.match(terms.textContent, /Доставка по всій Україні/);
+      assert.match(terms.textContent, /Відправлення завтра/);
+      assert.match(terms.textContent, /фізичними та юридичними особами/);
+      assert.doesNotMatch(terms.textContent, /Оплата|Рахунок/);
+      const call = terms.querySelector(".stock-call");
+      assert.equal(call.getAttribute("href"), "tel:+380935251024");
+      assert.match(call.getAttribute("aria-label"), /Зателефонувати/);
+      assert.equal(call.textContent.trim(), "");
       const form = checkout.querySelector("form[data-lead-form]");
       assert.equal(form.elements.namedItem("vin"), null);
       assert.equal(form.elements.name.required, true);
@@ -120,7 +131,7 @@ for (const item of stock) {
       assert.equal(payload.name, "Тест");
       assert.equal(payload.message, "Львів, відділення № 12");
       assert.equal(payload.vin, undefined);
-      assert.match(form.querySelector("[data-form-message]").textContent, /Замовлення прийнято.*доставку.*рахунок/);
+      assert.match(form.querySelector("[data-form-message]").textContent, /Замовлення прийнято.*доставку/);
     } finally { window.close(); }
   });
 }
