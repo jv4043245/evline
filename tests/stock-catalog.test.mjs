@@ -16,10 +16,15 @@ const money = (price) => new Intl.NumberFormat("uk-UA", {
 const pathFor = ({ brand, model, sku }) => `${catalog}${brand.toLowerCase()}/${model.toLowerCase()}/${sku.toLowerCase()}/`;
 const pathHtml = (path) => read(`.${path}index.html`);
 
-test("catalog is reachable from the home page and lists every product", async () => {
+test("catalog is reachable only from the homepage footer and lists every product", async () => {
   const homepage = await read("index.html");
   const catalogHtml = await pathHtml(catalog);
-  assert.ok(homepage.includes(`href="${catalog}"`));
+  const { window } = new JSDOM(homepage);
+  try {
+    const links = [...window.document.querySelectorAll(`a[href="${catalog}"]`)];
+    assert.equal(links.length, 1);
+    assert.ok(links[0].closest("footer"));
+  } finally { window.close(); }
   assert.ok(sitemap.includes(`<loc>${site + catalog}</loc>`));
   for (const item of stock) {
     assert.ok(catalogHtml.includes(`href="${pathFor(item)}"`));
