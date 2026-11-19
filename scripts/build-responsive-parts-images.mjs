@@ -15,7 +15,7 @@ for (const item of responsivePartsImages) {
   if (metadata.width !== item.width || metadata.height !== item.height) throw new Error(`Unexpected dimensions: ${item.source} ${metadata.width}x${metadata.height}`);
   for (const width of widthsForImage(item)) {
     const output = responsiveImagePath(item, width);
-    await sharp(input).resize({ width, withoutEnlargement: true }).webp({ quality: 95, effort: 6 }).toFile(fileURLToPath(new URL(output, root)));
+    await sharp(input).resize({ width, withoutEnlargement: true }).webp({ quality: item.quality ?? 95, effort: 6 }).toFile(fileURLToPath(new URL(output, root)));
     manifest.push({ source: item.source, output, width, height: Math.round(width * item.height / item.width), bytes: (await stat(new URL(output, root))).size });
   }
 }

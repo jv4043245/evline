@@ -1,9 +1,11 @@
 import { parse } from 'node-html-parser';
 
+const heroPreview = { quality: 87, version: '-v2' };
+
 export const responsivePartsImages = [
-  { source: 'assets/hero-gallery-5.webp', width: 720, height: 960, sizes: '(max-width: 900px) calc((100vw - 64px) * .575), 310px' },
-  { source: 'assets/hero-gallery-3.webp', width: 720, height: 540, sizes: '(max-width: 900px) calc((100vw - 64px) * .425), 275px' },
-  { source: 'assets/hero-gallery-6.webp', width: 720, height: 960, sizes: '(max-width: 900px) calc((100vw - 64px) * .425), 155px' },
+  { ...heroPreview, source: 'assets/hero-gallery-5.webp', width: 720, height: 960, widths: [240, 400, 480, 576, 640], sizes: '(max-width: 900px) calc((100vw - 64px) * .575), 310px' },
+  { ...heroPreview, source: 'assets/hero-gallery-3.webp', width: 720, height: 540, widths: [240, 400, 448, 560, 640], sizes: '(max-width: 900px) calc((100vw - 64px) * .425), 275px' },
+  { ...heroPreview, source: 'assets/hero-gallery-6.webp', width: 720, height: 960, widths: [240, 400, 448, 560, 640], sizes: '(max-width: 900px) calc((100vw - 64px) * .425), 155px' },
   { source: 'assets/images/china-delivery-visual.webp', width: 1802, height: 900, sizes: '(max-width: 900px) calc(100vw - 40px), 354px' },
   { source: 'assets/images/vin-parts-visual.webp', width: 1400, height: 900, sizes: '(max-width: 900px) calc(100vw - 40px), 354px' },
   { source: 'assets/images/oem-parts-visual.webp', width: 1400, height: 900, sizes: '(max-width: 900px) calc(100vw - 40px), 354px' },
@@ -13,11 +15,10 @@ export const responsivePartsImages = [
 
 export const responsiveWidths = [240, 400, 640, 960];
 export function widthsForImage(item) {
-  // For the already compressed 720px hero originals, a 640px re-encode is larger.
-  return responsiveWidths.filter(width => width < item.width && (!item.source.startsWith('assets/hero-') || width <= 400));
+  return (item.widths ?? responsiveWidths).filter(width => width < item.width);
 }
 export function responsiveImagePath(item, width) {
-  return `assets/responsive/${item.source.split('/').at(-1).replace(/\.[^.]+$/, '')}-${width}.webp`;
+  return `assets/responsive/${item.source.split('/').at(-1).replace(/\.[^.]+$/, '')}-${width}${item.version ?? ''}.webp`;
 }
 
 export function withResponsivePartsImages(html) {
