@@ -80,13 +80,4 @@
     var field = checkout && checkout.querySelector("input[name=name]");
     if (field) setTimeout(function () { field.focus({ preventScroll: true }); }, 400);
   });
-
-  if (!("IntersectionObserver" in window)) return;
-  var seen = false;
-  new IntersectionObserver(function (entries) {
-    var entry = entries[0];
-    if (entry.isIntersecting) seen = true;
-    // Show the bar only after the buy box has scrolled out of view above.
-    bar.hidden = entry.isIntersecting || !seen || entry.boundingClientRect.top > 0;
-  }).observe(order);
 })();

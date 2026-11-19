@@ -157,6 +157,25 @@ function breadcrumbs(entries) {
   };
 }
 
+// Mobile bottom bar, like the homepage: always at hand while scrolling.
+// In-stock product: call + price + buy; other pages: call + Telegram.
+function mobileBar(item) {
+  const call = `tel:${phone}`;
+  if (item?.inStock) {
+    return `  <div class="stock-sticky">
+    <a class="stock-sticky-call" href="${call}" data-contact-intent="parts" data-contact-id="stock-mobile-call" aria-label="Зателефонувати: +38 (093) 525-10-24">${icon("phone", 20)}</a>
+    <div><strong>${priceLabel(item.price)}</strong><span>В наявності</span></div>
+    <a class="stock-sticky-buy" href="#buy" data-open-checkout>Купити</a>
+  </div>
+`;
+  }
+  return `  <div class="stock-sticky stock-sticky--contact">
+    <a class="stock-sticky-call" href="${call}" data-contact-intent="parts" data-contact-id="stock-mobile-call">${icon("phone", 18)}Подзвонити</a>
+    <a class="stock-sticky-tg" href="https://t.me/evline_support" target="_blank" rel="noopener" data-contact-intent="parts" data-contact-id="stock-mobile-telegram">${icon("telegram", 18)}Telegram</a>
+  </div>
+`;
+}
+
 function page({ path, title, description, schema, content, item }) {
   const fullTitle = `${title} | EVLine`;
   const url = site + path;
@@ -170,7 +189,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-10">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-11">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -178,7 +197,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta property="og:url" content="${url}">
 ${item?.image ? `  <meta property="og:image" content="${escape(new URL(item.image, site).href)}">\n` : ""}  <script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@graph": schema }).replace(/</g, "\\u003c")}</script>
   <script src="/assets/js/${item?.inStock ? "main" : "contact-tracking"}.js" defer></script>
-  <script src="/assets/js/stock-card.js?v=20261119-card-4" defer></script>
+  <script src="/assets/js/stock-card.js?v=20261119-card-5" defer></script>
 </head>
 <body>
   <header class="stock-header">
@@ -199,7 +218,7 @@ ${content}
     <a href="${termsPath}">Доставка, оплата та повернення</a>
     <a href="/privacy/">Конфіденційність</a>
   </div></footer>
-</body>
+${mobileBar(item)}</body>
 </html>
 `));
 }
@@ -368,11 +387,7 @@ ${item.inStock ? `            <li>${icon("clock")}<span>Відправлення
           <a class="stock-call" href="tel:${phone}" data-contact-intent="parts" data-contact-id="stock-product-call" aria-label="Зателефонувати: +38 (093) 525-10-24" title="Зателефонувати">${icon("phone")}</a>
         </div>
       </section>
-    </div>
-${item.inStock ? `    <div class="stock-sticky" hidden>
-      <div><strong>${priceLabel(item.price)}</strong><span>В наявності</span></div>
-      <a href="#buy" data-open-checkout>Купити</a>
-    </div>` : ""}`,
+    </div>`,
   });
 }
 
