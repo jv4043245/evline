@@ -45,7 +45,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-buy-1">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -86,7 +86,7 @@ const groupId = (name) => slug(name);
 const list = page({
   path: catalog,
   title: catalogName,
-  description: "Запчастини зі складу EVLine в Україні. Дивіться ціни та артикули деталей Denza N7 і залишайте заявку на перевірку сумісності.",
+  description: "Купуйте запчастини Denza N7 зі складу EVLine. Актуальні ціни, артикули та доставка по Україні.",
   schema: [breadcrumbs([home, catalogCrumb]), {
     "@type": "ItemList",
     itemListElement: stock.map((item, index) => ({
@@ -94,7 +94,7 @@ const list = page({
     })),
   }],
   content: `    <h1>${catalogName}</h1>
-    <p class="stock-intro">Деталі зі складу в Україні. Перевіримо сумісність за VIN перед замовленням.</p>
+    <p class="stock-intro">Запчастини зі складу з доставкою по Україні.</p>
 ${[...groups].map(([name, items]) => `    <section class="stock-group" id="${groupId(name)}">
       <h2>${escape(name)}</h2>
       <ul class="stock-list">
@@ -117,7 +117,7 @@ function productPage(item) {
   const title = `${name} ${item.sku}`;
   return page({
     path, title, item,
-    description: `${item.description} ${availability(item)} в каталозі EVLine. Ціна: ${priceLabel(item.price)}.`,
+    description: `${item.description} ${availability(item)} в каталозі EVLine. Ціна: ${priceLabel(item.price)}. Доставка по Україні.`,
     schema: [breadcrumbs([home, catalogCrumb, [title, path]]), {
       "@type": "Product",
       name: title,
@@ -156,18 +156,25 @@ ${image(item, 8)}        <p>${escape(item.description)}</p>
       <section class="stock-order" aria-label="Замовлення">
         ${badge(item)}
         <p class="stock-total">${priceLabel(item.price)}</p>
-        ${item.inStock ? `<form class="stock-form" action="/api/leads" method="post" data-lead-form data-light-form data-form-name="${escape(`Склад: ${item.sku}`)}">
-          <input type="hidden" name="type" value="parts">
-          <input type="hidden" name="topic" value="Замовлення зі складу">
-          <input type="hidden" name="car" value="${escape(modelName(item))}">
-          <input type="hidden" name="part" value="${escape(`${item.name} · ${item.sku}`)}">
-          <label>Телефон <input name="phone" type="tel" autocomplete="tel" placeholder="+380" required></label>
-          <label>VIN <span class="stock-muted">(необов’язково)</span><input name="vin" autocapitalize="characters" maxlength="17" spellcheck="false" placeholder="17 символів"></label>
-          <button type="submit">Замовити зі складу</button>
-          <p class="form__note" data-form-message role="status"></p>
-        </form>
-        <p class="stock-muted">Менеджер підтвердить сумісність і умови відправлення.</p>` : ""}
-        <a class="stock-call" href="tel:${phone}">+38 (093) 525-10-24</a>
+        ${item.inStock ? `<details class="stock-checkout">
+          <summary>Купити</summary>
+          <form class="stock-form" action="/api/leads" method="post" aria-label="Оформлення замовлення" data-lead-form data-light-form data-form-name="${escape(`Склад: ${item.sku}`)}" data-lead-success="Замовлення прийнято. Менеджер зв’яжеться з вами, щоб підтвердити доставку та надіслати рахунок.">
+            <input type="hidden" name="type" value="parts">
+            <input type="hidden" name="topic" value="Замовлення зі складу">
+            <input type="hidden" name="car" value="${escape(modelName(item))}">
+            <input type="hidden" name="part" value="${escape(`${item.name} · ${item.sku}`)}">
+            <label>Ім’я <input name="name" autocomplete="given-name" maxlength="100" required></label>
+            <label>Телефон <input name="phone" type="tel" autocomplete="tel" placeholder="+380" maxlength="28" required></label>
+            <label>Місто та відділення <span class="stock-muted">(необов’язково)</span><input name="message" placeholder="Напр.: Львів, відділення № 12" maxlength="220"></label>
+            <button type="submit">Підтвердити замовлення</button>
+            <p class="form__note" data-form-message role="status"></p>
+          </form>
+        </details>` : ""}
+        <dl class="stock-terms">
+          <div><dt>Доставка по Україні</dt><dd>Вартість і строк відправлення уточнить менеджер.</dd></div>
+          <div><dt>Оплата за рахунком</dt><dd>Рахунок надсилаємо після підтвердження замовлення.</dd></div>
+        </dl>
+        <a class="stock-call" href="tel:${phone}">Питання про товар: +38 (093) 525-10-24</a>
       </section>
     </div>`,
   });

@@ -52,7 +52,7 @@ for (const item of stock) {
     } finally { dom.window.close(); }
   });
   if (!item.inStock) continue;
-  test(`${item.sku}: order form sends the exact part and reports a confirmed CRM save`, async () => {
+  test(`${item.sku}: buy-now checkout sends item and delivery details without VIN`, async () => {
     const path = pathFor(item);
     const { window } = new JSDOM(await pathHtml(path), { url: site + path, runScripts: "outside-only" });
     try {
@@ -62,9 +62,20 @@ for (const item of stock) {
         return { ok: true, json: async () => ({ ok: true, lead_id: "mock-stock-lead" }) };
       };
       window.eval(script);
-      const form = window.document.querySelector("form[data-lead-form]");
+      const checkout = window.document.querySelector(".stock-checkout");
+      assert.equal(checkout.open, false);
+      assert.equal(checkout.querySelector("summary").textContent, "Купити");
+      assert.match(window.document.querySelector(".stock-terms").textContent, /Доставка по Україні/);
+      const form = checkout.querySelector("form[data-lead-form]");
+      assert.equal(form.elements.namedItem("vin"), null);
+      assert.equal(form.elements.name.required, true);
+      assert.equal(form.elements.phone.required, true);
+      assert.equal(form.elements.message.required, false);
+      form.elements.name.value = "Тест";
       form.elements.phone.value = "+380000000000";
+      form.elements.message.value = "Львів, відділення № 12";
       form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+      assert.doesNotMatch(form.querySelector("[data-form-message]").textContent, /Замовлення прийнято/);
       await new Promise((resolve) => setImmediate(resolve));
       assert.equal(requests.length, 1);
       const [{ url, payload }] = requests;
@@ -73,7 +84,10 @@ for (const item of stock) {
       assert.equal(payload.car, `${item.brand} ${item.model}`);
       assert.equal(payload.part, `${item.name} · ${item.sku}`);
       assert.equal(payload.form_name, `Склад: ${item.sku}`);
-      assert.match(form.querySelector("[data-form-message]").textContent, /Заявку збережено/);
+      assert.equal(payload.name, "Тест");
+      assert.equal(payload.message, "Львів, відділення № 12");
+      assert.equal(payload.vin, undefined);
+      assert.match(form.querySelector("[data-form-message]").textContent, /Замовлення прийнято.*доставку.*рахунок/);
     } finally { window.close(); }
   });
 }
