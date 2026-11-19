@@ -1242,9 +1242,15 @@
   <url>
     <loc>https://evline.com.ua/v-nayavnosti/denza/n7/ufec-2905100/</loc>
     <lastmod>2026-11-19</lastmod>
+    <image:image>
+      <image:loc>https://evline.com.ua/assets/images/stock/ufec-2905100.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://evline.com.ua/v-nayavnosti/denza/n7/ta70-2904200bf/</loc>
     <lastmod>2026-11-19</lastmod>
+    <image:image>
+      <image:loc>https://evline.com.ua/assets/images/stock/ta70-2904200bf.png</image:loc>
+    </image:image>
   </url>
 </urlset>

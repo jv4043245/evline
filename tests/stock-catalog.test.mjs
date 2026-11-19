@@ -8,6 +8,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const stock = JSON.parse(await read("scripts/stock-catalog.json"));
 const script = await read("assets/js/main.js");
 const sitemap = await read("sitemap.xml");
+const denza = await read("zapchastyny-denza/index.html");
 const catalog = "/v-nayavnosti/";
 const site = "https://evline.com.ua";
 const money = (price) => new Intl.NumberFormat("uk-UA", {
@@ -42,6 +43,12 @@ for (const item of stock) {
       const data = JSON.parse(document.querySelector("script[type='application/ld+json']").textContent);
       const product = data["@graph"].find((node) => node["@type"] === "Product");
       assert.equal(product.mpn, item.sku);
+      assert.ok(document.title.includes(item.sku));
+      const summary = document.querySelector('meta[name="description"]').content;
+      assert.ok(summary.includes(item.sku));
+      assert.ok(summary.includes(item.cross));
+      assert.ok(summary.includes(money(item.price)));
+      assert.equal(product.additionalProperty.find((p) => p.name === "Крос-номер")?.value, item.cross);
       assert.equal(product.offers.priceCurrency, "UAH");
       assert.equal(product.offers.price, item.price.toFixed(2));
       assert.equal(product.offers.availability, `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`);
@@ -62,7 +69,11 @@ for (const item of stock) {
       assert.equal(document.querySelector(".stock-total").textContent, money(item.price));
       assert.ok(document.querySelector("dl").textContent.includes(item.cross));
       assert.equal(document.querySelector('link[rel="canonical"]').href, site + path);
-      assert.ok(sitemap.includes(`<loc>${site + path}</loc>`));
+      const sitemapEntry = [...sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)]
+        .find(([block]) => block.includes(`<loc>${site + path}</loc>`))?.[0];
+      assert.ok(sitemapEntry);
+      if (item.image) assert.ok(sitemapEntry.includes(`<image:loc>${site + item.image}</image:loc>`));
+      assert.ok(denza.includes(`href="${path}"`));
     } finally { dom.window.close(); }
   });
   if (!item.inStock) continue;
