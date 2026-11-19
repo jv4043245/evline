@@ -31,7 +31,11 @@
     "alsoListedFor": [
       "BYD Sea Lion 07 (Sealion 7)"
     ],
-    "fitmentCheck": "Звіримо за VIN комплектацію, сторону встановлення та номер вашого амортизатора."
+    "fitmentCheck": "Звіримо за VIN комплектацію, сторону встановлення та номер вашого амортизатора.",
+    "demandPages": [
+      "suspension"
+    ],
+    "partBrand": "BYD"
   },
   {
     "brand": "Denza",
@@ -67,6 +71,11 @@
       "BYD Sea Lion 07 (Sealion 7)",
       "BYD Song L"
     ],
-    "fitmentCheck": "Звіримо за VIN сторону та повний номер деталі, включно із закінченням BF."
+    "fitmentCheck": "Звіримо за VIN сторону та повний номер деталі, включно із закінченням BF.",
+    "demandPages": [
+      "song-l",
+      "suspension"
+    ],
+    "partBrand": "BYD"
   }
 ]

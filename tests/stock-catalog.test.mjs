@@ -94,6 +94,13 @@ for (const item of stock) {
       assert.ok(sitemapEntry);
       if (item.image) assert.ok(sitemapEntry.includes(`<image:loc>${site + item.image}</image:loc>`));
       assert.ok(denza.includes(`href="${path}"`));
+      assert.equal(product.brand?.name, item.partBrand);
+      assert.equal(product.isAccessoryOrSparePartFor?.name, `${item.brand} ${item.model}`);
+      assert.match(document.querySelector(".stock-h1-code").textContent, new RegExp(item.sku));
+      for (const key of item.demandPages || []) {
+        const demand = { "song-l": "zapchastyny-byd/song-l/index.html", suspension: "zapchastyny-byd/pidviska-kermove/index.html" }[key];
+        assert.ok((await read(demand)).includes(`href="${path}"`), `${key} links ${item.sku}`);
+      }
     } finally { dom.window.close(); }
   });
   if (!item.inStock) continue;
