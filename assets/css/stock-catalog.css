@@ -101,6 +101,8 @@ h3 { font-size: 19px; line-height: 1.3; }
 .stock-marking { margin-top: 8px; color: var(--stock-green); font-size: 14px; }
 .stock-marking summary { width: fit-content; padding: 4px 0; cursor: pointer; font-weight: 650; }
 .stock-marking img { width: min(100%, 400px); margin-top: 4px; border-radius: 6px; }
+.stock-marking-crop { display: block; width: min(100%, 400px); margin-top: 4px; border-radius: 6px; overflow: hidden; }
+.stock-marking-crop img { width: 177.78%; max-width: none; margin: 0 0 0 -25.93%; border-radius: 0; }
 .stock-specs { grid-area: specs; display: grid; gap: 12px; }
 .stock-specs dl { margin: 3px 0 8px; border-block: 1px solid var(--stock-line); }
 .stock-specs dl > div { display: grid; grid-template-columns: minmax(100px, 30%) 1fr; gap: 8px 16px; padding: 10px 0; }

@@ -34,6 +34,7 @@ function productThumbnail({ image, thumbnail, name, sku }) {
 function productGallery(item) {
   if (!item.image) return "";
   const vehicle = vehiclePhotos[modelName(item)];
+  const marking = item.marking;
   const srcset = item.thumbnail ? ` srcset="${escape(item.thumbnail)} 440w, ${escape(item.image)} 1440w" sizes="(max-width: 670px) calc(100vw - 54px), min(66vw, 710px)"` : "";
   return `      <div class="stock-gallery">
         <figure class="stock-stage">
@@ -44,10 +45,10 @@ ${vehicle ? `          <figcaption class="stock-vehicle">
             <div><span>Модель авто</span><strong>${escape(modelName(item))}</strong></div>
             <img src="${escape(vehicle)}" alt="" width="320" height="180" decoding="async">
           </figcaption>\n` : ""}        </figure>
-${item.marking ? `        <details class="stock-marking">
-          <summary>Маркування крупним планом</summary>
-          <a href="${escape(item.marking)}" aria-label="Відкрити фото маркування">
-            <img src="${escape(item.marking)}" alt="Маркування на корпусі амортизатора BYD" width="862" height="1150" loading="lazy" decoding="async">
+${marking ? `        <details class="stock-marking">
+          <summary>${escape(marking.label)}</summary>
+          <a href="${escape(marking.src)}"${marking.tightCrop ? ' class="stock-marking-crop"' : ""} aria-label="Відкрити фото маркування">
+            <img src="${escape(marking.src)}" alt="${escape(marking.alt)}" width="${marking.width}" height="${marking.height}" loading="lazy" decoding="async">
           </a>
         </details>\n` : ""}      </div>\n`;
 }
@@ -74,7 +75,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-photos-1">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-photos-2">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">

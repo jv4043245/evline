@@ -63,7 +63,15 @@ for (const item of stock) {
           assert.equal(png.subarray(1, 4).toString(), "PNG");
           assert.equal(png[25], 6, "product image has an alpha channel");
         }
-        assert.equal(document.querySelector(".stock-marking img")?.getAttribute("src"), item.marking);
+        const markingImage = document.querySelector(".stock-marking img");
+        assert.equal(markingImage?.getAttribute("src"), item.marking?.src);
+        if (item.marking) {
+          assert.equal(markingImage.alt, item.marking.alt);
+          assert.equal(markingImage.closest("a").getAttribute("href"), item.marking.src);
+          assert.equal(markingImage.closest("a").classList.contains("stock-marking-crop"), Boolean(item.marking.tightCrop));
+          const jpg = await readFile(new URL(`.${item.marking.src}`, root));
+          assert.equal(jpg.readUInt16BE(0), 0xffd8);
+        }
       }
       assert.equal(document.querySelector(".stock-badge").textContent, item.inStock ? "В наявності" : "Немає в наявності");
       assert.equal(document.querySelector(".stock-total").textContent, money(item.price));
