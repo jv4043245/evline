@@ -145,14 +145,16 @@ function productPage(item) {
   const name = `${item.name} ${modelName(item)}`;
   const title = `${name} ${item.sku}`;
   return page({
-    path, title, item,
-    description: `${item.description} ${availability(item)} в каталозі EVLine. Ціна: ${priceLabel(item.price)}. Доставка по Україні.`,
+    path, title: item.searchTitle || title, item,
+    description: `${item.searchDescription || item.description} ${availability(item)}: ${priceLabel(item.price)}. Доставка по Україні.`,
     schema: [breadcrumbs([home, catalogCrumb, [title, path]]), {
       "@type": "Product",
+      "@id": site + path + "#product",
       name: title,
       description: item.description,
       sku: item.sku,
       mpn: item.sku,
+      additionalProperty: [{ "@type": "PropertyValue", name: "Крос-номер", value: item.cross }],
       ...(item.image ? { image: new URL(item.image, site).href } : {}),
       url: site + path,
       offers: {
