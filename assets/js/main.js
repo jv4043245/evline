@@ -294,6 +294,7 @@ function formFeedbackCopy(form) {
 }
 
 function showLeadSaved(form, type) {
+  if (form.dataset.leadSuccess) return setFormMessage(form, form.dataset.leadSuccess);
   const node = setFormMessage(form, formFeedbackCopy(form).saved);
   const language = (form.dataset.lang || document.documentElement.lang || "").toLowerCase();
   if (language.startsWith("ro") || !window.EVLineLeadNextSteps) return node;
