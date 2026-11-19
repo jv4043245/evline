@@ -29,6 +29,7 @@ test("catalog is reachable only from the homepage footer and lists every product
   for (const item of stock) {
     assert.ok(catalogHtml.includes(`href="${pathFor(item)}"`));
     assert.ok(catalogHtml.includes(money(item.price)));
+    if (item.thumbnail) assert.ok(catalogHtml.includes(`src="${item.thumbnail}"`));
   }
 });
 
@@ -44,6 +45,19 @@ for (const item of stock) {
       assert.equal(product.offers.priceCurrency, "UAH");
       assert.equal(product.offers.price, item.price.toFixed(2));
       assert.equal(product.offers.availability, `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`);
+      if (item.image) {
+        assert.equal(product.image, site + item.image);
+        assert.equal(document.querySelector("meta[property='og:image']").content, product.image);
+        assert.equal(document.querySelector(".stock-stage a").getAttribute("href"), item.image);
+        assert.equal(document.querySelector(".stock-stage .stock-image").getAttribute("src"), item.image);
+        assert.notEqual(document.querySelector(".stock-vehicle img")?.getAttribute("src"), item.image);
+        for (const path of [item.image, item.thumbnail].filter(Boolean)) {
+          const png = await readFile(new URL(`.${path}`, root));
+          assert.equal(png.subarray(1, 4).toString(), "PNG");
+          assert.equal(png[25], 6, "product image has an alpha channel");
+        }
+        assert.equal(document.querySelector(".stock-marking img")?.getAttribute("src"), item.marking);
+      }
       assert.equal(document.querySelector(".stock-badge").textContent, item.inStock ? "В наявності" : "Немає в наявності");
       assert.equal(document.querySelector(".stock-total").textContent, money(item.price));
       assert.ok(document.querySelector("dl").textContent.includes(item.cross));

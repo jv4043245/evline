@@ -48,7 +48,7 @@ h3 { font-size: 19px; line-height: 1.3; }
   background: #fff;
 }
 .stock-row > div:first-of-type { flex: 1 1 260px; min-width: 0; }
-.stock-row .stock-image { width: 128px; }
+.stock-thumb { width: 148px; max-width: 100%; object-fit: contain; }
 .stock-row h3 { margin-block: 4px; }
 .stock-row-price { display: grid; justify-items: end; gap: 5px; }
 .stock-row-price strong { font-size: 20px; }
@@ -69,18 +69,45 @@ h3 { font-size: 19px; line-height: 1.3; }
 .stock-detail {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  grid-template-areas: "specs order";
   align-items: start;
   gap: 20px 32px;
   margin-top: 16px;
 }
-.stock-specs { display: grid; gap: 12px; }
+.stock-detail--media { grid-template-areas: "media order" "specs order"; }
+.stock-gallery { grid-area: media; min-width: 0; }
+.stock-stage {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--stock-line);
+  border-radius: 8px;
+  background: #fff;
+}
+.stock-stage > a { display: block; padding-block: 6px; }
+.stock-image { width: 100%; aspect-ratio: 3 / 1; object-fit: contain; }
+.stock-vehicle {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.stock-vehicle span, .stock-vehicle strong { display: block; }
+.stock-vehicle span { color: var(--stock-muted); }
+.stock-vehicle img { width: 96px; aspect-ratio: 16 / 9; object-fit: contain; }
+.stock-marking { margin-top: 8px; color: var(--stock-green); font-size: 14px; }
+.stock-marking summary { width: fit-content; padding: 4px 0; cursor: pointer; font-weight: 650; }
+.stock-marking img { width: min(100%, 400px); margin-top: 4px; border-radius: 6px; }
+.stock-specs { grid-area: specs; display: grid; gap: 12px; }
 .stock-specs dl { margin: 3px 0 8px; border-block: 1px solid var(--stock-line); }
 .stock-specs dl > div { display: grid; grid-template-columns: minmax(100px, 30%) 1fr; gap: 8px 16px; padding: 10px 0; }
 .stock-specs dl > div + div { border-top: 1px solid var(--stock-line); }
 .stock-specs dt { color: var(--stock-muted); }
 .stock-specs dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
-.stock-image { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 8px; }
-.stock-order { padding: 17px; border: 1px solid var(--stock-line); border-radius: 8px; background: #fff; }
+.stock-order { grid-area: order; padding: 17px; border: 1px solid var(--stock-line); border-radius: 8px; background: #fff; }
 .stock-total { margin-block: 5px 13px; font-size: 26px; font-weight: 750; }
 .stock-checkout summary {
   display: flex;
@@ -135,8 +162,8 @@ h3 { font-size: 19px; line-height: 1.3; }
   .stock-wrap { width: calc(100% - 28px); }
   .stock-main { padding-block: 22px 32px; }
   h1 { font-size: 27px; }
-  .stock-detail { grid-template-columns: minmax(0, 1fr); }
-  .stock-order { grid-row: 1; }
+  .stock-detail { grid-template-columns: minmax(0, 1fr); grid-template-areas: "order" "specs"; }
+  .stock-detail--media { grid-template-areas: "media" "order" "specs"; }
   .stock-row-price { justify-items: start; grid-auto-flow: column; align-items: center; gap: 10px; }
 }
 

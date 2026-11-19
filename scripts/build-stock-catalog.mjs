@@ -19,9 +19,38 @@ const priceLabel = (price) => `${new Intl.NumberFormat("uk-UA", {
 }).format(price)} грн`;
 const availability = ({ inStock }) => inStock ? "В наявності" : "Немає в наявності";
 const badge = (item) => `<span class="stock-badge${item.inStock ? "" : " stock-badge--unavailable"}">${availability(item)}</span>`;
-const image = ({ image: src, name, sku }, indent) => src
-  ? `${" ".repeat(indent)}<img class="stock-image" src="${escape(src)}" alt="${escape(`${name} ${sku}`)}" width="720" height="540">\n`
-  : "";
+const vehiclePhotos = {
+  // JustAnotherCarDesigner, Wikimedia Commons, CC0 1.0.
+  // https://commons.wikimedia.org/wiki/File:Denza_N7_facelift_011.jpg
+  "Denza N7": "/assets/images/stock/denza-n7-model.png",
+};
+
+function productThumbnail({ image, thumbnail, name, sku }) {
+  return image
+    ? `          <img class="stock-thumb" src="${escape(thumbnail || image)}" alt="${escape(`${name} ${sku}`)}" width="440" height="146" decoding="async">\n`
+    : "";
+}
+
+function productGallery(item) {
+  if (!item.image) return "";
+  const vehicle = vehiclePhotos[modelName(item)];
+  const srcset = item.thumbnail ? ` srcset="${escape(item.thumbnail)} 440w, ${escape(item.image)} 1440w" sizes="(max-width: 670px) calc(100vw - 54px), min(66vw, 710px)"` : "";
+  return `      <div class="stock-gallery">
+        <figure class="stock-stage">
+          <a href="${escape(item.image)}" aria-label="Збільшити фото деталі">
+            <img class="stock-image" src="${escape(item.image)}"${srcset} alt="${escape(`${item.name} ${item.sku}`)}" width="1440" height="480" fetchpriority="high">
+          </a>
+${vehicle ? `          <figcaption class="stock-vehicle">
+            <div><span>Модель авто</span><strong>${escape(modelName(item))}</strong></div>
+            <img src="${escape(vehicle)}" alt="" width="320" height="180" decoding="async">
+          </figcaption>\n` : ""}        </figure>
+${item.marking ? `        <details class="stock-marking">
+          <summary>Маркування крупним планом</summary>
+          <a href="${escape(item.marking)}" aria-label="Відкрити фото маркування">
+            <img src="${escape(item.marking)}" alt="Маркування на корпусі амортизатора BYD" width="862" height="1150" loading="lazy" decoding="async">
+          </a>
+        </details>\n` : ""}      </div>\n`;
+}
 
 function breadcrumbs(entries) {
   return {
@@ -45,7 +74,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-buy-1">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-photos-1">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -99,7 +128,7 @@ ${[...groups].map(([name, items]) => `    <section class="stock-group" id="${gro
       <h2>${escape(name)}</h2>
       <ul class="stock-list">
 ${items.map((item) => `        <li class="stock-row">
-${image(item, 10)}          <div>
+${productThumbnail(item)}          <div>
             <p class="stock-code">${escape(item.sku)} <span>· ${escape(item.cross)}</span></p>
             <h3><a href="${productPath(item)}">${escape(item.name)}</a></h3>
             <p class="stock-muted">${escape(item.design)}</p>
@@ -140,10 +169,10 @@ function productPage(item) {
       <a href="${catalog}#${groupId(modelName(item))}">${escape(modelName(item))}</a>
     </nav>
     <h1>${escape(name)}</h1>
-    <div class="stock-detail">
-      <div class="stock-specs">
+    <div class="stock-detail${item.image ? " stock-detail--media" : ""}">
+${productGallery(item)}      <div class="stock-specs">
         <p class="stock-code">${escape(item.sku)}</p>
-${image(item, 8)}        <p>${escape(item.description)}</p>
+        <p>${escape(item.description)}</p>
         <dl>
           <div><dt>Артикул</dt><dd>${escape(item.sku)}</dd></div>
           <div><dt>Крос-номер</dt><dd>${escape(item.cross)}</dd></div>
