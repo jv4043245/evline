@@ -25,6 +25,18 @@ const priceLabel = (price) => `${new Intl.NumberFormat("uk-UA", {
 const availability = ({ inStock }) => inStock ? "В наявності" : "Немає в наявності";
 const badge = (item) => `<span class="stock-badge${item.inStock ? "" : " stock-badge--unavailable"}">${availability(item)}</span>`;
 const attributeBadge = (text) => `<span class="stock-badge stock-badge--attribute">${text}</span>`;
+// Maker wordmarks shown next to "Оригінал" (official shapes; BYD's 2021 logo
+// is a monochrome wordmark, used in black on light backgrounds).
+const brandLogos = {
+  BYD: { src: "/assets/brand-logos/byd-black.svg", ratio: 4 },
+};
+const brandMark = (brand, height) => {
+  const logo = brandLogos[brand];
+  return logo
+    ? `<img class="stock-brand-logo" src="${logo.src}" alt="${escape(brand)}" width="${height * logo.ratio}" height="${height}">`
+    : `<b class="stock-brand-text">${escape(brand || "")}</b>`;
+};
+
 // Car photos for the "fits" tile: background removed, facing right, plates blanked.
 // Keyed by the names used in stock-catalog.json (model name and alsoListedFor).
 const vehiclePhotos = {
@@ -157,7 +169,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-8">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-9">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -198,7 +210,7 @@ const groups = Map.groupBy(stock, modelName);
 const groupId = (name) => slug(name);
 
 const models = [...groups.keys()];
-const brandIcon = (item) => item.isGenuine ? `<span class="stock-card-fact">${icon("genuine", 16)}Оригінал</span>` : "";
+const brandIcon = (item) => item.isGenuine ? `<span class="stock-card-fact">${icon("genuine", 16)}Оригінал${item.partBrand ? brandMark(item.partBrand, 10) : ""}</span>` : "";
 const newIcon = (item) => item.isNew ? `<span class="stock-card-fact">${icon("new", 16)}Нова</span>` : "";
 
 function catalogCard(item) {
@@ -331,7 +343,7 @@ ${productGallery(item)}      <div class="stock-specs">
           ${badge(item)}
         </div>
         <ul class="stock-badges" aria-label="Стан деталі">
-${item.isGenuine ? `          <li class="stock-fact">${icon("genuine", 22)}<span>${attributeBadge("Оригінал")}<small>заводська деталь</small></span></li>\n` : ""}${item.isNew ? `          <li class="stock-fact">${icon("new", 22)}<span>${attributeBadge("Нова")}<small>без пробігу</small></span></li>\n` : ""}        </ul>
+${item.isGenuine ? `          <li class="stock-fact">${icon("genuine", 22)}<span>${attributeBadge("Оригінал")}${item.partBrand ? brandMark(item.partBrand, 13) : ""}</span></li>\n` : ""}${item.isNew ? `          <li class="stock-fact">${icon("new", 22)}<span>${attributeBadge("Нова")}<small>без пробігу</small></span></li>\n` : ""}        </ul>
         ${item.inStock ? `<details class="stock-checkout">
           <summary>Купити</summary>
           <form class="stock-form" action="/api/leads" method="post" aria-label="Оформлення замовлення" data-lead-form data-light-form data-form-name="${escape(`Склад: ${item.sku}`)}" data-lead-success="Замовлення прийнято. Менеджер зв’яжеться з вами, щоб підтвердити доставку.">
