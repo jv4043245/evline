@@ -207,6 +207,9 @@ a.stock-tile:hover { border-color: var(--stock-green); color: inherit; }
 .stock-fit > .stock-muted { font-size: 14px; }
 .stock-vin-link { display: inline-flex; align-items: center; gap: 8px; width: fit-content; font-weight: 700; }
 .stock-about { display: grid; gap: 6px; }
+.stock-aliases { font-size: 13px !important; }
+.stock-h1-code { margin-top: 6px; font-family: ui-monospace, monospace; font-weight: 700; color: #273a32; }
+.stock-h1-code span { color: var(--stock-muted); font-weight: 500; }
 .stock-about h2 { font-size: 18px; }
 .stock-about p { color: var(--stock-muted); font-size: 15px; }
 

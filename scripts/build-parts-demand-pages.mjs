@@ -9,6 +9,13 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const siteUrl = "https://evline.com.ua";
 const template = await readFile(path.join(root, "scripts/templates/parts-demand-page.tmpl"), "utf8");
 const config = JSON.parse(await readFile(path.join(root, "scripts/parts-demand-pages.json"), "utf8"));
+const stock = JSON.parse(await readFile(path.join(root, "scripts/stock-catalog.json"), "utf8"));
+const stockSlug = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+// In-stock parts linked from the matching Ukrainian demand pages.
+const stockLinksFor = (key) => stock
+  .filter((item) => item.inStock && (item.demandPages || []).includes(key))
+  .map((item) => '<a href="/v-nayavnosti/' + [item.brand, item.model, item.sku].map(stockSlug).join("/") + '/">' +
+    escapeHtml("В наявності: " + item.name.toLowerCase().replace(/^./, (c) => c.toUpperCase()) + " " + item.brand + " " + item.model + " " + item.sku) + "</a>");
 
 const common = {
   uk: {
@@ -217,10 +224,12 @@ function renderPage(topic, language) {
   const ruUrl = siteUrl + ruPath;
   const canonical = language === "uk" ? uaUrl : ruUrl;
   const currentPath = language === "uk" ? topic.uaPath : topic.ruPath;
-  const related = relatedPages[language]
-    .filter((item) => item[0] !== topic.key)
-    .map((item) => '<a href="' + item[1] + '">' + escapeHtml(item[2]) + "</a>")
-    .join("\n              ");
+  const related = [
+    ...(language === "uk" ? stockLinksFor(topic.key) : []),
+    ...relatedPages[language]
+      .filter((item) => item[0] !== topic.key)
+      .map((item) => '<a href="' + item[1] + '">' + escapeHtml(item[2]) + "</a>"),
+  ].join("\n              ");
   const carInput = page.carValue
     ? '<input name="car" value="' + escapeHtml(page.carValue) + '" required>'
     : '<input name="car" placeholder="' + escapeHtml(page.carPlaceholder) + '" required>';

@@ -84,6 +84,12 @@ ${vehicle ? `          <div class="stock-tile stock-vehicle">
       </div>\n`;
 }
 
+// Spellings people type into search: without dashes and with the maker prefix.
+function numberAliases({ sku, cross, partBrand }) {
+  const plain = (value) => value.replace(/[^0-9A-Za-z]/g, "");
+  return [...new Set([plain(sku), plain(cross), partBrand ? `${partBrand} ${sku}` : ""].filter(Boolean))];
+}
+
 function numberRow(label, value) {
   return `<div><dt>${label}</dt><dd><strong>${escape(value)}</strong><button type="button" class="stock-copy" data-copy="${escape(value)}" aria-label="Скопіювати: ${escape(value)}" title="Скопіювати">${icon("copy", 16)}</button></dd></div>`;
 }
@@ -123,7 +129,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-2">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-3">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -203,6 +209,8 @@ function productPage(item) {
       description: item.description,
       sku: item.sku,
       mpn: item.sku,
+      ...(item.partBrand ? { brand: { "@type": "Brand", name: item.partBrand } } : {}),
+      isAccessoryOrSparePartFor: { "@type": "Car", name: modelName(item), brand: { "@type": "Brand", name: item.brand } },
       additionalProperty: [{ "@type": "PropertyValue", name: "Крос-номер", value: item.cross }],
       ...(item.image ? { image: new URL(item.image, site).href } : {}),
       url: site + path,
@@ -221,6 +229,7 @@ function productPage(item) {
       <a href="${catalog}#${groupId(modelName(item))}">${escape(modelName(item))}</a>
     </nav>
     <h1>${escape(name)}</h1>
+    <p class="stock-h1-code">${escape(item.sku)} <span>· ${escape(item.cross)}</span></p>
     <div class="stock-detail${item.image ? " stock-detail--media" : ""}">
 ${productGallery(item)}      <div class="stock-specs">
         <div class="stock-placement">
@@ -239,6 +248,7 @@ ${productGallery(item)}      <div class="stock-specs">
         <section class="stock-about" aria-labelledby="about-title">
           <h2 id="about-title">Про деталь</h2>
           <p>${escape(item.description)}</p>
+          <p class="stock-aliases">Інші варіанти номера: ${escape(numberAliases(item).join(", "))}</p>
         </section>
       </div>
       <section class="stock-order" id="buy" aria-label="Замовлення">
