@@ -20,6 +20,28 @@ for (const page of ['index.html', 'ru/index.html']) {
     assert.match(html, /\.hero-proof\{height:156px;min-height:0\}/);
   });
 
+  test(`${page}: proof images fit their cards at every breakpoint`, () => {
+    const dom = setup();
+    try {
+      const { document } = dom.window;
+      const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]);
+      const style = (selector, list = rules) => list.find(rule => rule.selectorText === selector)?.style;
+      const stylesAt = width => rules.filter(rule => rule.conditionText === `(max-width:${width}px)`)
+        .flatMap(rule => [...rule.cssRules]);
+      assert.equal(document.querySelectorAll('.proof-card__media picture img').length, 3);
+      assert.equal(style('.proof-cards')?.getPropertyValue('display'), 'grid');
+      assert.equal(style('.proof-cards', stylesAt(900))?.getPropertyValue('grid-template-columns'), '1fr');
+      for (const [height, list] of [['190px', rules], ['220px', stylesAt(900)], ['180px', stylesAt(560)]]) {
+        assert.equal(style('.proof-card__media', list)?.getPropertyValue('height'), height);
+      }
+      for (const selector of ['.proof-card__media picture', '.proof-card__media img']) {
+        assert.equal(style(selector)?.getPropertyValue('width'), '100%');
+        assert.equal(style(selector)?.getPropertyValue('height'), '100%');
+      }
+      assert.equal(style('.proof-card__media img')?.getPropertyValue('object-fit'), 'cover');
+    } finally { dom.window.close(); }
+  });
+
   test(`${page}: tracking preload does not change script execution order`, () => {
     const dom = setup();
     try {
