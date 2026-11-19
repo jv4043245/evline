@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 
@@ -18,6 +18,31 @@ for (const page of ['index.html', 'ru/index.html']) {
   test(`${page}: mobile photo row reserves the existing height before images arrive`, () => {
     assert.match(html, /\.hero \.wrap\{gap:14px;grid-template-rows:auto 156px auto\}/);
     assert.match(html, /\.hero-proof\{height:156px;min-height:0\}/);
+  });
+
+  test(`${page}: 3x mobile hero uses sharp, lightweight previews and keeps originals`, async () => {
+    const dom = setup();
+    try {
+      const photos = [...dom.window.document.querySelectorAll('.hero-proof__tile img')];
+      assert.equal(photos.length, 3);
+      let total = 0;
+      for (const [index, [id, minimumPixels]] of [[5, 564], [3, 417], [6, 417]].entries()) {
+        const photo = photos[index];
+        const original = `/assets/hero-gallery-${id}.webp`;
+        const entries = photo.srcset.split(',').map(item => {
+          const [url, size] = item.trim().split(/\s+/);
+          return { url, width: Number.parseInt(size, 10) };
+        });
+        assert.ok(photo.src.endsWith(original));
+        assert.deepEqual(entries.at(-1), { url: original, width: 720 });
+        assert.equal(photo.loading ?? photo.getAttribute('loading'), 'eager');
+        const chosen = entries.find(entry => entry.width >= minimumPixels);
+        assert.match(chosen.url, /^\/assets\/responsive\/hero-gallery-/);
+        assert.ok(chosen.width <= minimumPixels * 1.1);
+        total += (await stat(new URL(`..${chosen.url}`, import.meta.url))).size;
+      }
+      assert.ok(total <= 145_000, `Mobile hero transfer budget exceeded: ${total} B`);
+    } finally { dom.window.close(); }
   });
 
   test(`${page}: proof images fit their cards at every breakpoint`, () => {

@@ -1,45 +1,108 @@
 [
   {
     "source": "assets/hero-gallery-5.webp",
-    "output": "assets/responsive/hero-gallery-5-240.webp",
+    "output": "assets/responsive/hero-gallery-5-240-v2.webp",
     "width": 240,
     "height": 320,
-    "bytes": 25406
+    "bytes": 14218
   },
   {
     "source": "assets/hero-gallery-5.webp",
-    "output": "assets/responsive/hero-gallery-5-400.webp",
+    "output": "assets/responsive/hero-gallery-5-400-v2.webp",
     "width": 400,
     "height": 533,
-    "bytes": 60112
+    "bytes": 31154
+  },
+  {
+    "source": "assets/hero-gallery-5.webp",
+    "output": "assets/responsive/hero-gallery-5-480-v2.webp",
+    "width": 480,
+    "height": 640,
+    "bytes": 41590
+  },
+  {
+    "source": "assets/hero-gallery-5.webp",
+    "output": "assets/responsive/hero-gallery-5-576-v2.webp",
+    "width": 576,
+    "height": 768,
+    "bytes": 50604
+  },
+  {
+    "source": "assets/hero-gallery-5.webp",
+    "output": "assets/responsive/hero-gallery-5-640-v2.webp",
+    "width": 640,
+    "height": 853,
+    "bytes": 60270
   },
   {
     "source": "assets/hero-gallery-3.webp",
-    "output": "assets/responsive/hero-gallery-3-240.webp",
+    "output": "assets/responsive/hero-gallery-3-240-v2.webp",
     "width": 240,
     "height": 180,
-    "bytes": 17290
+    "bytes": 10196
   },
   {
     "source": "assets/hero-gallery-3.webp",
-    "output": "assets/responsive/hero-gallery-3-400.webp",
+    "output": "assets/responsive/hero-gallery-3-400-v2.webp",
     "width": 400,
     "height": 300,
-    "bytes": 42360
+    "bytes": 24540
+  },
+  {
+    "source": "assets/hero-gallery-3.webp",
+    "output": "assets/responsive/hero-gallery-3-448-v2.webp",
+    "width": 448,
+    "height": 336,
+    "bytes": 29410
+  },
+  {
+    "source": "assets/hero-gallery-3.webp",
+    "output": "assets/responsive/hero-gallery-3-560-v2.webp",
+    "width": 560,
+    "height": 420,
+    "bytes": 41394
+  },
+  {
+    "source": "assets/hero-gallery-3.webp",
+    "output": "assets/responsive/hero-gallery-3-640-v2.webp",
+    "width": 640,
+    "height": 480,
+    "bytes": 51206
   },
   {
     "source": "assets/hero-gallery-6.webp",
-    "output": "assets/responsive/hero-gallery-6-240.webp",
+    "output": "assets/responsive/hero-gallery-6-240-v2.webp",
     "width": 240,
     "height": 320,
-    "bytes": 28418
+    "bytes": 16796
   },
   {
     "source": "assets/hero-gallery-6.webp",
-    "output": "assets/responsive/hero-gallery-6-400.webp",
+    "output": "assets/responsive/hero-gallery-6-400-v2.webp",
     "width": 400,
     "height": 533,
-    "bytes": 70688
+    "bytes": 39714
+  },
+  {
+    "source": "assets/hero-gallery-6.webp",
+    "output": "assets/responsive/hero-gallery-6-448-v2.webp",
+    "width": 448,
+    "height": 597,
+    "bytes": 48620
+  },
+  {
+    "source": "assets/hero-gallery-6.webp",
+    "output": "assets/responsive/hero-gallery-6-560-v2.webp",
+    "width": 560,
+    "height": 747,
+    "bytes": 70548
+  },
+  {
+    "source": "assets/hero-gallery-6.webp",
+    "output": "assets/responsive/hero-gallery-6-640-v2.webp",
+    "width": 640,
+    "height": 853,
+    "bytes": 85506
   },
   {
     "source": "assets/images/china-delivery-visual.webp",
