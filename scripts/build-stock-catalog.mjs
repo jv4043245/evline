@@ -25,11 +25,38 @@ const priceLabel = (price) => `${new Intl.NumberFormat("uk-UA", {
 const availability = ({ inStock }) => inStock ? "В наявності" : "Немає в наявності";
 const badge = (item) => `<span class="stock-badge${item.inStock ? "" : " stock-badge--unavailable"}">${availability(item)}</span>`;
 const attributeBadge = (text) => `<span class="stock-badge stock-badge--attribute">${text}</span>`;
+// Car photos for the "fits" tile: background removed, facing right, plates blanked.
+// Keyed by the names used in stock-catalog.json (model name and alsoListedFor).
 const vehiclePhotos = {
   // JustAnotherCarDesigner, Wikimedia Commons, CC0 1.0.
   // https://commons.wikimedia.org/wiki/File:Denza_N7_facelift_011.jpg
-  "Denza N7": "/assets/images/stock/denza-n7-model.png",
+  "Denza N7": { src: "/assets/images/stock/denza-n7-model.png", label: "Denza N7" },
+  // JustAnotherCarDesigner, Wikimedia Commons, CC0 1.0.
+  // https://commons.wikimedia.org/wiki/File:BYD_Sealion_07_EV_001.jpg
+  "BYD Sea Lion 07 (Sealion 7)": { src: "/assets/images/stock/byd-sealion-07-model.png", label: "BYD Sealion 7" },
+  // JustAnotherCarDesigner, Wikimedia Commons, CC0 1.0.
+  // https://commons.wikimedia.org/wiki/File:BYD_Song_L_006.jpg
+  "BYD Song L": { src: "/assets/images/stock/byd-song-l-model.png", label: "BYD Song L" },
 };
+
+// Main car (confirmed) plus every car the part is listed for; others link to
+// Telegram with a ready question, so an owner who sees their car can ask.
+function fitCars(item) {
+  const cars = [modelName(item), ...(item.alsoListedFor || [])]
+    .map((name, index) => ({ name, main: index === 0, photo: vehiclePhotos[name] }));
+  return `          <div class="stock-tile stock-vehicle">
+            <span class="stock-vehicle-title">Підходить для</span>
+            <ul class="stock-vehicle-list">
+${cars.map((car) => {
+    const label = escape(car.photo?.label || car.name);
+    const img = car.photo ? `<img src="${escape(car.photo.src)}" alt="${escape(car.name)}" width="320" height="180" loading="lazy" decoding="async">` : "";
+    if (car.main) return `              <li class="is-main">${img}<strong>${label}</strong><small>${icon("check", 14)}підходить</small></li>`;
+    const text = `Добрий день! У мене ${car.name}. Чи підійде ${item.sku} (${item.name.toLowerCase()})?`;
+    return `              <li><a href="https://t.me/evline_support?text=${encodeURIComponent(text)}" target="_blank" rel="noopener" data-contact-intent="parts" data-contact-id="stock-fit-car">${img}<strong>${label}</strong><small>уточнимо за VIN</small></a></li>`;
+  }).join("\n")}
+            </ul>
+          </div>\n`;
+}
 
 function productThumbnail({ image, thumbnail, name, sku }) {
   return image
@@ -69,7 +96,6 @@ ${wheels.map((wheel) => `            <rect x="${wheel[2]}" y="${wheel[3]}" width
 
 function productGallery(item) {
   if (!item.image) return "";
-  const vehicle = vehiclePhotos[modelName(item)];
   const marking = item.marking;
   const srcset = item.thumbnail ? ` srcset="${escape(item.thumbnail)} 440w, ${escape(item.image)} 1440w" sizes="(max-width: 670px) calc(100vw - 54px), min(66vw, 710px)"` : "";
   return `      <div class="stock-gallery">
@@ -79,10 +105,7 @@ function productGallery(item) {
           </a>
         </figure>
         <div class="stock-tiles">
-${vehicle ? `          <div class="stock-tile stock-vehicle">
-            <img src="${escape(vehicle)}" alt="" width="320" height="180" decoding="async">
-            <div><span>Для авто</span><strong>${escape(modelName(item))}</strong></div>
-          </div>\n` : ""}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
+${fitCars(item)}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
             <img src="${escape(marking.src)}" alt="${escape(marking.alt)}" width="${marking.width}" height="${marking.height}" loading="lazy" decoding="async">
             <div><span>Реальне фото</span><strong>Маркування</strong></div>
           </a>\n` : ""}        </div>
@@ -134,7 +157,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-7">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-8">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">

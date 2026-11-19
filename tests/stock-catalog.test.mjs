@@ -215,3 +215,24 @@ test("catalog showcase: searchable cards, perks and a China-order fallback; prod
     if (item.marking) assert.match(html, new RegExp(`href="${item.marking.src}"[^>]*data-lightbox`));
   }
 });
+
+test("fits tile shows every listed car with a photo; other cars ask about fitment in Telegram", async () => {
+  for (const item of stock) {
+    const { window } = new JSDOM(await pathHtml(pathFor(item)));
+    try {
+      const cars = [...window.document.querySelectorAll(".stock-vehicle-list li")];
+      assert.equal(cars.length, 1 + (item.alsoListedFor || []).length, item.sku);
+      assert.ok(cars[0].classList.contains("is-main"));
+      for (const car of cars) {
+        const src = car.querySelector("img")?.getAttribute("src");
+        assert.ok(src, `${item.sku}: car photo`);
+        await readFile(new URL(`.${src}`, root));
+      }
+      for (const car of cars.slice(1)) {
+        const href = car.querySelector("a").getAttribute("href");
+        assert.ok(href.startsWith("https://t.me/evline_support?text="));
+        assert.ok(decodeURIComponent(href).includes(item.sku));
+      }
+    } finally { window.close(); }
+  }
+});
