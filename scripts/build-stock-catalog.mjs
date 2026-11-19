@@ -88,6 +88,7 @@ const iconPaths = {
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.26a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/>',
   telegram: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
 };
 const icon = (name, size = 20) => `<svg class="stock-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
 
@@ -115,12 +116,12 @@ function productGallery(item) {
           <a href="${escape(item.image)}" aria-label="Збільшити фото деталі" data-lightbox data-caption="${escape(`${item.name} ${modelName(item)} · ${item.sku}`)}">
             <img class="stock-image" src="${escape(item.image)}"${srcset} alt="${escape(`${item.name} ${item.sku}`)}" width="1440" height="480" fetchpriority="high">
           </a>
-        </figure>
-        <div class="stock-tiles">
-${fitCars(item)}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
+${marking ? `          <a class="stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}${marking.corner === "right" ? " stock-marking-right" : ""}" href="${escape(marking.src)}" aria-label="Відкрити реальне фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
             <img src="${escape(marking.src)}" alt="${escape(marking.alt)}" width="${marking.width}" height="${marking.height}" loading="lazy" decoding="async">
-            <div><span>Реальне фото</span><strong>Маркування</strong></div>
-          </a>\n` : ""}        </div>
+            <span>${icon("camera", 14)}Реальне фото</span>
+          </a>\n` : ""}        </figure>
+        <div class="stock-tiles">
+${fitCars(item)}        </div>
       </div>\n`;
 }
 
@@ -156,6 +157,25 @@ function breadcrumbs(entries) {
   };
 }
 
+// Mobile bottom bar, like the homepage: always at hand while scrolling.
+// In-stock product: call + price + buy; other pages: call + Telegram.
+function mobileBar(item) {
+  const call = `tel:${phone}`;
+  if (item?.inStock) {
+    return `  <div class="stock-sticky">
+    <a class="stock-sticky-call" href="${call}" data-contact-intent="parts" data-contact-id="stock-mobile-call" aria-label="Зателефонувати: +38 (093) 525-10-24">${icon("phone", 20)}</a>
+    <div><strong>${priceLabel(item.price)}</strong><span>В наявності</span></div>
+    <a class="stock-sticky-buy" href="#buy" data-open-checkout>Купити</a>
+  </div>
+`;
+  }
+  return `  <div class="stock-sticky stock-sticky--contact">
+    <a class="stock-sticky-call" href="${call}" data-contact-intent="parts" data-contact-id="stock-mobile-call">${icon("phone", 18)}Подзвонити</a>
+    <a class="stock-sticky-tg" href="https://t.me/evline_support" target="_blank" rel="noopener" data-contact-intent="parts" data-contact-id="stock-mobile-telegram">${icon("telegram", 18)}Telegram</a>
+  </div>
+`;
+}
+
 function page({ path, title, description, schema, content, item }) {
   const fullTitle = `${title} | EVLine`;
   const url = site + path;
@@ -169,7 +189,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-9">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-11">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
@@ -177,7 +197,7 @@ function page({ path, title, description, schema, content, item }) {
   <meta property="og:url" content="${url}">
 ${item?.image ? `  <meta property="og:image" content="${escape(new URL(item.image, site).href)}">\n` : ""}  <script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@graph": schema }).replace(/</g, "\\u003c")}</script>
   <script src="/assets/js/${item?.inStock ? "main" : "contact-tracking"}.js" defer></script>
-  <script src="/assets/js/stock-card.js?v=20261119-card-4" defer></script>
+  <script src="/assets/js/stock-card.js?v=20261119-card-5" defer></script>
 </head>
 <body>
   <header class="stock-header">
@@ -198,7 +218,7 @@ ${content}
     <a href="${termsPath}">Доставка, оплата та повернення</a>
     <a href="/privacy/">Конфіденційність</a>
   </div></footer>
-</body>
+${mobileBar(item)}</body>
 </html>
 `));
 }
@@ -367,11 +387,7 @@ ${item.inStock ? `            <li>${icon("clock")}<span>Відправлення
           <a class="stock-call" href="tel:${phone}" data-contact-intent="parts" data-contact-id="stock-product-call" aria-label="Зателефонувати: +38 (093) 525-10-24" title="Зателефонувати">${icon("phone")}</a>
         </div>
       </section>
-    </div>
-${item.inStock ? `    <div class="stock-sticky" hidden>
-      <div><strong>${priceLabel(item.price)}</strong><span>В наявності</span></div>
-      <a href="#buy" data-open-checkout>Купити</a>
-    </div>` : ""}`,
+    </div>`,
   });
 }
 

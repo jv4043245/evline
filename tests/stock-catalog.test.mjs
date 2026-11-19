@@ -87,6 +87,10 @@ for (const item of stock) {
           assert.equal(markingImage.alt, item.marking.alt);
           assert.equal(markingImage.closest("a").getAttribute("href"), item.marking.src);
           assert.equal(markingImage.closest("a").classList.contains("stock-marking-crop"), Boolean(item.marking.tightCrop));
+          // The real photo sits in a corner of the main photo, not in a separate tile.
+          assert.ok(markingImage.closest(".stock-stage"), "marking photo is pinned to the main photo");
+          assert.equal(markingImage.closest("a").classList.contains("stock-marking-right"), item.marking.corner === "right");
+          assert.equal(document.querySelectorAll(".stock-tiles > *").length, 1, "only the fits tile stays under the photo");
           const jpg = await readFile(new URL(`.${item.marking.src}`, root));
           assert.equal(jpg.readUInt16BE(0), 0xffd8);
         }
@@ -123,9 +127,11 @@ for (const item of stock) {
       const checkout = window.document.querySelector(".stock-checkout");
       assert.equal(checkout.open, false);
       assert.equal(checkout.querySelector("summary").textContent, "Купити");
+      // Mobile bottom bar is always there (like the homepage): call + price + buy.
       const sticky = window.document.querySelector(".stock-sticky");
-      assert.ok(sticky.hidden);
+      assert.equal(sticky.hidden, false);
       assert.equal(sticky.querySelector("[data-open-checkout]").getAttribute("href"), "#buy");
+      assert.equal(sticky.querySelector(".stock-sticky-call").getAttribute("href"), "tel:+380935251024");
       assert.ok(sticky.textContent.includes(money(item.price)));
       const terms = window.document.querySelector(".stock-terms");
       assert.match(terms.textContent, /Доставка по всій Україні/);
@@ -168,6 +174,7 @@ test("terms page, return policy and Merchant Center feed match the stock data", 
   assert.match(termsHtml, /Накладений платіж/);
   assert.match(termsHtml, /протягом 14 днів/);
   assert.ok(sitemap.includes(`<loc>${site}${catalog}umovy/</loc>`));
+  assert.match(termsHtml, /class="stock-sticky stock-sticky--contact"/);
   const feed = await read("merchant-feed.xml");
   const { window } = new JSDOM(feed, { contentType: "text/xml" });
   try {
@@ -199,6 +206,9 @@ test("catalog showcase: searchable cards, perks and a China-order fallback; prod
     assert.match(document.querySelector(".stock-perks").textContent, /Повернення 14 днів/);
     assert.ok(document.querySelector(`.stock-perks-link[href="${catalog}umovy/"]`));
     assert.ok(document.querySelector('.stock-cta a[href="/#vin-form"]'));
+    // Same mobile bottom bar as the homepage: call + Telegram.
+    assert.ok(document.querySelector('.stock-sticky--contact a.stock-sticky-call[href="tel:+380935251024"]'));
+    assert.ok(document.querySelector('.stock-sticky--contact a.stock-sticky-tg[href="https://t.me/evline_support"]'));
     assert.equal(document.querySelectorAll(".stock-card").length, stock.length);
     window.eval(await read("assets/js/stock-card.js"));
     const search = document.querySelector("[data-stock-search]");
