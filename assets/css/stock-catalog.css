@@ -268,6 +268,12 @@ a.stock-tile:hover { border-color: var(--stock-green); color: inherit; }
 
 .stock-sticky { display: none; }
 
+/* Maker wordmark next to "Оригінал" */
+.stock-brand-logo { display: inline-block; width: auto; vertical-align: middle; }
+.stock-fact .stock-brand-logo { height: 13px; margin-top: 4px; }
+.stock-card-fact .stock-brand-logo { height: 10px; margin-left: 2px; }
+.stock-brand-text { font-size: 13px; letter-spacing: .04em; }
+
 /* Photo lightbox */
 .stock-lightbox { width: min(96vw, 1100px); max-height: 92vh; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 30px 80px rgba(0, 0, 0, .4); }
 .stock-lightbox::backdrop { background: rgba(10, 16, 13, .78); }

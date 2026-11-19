@@ -55,6 +55,12 @@ for (const item of stock) {
       assert.equal(product.offers.itemCondition, item.isNew ? "https://schema.org/NewCondition" : undefined);
       const badges = [...document.querySelectorAll(".stock-badges .stock-badge--attribute")].map((badge) => badge.textContent);
       assert.deepEqual(badges, [item.isGenuine && "Оригінал", item.isNew && "Нова"].filter(Boolean));
+      if (item.isGenuine && item.partBrand) {
+        const logo = document.querySelector(".stock-fact .stock-brand-logo");
+        assert.equal(logo?.getAttribute("alt"), item.partBrand);
+        await readFile(new URL(`.${logo.getAttribute("src")}`, root));
+        assert.doesNotMatch(document.querySelector(".stock-badges").textContent, /заводська деталь/);
+      }
       assert.equal(document.querySelector(".stock-placement strong").textContent, item.position);
       const activeWheels = document.querySelectorAll(".stock-placement-car .car-wheel.is-active").length;
       assert.equal(activeWheels, item.placement?.side === "both" ? 2 : 1);
