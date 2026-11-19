@@ -20,10 +20,18 @@
       "width": 862,
       "height": 1150
     },
-    "price": 6090.30,
+    "price": 6090.3,
     "isNew": true,
     "isGenuine": true,
-    "inStock": true
+    "inStock": true,
+    "placement": {
+      "axle": "front",
+      "side": "both"
+    },
+    "alsoListedFor": [
+      "BYD Sea Lion 07 (Sealion 7)"
+    ],
+    "fitmentCheck": "Звіримо за VIN комплектацію, сторону встановлення та номер вашого амортизатора."
   },
   {
     "brand": "Denza",
@@ -47,9 +55,18 @@
       "height": 1280,
       "tightCrop": true
     },
-    "price": 4409.10,
+    "price": 4409.1,
     "isNew": true,
     "isGenuine": true,
-    "inStock": true
+    "inStock": true,
+    "placement": {
+      "axle": "front",
+      "side": "right"
+    },
+    "alsoListedFor": [
+      "BYD Sea Lion 07 (Sealion 7)",
+      "BYD Song L"
+    ],
+    "fitmentCheck": "Звіримо за VIN сторону та повний номер деталі, включно із закінченням BF."
   }
 ]
