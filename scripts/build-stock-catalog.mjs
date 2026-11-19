@@ -74,7 +74,7 @@ function productGallery(item) {
   const srcset = item.thumbnail ? ` srcset="${escape(item.thumbnail)} 440w, ${escape(item.image)} 1440w" sizes="(max-width: 670px) calc(100vw - 54px), min(66vw, 710px)"` : "";
   return `      <div class="stock-gallery">
         <figure class="stock-stage">
-          <a href="${escape(item.image)}" aria-label="Збільшити фото деталі">
+          <a href="${escape(item.image)}" aria-label="Збільшити фото деталі" data-lightbox data-caption="${escape(`${item.name} ${modelName(item)} · ${item.sku}`)}">
             <img class="stock-image" src="${escape(item.image)}"${srcset} alt="${escape(`${item.name} ${item.sku}`)}" width="1440" height="480" fetchpriority="high">
           </a>
         </figure>
@@ -82,7 +82,7 @@ function productGallery(item) {
 ${vehicle ? `          <div class="stock-tile stock-vehicle">
             <img src="${escape(vehicle)}" alt="" width="320" height="180" decoding="async">
             <div><span>Для авто</span><strong>${escape(modelName(item))}</strong></div>
-          </div>\n` : ""}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування">
+          </div>\n` : ""}${marking ? `          <a class="stock-tile stock-marking${marking.tightCrop ? " stock-marking-crop" : ""}" href="${escape(marking.src)}" aria-label="Відкрити фото маркування" data-lightbox data-caption="${escape(marking.alt)}">
             <img src="${escape(marking.src)}" alt="${escape(marking.alt)}" width="${marking.width}" height="${marking.height}" loading="lazy" decoding="async">
             <div><span>Реальне фото</span><strong>Маркування</strong></div>
           </a>\n` : ""}        </div>
@@ -134,14 +134,15 @@ function page({ path, title, description, schema, content, item }) {
   <meta name="description" content="${escape(description)}">
   <link rel="canonical" href="${url}">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-5">
+  <link rel="stylesheet" href="/assets/css/stock-catalog.css?v=20261119-card-7">
   <meta property="og:locale" content="uk_UA">
   <meta property="og:type" content="${item ? "product" : "website"}">
   <meta property="og:title" content="${escape(fullTitle)}">
   <meta property="og:description" content="${escape(description)}">
   <meta property="og:url" content="${url}">
 ${item?.image ? `  <meta property="og:image" content="${escape(new URL(item.image, site).href)}">\n` : ""}  <script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@graph": schema }).replace(/</g, "\\u003c")}</script>
-  <script src="/assets/js/${item?.inStock ? "main" : "contact-tracking"}.js" defer></script>${item ? `\n  <script src="/assets/js/stock-card.js?v=20261119-card-2" defer></script>` : ""}
+  <script src="/assets/js/${item?.inStock ? "main" : "contact-tracking"}.js" defer></script>
+  <script src="/assets/js/stock-card.js?v=20261119-card-4" defer></script>
 </head>
 <body>
   <header class="stock-header">
@@ -173,32 +174,67 @@ const catalogCrumb = [catalogName, catalog];
 const groups = Map.groupBy(stock, modelName);
 const groupId = (name) => slug(name);
 
+const models = [...groups.keys()];
+const brandIcon = (item) => item.isGenuine ? `<span class="stock-card-fact">${icon("genuine", 16)}Оригінал</span>` : "";
+const newIcon = (item) => item.isNew ? `<span class="stock-card-fact">${icon("new", 16)}Нова</span>` : "";
+
+function catalogCard(item) {
+  const searchText = [item.name, item.design, item.sku, item.cross, modelName(item), ...numberAliases(item)].join(" ").toLowerCase();
+  return `        <li class="stock-row stock-card" data-search="${escape(searchText)}">
+          <a class="stock-card-media" href="${productPath(item)}" tabindex="-1" aria-hidden="true">
+${productThumbnail(item).replace(/^ +/, "            ")}          </a>
+          <div class="stock-card-body">
+            <p class="stock-code">${escape(item.sku)} <span>· ${escape(item.cross)}</span></p>
+            <h3><a href="${productPath(item)}">${escape(item.name)}</a></h3>
+            <p class="stock-card-place">${placementDiagram(item.placement).replace('width="56" height="96"', 'width="14" height="24"')}${escape(item.position)}</p>
+            <p class="stock-card-facts">${brandIcon(item)}${newIcon(item)}</p>
+          </div>
+          <div class="stock-row-price">${badge(item)}<strong>${priceLabel(item.price)}</strong><a class="stock-card-buy" href="${productPath(item)}#buy">${item.inStock ? "Купити" : "Детальніше"}</a></div>
+        </li>`;
+}
+
 const list = page({
   path: catalog,
-  title: catalogName,
-  description: "Купуйте запчастини Denza N7 зі складу EVLine. Актуальні ціни, артикули та доставка по Україні.",
+  title: `Запчастини ${models.join(", ")} в наявності — оригінал зі складу`,
+  description: `Оригінальні нові запчастини ${models.join(", ")} зі складу EVLine: ${stock.slice(0, 3).map((item) => `${item.name.toLowerCase()} ${item.sku}`).join(", ")}. Відправлення наступного робочого дня Новою поштою, повернення 14 днів.`,
   schema: [breadcrumbs([home, catalogCrumb]), {
     "@type": "ItemList",
     itemListElement: stock.map((item, index) => ({
       "@type": "ListItem", position: index + 1, name: `${item.name} ${modelName(item)}`, url: site + productPath(item),
     })),
   }],
-  content: `    <h1>${catalogName}</h1>
-    <p class="stock-intro">Запчастини зі складу з доставкою по Україні.</p>
+  content: `    <section class="stock-hero">
+      <h1>${catalogName}</h1>
+      <p class="stock-intro">Оригінальні нові деталі зі складу — без очікування доставки з Китаю.</p>
+      <ul class="stock-perks">
+        <li>${icon("clock")}<span><strong>Відправлення наступного робочого дня</strong></span></li>
+        <li>${icon("truck")}<span><strong>Нова пошта, 1–3 дні</strong></span></li>
+        <li>${icon("genuine")}<span><strong>Повернення 14 днів</strong></span></li>
+        <li>${icon("buyers")}<span><strong>Рахунок або накладений платіж</strong></span></li>
+      </ul>
+      <a class="stock-perks-link" href="${termsPath}">Умови доставки, оплати та повернення</a>
+    </section>
+    <div class="stock-search">
+      ${icon("search", 18)}
+      <input type="search" placeholder="Пошук за назвою або артикулом" aria-label="Пошук за назвою або артикулом" data-stock-search>
+    </div>
+    <p class="stock-search-empty" data-stock-empty hidden>Нічого не знайшли на складі. <a href="/#vin-form">Підберемо й привеземо з Китаю</a></p>
 ${[...groups].map(([name, items]) => `    <section class="stock-group" id="${groupId(name)}">
-      <h2>${escape(name)}</h2>
-      <ul class="stock-list">
-${items.map((item) => `        <li class="stock-row">
-${productThumbnail(item)}          <div>
-            <p class="stock-code">${escape(item.sku)} <span>· ${escape(item.cross)}</span></p>
-            <h3><a href="${productPath(item)}">${escape(item.name)}</a></h3>
-            <p class="stock-muted">${escape(item.design)}</p>
-          </div>
-          <div class="stock-row-price">${badge(item)}<strong>${priceLabel(item.price)}</strong></div>
-        </li>`).join("\n")}
+      <h2>${escape(name)} <span>${items.length}</span></h2>
+      <ul class="stock-list stock-grid">
+${items.map(catalogCard).join("\n")}
       </ul>
     </section>`).join("\n")}
-    <p class="stock-more">Потрібна інша деталь? <a href="/#vin-form">Підбір запчастин за VIN</a></p>`,
+    <section class="stock-cta">
+      <div>
+        <h2>Немає потрібної деталі?</h2>
+        <p>Підберемо за VIN і привеземо з Китаю — авіа від 20 днів. Оригінал або якісний OEM, ціна «під ключ» до оплати.</p>
+      </div>
+      <div class="stock-cta-actions">
+        <a class="stock-cta-main" href="/#vin-form">Підібрати за VIN</a>
+        <a class="stock-cta-tg" href="https://t.me/evline_support" target="_blank" rel="noopener" data-contact-intent="parts" data-contact-id="stock-catalog-telegram">${icon("telegram", 18)}Telegram</a>
+      </div>
+    </section>`,
 });
 
 function productPage(item) {

@@ -183,3 +183,35 @@ test("terms page, return policy and Merchant Center feed match the stock data", 
     }
   } finally { window.close(); }
 });
+
+test("catalog showcase: searchable cards, perks and a China-order fallback; product photos open in a popup", async () => {
+  const catalogHtml = await pathHtml(catalog);
+  const { window } = new JSDOM(catalogHtml, { url: site + catalog, runScripts: "outside-only" });
+  try {
+    const document = window.document;
+    assert.ok(document.querySelector("[data-stock-search]"));
+    assert.match(document.querySelector(".stock-perks").textContent, /Повернення 14 днів/);
+    assert.ok(document.querySelector(`.stock-perks-link[href="${catalog}umovy/"]`));
+    assert.ok(document.querySelector('.stock-cta a[href="/#vin-form"]'));
+    assert.equal(document.querySelectorAll(".stock-card").length, stock.length);
+    window.eval(await read("assets/js/stock-card.js"));
+    const search = document.querySelector("[data-stock-search]");
+    const visible = (query) => {
+      search.value = query;
+      search.dispatchEvent(new window.Event("input"));
+      return [...document.querySelectorAll(".stock-card")].filter((card) => !card.hidden).length;
+    };
+    for (const item of stock) {
+      assert.equal(visible(item.sku.replace("-", " ").toLowerCase()), 1, item.sku);
+      assert.equal(visible(item.cross), 1, item.cross);
+    }
+    assert.equal(visible("немає-такої-деталі"), 0);
+    assert.equal(document.querySelector("[data-stock-empty]").hidden, false);
+    assert.equal(visible(""), stock.length);
+  } finally { window.close(); }
+  for (const item of stock.filter((entry) => entry.image)) {
+    const html = await pathHtml(pathFor(item));
+    assert.match(html, new RegExp(`href="${item.image}"[^>]*data-lightbox`));
+    if (item.marking) assert.match(html, new RegExp(`href="${item.marking.src}"[^>]*data-lightbox`));
+  }
+});
