@@ -11,7 +11,25 @@ const termsPath = "/v-nayavnosti/umovy/";
 // Owner-confirmed terms (19.11.2026): Nova Poshta at carrier rates paid by the
 // buyer, dispatch next working day, 1–3 days in transit; 14-day returns of
 // unfitted parts, return shipping paid by the buyer unless the error is ours.
-const terms = { returnDays: 14, handlingDays: [0, 1], transitDays: [1, 3] };
+// Shipping estimate 200 UAH: the owner's figure for the current parts (20.11.2026),
+// the same flat rate as in Google Merchant Center. Override per item with
+// `shippingCost` in stock-catalog.json for much smaller or bigger parts.
+const terms = { returnDays: 14, handlingDays: [0, 1], transitDays: [1, 3], shippingCost: 200 };
+const days = ([minValue, maxValue]) => ({ "@type": "QuantitativeValue", minValue, maxValue, unitCode: "DAY" });
+const shippingDetails = (item) => ({
+  "@type": "OfferShippingDetails",
+  shippingRate: { "@type": "MonetaryAmount", value: (item.shippingCost ?? terms.shippingCost).toFixed(2), currency: "UAH" },
+  shippingDestination: { "@type": "DefinedRegion", addressCountry: "UA" },
+  deliveryTime: {
+    "@type": "ShippingDeliveryTime",
+    businessDays: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => `https://schema.org/${day}`),
+    },
+    handlingTime: days(terms.handlingDays),
+    transitTime: days(terms.transitDays),
+  },
+});
 const escape = (value) => String(value).replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 })[c]);
@@ -319,9 +337,11 @@ function productPage(item) {
         availability: `https://schema.org/${item.inStock ? "InStock" : "OutOfStock"}`,
         ...(item.isNew ? { itemCondition: "https://schema.org/NewCondition" } : {}),
         seller: { "@type": "Organization", name: "EVLine Україна" },
+        shippingDetails: shippingDetails(item),
         hasMerchantReturnPolicy: {
           "@type": "MerchantReturnPolicy",
           applicableCountry: "UA",
+          returnPolicyCountry: "UA",
           returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
           merchantReturnDays: terms.returnDays,
           returnMethod: "https://schema.org/ReturnByMail",
@@ -451,6 +471,7 @@ ${item.image ? `      <g:image_link>${site}${xml(item.image)}</g:image_link>
 ` : ""}${item.marking ? `      <g:additional_image_link>${site}${xml(item.marking.src)}</g:additional_image_link>
 ` : ""}      <g:availability>${item.inStock ? "in_stock" : "out_of_stock"}</g:availability>
       <g:price>${item.price.toFixed(2)} UAH</g:price>
+      <g:shipping><g:country>UA</g:country><g:price>${(item.shippingCost ?? terms.shippingCost).toFixed(2)} UAH</g:price></g:shipping>
       <g:condition>${item.isNew ? "new" : "used"}</g:condition>
 ${item.partBrand ? `      <g:brand>${xml(item.partBrand)}</g:brand>
 ` : ""}      <g:mpn>${xml(item.sku)}</g:mpn>
