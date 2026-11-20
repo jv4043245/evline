@@ -14,6 +14,7 @@
       <g:additional_image_link>https://evline.com.ua/assets/images/stock/ufec-2905100-marking.jpg</g:additional_image_link>
       <g:availability>in_stock</g:availability>
       <g:price>6090.30 UAH</g:price>
+      <g:shipping><g:country>UA</g:country><g:price>200.00 UAH</g:price></g:shipping>
       <g:condition>new</g:condition>
       <g:brand>BYD</g:brand>
       <g:mpn>UFEC-2905100</g:mpn>
@@ -29,6 +30,7 @@
       <g:additional_image_link>https://evline.com.ua/assets/images/stock/ta70-2904200bf-marking.jpg</g:additional_image_link>
       <g:availability>in_stock</g:availability>
       <g:price>4409.10 UAH</g:price>
+      <g:shipping><g:country>UA</g:country><g:price>200.00 UAH</g:price></g:shipping>
       <g:condition>new</g:condition>
       <g:brand>BYD</g:brand>
       <g:mpn>TA70-2904200BF</g:mpn>

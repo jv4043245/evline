@@ -193,6 +193,13 @@ test("terms page, return policy and Merchant Center feed match the stock data", 
       const product = JSON.parse(html.match(/ld\+json">(.*?)<\/script>/s)[1])["@graph"].find((n) => n["@type"] === "Product");
       assert.equal(product.offers.hasMerchantReturnPolicy.merchantReturnDays, 14);
       assert.equal(product.offers.hasMerchantReturnPolicy.applicableCountry, "UA");
+      // Shipping in the markup (Search Console "missing shippingDetails"), same as Merchant Center.
+      const shipping = product.offers.shippingDetails;
+      assert.equal(shipping.shippingRate.currency, "UAH");
+      assert.equal(shipping.shippingRate.value, (item.shippingCost ?? 200).toFixed(2));
+      assert.equal(shipping.shippingDestination.addressCountry, "UA");
+      assert.deepEqual([shipping.deliveryTime.handlingTime.minValue, shipping.deliveryTime.handlingTime.maxValue], [0, 1]);
+      assert.deepEqual([shipping.deliveryTime.transitTime.minValue, shipping.deliveryTime.transitTime.maxValue], [1, 3]);
     }
   } finally { window.close(); }
 });
