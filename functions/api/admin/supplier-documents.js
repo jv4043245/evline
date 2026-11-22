@@ -5,6 +5,13 @@ import { documentStorageStatus } from '../../_lib/supplier-document-storage.js';
 import { supportAvailable } from '../../_lib/slavik-support.js';
 import { all, first, run, fail, clean, nowISO, digest, DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, orderAndPayment, uploadDocument, listDocuments, documentVersion, selectedDocuments, readOriginal, listFollowups, saveFollowup, documentAudit, supplierFollowupText, watchPayment } from '../../_lib/supplier-documents.js';
 import { boundedBytes, ownTelegram, pairingStatus, createPairing, confirmPairing, sendConnectionMessage, botLink, sendOriginal } from '../../_lib/supplier-documents-telegram.js';
+import { internalInvoicePrefix, isInternalInvoice, validateSupplierInvoiceTemplate } from '../../../admin/supplier-invoice-model.js';
+
+const templateKey = 'internal_supplier_invoice_template_v1';
+async function invoiceTemplate(env) {
+  const row = await first(env, 'SELECT value FROM supplier_document_runtime WHERE key=?', templateKey);
+  return row ? validateSupplierInvoiceTemplate(JSON.parse(row.value)) : null;
+}
 
 function fileResponse(body,mime,filename,inline=false) {
   return new Response(body,{headers:{'content-type':mime,'cache-control':'private, no-store','x-content-type-options':'nosniff','content-security-policy':"sandbox; default-src 'none';",'content-disposition':`${inline?'inline':'attachment'}; filename="document"; filename*=UTF-8''${encodeURIComponent(filename)}`}});
@@ -15,6 +22,7 @@ export async function onRequest({request,env}) {
   const url=new URL(request.url), action=url.searchParams.get('action') || 'list', orderId=clean(url.searchParams.get('order_id'));
   try {
     if (request.method==='GET') {
+      if (action==='invoice-template') return json({template:await invoiceTemplate(env),can_configure:user.id==='owner'});
       if (action==='setup') {
         const cron=await first(env,"SELECT value FROM supplier_document_runtime WHERE key='cron_last_run_at'");
         const linked=new Set((await all(env,'SELECT admin_id FROM supplier_document_telegram')).map(row=>row.admin_id));
@@ -30,7 +38,7 @@ export async function onRequest({request,env}) {
       if (action==='search') {
         const q=clean(url.searchParams.get('q'),100);
         if (q.length<2) return json({documents:[]});
-        return json({documents:await all(env,`SELECT DISTINCT d.id,d.supplier_name,d.kind,d.reference,v.filename,o.order_number FROM supplier_documents d JOIN supplier_document_links l ON l.document_id=d.id JOIN orders o ON o.id=l.order_id JOIN supplier_document_versions v ON v.document_id=d.id AND v.version=d.current_version WHERE l.archived_at IS NULL AND (d.reference LIKE ? OR v.filename LIKE ? OR o.order_number LIKE ? OR d.supplier_name LIKE ?) ORDER BY d.created_at DESC LIMIT 30`,...Array(4).fill(`%${q}%`))});
+        return json({documents:await all(env,`SELECT DISTINCT d.id,d.supplier_name,d.kind,d.reference,v.filename,o.order_number FROM supplier_documents d JOIN supplier_document_links l ON l.document_id=d.id JOIN orders o ON o.id=l.order_id JOIN supplier_document_versions v ON v.document_id=d.id AND v.version=d.current_version WHERE l.archived_at IS NULL AND NOT (d.kind='other' AND COALESCE(d.reference,'') LIKE ?) AND (d.reference LIKE ? OR v.filename LIKE ? OR o.order_number LIKE ? OR d.supplier_name LIKE ?) ORDER BY d.created_at DESC LIMIT 30`,`${internalInvoicePrefix}%`,...Array(4).fill(`%${q}%`))});
       }
       if (action==='list') return json({documents:await listDocuments(env,orderId),followups:await listFollowups(env,orderId)});
       if (action==='versions') {
@@ -48,13 +56,36 @@ export async function onRequest({request,env}) {
     }
     if (request.method!=='POST') return json({error:'Method not allowed'},{status:405,headers:{allow:'GET, POST'}});
     // Bound the entire request, not just the declared file size or Content-Length.
-    const bytes=await boundedBytes(new Response(request.body),action==='upload'?MAX_DOCUMENT_BYTES+65536:65536);
-    if (action==='upload') {
+    const multipart=action==='upload' || action==='save-internal-invoice';
+    const bytes=await boundedBytes(new Response(request.body),multipart?MAX_DOCUMENT_BYTES+65536:65536);
+    if (multipart) {
       const form=await new Response(bytes,{headers:{'content-type':request.headers.get('content-type') || ''}}).formData();
       const data=Object.fromEntries([...form].filter(([key])=>key!=='file'));
+      if (action==='save-internal-invoice') {
+        const template=await invoiceTemplate(env);
+        if (!template) fail('Шаблон інвойсу ще не налаштовано.',409);
+        const {order}=await orderAndPayment(env,clean(data.order_id));
+        const orderCode=String(order.order_number || '').replace(/[^A-Za-z0-9-]/g,'') || 'ORDER';
+        const reference=clean(data.reference);
+        const prefix=`${internalInvoicePrefix}${orderCode}-`;
+        if (!reference.startsWith(prefix) || !/^\d{8}-[a-f0-9]{8}$/.test(reference.slice(prefix.length))) fail('Некоректний внутрішній номер.');
+        const file=form.get('file');
+        if (file?.type!=='application/pdf' || !file.name.endsWith('.pdf') || await file.slice(0,5).text()!=='%PDF-') fail('Потрібен PDF інвойсу.');
+        return json({ok:true,...await uploadDocument(env,user,{order_id:order.id,supplier_name:template.supplier,kind:'other',reference},file)});
+      }
+      if (String(data.reference || '').startsWith(internalInvoicePrefix)) fail('Для внутрішнього інвойсу скористайтеся генератором.');
       return json({ok:true,...await uploadDocument(env,user,data,form.get('file'))});
     }
     const data=bytes.length ? JSON.parse(new TextDecoder().decode(bytes)) : {};
+    if (action==='invoice-template') {
+      if (user.id!=='owner') fail('Шаблон може редагувати лише власник.',403);
+      let template;
+      try { template=validateSupplierInvoiceTemplate(data); }
+      catch(error) { fail(error.message); }
+      await run(env,'INSERT INTO supplier_document_runtime(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',templateKey,JSON.stringify(template));
+      await documentAudit(env,user,'invoice_template_save',null,null);
+      return json({ok:true,template});
+    }
     if (action==='connect') return json(await createPairing(env,user));
     if (action==='confirm') return json({ok:true,...await confirmPairing(env,user,data.telegram_id)});
     if (action==='test-connection') {
@@ -88,8 +119,9 @@ export async function onRequest({request,env}) {
       return json({ok:true});
     }
     if (action==='link') {
-      const doc=await first(env,'SELECT id,supplier_name FROM supplier_documents WHERE id=?',clean(data.id));
+      const doc=await first(env,'SELECT id,supplier_name,kind,reference FROM supplier_documents WHERE id=?',clean(data.id));
       if (!doc) fail('Документ не знайдений.',404);
+      if (isInternalInvoice(doc)) fail('Внутрішній інвойс залишається у своєму замовленні.');
       if (payment && payment.supplier_name!==doc.supplier_name) fail('Постачальник документа та оплати має збігатися.');
       await run(env,`INSERT INTO supplier_document_links(document_id,order_id,payment_id,created_at,created_by) VALUES(?,?,?,?,?) ON CONFLICT(document_id,order_id) DO UPDATE SET payment_id=excluded.payment_id,archived_at=NULL`,doc.id,order.id,payment?.id || null,nowISO(),user.id);
       await documentAudit(env,user,'link',doc.id,order.id,{payment_id:payment?.id || null});
@@ -98,6 +130,7 @@ export async function onRequest({request,env}) {
     }
     if (action==='bundle' || action==='send') {
       const rows=await selectedDocuments(env,order.id,data.ids);
+      if (rows.some(isInternalInvoice)) fail('Внутрішні інвойси не додаються до відправлень.');
       if (action==='bundle') {
         const files={};
         for (const [index,row] of rows.entries()) files[`${String(index+1).padStart(2,'0')}-${row.filename}`]=new Uint8Array(await (await readOriginal(env,row)).arrayBuffer());

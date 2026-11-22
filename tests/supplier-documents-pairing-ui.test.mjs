@@ -21,7 +21,7 @@ async function fixture(t,{initial=baseSetup(),setupHook=null,confirmationDeliver
   w.Date.now=()=>clock;
   w.setTimeout=(fn,ms)=>{const id=++timerId;timers.set(id,{fn,at:clock+ms,ms});return id;};
   w.clearTimeout=id=>timers.delete(id);
-  w.icon=icon;w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
+  w.icon=icon;w.isInternalInvoice=row=>row?.kind==='other' && String(row.reference || '').startsWith('EVL-CN-');w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
   w.fetch=async(url,options={})=>{
     if(String(url).startsWith('/api/admin/slavik-support')) {
       const action=new URL(url,w.location.href).searchParams.get('action') || 'status',body=options.body?JSON.parse(options.body):null;
