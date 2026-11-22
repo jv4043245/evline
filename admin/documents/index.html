@@ -8,12 +8,15 @@
   <title>Документи замовлення | EVLine CRM</title>
   <link rel="icon" href="/assets/images/favicon.png">
   <link rel="stylesheet" href="/admin/documents/documents.css?v=20261103-order-documents">
-  <script type="module" src="/admin/documents/documents.js?v=20261103-order-documents"></script>
+  <link rel="stylesheet" href="/admin/subpage-nav.css?v=20261122">
+  <script type="module" src="/admin/documents/documents.js?v=20261122-navigation"></script>
 </head>
 <body>
-  <header class="app-header">
+  <header class="app-header crm-subpage-header">
     <a class="brand" href="/admin/"><img src="/assets/images/logo.png" alt="EVLine" width="98" height="40"><span>CRM</span></a>
-    <a data-back href="/admin/">До замовлення</a>
+    <nav class="crm-subpage-nav" aria-label="Навігація CRM">
+      <a class="crm-back" data-back href="/admin/invoices/"><span aria-hidden="true">←</span> До рахунків</a>
+    </nav>
   </header>
   <main>
     <div class="page-heading"><div class="page-identity"><h1>Документи клієнту</h1><p class="eyebrow" data-order-number>Замовлення</p><p class="muted" data-customer></p></div><span class="state-label" data-state>Завантаження</span></div>

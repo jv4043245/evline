@@ -430,7 +430,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     setBusy(true);target.disabled=true;notify('');
     try {
       if(action==='open-invoice') {
-        const {openSupplierInvoice}=await import('./supplier-invoice.js?v=20261122');
+        const {openSupplierInvoice}=await import('./supplier-invoice.js?v=20261122-invoice-menu');
         if(active())openSupplierInvoice({order,request,download,onSaved:refresh});
       }
       else if(action==='refresh') {await refreshSetup();await refresh();}

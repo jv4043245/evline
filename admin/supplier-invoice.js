@@ -40,14 +40,15 @@ async function makePdf(template, data, reference, print = false) {
   });
 }
 
-export function openSupplierInvoice({ order, request, download, onSaved }) {
-  const dialog = document.createElement('dialog');
+export function openSupplierInvoice({ order, request, download, onSaved, host }) {
+  const dialog = document.createElement(host ? 'section' : 'dialog');
   dialog.className = 'sd-invoice';
+  if (host) dialog.classList.add('sd-invoice--page');
   dialog.setAttribute('aria-label', 'Внутрішній інвойс');
   dialog.innerHTML = `
-    <header><h3>Внутрішній інвойс</h3><span data-inv-order></span>
+    <header>${host ? '<h1>Інвойс постачальника</h1>' : '<h3>Внутрішній інвойс</h3><span data-inv-order></span>'}
       <button class="admin-btn admin-btn--small" type="button" data-inv-settings hidden>Шаблон</button>
-      <button class="admin-btn admin-btn--small" type="button" data-inv-close>Закрити</button>
+      ${host ? '' : '<button class="admin-btn admin-btn--small" type="button" data-inv-close>Закрити</button>'}
     </header>
     <p class="sd-notice" data-inv-status role="status" aria-live="polite">Завантажуємо шаблон…</p>
     <form data-inv-editor hidden>
@@ -67,7 +68,7 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
         <button class="admin-btn admin-btn--primary" type="submit">${icon('Eye')} Передперегляд</button>
         <button class="admin-btn" type="button" data-inv-action="download">${icon('Download')} PDF</button>
         <button class="admin-btn" type="button" data-inv-action="print">${icon('Printer')} Друк</button>
-        <button class="admin-btn" type="button" data-inv-action="save">${icon('Save')} Зберегти в замовленні</button>
+        ${order?.id ? `<button class="admin-btn" type="button" data-inv-action="save">${icon('Save')} Зберегти в замовленні</button>` : ''}
       </div>
     </form>
     <form data-inv-template hidden>
@@ -100,10 +101,10 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
     config.hidden = !configuring;
     settings.disabled = configuring;
     q('[data-inv-back]').hidden = !template;
-    if (!configuring && template) editor.elements.part.focus();
+    if (!configuring && template && !host) editor.elements.part.focus();
   }
-  q('[data-inv-order]').textContent = order.order_number || '';
-  const name = String(order.item_name || '').trim();
+  if (!host) q('[data-inv-order]').textContent = order?.order_number || '';
+  const name = String(order?.item_name || '').trim();
   if (name.length <= 180) editor.elements.part.value = name;
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv', year:'numeric',month:'2-digit',day:'2-digit' });
   editor.elements.date.value = today.format(new Date());
@@ -137,7 +138,7 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
     } catch { notice('Не вдалося прочитати шаблон JSON.',true); }
     finally { input.value=''; }
   };
-  q('[data-inv-close]').onclick = () => dialog.close();
+  if (!host) q('[data-inv-close]').onclick = () => dialog.close();
   settings.onclick = () => { notice(''); mode(true); };
   q('[data-inv-back]').onclick = () => { notice(''); mode(false); };
   dialog.addEventListener('close', () => { mounted = false; clearPreview(); dialog.remove(); }, { once:true });
@@ -167,7 +168,7 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
         throw new Error('Перевірте переклад і заповніть назву китайською та англійською.');
       }
       if (!cache) {
-        const orderCode = String(order.order_number || '').replace(/[^A-Za-z0-9-]/g,'') || 'ORDER';
+        const orderCode = String(order?.order_number || '').replace(/[^A-Za-z0-9-]/g,'') || (order ? 'ORDER' : 'DIRECT');
         cache = { reference: `${internalInvoicePrefix}${orderCode}-${data.date.replaceAll('-','')}-${crypto.randomUUID().slice(0,8)}` };
       }
       const current = cache;
@@ -186,7 +187,7 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
         const url = URL.createObjectURL(file);
         popup.location.replace(url);
         setTimeout(()=>URL.revokeObjectURL(url), 60000);
-      } else if (action==='save') {
+      } else if (action==='save' && order?.id) {
         if (!current.saved) {
           const form = new FormData();
           form.set('order_id',order.id);
@@ -229,8 +230,8 @@ export function openSupplierInvoice({ order, request, download, onSaved }) {
     } catch(error) { if (mounted) notice(error.message,true); }
     finally { if (mounted) setBusy(false); }
   });
-  document.body.append(dialog);
-  dialog.showModal();
+  (host || document.body).append(dialog);
+  if (!host) dialog.showModal();
   request('invoice-template').then(data=>{
     if (!mounted) return;
     template = data.template;

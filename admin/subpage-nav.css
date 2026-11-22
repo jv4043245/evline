@@ -1,0 +1,35 @@
+.crm-subpage-header { gap: 8px 16px; }
+.crm-subpage-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.crm-subpage-nav .crm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid #bfd3ca;
+  border-radius: 6px;
+  background: #f2f8f5;
+  color: #175743;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.crm-subpage-nav .crm-back:hover { background: #e7f2ed; }
+.crm-subpage-nav .crm-back:focus-visible { outline: 2px solid #087b5d; outline-offset: 2px; }
+.crm-back svg { width: 16px; height: 16px; flex: none; }
+@media (max-width: 760px) {
+  .admin-header.crm-subpage-header { flex-direction: row; align-items: center; }
+  .crm-subpage-nav .crm-back { min-height: 44px; }
+}
+@media (max-width: 450px) {
+  .crm-subpage-header { flex-wrap: wrap; }
+  .crm-subpage-nav--tools { justify-content: flex-start; }
+}

@@ -74,7 +74,9 @@ test('contact destinations reject active URLs and email headers; only valid cont
 test('browser delivery helper shares the editor versioned model and cannot reuse the old unversioned cache',()=>{
   const editorModel=source.match(/from '(\.\/model\.js\?v=[^']+)'/)[1];
   assert.ok(deliverySource.includes(`from '${editorModel}'`));
-  assert.match(source,/delivery\.js\?v=20261103-simple/);assert.match(html,/documents\.js\?v=20261103-order-documents/);
+  assert.match(source,/delivery\.js\?v=20261103-simple/);
+  const editorVersion = Number(html.match(/documents\.js\?v=(\d{8})-/)?.[1]);
+  assert.ok(editorVersion >= 20261103);
   assert.ok(renderSource.includes(`from '${editorModel}'`));
 });
 test('order actions open the requested document with shared buyer and prices without saving or issuing a number',async t=>{
