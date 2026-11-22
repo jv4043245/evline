@@ -84,6 +84,9 @@
 .sd-invoice label { min-width:0; display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:600; }
 .sd-invoice input,.sd-invoice textarea { width:100%; min-width:0; box-sizing:border-box; min-height:40px; border:1px solid #cbdcd4; border-radius:5px; padding:7px; background:#fff; color:inherit; font:inherit; font-weight:400; font-size:16px; }
 .sd-invoice iframe { display:block; width:100%; height:min(460px,57dvh); margin-top:12px; border:1px solid #d9e3df; border-radius:5px; background:#fff; }
+.sd-invoice--page { width:100%; max-width:760px; max-height:none; border:0; padding:0; margin:0 auto; background:transparent; }
+.sd-invoice--page h1 { margin:0; font-size:24px; line-height:1.25; letter-spacing:0; }
+.sd-invoice--page header { justify-content:space-between; margin-bottom:16px; }
 .sd-document.sd-document--internal { grid-template-columns:minmax(0,1fr) auto; }
 .orders-table__documents { display:inline-flex; align-items:center; gap:3px; color:#26725d; font-size:11px; border:0; background:transparent; padding:3px; margin-top:4px; }
 .orders-table__documents[hidden] { display:none; }
@@ -99,8 +102,10 @@
   [data-sd-archive] .sd-document { grid-template-columns:minmax(0,1fr); }
   [data-sd-archive] .sd-tools { grid-column:1; }
   .sd-invoice { padding:12px; }
+  .sd-invoice--page { padding:0; }
   .sd-invoice .admin-btn { min-height:44px; }
   .sd-invoice .sd-toolbar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sd-invoice--page [data-inv-editor] .sd-toolbar > [type=submit] { grid-column:1/-1; }
   .sd-invoice .sd-toolbar .admin-btn { padding:6px; font-size:12px; }
   .sd-document.sd-document--internal { grid-template-columns:minmax(0,1fr); }
   .sd-document--internal .sd-tools { grid-column:1; }

@@ -434,8 +434,9 @@ $('[data-versions]').addEventListener('change', async e => {
 window.addEventListener('beforeunload', e => { if (dirty() || busy) { e.preventDefault(); e.returnValue = ''; } });
 
 async function boot() {
-  $('[data-back]').href = standalone ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
-  $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${standalone ? 'До рахунків' : 'До замовлення'}`;
+  const backToInvoices = standalone || pageUrl.searchParams.get('from') === 'invoices';
+  $('[data-back]').href = backToInvoices ? '/admin/invoices/' : `/admin/?order=${encodeURIComponent(orderId)}`;
+  $('[data-back]').innerHTML = `${icon('ArrowLeft')} ${backToInvoices ? 'До рахунків' : 'До замовлення'}`;
   for (const [name, symbol] of Object.entries({ save: 'Save', 'duplicate-invoice': 'Copy', pdf: 'Download', print: 'Printer', copy: 'Copy', send: 'Share2', 'refresh-order': 'RefreshCw', 'send-download': 'Download', 'send-print': 'Printer', share: 'Share2', telegram: 'Share2', email: 'FileText' })) {
     for (const b of document.querySelectorAll(`[data-action="${name}"]`)) {
       const label = b.textContent.trim();

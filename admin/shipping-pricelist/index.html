@@ -9,10 +9,11 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/admin/admin.css?v=20260924-workspace">
     <link rel="stylesheet" href="/admin/shipping-pricelist/pricelist.css?v=20260924-workspace">
+    <link rel="stylesheet" href="/admin/subpage-nav.css?v=20261122">
     <script type="module" src="/admin/shipping-pricelist/pricelist.js?v=20260930-20260914-guide"></script>
   </head>
   <body class="admin-shell shipping-pricelist-page">
-    <header class="admin-header">
+    <header class="admin-header crm-subpage-header">
       <div class="admin-header__brand">
         <a href="/admin/" aria-label="EVLine Admin">
           <img src="/assets/images/logo.png" alt="EVLine">
@@ -22,9 +23,9 @@
           <span>внутрішній довідник</span>
         </div>
       </div>
-      <div class="admin-header__actions">
-        <a class="admin-btn admin-btn--small" href="/admin/">← До CRM</a>
-      </div>
+      <nav class="crm-subpage-nav" aria-label="Навігація CRM">
+        <a class="crm-back" href="/admin/?tab=delivery"><span aria-hidden="true">←</span> До доставки</a>
+      </nav>
     </header>
 
     <main class="admin-main shipping-pricelist-main">
