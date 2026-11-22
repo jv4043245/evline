@@ -1,4 +1,5 @@
 import { icon } from './documents/icons.js';
+import { isInternalInvoice } from './supplier-invoice-model.js?v=20261122';
 
 const kinds={invoice:'Рахунок постачальника',china_shipping:'Доставка Китаєм',packing:'Пакування',other:'Інше'};
 const states={waiting:'Очікуємо відправлення',sending:'Відправлення нагадування',notified:'Нагадування надіслане',failed:'Перевірте Telegram перед повтором',paused:'Нагадування призупинене',shipped:'Товар відправлено'};
@@ -41,6 +42,7 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
   const notify=(text,error=false)=>{if(!active())return;const node=root.querySelector('[data-sd-notice]');node.textContent=text;node.classList.toggle('sd-error',error);};
   const options=(rows,current)=>rows.map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
   root.innerHTML=`<header class="sd-heading"><strong>Документи постачальника</strong><span data-sd-total></span>${button('refresh','Оновити','RefreshCw')}</header>
+    <div class="sd-toolbar">${button('open-invoice','Створити інвойс','FileText')}</div>
     <p class="sd-notice" data-sd-notice role="status" aria-live="polite"></p>
     <details class="sd-telegram-card" data-sd-telegram open><summary>Мій Telegram · перевіряємо</summary><div data-sd-connection aria-live="polite"><p>Перевіряємо підключення…</p></div><div class="sd-slavik-support" data-sd-support aria-live="polite" hidden></div></details>
     <details data-sd-upload><summary>Додати документ</summary>
@@ -255,10 +257,13 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     const active=documents.filter(d=>!d.archived_at), archived=documents.filter(d=>d.archived_at);
     root.querySelector('[data-sd-total]').textContent=String(active.length);
     root.querySelector('[data-sd-archived-count]').textContent=archived.length?`· ${archived.length}`:'';
-    const row=d=>`<article class="sd-document" data-sd-row="${esc(d.id)}">
-      ${d.archived_at?'':`<input type="checkbox" data-sd-select="${esc(d.id)}" aria-label="Вибрати ${esc(d.filename)}" ${kept.has(d.id)?'checked':''}>`}
-      <div class="sd-document-info"><strong>${esc(d.reference || d.filename)}</strong><small>${esc(d.supplier_name)} · ${esc(kinds[d.kind])}${d.payment_id?` · ${esc(payments.find(p=>p.id===d.payment_id)?.payment_number || '')}`:''}</small><small>${date(d.version_created_at)} · ${esc(setup?.managers.find(u=>u.id===d.version_created_by)?.name || d.version_created_by)} · v${d.current_version} · ${Math.ceil(d.bytes/1024)} КБ${d.linked_orders>1?` · ${d.linked_orders} замовлення`:''}</small></div>
-      <div class="sd-tools">${tool('preview','Переглянути','Eye',d.id)}${tool('download','Завантажити','Download',d.id)}${d.archived_at?tool('restore','Повернути в замовлення','RefreshCw',d.id):`${tool('replace','Нова версія','Pencil',d.id)}${tool('archive','Вилучити з замовлення','Trash2',d.id)}`}${tool('versions','Попередні версії','History',d.id)}</div><div class="sd-versions" data-sd-versions="${esc(d.id)}"></div></article>`;
+    const row=d=>{
+      const internal=isInternalInvoice(d);
+      return `<article class="sd-document${internal?' sd-document--internal':''}" data-sd-row="${esc(d.id)}">
+        ${d.archived_at || internal?'':`<input type="checkbox" data-sd-select="${esc(d.id)}" aria-label="Вибрати ${esc(d.filename)}" ${kept.has(d.id)?'checked':''}>`}
+        <div class="sd-document-info"><strong>${esc(d.reference || d.filename)}</strong><small>${esc(d.supplier_name)} · ${esc(internal?'Внутрішній інвойс':kinds[d.kind])}${d.payment_id?` · ${esc(payments.find(p=>p.id===d.payment_id)?.payment_number || '')}`:''}</small><small>${date(d.version_created_at)} · ${esc(setup?.managers.find(u=>u.id===d.version_created_by)?.name || d.version_created_by)} · v${d.current_version} · ${Math.ceil(d.bytes/1024)} КБ${d.linked_orders>1?` · ${d.linked_orders} замовлення`:''}</small></div>
+        <div class="sd-tools">${tool('preview','Переглянути','Eye',d.id)}${tool('download','Завантажити','Download',d.id)}${d.archived_at?tool('restore','Повернути в замовлення','RefreshCw',d.id):`${internal?'':tool('replace','Нова версія','Pencil',d.id)}${tool('archive','Вилучити з замовлення','Trash2',d.id)}`}${internal?'':tool('versions','Попередні версії','History',d.id)}</div><div class="sd-versions" data-sd-versions="${esc(d.id)}"></div></article>`;
+    };
     root.querySelector('[data-sd-list]').innerHTML=active.map(row).join('') || '<p class="muted">Документів ще немає.</p>';
     root.querySelector('[data-sd-archive]').innerHTML=archived.map(row).join('');
     updateSelection(); onCountChanged(order.id,active.length);
@@ -424,7 +429,11 @@ export function mountSupplierDocuments(root,{order,payments=[],suppliers=[],getH
     const version=target.dataset.version;
     setBusy(true);target.disabled=true;notify('');
     try {
-      if(action==='refresh') {await refreshSetup();await refresh();}
+      if(action==='open-invoice') {
+        const {openSupplierInvoice}=await import('./supplier-invoice.js?v=20261122');
+        if(active())openSupplierInvoice({order,request,download,onSaved:refresh});
+      }
+      else if(action==='refresh') {await refreshSetup();await refresh();}
       else if(action==='setup') {await refreshSetup();}
       else if(action==='connect') {
         await preparePairingAction();

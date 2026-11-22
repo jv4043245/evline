@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 import { icon } from '../admin/documents/icons.js';
+import { isInternalInvoice } from '../admin/supplier-invoice-model.js';
 
 const documentsSource=await readFile(new URL('../admin/supplier-documents.js',import.meta.url),'utf8');
 const adminSource=await readFile(new URL('../admin/admin.js',import.meta.url),'utf8');
@@ -15,7 +16,7 @@ async function fixture(t,{upload=async()=>{},patch=async()=>{},connected=true}={
   const dom=new JSDOM(`<form data-order-editor><input name="id" value="order-test"><input name="customer_name" value="Test"><input name="revenue_uah" value="900"><input name="status" value="paid"><input name="notify_customer" type="checkbox" value="1" checked><section data-supplier-documents></section><div data-order-save-bar><span data-save-state></span><button type="submit">Save</button><p data-order-save-error hidden></p></div></form>`,{url:'https://fixture.local/admin/',runScripts:'outside-only'});
   const w=dom.window,document=w.document,calls=[],patches=[],saved=[];
   t.after(()=>w.close());
-  w.icon=icon;w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
+  w.icon=icon;w.isInternalInvoice=isInternalInvoice;w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;
   w.state={selectedOrder:{id:'order-test',order_number:'O-TEST',status:'paid'},selectedNotifications:[],selectedTrackingEvents:[],selectedSupplierPayments:[],selectedSupplierRequests:[]};
   w.activeOrderEditorTab=()=> 'payment';w.refresh=async()=>{};
   w.fetch=async(url,options={})=>{

@@ -7,5 +7,9 @@ official npm package `pdfmake@0.2.20`, integrity:
 loads only on the documents screen when PDF output is requested; no customer
 data is transmitted to a PDF service or CDN.
 
+`NotoSansSC-Regular.otf` (SIL OFL, `NOTO-SC-LICENSE`) is the
+[official Simplified Chinese subset](https://github.com/notofonts/noto-cjk/tree/main/Sans/SubsetOTF/SC).
+It is fetched only when creating an internal supplier invoice PDF.
+
 Lucide icon node data is generated from the bundled Lucide package; its ISC
 license is retained in `LUCIDE-LICENSE`.

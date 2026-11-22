@@ -43,10 +43,42 @@ async function fixture(t) {
 test('authorization is required before DB, storage or parsing',async()=>{
   const env={ADMIN_TOKEN:'secret'};
   Object.defineProperty(env,'DB',{get(){assert.fail('must not access DB');}});
-  for(const method of ['GET','POST']) for(const action of ['file','list','bundle','upload','confirm','send','test-connection']) {
+  for(const method of ['GET','POST']) for(const action of ['file','list','bundle','upload','confirm','send','test-connection','invoice-template','save-internal-invoice']) {
     const response=await onRequest({env,request:new Request(`https://test/?action=${action}`,{method,...(method==='POST'?{body:'invalid'}:{})})});
     assert.equal(response.status,401);
   }
+});
+test('owner configures a private invoice template; manager PDF stays separate from original invoices and shipments',async t=>{
+  const {env,db,request,calls}=await fixture(t);
+  env.ADMIN_OWNER_TOKEN='test-owner';
+  const template={supplier:'测试供应商',buyer:'EVLine QA',english:{supplier:'Test Supplier',buyer:'EVLine QA'}};
+  assert.equal((await request('invoice-template',template)).status,403);
+  assert.equal((await request('invoice-template',{}, {},'test-owner')).status,400);
+  assert.equal((await request('invoice-template',template,{},'test-owner')).status,200);
+  const tmpl=await request('invoice-template');
+  assert.equal(tmpl.headers.get('cache-control'),'no-store');
+  assert.equal((await tmpl.json()).template.supplier,template.supplier);
+  const form=new FormData();
+  form.set('order_id','order1');
+  form.set('reference','EVL-CN-O-000001-20261122-abcd1234');
+  form.set('kind','invoice');
+  form.set('payment_id','pay1');
+  form.set('supplier_name','spoofed');
+  form.set('file',file('evline-test.pdf'));
+  assert.equal((await request('upload',form)).status,400);
+  const saved=await request('save-internal-invoice',form);
+  assert.equal(saved.status,200);
+  const {id}=await saved.json();
+  const row=db.prepare('SELECT d.kind,d.supplier_name,l.payment_id FROM supplier_documents d JOIN supplier_document_links l ON l.document_id=d.id').get();
+  assert.equal(row.kind,'other');
+  assert.equal(row.supplier_name,template.supplier);
+  assert.equal(row.payment_id,null);
+  assert.equal((await request('bundle',{order_id:'order1',ids:[id]})).status,400);
+  assert.equal((await request('send',{order_id:'order1',ids:[id]})).status,400);
+  assert.equal((await request('link',{order_id:'order2',id})).status,400);
+  assert.equal((await (await request('search',null,{q:'EVL-CN'})).json()).documents.length,0);
+  assert.equal((await request('file',null,{order_id:'order1',id})).status,200);
+  assert.equal(calls.length,0);
 });
 test('upload preserves money/status; authenticated list never leaks object keys',async t=>{
   const{env,db,objects,request}=await fixture(t);
