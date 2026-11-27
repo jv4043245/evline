@@ -6,7 +6,12 @@ import { priorityPartsPages } from '../scripts/lib/parts-priority-content.mjs';
 
 const root = new URL('../', import.meta.url);
 const mainScript = await readFile(new URL('assets/js/main.js', root), 'utf8');
-const pages = ['/', '/ru/', ...priorityPartsPages.flatMap(page => [page.uk, page.ru])];
+const pages = [
+  '/', '/ru/',
+  ...priorityPartsPages.flatMap(page => [page.uk, page.ru]),
+  '/zapchastyny-xiaomi/su7/', '/zapchastyny-xiaomi/yu7/',
+  '/zapchastyny-byd/song-plus/', '/zapchastyny-byd/song-l/',
+];
 
 for (const pathname of pages) {
   for (const success of [true, false]) {
