@@ -11,6 +11,7 @@ const pages = [
   ...priorityPartsPages.flatMap(page => [page.uk, page.ru]),
   '/zapchastyny-xiaomi/su7/', '/zapchastyny-xiaomi/yu7/',
   '/zapchastyny-byd/song-plus/', '/zapchastyny-byd/song-l/',
+  '/zapchastyny-byd/tang/', '/ru/zapchasti-byd/tang/',
 ];
 
 for (const pathname of pages) {
